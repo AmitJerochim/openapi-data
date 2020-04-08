@@ -1,0 +1,341 @@
+penapi: 3.0.0
+info:
+  version: "0.2"
+  title: bFAN Export API
+  description: |-
+    Export API for bFan customer 
+     URL of the qa API : https://qa.export.api.bfansports.com/stage/1
+  termsOfService: 'http://swagger.io/terms/'
+  contact:
+    name: bFAN Support
+    email: support@bfansports.com
+servers:
+  - url: 'https://l2gcqth2s0.execute-api.eu-west-1.amazonaws.com/1'
+    description: Dev server (uses dev data)
+  - url: 'https://qa.export.api.bfansports.com/stage/1'
+    description: QA server (uses pre prod data)
+  - url: 'https://prod.export.api.bfansports.com/stage/1'
+    description: Production server (uses prod data)
+  - url: 'https://{env}.export.api.bfansports.com/stage/{stage}'
+    description: Generic url
+    variables:
+      env:
+        default: dev
+        enum:
+          - dev
+          - qa
+          - prod
+      stage:
+        default: "1"
+        enum:
+          - "1"
+x-amazon-apigateway-api-key-source: HEADER
+paths:
+  /robots.txt:
+    get:
+      responses:
+        '200':
+          description: 200 response
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Empty'
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: '200'
+            responseTemplates:
+              text/plain: |-
+                User-agent: *
+                Disallow: /
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        passthroughBehavior: when_no_match
+        type: mock
+    head:
+      responses:
+        '200':
+          description: 200 response
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Empty'
+      x-amazon-apigateway-integration:
+        responses:
+          default:
+            statusCode: '200'
+            responseTemplates:
+              text/plain: |-
+                User-agent: *
+                Disallow: /
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        passthroughBehavior: when_no_match
+        type: mock
+  /export-users:
+    get:
+      description: >
+        This API call returns a list of users for your bFAN Sports
+        applications. 
+
+        This call can return at most 100 users per call, so you need to paginate
+        through using limit and offset parameters.
+      parameters:
+        - name: x-api-key
+          in: header
+          description: Api
+          required: true
+          schema:
+            type: string
+        - name: organizations
+          in: query
+          description: List of organizations id to use for the call separated with pipe.
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Limit the number of users returned.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: offset
+          in: query
+          description: >-
+            Where to start searching in the result array. This is used for
+            pagination. For example, with your first call to this endpoint you
+            will receive the first 100 users, then if you put 100 as offset you
+            will receive user from 100 to 200 ect ...
+          schema:
+            type: integer
+        - name: modified_since
+          in: query
+          description: >-
+            Filter the result to which have modified there profile since the given timestamp
+            Modification to field such as login_count or points doesn't as a profile update
+            The parameter must be a Unix timestamp
+          required: false
+          schema:
+            type: integer
+        - name: modified_until
+          in: query
+          description: >-
+            Filter the result to which have modified there profile until the given timestamp
+            Modification to field such as login_count or points doesn't as a profile update
+            The parameter must be a Unix timestamp
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+        '500':
+          description: Execution Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - api_key: []
+      x-amazon-apigateway-auth:
+        type: none
+      x-amazon-apigateway-integration:
+        type: aws
+        uri: >-
+          arn:aws:apigateway:%AWS_REGION%:lambda:path/2015-03-31/functions/arn:aws:lambda:%AWS_REGION%:%AWS_ACCOUNT%:function:ExportUsers/invocations
+        httpMethod: POST
+        requestTemplates:
+          application/json: |
+            {
+              "apiKey" : "$input.params('x-api-key')"
+              #if($input.params('organizations') != ""),"organizations" : "$input.params('organizations')"#end
+              #if($input.params('limit') != "") , "limit" : $input.params('limit')#end
+              #if($input.params('offset') != "") , "offset" : $input.params('offset')#end
+              #if($input.params('modified_since') != "") , "modified_since" : $input.params('modified_since')#end
+              #if($input.params('modified_until') != "") , "modified_until" : $input.params('modified_until')#end
+            }
+        requestParameters:
+          integration.request.querystring.org_id: method.request.querystring.organizations
+          integration.request.querystring.limit: method.request.querystring.limit
+          integration.request.querystring.offset: method.request.querystring.offset
+          integration.request.querystring.modified_since: method.request.querystring.modified_since
+          integration.request.querystring.modified_until: method.request.querystring.modified_until
+        responses:
+          default:
+            statusCode: '200'
+          error.*:
+            statusCode: '500'
+            responseTemplates:
+              application/json: |
+                {
+                  "errorMessage" : $input.json('$.errorMessage')
+                }
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: x-api-key
+      in: header
+  schemas:
+    Error:
+      type: object
+      required:
+        - errorMessage
+      properties:
+        errorMessage:
+          type: string
+    Success:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    Empty:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    Avatar:
+      type: object
+      description: One Avatar
+      required:
+        - image_url
+        - small_url
+        - medium_url
+        - large_url
+        - level
+        - id
+        - org_id
+      properties:
+        id:
+          description: Key of the object in DB
+          type: string
+        org_id:
+          description: ID of the org if private Avatar. Global is public/global one
+          type: string
+        image_url:
+          description: URL of the avarar image in 128px height. Default image
+          type: string
+        large_url:
+          description: URL of the avarar image in 128px height.
+          type: string
+        medium_url:
+          description: URL of the avarar image in 64px height.
+          type: string
+        small_url:
+          description: URL of the avarar image in 32px height.
+          type: string
+        level:
+          description: >-
+            Minimum level for this avatar. If the my level is < as Avatar level
+            then the avatar is locked and show grayed out.
+          type: integer
+    Points:
+      type: object
+      required:
+        - current_level
+        - lifetime_points
+        - next_level
+        - prev_level
+        - remaining_points
+      properties:
+        current_level:
+          type: integer
+          description: The current level
+        lifetime_points:
+          description: The current total number of points earned
+          type: integer
+        next_level:
+          description: Next level points required
+          type: integer
+        prev_level:
+          description: Previous level points required
+          type: integer
+        remaining_points:
+          description: Remaining points until next level
+          type: integer
+    User:
+      type: object
+      description: One User
+      required:
+        - identityId
+      properties:
+        identityId:
+          type: string
+          description: IdentityId coming from AWS Cognito. We identify the user with this.
+        identifier:
+          type: string
+          description: >-
+            ID coming from the specific social platform. Different format, it's
+            ok.
+        provider:
+          type: string
+          description: 'Name of the social provide (google, facebook)'
+        firstname:
+          type: string
+        lastname:
+          type: string
+        login_count:
+          type: integer
+          description: Number of time the user logged in
+        photoURL:
+          type: string
+          description: Photo coming from social media
+        email:
+          type: string
+        displayName:
+          type: string
+          description: >-
+            Coming from social if any. Combine firstname / lastname if none
+            available
+        username:
+          type: string
+          description: Can be entered in the mobile app. Empty by default
+        address1:
+          type: string
+        address2:
+          type: string
+        zip:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        message:
+          type: string
+        sso_user_id:
+          type: string
+          description: Id of this user within the SSO database. (Reach5 for example)
+        gender:
+          type: string
+          description: The genre of the user
+          enum:
+            - female
+            - male
+        birthdate:
+          type: string
+        last_modification:
+          type: integer
+        avatar:
+          $ref: '#/components/schemas/Avatar'
+        points:
+          $ref: '#/components/schemas/Points'
+    UserList:
+      type: object
+      description: List of `User` object as returned by DB
+      required:
+        - Items
+      properties:
+        Items:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'

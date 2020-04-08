@@ -1,0 +1,751 @@
+penapi: 3.0.1
+info:
+  title: API Documentation
+  description: Documentation for <strong><a href="http://adm.point-agency.net">adm.point-agency.net</a></strong>
+  version: '0.1'
+  contact:
+    email: prodan.dev@gmail.com
+servers:
+  - url: 'http://adm.point-agency.net/api'
+tags:
+  - name: Auth
+    description: Auth Section
+  - name: Clients
+    description: Clients Section
+  - name: Projects
+    description: Projects Section
+  - name: Money Types
+    description: Money Types Section
+  - name: Transactions
+    description: Transactions Section
+  - name: Dashboard
+    description: Dashboard Section
+paths:
+  /auth/login:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login:
+                  type: string
+                password:
+                  type: string
+                  format: password
+            examples:
+              'Example':
+                value: {"login": "admin", "password": "Te5tP@55"}
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessToken'
+              examples:
+                'Success':
+                  value: >-
+                    {"access_token": "jwt_token_will_be_here", "token_type": "bearer", "expires_in": 3600}
+        401:
+            $ref: '#/components/responses/WrongToken'
+        422:
+          description: Validation errors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  login:
+                    type: array
+                    items:
+                      type: string
+                  password:
+                    type: array
+                    items:
+                      type: string
+              examples:
+                'Example':
+                  value: '{"login": ["The login field is required."],"password": ["The password field is required."]}'
+      tags:
+        - Auth
+      summary: Login
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Logout
+      security:
+        - JWT: []
+      responses:
+        200:
+          description: Success
+        401:
+            $ref: '#/components/responses/WrongToken'
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Profile
+      security:
+        - JWT: []
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+              examples:
+                'Success':
+                  value: >-
+                    {"id": 1, "username": "admin", "email": "admin@dev.test"}
+        401:
+            $ref: '#/components/responses/WrongToken'
+  /auth/refresh:
+      get:
+        tags:
+          - Auth
+        summary: Refresh Token
+        security:
+          - JWT: []
+        responses:
+          200:
+            description: Success
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    access_token:
+                      type: string
+                    token_type:
+                      type: string
+                    expires_in:
+                      type: integer
+                examples:
+                  'Success':
+                    value: >-
+                      {"access_token": "jwt_token_will_be_here", "token_type": "bearer", "expires_in": 3600}
+          401:
+            $ref: '#/components/responses/WrongToken'
+  /clients:
+    get:
+        tags:
+          - Clients
+        summary: Get Clients
+        security:
+          - JWT: []
+        parameters:
+          - $ref: '#/components/parameters/Limit'
+          - $ref: '#/components/parameters/Offset'
+        responses:
+          200:
+            description: Success
+            content:
+              application/json:
+                schema:
+                  allOf:
+                    - $ref: '#/components/schemas/PaginatedData'
+                    - properties:
+                        data:
+                          type: array
+                          items:
+                            allOf:
+                              - $ref: '#/components/schemas/Client'
+                              - properties:
+                                  projects_count:
+                                    type: integer
+          401:
+            $ref: '#/components/responses/WrongToken'
+    post:
+        tags:
+          - Clients
+        summary: Create Client
+        security:
+          - JWT: []
+        requestBody:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        responses:
+          200:
+            content:
+              applicattion/json:
+                schema:
+                  $ref: '#/components/schemas/Client'
+            description: Created Item
+  /clients/{id}:
+    get:
+      tags:
+        - Clients
+      summary: Get Client
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Client'
+                  - properties:
+                      projects:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Project'
+        401:
+          $ref: '#/components/responses/WrongToken'
+    post:
+      tags:
+        - Clients
+      summary: Edit Client
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Client'
+      responses:
+        200:
+          content:
+            applicattion/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+          description: Edited Item
+        401:
+          $ref: '#/components/responses/WrongToken'
+    delete:
+      tags:
+        - Clients
+      summary: Delete Client
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      responses:
+        200:
+          description: Success
+        401:
+          $ref: '#/components/responses/WrongToken'
+  /projects:
+    get:
+      tags:
+        - Projects
+      summary: Get Projects
+      security:
+        - JWT: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - in: query
+          name: client_id
+          schema:
+            type: integer
+          required: false
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedData'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Project'
+        401:
+          $ref: '#/components/responses/WrongToken'
+    post:
+      tags:
+        - Projects
+      summary: Create Project
+      security:
+        - JWT: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+      responses:
+        200:
+          content:
+            applicattion/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: Created Item
+        401:
+          $ref: '#/components/responses/WrongToken'
+  /projects/{id}:
+    get:
+      tags:
+        - Projects
+      summary: Get Project
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Project'
+                  - properties:
+                      client_id:
+                        writeOnly: true
+                      client:
+                        $ref: '#/components/schemas/Client'
+        401:
+          $ref: '#/components/responses/WrongToken'
+    post:
+      tags:
+        - Projects
+      summary: Edit Project
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project'
+      responses:
+        200:
+          content:
+            applicattion/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: Edited Item
+        401:
+          $ref: '#/components/responses/WrongToken'
+    delete:
+      tags:
+        - Projects
+      summary: Delete Project
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      responses:
+        200:
+          description: Success
+        401:
+          $ref: '#/components/responses/WrongToken'
+  /money_types:
+    get:
+      tags:
+        - Money Types
+      summary: Get Money Types
+      security:
+        - JWT: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedData'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/MoneyType'
+        401:
+          $ref: '#/components/responses/WrongToken'
+    post:
+      tags:
+        - Money Types
+      summary: Create Money Type
+      security:
+        - JWT: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoneyType'
+      responses:
+        200:
+          content:
+            applicattion/json:
+              schema:
+                $ref: '#/components/schemas/MoneyType'
+          description: Created Item
+        401:
+          $ref: '#/components/responses/WrongToken'
+  /money_types/{id}:
+    get:
+      tags:
+        - Money Types
+      summary: Get Money Type
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/MoneyType'
+        401:
+          $ref: '#/components/responses/WrongToken'
+    post:
+      tags:
+        - Money Types
+      summary: Edit Money Type
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoneyType'
+      responses:
+        200:
+          content:
+            applicattion/json:
+              schema:
+                $ref: '#/components/schemas/MoneyType'
+          description: Edited Item
+        401:
+          $ref: '#/components/responses/WrongToken'
+    delete:
+      tags:
+        - Money Types
+      summary: Delete Money Type
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      responses:
+        200:
+          description: Success
+        401:
+          $ref: '#/components/responses/WrongToken'
+  /transactions:
+    get:
+      tags:
+        - Transactions
+      summary: Get Transactions
+      security:
+        - JWT: []
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - in: query
+          name: project_id
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: money_type_id
+          schema:
+            type: integer
+          required: false
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: ['credit', 'debit']
+          required: false
+        - in: query
+          name: date_from
+          schema:
+            type: string
+            format: date
+          required: false
+        - in: query
+          name: date_to
+          schema:
+            type: string
+            format: date
+          required: false
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedData'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Transaction'
+        401:
+          $ref: '#/components/responses/WrongToken'
+    post:
+      tags:
+        - Transactions
+      summary: Create Transaction
+      security:
+        - JWT: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+      responses:
+        200:
+          content:
+            applicattion/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: Created Item
+        401:
+          $ref: '#/components/responses/WrongToken'
+  /transactions/{id}:
+    get:
+      tags:
+        - Transactions
+      summary: Get Transaction
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Transaction'
+                  - properties:
+                      project_id:
+                        writeOnly: true
+                      money_type_id:
+                        writeOnly: true
+                      project:
+                        $ref: '#/components/schemas/Project'
+                      money_type:
+                        $ref: '#/components/schemas/MoneyType'
+        401:
+          $ref: '#/components/responses/WrongToken'
+    post:
+      tags:
+        - Transactions
+      summary: Edit Transaction
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+      responses:
+        200:
+          content:
+            applicattion/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+          description: Edited Item
+        401:
+          $ref: '#/components/responses/WrongToken'
+    delete:
+      tags:
+        - Transactions
+      summary: Delete Transaction
+      security:
+        - JWT: []
+      parameters: 
+        - $ref: '#/components/parameters/ID'
+      responses:
+        200:
+          description: Success
+        401:
+          $ref: '#/components/responses/WrongToken'
+  /dashboard:
+    get:
+      tags:
+        - Dashboard
+      summary: Get Dashboard
+      security:
+        - JWT: []
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dashboard'
+        401:
+          $ref: '#/components/responses/WrongToken'
+components:
+  securitySchemes:
+    JWT:
+      type: http
+      scheme: bearer
+  schemas:
+    AccessToken:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+        expires_in:
+          type: integer
+    Client:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+        desc:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PaginatedData:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+        count:
+          type: integer
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+        desc:
+          type: string
+        website:
+          type: string
+        client_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    MoneyType:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        project_id:
+          type: integer
+        money_type_id:
+          type: integer
+        value:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        type:
+          type: string
+          readOnly: true
+          enum: ['credit',  'debit']
+    Dashboard:
+      type: object
+      properties:
+        count:
+          type: integer
+        credit:
+          type: integer
+        debit:
+          type: integer
+  parameters:
+    ID:
+      in: path
+      name: id
+      schema:
+        type: integer
+      required: true
+      description: ID
+    Limit:
+      in: query
+      name: limit
+      schema:
+        type: integer
+      required: false
+      description: Pagination limit (Default is 25)
+    Offset:
+      in: query
+      name: offset
+      schema:
+        type: integer
+      required: false
+      description: Pagination offset (Default is 0)
+  responses:
+    WrongToken:
+      description: Wrong token provided
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+          examples:
+            'Unauthorized':
+              value: {"error": "Unauthorized"}

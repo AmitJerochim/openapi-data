@@ -1,0 +1,210 @@
+penapi: 3.0.2
+info:
+  title: Filterd workflows
+  description: Get filterd and paged workflows 
+  version: "1.0"
+paths:
+  /getAllWorkflows:
+    get:
+      security:
+        - JwtAuthKey: []
+      tags:
+        - workflows
+      parameters:
+      - name: offset
+        in: query
+        description: Page Offset
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 1
+      - name: size
+        in: query
+        description: Page Size
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 25
+      - name: criteriaMap 
+        in: query
+        description: A multi value map of criterias 
+        schema:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example: 
+            STATUS:
+              - RFQ_CREATED
+              - RFQ_DECLINED
+              - RFQ_RECEIVED
+              - RFQ_SUBMITTED
+            MATERIAL_NAME_ID:
+              - 808032135ab10351035
+              - 80832465465a755a554
+      - name: scopeList
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowScopeParams'
+      - name: filterColumnNameList
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            $ref: '#/components/schemas/FilterColumnName'
+      responses:
+        '200':
+          $ref: '#/components/responses/SupplierWorkflowsCarrierResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  responses:
+    SupplierWorkflowsCarrierResponse:
+      description: Success
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SupplierWorkflowsCarrier'
+    BadRequest:
+      description: BAD_REQUEST
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: UNAUTHORIZED
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: FORBIDDEN
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: NOT_FOUND
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: INTERNAL_SERVER_ERROR
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  securitySchemes:
+   JwtAuthKey: # arbitrary name for the security scheme
+    type: apiKey
+    in: header # can be "header", "query" or "cookie"
+    name: Authorization # name of the header, query parameter or cookie
+  schemas:
+    WorkflowCriteriaParams:
+      type: string
+      enum:
+        - ORGANIZATION_ID 
+        - OWNER_ID
+        - STATUS
+        - MATERIAL_NAME_ID
+        - MATERIAL_TYPE_ID
+        - AM_TECHNOLOGY_ID
+        - UPDATED_BEFORE
+        - UPDATED_AFTER
+    WorkflowScopeParams:
+      type: string
+      enum:
+        - FETCH_FIRST_PART 
+        - FETCH_ALL_PARTS
+        - FETCH_ANALYSIS_DATA
+        - FETCH_MATERIAL_DATA
+        - FETCH_STATUS_HISTORY
+        - FETCH_COSTING
+    FilterColumnName:
+      type: string
+      enum:
+        - ASSIGN_TO 
+        - MATERIAL
+        - TECHNOLOGY
+        - CUSTOMER_ORG
+        - CUSTOMER_NAME
+    WorkflowsStatus:
+      type: string
+      enum:
+        - MOVED_TO_SHIPMENT
+        - ORDER_ACCEPTED
+        - ORDER_SUBMITTED
+        - PRODUCTION_IN_PROGRESS
+        - PRODUCTION_STARTED
+        - PROPOSAL_CREATED
+        - PROPOSAL_RECEIVED
+        - PROPOSAL_SUBMITTED
+        - PURCHASE_ORDER_CREATED
+        - PURCHASE_ORDER_RECEIVED
+        - RECEIVED
+        - RFQ_CREATED
+        - RFQ_DECLINED
+        - RFQ_RECEIVED
+        - RFQ_SUBMITTED
+        - SHIPPED
+    WorkflowCarrier:
+      type: object
+      properties:
+        workflow_id:
+          type: string
+          example: 123
+        rfq_num:
+          type: string
+          example: 456
+    WorkflowsCarrierList:
+      type: array
+      description: List of workflows carriers
+      items:
+        $ref: '#/components/schemas/WorkflowCarrier'
+    FiltersOptions:
+      description: A map that contains the options of filtering for each FilterColumn.
+      type: object
+      additionalProperties:
+       type: array
+       items:
+         type: string
+      example:
+        CUSTOMER_ORG: 
+          - Siemens-Org
+          - BMW
+        CUSTOMER_NAME: 
+          - Avi
+          - Igor
+          - Gal
+    SupplierWorkflowsCarrier:
+      type: object
+      description: List of workflows DTO and filtersOptions map.
+      properties:
+        workflowsCarrierList:
+          $ref: '#/components/schemas/WorkflowsCarrierList'
+        filtersOptionsMap:
+         $ref: '#/components/schemas/FiltersOptions'
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        correlation-id:
+          type: string
+          example: 2c9a-07616-cccd-62901

@@ -1,0 +1,515 @@
+penapi: 3.0.0
+info:
+  description: >-
+    This describes the HIM Server API. It contains rest calls for retrieving and
+    modifying HIM project data, as well as a number of calls to run operations
+    on a currently running unit.
+  version: "1.0.0-oas3"
+  title: HIM Server Communication (HIM 2019.3)
+  contact:
+    email: bla@arkite.be
+tags:
+  - name: data
+    description: Calls for sending and requesting data
+  - name: operation
+    description: Calls during operations
+paths:
+  /units/all/:
+    get:
+      tags:
+        - data
+      summary: fetches all units
+      operationId: fetchUnits
+      description: Fetches all units which have been connected to this server
+      responses:
+        '200':
+          description: unit list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Unit'
+                  
+  /projects/all/:
+    get:
+      tags:
+        - data
+      summary: Fetches all projects
+      operationId: fetchProjects
+      description: Fetches all projects which have not been archived
+      responses:
+        '200':
+          description: project list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+                  
+  /processes/all/{projectId}/:
+    get:
+      parameters:
+      - name: projectId
+        in: path
+        description: Id of project (use projects/all to fetch the projects)
+        required: true
+        schema:
+          type: number
+      tags:
+      - data
+      summary: Fetches all processes for the given project
+      operationId: fetchProcessesForProject
+      description: 
+        Fetches all processes for the given project
+      responses:
+        '200':
+          description: process list or errormessage
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/Process'
+                - $ref: '#/components/schemas/Message'
+                
+  /tasks/all/{projectId}/:
+    get:
+      parameters:
+      - name: projectId
+        in: path
+        description: Id of project (use projects/all to fetch the projects)
+        required: true
+        schema:
+          type: number
+      tags:
+      - data
+      summary: Fetches all Tasks for the given project
+      operationId: fetchTasksForProject
+      description: 
+        Fetches all Tasks for the given project
+      responses:
+        '200':
+          description: Tasks list or errormessage
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/Task'
+                - $ref: '#/components/schemas/Message'
+  /entities/all/{projectId}/:
+    get:
+      parameters:
+      - name: projectId
+        in: path
+        description: Id of project (use projects/all to fetch the projects)
+        required: true
+        schema:
+          type: number
+      tags:
+      - data
+      summary: Fetches all entities for the given project
+      operationId: fetchEntitiesForProject
+      description: 
+        Fetches all entities (object/tool/activity/container/...) for the given project
+      responses:
+        '200':
+          description: Entities list or errormessage
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/Entity'
+                - $ref: '#/components/schemas/Message'
+  
+  /entities/add/{projectId}/:
+    post:
+      parameters:
+      - name: projectId
+        in: path
+        description: Id of project (use projects/all to fetch the projects)
+        required: true
+        schema:
+          type: number
+      tags:
+      - data
+      summary: Adds one or more entities for the given project
+      operationId: addEntityForProject
+      description: 
+        Adds entities (object/tool/activity/container/...) to the given project
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/NewEntity'
+      responses:
+        '200':
+          description: Info- or Error Message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+  
+                
+  /clientController/loadProject/{unitId}/{projectId}/:
+    get:
+      parameters:
+      - name: unitId
+        in: path
+        description: Id of the unit to run the operation on (use /units/all to fetch the units)
+        required: true
+        schema:
+          type: number
+      - name: projectId
+        in: path
+        description: Id of the project to load (use /projects/all to fetch the projects)
+        required: true
+        schema:
+          type: number
+      tags:
+      - operation
+      summary: Loads the given project on the (running) unit
+      operationId: loadProject
+      description: 
+        Loads the project with the given projectId on the unit with the given unitId. Be aware that the unit should be running (turned on with HIM software running)
+      responses:
+        '200':
+          description: Info- or Error Message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'                  
+  
+  /clientController/currentProject/{unitId}/:
+    get:
+      parameters:
+      - name: unitId
+        in: path
+        description: Id of the unit to run the operation on (use /units/all to fetch the units)
+        required: true
+        schema:
+          type: number
+      tags:
+      - operation
+      summary: Returns the currently loaded project for the given unit
+      operationId: retrieveCurrentlyLoadedProject
+      description: 
+        Returns the currently loaded project for the given unit. Be aware that the unit should be running (turned on with HIM software running)
+      responses:
+        '200':
+          description: Project object or Error Message
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/Project'
+                - $ref: '#/components/schemas/Message'     
+                
+  /clientController/getVariable/{unitId}/{variableName}/:
+    get:
+      parameters:
+      - name: unitId
+        in: path
+        description: Id of the unit to run the operation on (use /units/all to fetch the units)
+        required: true
+        schema:
+          type: number
+      - name: variableName
+        in: path
+        description: Name of the variable to fetch
+        required: true
+        schema:
+          type: string
+      tags:
+      - operation
+      summary: Returns the current value of a specific variable.
+      operationId: retrieveVariableByName
+      description: 
+        Returns the current value of a specific variable for the project which is currently loaded. Be aware that the unit should be running (turned on with HIM software running)
+      responses:
+        '200':
+          description: Variable object or Error Message
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/Variable'
+                - $ref: '#/components/schemas/Message'     
+
+  /clientController/setVariable/{unitId}/{variableName}/{variableState}/:
+    get:
+      parameters:
+      - name: unitId
+        in: path
+        description: Id of the unit to run the operation on (use /units/all to fetch the units)
+        required: true
+        schema:
+          type: number
+      - name: variableName
+        in: path
+        description: Name of the variable to change
+        required: true
+        schema:
+          type: string
+      - name: variableState
+        in: path
+        description: New state of the variable
+        required: true
+        schema:
+          type: string
+      tags:
+      - operation
+      summary: Changes the state of a specific variable
+      operationId: setVariableState
+      description: 
+        Changes the state of a specific variable for the project which is currently loaded. Be aware that the unit should be running (turned on with HIM software running)
+      responses:
+        '200':
+          description: Info or Error Message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'   
+                
+  /clientController/processControl/{unitId}/{processId}/{controlType}/:
+    get:
+      parameters:
+      - name: unitId
+        in: path
+        description: Id of the unit to run the operation on (use /units/all to fetch the units)
+        required: true
+        schema:
+          type: number
+      - name: processId
+        in: path
+        description: Id of the process to control
+        required: true
+        schema:
+          type: number
+      - name: controlType
+        in: path
+        description: Control type determining the action to take on the process (Next, Previous, Reset, Play, Pause, Restart)
+        required: true
+        schema:
+          type: string
+      tags:
+      - operation
+      summary: Controls a process, based on the control type (Next step, Previous step, Reset, Play, Pause, Restart)
+      operationId: processControl
+      description: 
+        Controls a process, based on the control type (Next step, Previous step, Reset, Play, Pause, Restart) for the project which is currently loaded. Be aware that the unit should be running (turned on with HIM software running)
+      responses:
+        '200':
+          description: Info or Error Message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'  
+
+  /clientController/scheduleTask/{unitId}/{processId}/{taskId}/:
+    get:
+      parameters:
+      - name: unitId
+        in: path
+        description: Id of the unit to run the operation on (use /units/all to fetch the units)
+        required: true
+        schema:
+          type: number
+      - name: processId
+        in: path
+        description: Id of the process to schedule a task for. Be aware this should be a dynamic ('api controlled') process!
+        required: true
+        schema:
+          type: number
+      - name: taskId
+        in: path
+        description: Id of the task to schedule
+        required: true
+        schema:
+          type: string
+      tags:
+      - operation
+      summary: Schedules a task
+      operationId: scheduleTask
+      description: 
+        Schedules a task. Be aware that the unit should be running (turned on with HIM software running), that the given process id should be a dynamic ('api controlled') process which exists on the currently open project on this unit, and that the task id is the id of one of the tasks for that project.
+      responses:
+        '200':
+          description: Task object (the scheduled task) or Error Message
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/Task'
+                - $ref: '#/components/schemas/Message'
+                
+  /clientController/getScheduledTasks/{unitId}/{processId}/:
+    get:
+      parameters:
+      - name: unitId
+        in: path
+        description: Id of the unit to run the operation on (use /units/all to fetch the units)
+        required: true
+        schema:
+          type: number
+      - name: processId
+        in: path
+        description: Id of the process to schedule a task for. Be aware this should be a dynamic ('api controlled') process!
+        required: true
+        schema:
+          type: number
+      tags:
+      - operation
+      summary: Returns a list of currently scheduled tasks
+      operationId: getScheduledTasks
+      description: 
+        Returns a list of currently scheduled tasks. These are the tasks that have been scheduled using the 'scheduletask' call, and which have not yet (completely) been executed. Be aware that the unit should be running (turned on with HIM software running).
+      responses:
+        '200':
+          description: Array of Task objects (the scheduled tasks) or Error Message
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  - $ref: '#/components/schemas/Message'
+      
+servers:
+  - url: 'http://myHimServerUrl:7777/api/v1'
+  - url: 'http://localhost:7777/api/v1'
+components:
+  schemas:
+    Message:
+      type: object
+      description: Error message
+      required:
+        - Type
+        - ErrorMessage
+      properties:
+        Type:
+          type: string
+          example: 'ERROR'
+        ErrorMessage:
+          type: string
+          example: 'Project with id -1234 does not exist.'
+    BaseObject:
+      type: object
+      description: Base for all objects
+      required:
+        - Id
+        - Name
+      properties:
+        Name:
+          type: string
+          example: Entity name
+        Id:
+          type: number
+          example: 123454321
+    
+    
+    Project:
+      allOf:
+        - $ref: '#/components/schemas/BaseObject'
+        - type: object
+          description: Project
+          properties:
+            Type:
+              type: string
+              example: Project
+            Archived:
+              type: boolean
+              example: false
+            Description:
+              type: string
+              example: Assembly of a filter
+    Unit:
+      allOf:
+        - $ref: '#/components/schemas/BaseObject'
+        - type: object
+          description: Unit
+          properties:
+            Type:
+              type: string
+              example: Unit
+            LastHeartbeat:
+              type: string
+              example: '2019-09-09T17:04:52.8155703+02:00'
+            LastIp:
+              type: string
+              example: '123.123.123.2'
+    Variable:
+      type: object
+      description: Variable
+      properties:
+        Name:
+          type: string
+          example: 'myVariable'
+        CurrentState:
+          type: string
+          example: '123ABC'
+
+    Process:
+      allOf:
+        - $ref: '#/components/schemas/BaseObject'
+        - type: object
+          description: Process
+          properties:
+            Type:
+              type: string
+              example: Process
+            Dynamic:
+              type: boolean
+              example: false
+    Task:
+      allOf:
+        - $ref: '#/components/schemas/BaseObject'
+        - type: object
+          description: Task
+          properties:
+            Type:
+              type: string
+              example: Task
+    Resource:
+      allOf:
+        - $ref: '#/components/schemas/BaseObject'
+        - type: object
+          description: Resource
+          properties:
+            Guid:
+              type: string
+              example: 'e0464a14-a11f-4aad-a497-697a755a32fd'
+            Extension:
+              type: string
+              example: '.jpg'
+    NewEntity:
+      type: object
+      description: 'New Entity'
+      properties:
+        AssemblyObjectType:
+          type: string
+          example: CONTAINER
+        Name:
+          type: string
+          example: 'my container'
+    Entity:
+      allOf:
+        - $ref: '#/components/schemas/BaseObject'
+        - type: object
+          description: Entity
+          properties:
+            Type:
+              type: string
+              example: Entity
+            AssemblyObjectType:
+              type: string
+              example: CONTAINER

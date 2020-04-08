@@ -1,0 +1,538 @@
+penapi: 3.0.0
+info:
+  version: "1.0.1"
+  title: 'Unison Downstream Application Event and KPI API'
+  description: 'Provides a REST service for Unison downstream applications to provide Event (calendar) information as well as KPI information about these events. Supports CUD operations (no read).'
+  
+# Operations
+
+paths:
+  /healthcheck:
+    get:
+      tags:
+        - healthCheck
+      summary: Excutes an internal api health check. A http status code of 200 indicates the api is healthy and 500 indicates otherwise.
+      responses:
+        '200':
+          description: Ok
+        '500':
+          description: Internal Server Error
+  /appChronology:
+    post:
+      tags:
+        - appChronology
+      summary: Describes a sequence of data corresponding to an application over a period of time, such as hourly webcast views. Duplicate data is not supported.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/AppChronology'
+              minItems: 1
+              
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad request
+        '401':
+          description: Not authorized
+  /events:
+    post:
+      tags:
+        - events
+      summary: Adds a new event or list of events (deprecated - use PUT)
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad request
+        '401':
+          description: Not authorized
+        '403':
+          description: Forbidden
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Event'
+              minItems: 1
+        required: true
+    put:
+      tags:
+          - events
+      summary: Updates an existing event or list of events
+      responses:
+        '200':
+          description: Created/Updated
+        '400':
+          description: Bad request
+        '401':
+          description: Not authorized
+        '403':
+          description: Forbidden
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Event'
+              minItems: 1
+        description: Event objects to be updated
+        required: true
+    delete:
+      tags:
+        - events
+      summary: Permanently deletes an existing event or list of events
+      operationId: deleteEvent
+      parameters:
+        - name: eventId
+          in: path
+          description: Event IDs to delete
+          required: true
+          schema:
+            $ref: '#/components/schemas/eventDelete'
+
+      responses:
+        '400':
+          description: Event not found
+        '401':
+          description: Not authorized
+        '200':
+          description: Deleted
+  /eventData/gnw:
+    post:
+      tags:
+        - GNW eventData
+      summary: Add a new EventData (KPIs for each Event) object or list of objects, specific to GNW (deprecated - use PUT).
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad request
+        '401':
+          description: Not authorized
+        '403':
+          description: Forbidden
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GNWEventData'
+                
+    put:
+      tags:
+        - GNW eventData
+      summary: Update EventData (KPIs for each Event) object or list of objects, specific to GNW.
+      responses:
+        '200':
+          description: Created/Update
+        '400':
+          description: Bad request
+        '401':
+          description: Not authorized
+        '403':
+          description: Forbidden
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GNWEventData'
+  
+  /eventData/mmc:
+    post:
+      tags:
+        - MMC eventData
+      summary: Add a new EventData (KPIs for each Event) object or list of objects, specific to MMC (deprecated - use PUT).
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad request
+        '401':
+          description: Not authorized
+        '403':
+          description: Forbidden
+      requestBody:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MMCEventData'
+          required: true
+    put:
+      tags:
+        - MMC eventData
+      summary: Update EventData (KPIs for each Event) object or list of objects, specific to MMC.
+      responses:
+        '200':
+          description: Created/Updated
+        '400':
+          description: One or more event data objects not found
+        '401':
+          description: Not authorized
+        '403':
+          description: Forbidden
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MMCEventData'
+        required: true
+
+          
+components:
+
+  # Require x-api-key param in request header for authentication
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+  schemas:
+  # Primary types for CUD operations
+
+    AppChronology:
+      type: object
+      description: A record of one hour's work of appchronology data
+      required:
+        - id
+        - applicationId
+        - chronologyType
+        - beginDateTime
+        - chronologyData
+        - N3ATenantId
+      properties:
+        id:
+          type: string
+          description: 'A GUID for the specific appchronology item. This is only for uniqueness and will not be reused.'
+        applicationId:
+          type: string
+          description: 'GUID for your specific application ID'
+        chronologyType:
+          $ref: '#/components/schemas/AppChronologyTypesEnum'
+        beginDateTime:
+            type: string
+            format: date-time
+            description: The time at which the data is for. Must be an even unit (provide a beginDateTime that falls on the start of an hour).
+            example: '2019-07-21T00:00:00Z'
+        chronologyData:
+          description: The total for this hour (views, etc). Entries must be in integer format.
+          type: integer
+        N3ATenantId:
+          type: string
+          description: 'The ID for the customer tenant in N3A'
+
+    GNWEventData:
+      type: object
+      properties:
+          applicationId:
+            type: string
+            description: 'GUID for your specific application ID'
+          N3ATenantId:
+            type: string
+            description: 'The ID for the customer tenant in N3A'
+          pressReleases:
+            type: array
+            items:
+              type: object
+              description: List of properties representing KPIS relevant to Wire and List distributions
+              properties:
+                eventId:
+                  type: string
+                  description: \"GN_US_eventId\" ID of the associated Event
+                views:
+                  type: integer
+                  description: Optional, will udpate if not NULL.
+                clicks:
+                  type: integer
+                  description: The numbver of clicks for a given Event
+                fulltextClips:
+                  type: integer
+                  description: The number of fulltext clips
+                headlineClips:
+                  type: integer
+                  description: The number of headline clips
+                engagement:
+                  type: integer
+                  description: Engagement (general activity)
+                duplicates:
+                  type: integer
+                  description: Number of duplicate email addresses
+                successRate:
+                  type: number
+                  description: Delivery sucess rate (0 - 1)
+                  example: .75
+                failureRate:
+                  type: number
+                  description: Delivery failure rate (0 - 1)
+                  example: .25
+                bounceRate:
+                  type: number
+                  description: Bounce rate (0 - 1)
+                  example: .25
+                readRate:
+                  type: number
+                  description: Read rate (0 - 1)
+                  example: .35
+              required:
+                - eventId
+                - views
+                - potentialReach
+                - fulltextClips
+                - headlineClips
+                - engagement
+                - duplicates
+                - successRate
+                - failureRate
+                - bounceRate
+                - readRate
+            minItems: 1
+      required:
+        - applicationId
+        - N3ATenantId
+        - pressReleases
+
+    MMCEventData:
+      type: object
+      properties:
+          applicationId:
+            type: string
+            description: 'GUID for your specific application ID'
+          N3ATenantId:
+            type: string
+            description: 'The ID for the customer tenant in N3A'
+          webcastEvents:
+            type: array
+            items:
+              type: object
+              description: List of properties representing KPIS relevant to MMC Webcasts
+              properties:
+                eventId:
+                  type: string
+                  description: ID of the associated Event
+                  example: "mmc_23456"
+                registrants:
+                  type: integer
+                  description: The nuber of Registrants
+                  example: 52
+                liveViews:
+                  type: integer
+                  description: The number of Live Views
+                  example: 120                
+                replayViews:
+                  type: integer
+                  description: The number of Replay Views
+                  example: 104
+                downloads:
+                  type: integer
+                  description: The number of Downloads
+                  example: 210
+                participants:
+                  type: integer
+                  description: The number of Total Participants
+                  example: 330
+              required:
+                - eventId
+                - registrants
+                - liveViews
+                - replayViews
+                - downloads
+                - participants
+            minItems: 1
+      required:
+        - applicationId
+        - N3ATenantId
+        - webcastEvents
+    eventDelete:
+        type: object
+        properties:
+            applicationId:
+              type: string
+              description: 'GUID for your specific application ID'
+            N3ATenantId:
+              type: string
+              description: 'The ID for the customer tenant in N3A'
+            eventIds:
+              type: array
+              items:
+                type: string
+                description: ID or IDs of the associated Event(s)
+                example: "mmc_23456"
+                required:
+                  - eventIds
+        required:
+          - applicationId
+          - N3ATenantId
+        uniqueItems: true
+          
+    LocalizedValue:
+      type: object
+      description: A key/value pair of a language short code and a corresponding string. Used for localization of event titles currently.
+      properties:
+        language:
+          type: string
+        value:
+          type: string
+          description: The localized value for this language
+    
+    Event:
+      type: object
+      description: A downstream application generated event such as a webcast, press release, etc.
+      required: 
+        - eventId
+        - applicationId
+        - N3ATenantId
+        - englishTitle
+        - startDateTime
+        - eventType
+      properties:
+        eventId:
+          type: string
+          description: 'The unique ID for the event in the source application system. To keep unique event IDs across systems, you must prepend the eventId with your applications short code (listed on Confluence). Example: a Whistleblower eventId of 1234 would become WB_1234'
+          example: 'WB_1234'
+        applicationId:
+          type: string
+          description: 'GUID for your specific application ID'
+        N3ATenantId:
+          type: string
+          description: 'The ID for the customer tenant in N3A'
+        primaryLanguage:
+          type: string
+          description: 'Primary language for this event - Language short code.'
+        localizedTitles:
+          description: 'An  array of LocalizedValue for each language the event supports. Use the language code as the key and the title as the value.'
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalizedValue'
+        startDateTime:
+          type: string
+          format: date-time
+          example: '2017-07-21T17:32:28Z'
+        duration:
+          type: number
+          description: 'The length of the event in minutes. Optional, omit if the event does not have a specified length.'
+          example: 60
+        eventType:
+          $ref: '#/components/schemas/EventTypeEnum'
+        eventSubType:
+          $ref: '#/components/schemas/EventSubTypeEnum'
+        eventUseCase:
+          $ref: '#/components/schemas/EventUseCaseEnum'
+        workflowState:
+          $ref: '#/components/schemas/WorkflowStateEnum'
+        actions:
+          description: An array of the actions the user can perform on the event, such as view, report, edit, etc.
+          type: array
+          items:
+            $ref: '#/components/schemas/EventAction'
+          minItems: 1
+        languages:
+          type: array
+          items:
+            type: string
+            description: An array of the languages the event supports.
+            example: "en"
+            required:
+              - languages
+   
+  # Complex types that appear as properties of primary types
+
+    EventAction:
+      type: object
+      properties:
+        actionType:
+          $ref: '#/components/schemas/EventActionTypeEnum'
+        actionUrl:
+          type: string
+          description: The complete URL to direct the user to in order to perform the specified action
+          example: 'http://www.dostuff.org/edit.aspx?id=1234'
+          
+  # Enum types for reuse in other types
+  
+ #   AppChronologyIntervalsEnum:
+ #     type: string
+ #     description: The time interval provided in the chronology array
+ #     enum: 
+ #       - Hours
+ #       - Minutes
+ #       - Days
+    AppChronologyTypesEnum:
+      type: string
+      description: The metric being reported in the chronology array
+      enum:
+        - ContentViews
+        - WebcastViews
+        - Registrants
+        - Attendees
+        - Messages
+        - Visitors
+        # Whistleblower types
+        - WBNew
+        - WBActive
+        - WBActionPending
+        - WBClosed
+        - WBDismissed
+    EventActionTypeEnum:
+      type: string
+      enum:
+      - Edit
+      - View
+      - Report
+      - Present
+    EventTypeEnum:
+      type: string
+      description: The primary type of the event. Must correspond to an eventType supported by the supplying application.
+      enum: 
+      - PressRelease
+      - RegulatoryFiling
+      - EmailDistribution
+      - EventCalendarEntry
+      - Webcast
+      - ConferenceCall
+      
+    EventSubTypeEnum:
+      type: string
+      description: The subtype of the event. Must correspond to appropriate eventType - see documentation for acceptable mappings.
+      enum:
+      - StandardAudio
+      - VirtualAudio
+      - StandardVideo
+      - VirtualVideo
+      - AudioOnly
+      - Video
+      - SelfService
+      - FullService
+      - EdgarService
+      - SedarService
+    EventUseCaseEnum:
+      type: string
+      description: The use case for the event. Based on event subject code.
+      enum:
+      - General
+      - IR
+      - PR
+      - Marketing
+      - Internal
+    WorkflowStateEnum:
+      description: The workflow state of an event if applicable
+      type: string
+      enum:
+      - Draft
+      - Scheduled
+      - Published
+      - Prior
+      - Live
+      - Post
+      - OnDemand
+      - Open
+      - Closed
+  
+security:
+  - ApiKeyAuth: []
+servers:
+  - description: API Automocking
+    url: https://virtserver.swaggerhub.com/West-WDMS/UnisonAppApi/1.0.1

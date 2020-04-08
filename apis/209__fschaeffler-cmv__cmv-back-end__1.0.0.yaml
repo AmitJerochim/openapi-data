@@ -1,0 +1,2755 @@
+openapi: 3.0.0
+
+info:
+  version: 1.0.0
+  title: CMV Back-end API
+
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: 'https://virtserver.swaggerhub.com/fschaeffler-cmv/cmv-back-end/1.0.0'
+  - description: CMV Back-end API (Production)
+    url: 'https://api.cm-gesundheit.de'
+  - description: CMV Back-end API (Staging)
+    url: 'https://api-stage.cm-gesundheit.de'
+  - description: CMV Back-end API (Development)
+    url: 'https://api-dev.cm-gesundheit.de'
+    
+security:
+  - bearerAuth: []
+
+paths:
+  /sessions:
+    post:
+      security: []
+      tags:
+        - Authentification
+      description: Create a new session
+      summary: Login to the application
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  maxLength: 255
+                  pattern: /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/
+                password:
+                  type: string
+                  format: sha256 + base64
+                  pattern: /.{64}/
+                  maxLength: 64
+                  minLength: 64
+        required: true
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    description: JWT token
+                    type: string
+                  refreshToken:
+                    description: JWT refresh token
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+        '500':
+          $ref: '#/components/responses/500'
+    delete:
+      tags:
+        - Authentification
+      description: Delete an existing session
+      summary: Logout from the application
+      parameters:
+        - name: all
+          in: query
+          required: false
+          description: Logout from all sessions
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successful logout
+        '401':
+          $ref: '#/components/responses/401'
+        '500':
+          $ref: '#/components/responses/500'
+  /sessions/refresh:
+    post:
+      tags:
+        - Authentification
+      summary: Refresh an existing session
+      description: Refresh a JWT token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+        required: true
+      responses:
+        '200':
+          description: Successful session token refresh
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    description: JWT token
+                    type: string
+                  refreshToken:
+                    description: JWT refresh token
+                    type: string
+                    maxLength: 512
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '500':
+          $ref: '#/components/responses/500'
+  /me:
+    get:
+      summary: Get user profile
+      description: Retrieves user profile for basic fields
+      tags:
+        - User
+      responses:
+        '200':
+          description: Successful profile retrieval
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - firstname
+                  - lastname
+                  - email
+                  - emailVerified
+                  - roleId
+                properties:
+                  id:
+                    type: integer
+                  firstname:
+                    type: string
+                  lastname:
+                    type: string
+                  email:
+                    type: string
+                  emailVerified:
+                    type: boolean
+                  language:
+                    type: string
+                    format: Supported language [de|en]
+                  roleId:
+                    type: integer
+                  salesUserId:
+                    type: integer
+                  phone:
+                    type: string
+                  phoneVerified:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '500':
+          $ref: '#/components/responses/500'
+  /users:
+      get:
+        summary: Get list of users
+        description: Get list of users
+        tags:
+          - User
+        parameters:
+          - name: include-disabled
+            in: query
+            required: false
+            description: get disabled users also
+            schema:
+              type: boolean
+        responses:
+          '200':
+            description: Successful user list retrievl
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      firstname:
+                        type: string
+                      lastname:
+                        type: string
+                      email:
+                        type: string
+                      roleId:
+                        type: integer
+                      disabled:
+                        type: boolean
+                      lastSessionRefresh:
+                        type: string
+          '400':
+            $ref: '#/components/responses/400'
+          '401':
+            $ref: '#/components/responses/401'
+          '500':
+            $ref: '#/components/responses/500'
+      post:
+        summary: Create user
+        description: Create user
+        tags:
+          - User
+        requestBody:
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - firstname
+                  - lastname
+                  - email
+                  - roleId
+                properties:
+                  firstname:
+                    type: string
+                  lastname:
+                    type: string
+                  email:
+                    type: string
+                  language:
+                    type: string
+                  roleId:
+                    type: integer
+                    description: The id of the role (admin/accountant)
+          required: true
+        responses:
+          '201':
+            description: Successful user creation
+            content:
+              application/json:
+                schema:
+                  type: object
+                  required: ['id', 'path']
+                  properties:
+                    id:
+                      description: ID of the user
+                      type: integer
+                    path:
+                      description: Object URL
+                      type: string
+          '400':
+            $ref: '#/components/responses/400'
+          '500':
+            $ref: '#/components/responses/500'
+  /users/{userId}:
+    summary: Endpoint for specific User manipulation
+    description: Users read/update/delete
+    get:
+      summary: Get user profile
+      description: Retrieves user profile for basic fields
+      parameters:
+        - name: userId
+          in: path
+          description: ID of the user to be updated
+          required: true
+          schema:
+            type: integer
+      tags:
+        - User
+      responses:
+        '200':
+          description: Successful profile retrieval
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - id
+                  - firstname
+                  - lastname
+                  - email
+                  - emailVerified
+                  - roleId
+                properties:
+                  id:
+                    type: integer
+                  firstname:
+                    type: string
+                  lastname:
+                    type: string
+                  email:
+                    type: string
+                  emailVerified:
+                    type: boolean
+                  language:
+                    type: string
+                    format: Supported language [de|en]
+                    nullable: true
+                  roleId:
+                    type: integer
+                  salesUserId:
+                    type: integer
+                    nullable: true
+                  phone:
+                    type: string
+                    nullable: true
+                  phoneVerified:
+                    type: boolean
+                    nullable: true
+                  address1:
+                    type: string
+                  address2:
+                    type: string
+                    nullable: true
+                  postcode:
+                    type: string
+                  city:
+                    type: string
+                  countryCode:
+                    type: string
+                  brokerNumber:
+                    type: string
+                  companyName:
+                    type: string
+                  vat:
+                    type: string
+                  iban:
+                    type: string
+                  bankAccountHolder:
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '500':
+          $ref: '#/components/responses/500'
+    patch:
+        summary: Update user
+        description: Update user
+        parameters:
+        - name: userId
+          in: path
+          description: ID of the user to be deleted
+          required: true
+          schema:
+            type: integer
+        tags:
+          - User
+        requestBody:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  firstname:
+                    type: string
+                  lastname:
+                    type: string
+                  email:
+                    type: string
+                  language:
+                    type: string
+                  password:
+                    type: string
+                    description: set to any value in order to trigger reset
+                  roleId:
+                    type: integer
+                    description: The id of the role (admin/accountant/sales-user)
+          required: true
+        responses:
+          '200':
+            description: Successful user update
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    firstname:
+                      type: string
+                    lastname:
+                      type: string
+                    email:
+                      type: string
+                    language:
+                      type: string
+                    roleId:
+                      type: integer
+                    id:
+                      type: integer
+          '400':
+            $ref: '#/components/responses/400'
+          '500':
+            $ref: '#/components/responses/500'
+    delete:
+      summary: Delete a user by ID
+      description: (Soft) Delete a user
+      parameters:
+        - name: userId
+          in: path
+          description: ID of the user to be deleted
+          required: true
+          schema:
+            type: integer
+      tags:
+        - User
+        - Sales User
+      responses:
+        '200':
+          description: Successful user delete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    description: ID of the user
+        '404':
+          $ref: '#/components/responses/404'
+        '500':
+          $ref: '#/components/responses/500'
+  /users/reset-password:
+    get:
+      security: []
+      tags:
+        - User
+      summary: Request a password reset
+      description: Request a password reset if the given email exists
+      parameters:
+        - name: email
+          in: query
+          description: Email of user to reset password
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful password reset request sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    description: Email address of user
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /users/email/send-verification:
+    get:
+      security: []
+      tags:
+        - User
+      summary: Send verification email to user
+      description: Send verification email to user if the given email exists
+      parameters:
+        - name: email
+          in: query
+          description: Email of user that will receive the verification email
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful sending of email verification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    description: Email address of user
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /users/{userId}/password:
+    post:
+      security: []
+      tags:
+        - User
+      summary: Reset a password
+      description: >-
+        Reset a password with the new given after verifying the password reset
+        token
+      parameters:
+        - name: userId
+          in: path
+          description: User Id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - passwordResetToken
+                - password
+              properties:
+                passwordResetToken:
+                  type: string
+                password:
+                  type: string
+        required: true
+      responses:
+        '200':
+          description: Successful password reset request sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    description: User id of the user that the password changed
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /users/{userId}/email/verify:
+    get:
+      security: []
+      tags:
+        - User
+      summary: Verify email
+      description: Verify an email with a token
+      parameters:
+        - name: userId
+          in: path
+          description: ID of the user
+          required: true
+          schema:
+            type: integer
+        - name: token
+          in: query
+          description: Verification token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful email verification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  phoneVerified:
+                    description: Email verification status
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /sales-users:
+    post:
+      security: []
+      tags:
+        - Sales User
+      summary: Register a sales user
+      description: Registers a new sales user including verification requests
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - phone
+                - firstname
+                - lastname
+                - address1
+                - postcode
+                - city
+                - countryCode
+                - password
+                - brokerNumber
+                - iban
+                - bankAccountHolder
+              properties:
+                email:
+                  type: string
+                phone:
+                  type: string
+                firstname:
+                  type: string
+                lastname:
+                  type: string
+                address1:
+                  type: string
+                address2:
+                  type: string
+                postcode:
+                  type: string
+                city:
+                  type: string
+                countryCode:
+                  type: string
+                  format: ISO 3166-2
+                brokerNumber:
+                  type: string
+                companyName:
+                  type: string
+                vat:
+                  type: string
+                iban:
+                  type: string
+                bankAccountHolder:
+                  type: string
+                language:
+                  type: string
+                  format: Supported language [de|en]
+                password:
+                  type: string
+                  format: sha256 + base64
+        required: true
+      responses:
+        '201':
+          description: Successful registration
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ['userId', 'salesUserId', 'path']
+                properties:
+                  userId:
+                    description: ID of the user
+                    type: integer
+                  salesUserId:
+                    description: ID of the sales user
+                    type: integer
+                  path:
+                    description: Object URL,
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /sales-users/{salesUserId}:
+    patch:
+      security: []
+      tags:
+        - Sales User
+      summary: Update a sales user
+      description: Updates a sales user including verification requests
+      parameters:
+        - name: salesUserId
+          in: path
+          description: ID of the salesUser to be updated
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                firstname:
+                  type: string
+                lastname:
+                  type: string
+                password:
+                  type: string
+                  format: sha256 + base64
+                language:
+                  type: string
+                  format: Supported language [de|en]
+                roleId:
+                  type: integer
+                phone:
+                  type: string
+                phoneVerified:
+                  type: boolean
+                phoneVerificationToken:
+                  type: string
+                address1:
+                  type: string
+                address2:
+                  type: string
+                postcode:
+                  type: string
+                city:
+                  type: string
+                countryCode:
+                  type: string
+                  format: ISO 3166-2
+                brokerNumber:
+                  type: string
+                companyName:
+                  type: string
+                vat:
+                  type: string
+                disabled:
+                  type: boolean
+                iban:
+                  type: string
+                bankAccountHolder:
+                  type: string
+      responses:
+        '200':
+          description: Successful update
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ['userId', 'salesUserId']
+                properties:
+                  userId:
+                    description: ID of the user
+                    type: integer
+                  salesUserId:
+                    description: ID of the sales user
+                    type: integer
+        '204':
+          description: The request was successfull but no updates where done in the DB
+        '400':
+          $ref: '#/components/responses/400'
+        '403':
+          $ref: '#/components/responses/403'
+        '404':
+          $ref: '#/components/responses/404'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /validations/post-code/{countryCode}/{postCode}:
+    get:
+      security: []
+      tags:
+        - Validation
+      summary: Validate a post code
+      description: Validate a post code and return possible cities
+      parameters:
+        - name: countryCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: postCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Valid cities for post code
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cities:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /validations/iban/{iban}:
+    get:
+      tags:
+        - Validation
+      summary: Validate a bank account number
+      description: Validate a bank account nummber. For now only possible for German bank accounts
+      parameters:
+        - name: iban
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Validated bank account
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ['isValid']
+                properties:
+                  isValid:
+                    type: boolean
+                  bankName:
+                    type: string
+                  city:
+                    type: string
+                  countryCode:
+                    type: string
+                  iban:
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /validations/bank-account-number/{countryCode}/{routingNumber}/{accountNumber}:
+    get:
+      tags:
+        - Validation
+      summary: Validate a bank account number
+      description: Validate a bank account nummber. For now only possible for German bank accounts
+      parameters:
+        - name: countryCode
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: routingNumber
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: accountNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Validated bank account
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ['isValid']
+                properties:
+                  isValid:
+                    type: boolean
+                  bankName:
+                    type: string
+                  city:
+                    type: string
+                  countryCode:
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /sales-users/{salesUserId}/phone/verify:
+    get:
+      security: []
+      tags:
+        - Sales User
+      summary: Verify phone number
+      description: Verify a phone number with a 6-digit token
+      parameters:
+        - name: salesUserId
+          in: path
+          description: ID of the sales user
+          required: true
+          schema:
+            type: integer
+        - name: token
+          in: query
+          description: Verification token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful phone verification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  phoneVerified:
+                    description: Phone verification status
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /sales-users/phone/send-verification:
+    get:
+      security: []
+      tags:
+        - Sales User
+      summary: Send verification SMS to Sales User
+      description: Send verification SMS to Sales User if the given phone exists
+      parameters:
+        - name: phone
+          in: query
+          description: phone of user that will receive the verification SMS
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful sending of SMS verification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  phone:
+                    description: Phone of user
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /sales-users/phone/make-verification-call:
+    get:
+      security: []
+      tags:
+        - Sales User
+      summary: Make verification phone call to Sales User
+      description: Make verification phone call to Sales User if the given phone exists
+      parameters:
+        - name: phone
+          in: query
+          description: phone of user that will receive the verification phone call
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful placing of verification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  phone:
+                    description: Phone of user
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+  /sales-users/invite:
+    get:
+      security:
+        - BearerAuthAdmin: []
+      tags:
+        - Sales User
+      summary: Invite Sales User
+      description: Invite a sales user via an email
+      parameters:
+        - name: email
+          in: query
+          description: email of Sales user that will receive the invitation email
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful sending of invitation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    description: Email of sales user
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /customers:
+    summary: Endpoint for Customers manipulation
+    description: Customers creation/list
+    get:
+      summary: List Customers
+      description: List Customers
+      tags:
+        - Customer
+      parameters:
+        - name: include-disabled
+          in: query
+          description: A query parameter whether or not to include the disabled customers on the results
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successful fetching of customers' list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomerWithSubscription'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+    post:
+      summary: Create customer
+      description: Create Customer
+      tags:
+        - Customer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - firstname
+                - lastname
+                - email
+                - address1
+                - postcode
+                - city
+                - countryCode
+                - subscription
+                - bankAccount
+              properties:
+                title:
+                  type: string
+                  nullable: true
+                firstname:
+                  type: string
+                lastname:
+                  type: string
+                email:
+                  type: string
+                address1:
+                  type: string
+                address2:
+                  type: string
+                postcode:
+                  type: string
+                city:
+                  type: string
+                countryCode:
+                  type: string
+                  format: ISO 3166-2
+                language:
+                  type: string
+                  format: Supported language [de|en]
+                reference:
+                  type: string
+                subscription:
+                  type: object
+                  required:
+                    - startDate
+                    - tariffId
+                    - tariffOptionPriceId
+                  properties:
+                    startDate:
+                      type: string
+                      format: date
+                    tariffId:
+                      type: integer
+                    tariffOptionPriceId:
+                      type: integer
+                bankAccount:
+                  type: object
+                  required:
+                    - iban
+                    - recipient
+                  properties:
+                    iban:
+                      type: string
+                    recipient:
+                      type: string
+        required: true
+      responses:
+        '201':
+          description: Successful customer creation
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ['id', 'path']
+                properties:
+                  id:
+                    description: ID of the customer
+                    type: integer
+                  reference:
+                    description: Customer reference
+                  path:
+                    description: Object URL
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /customers/{customerId}:
+    summary: Endpoint for specific Customer manipulation
+    description: Customers read/update/delete
+    patch:
+      summary: Update a customer by ID
+      description: Update Customer
+      parameters:
+        - name: customerId
+          in: path
+          description: ID of the customer to be updated
+          required: true
+          schema:
+            type: integer
+      tags:
+        - Customer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  nullable: true
+                firstname:
+                  type: string
+                lastname:
+                  type: string
+                email:
+                  type: string
+                address1:
+                  type: string
+                address2:
+                  type: string
+                postcode:
+                  type: string
+                city:
+                  type: string
+                countryCode:
+                  type: string
+                  format: ISO 3166-2
+                language:
+                  type: string
+                  format: Supported language [de|en]
+                reference:
+                  type: string
+                disabled:
+                  type: boolean
+                salesUserId:
+                  type: integer
+                bankAccount:
+                  type: object
+                  properties:
+                    iban:
+                      type: string
+                    recipient:
+                      type: string
+        required: true
+      responses:
+        '200':
+          description: Successful customer update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          $ref: '#/components/responses/400'
+        '404':
+          $ref: '#/components/responses/404'
+        '500':
+          $ref: '#/components/responses/500'
+    get:
+      summary: Get Customer
+      description: Get Customer
+      tags:
+        - Customer
+      parameters:
+        - name: customerId
+          in: path
+          description: ID of the customer to be retrieved
+          required: true
+          schema:
+            type: integer
+        - name: include-disabled
+          in: query
+          description: A query parameter whether or not to include the disabled customers on the results
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successful fetching of customers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerWithSubscription'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+    delete:
+      summary: Delete a customer by ID
+      description: (Soft) Delete a customer
+      parameters:
+        - name: customerId
+          in: path
+          description: ID of the customer to be deleted
+          required: true
+          schema:
+            type: integer
+      tags:
+        - Customer
+      responses:
+        '200':
+          description: Successful customer delete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customerId:
+                    type: string
+                    description: ID of the customer
+        '404':
+          $ref: '#/components/responses/404'
+        '500':
+          $ref: '#/components/responses/500'
+  /commissions:
+    summary: Endpoint for Commissions manipulation
+    description: Commissions
+    get:
+      summary: List Commissions
+      description: >
+        Sales Users gets only their own Commissions. Admins & Accountants get the unfiltered Commissions.
+        <br/><br/>
+        **Authorized Roles:**
+          * `Admin`
+          * `Accountant`
+          * `Sales User`
+      security:
+        - BearerAuthAdmin: []
+        - BearerAuthAccountant: []
+        - BearerAuthSalesUser: []
+      tags:
+        - Commission
+      parameters:
+        - name: format
+          in: query
+          description: Format of the expected results
+          required: false
+          schema:
+            type: string
+            enum: [csv]
+      responses:
+        '200':
+          description: List commissions
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - commissions
+                properties:
+                  commissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Commission'
+            text/csv:
+              schema:
+                type: object
+                properties:
+                  items:
+                    $ref: '#/components/schemas/CommissionCSV'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '500':
+          $ref: '#/components/responses/500'
+    patch:
+      summary: Batch update of commissions
+      description: Batch update of commissions
+      tags:
+        - Commission
+      security:
+        - BearerAuthAdmin: []
+        - BearerAuthAccountant: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [commissions]
+              properties:
+                payments:
+                  type: array
+                  items:
+                    type: object
+                    required: [id, status]
+                    properties:
+                      id:
+                        type: number
+                      status:
+                        type: number
+      responses:
+        200:
+          description: Result of the batch update of commissions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, failure]
+                properties:
+                  success:
+                    description: List of IDs that updated successfully
+                    type: array
+                    items:
+                      type: number
+                  failure:
+                    description: List of IDs that failed to update
+                    type: array
+                    items:
+                      type: number
+        204:
+          description: The request was successful but there were no commissions in the body, so no updates in the DB
+        400:
+          $ref: '#/components/responses/400'
+        403:
+          $ref: '#/components/responses/403'
+        500:
+          $ref: '#/components/responses/500'
+  /commissions/{commissionId}:
+    patch:
+      tags:
+        - Commission
+      summary: Update commission's status
+      description: >
+        Update a commission's status
+        <br/><br/>
+        **Authorized Roles:**
+          * `Admin`
+          * `Accountant`
+      security:
+        - BearerAuthAdmin: []
+        - BearerAuthAccountant: []
+      parameters:
+        - name: commissionId
+          in: path
+          description: Reference ID of the subscription commission
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Result of the commissionId update
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [commissionId]
+                properties:
+                  commissionId:
+                    description: Reference ID of the updated commission
+                    type: integer
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+  /commissions/report:
+    summary: Endpoint for Commission Reports manipulation
+    description: Commission Reports
+    get:
+      summary: List Commission Reports
+      description: >
+        Admins & Accountants get commission reports grouped by invoicingPeriod, salesUserId and payment status.
+        <br/><br/>
+        **Authorized Roles:**
+          * `Admin`
+          * `Accountant`
+      security:
+        - BearerAuthAdmin: []
+        - BearerAuthAccountant: []
+      tags:
+        - Commission
+      parameters:
+        - name: format
+          in: query
+          description: Format of the expected results
+          required: false
+          schema:
+            type: string
+            enum: [csv]
+      responses:
+        '200':
+          description: List commission reports
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - commissions
+                properties:
+                  commissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CommissionReport'
+            text/csv:
+              schema:
+                type: object
+                properties:
+                  items:
+                    $ref: '#/components/schemas/CommissionReport'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '500':
+          $ref: '#/components/responses/500'
+  /tariffs:
+    summary: Endpoint for Tariffs manipulation
+    description: Tariffs creation/list
+    get:
+      summary: List Tariffs
+      description: List Tariffs
+      tags:
+        - Tariff
+      responses:
+        '200':
+          description: Successful fetching of tariffs' list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tariff'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /tariffs/{tariffId}/tariff-options:
+    summary: Endpoint for getting tariff options by tariff id
+    description: Tariffs options list
+    get:
+      summary: List Tariff options
+      description: List Tariff options by tariff Id
+      tags:
+        - Tariff
+      parameters:
+        - name: tariffId
+          in: path
+          description: ID of the tariff
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful fetching of tariff options
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TariffOption'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /tariffs/{tariffId}/documents:
+    summary: Endpoint for downloading tariff documents
+    description: Tariffs documents list
+    get:
+      summary: List Tariff documents
+      description: List Tariff documents
+      tags:
+        - Tariff
+      parameters:
+        - name: tariffId
+          in: path
+          description: ID of the tariff
+          required: true
+          schema:
+            type: integer
+        - name: language
+          in: query
+          description: language of the documents [de|en]
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful fetching of tariffs' documents list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documents:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        url: 
+                          type: string
+                    
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /tariffs/{tariffId}/tariff-options/{tariffOptionId}/tariff-option-prices:
+    summary: Endpoint for getting tariff option prices by tariff id and tariff option id
+    description: Tariffs option prices list
+    get:
+      summary: List Tariff option prices
+      description: List Tariff option prices by tariff id and tariff option id
+      tags:
+        - Tariff
+      parameters:
+        - name: tariffId
+          in: path
+          description: ID of the tariff
+          required: true
+          schema:
+            type: integer
+        - name: tariffOptionId
+          in: path
+          description: ID of the tariff option
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful fetching of tariff option prices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TariffOptionPrice'
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /documents:
+    post:
+      summary: Upload Document (presigned URL)
+      description: Get presigned URL to upload Documents
+      tags:
+        - Document
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - fileType
+              properties:
+                type:
+                  type: string
+                  description: The type of the refference
+                  enum: [user,customer,subscription,tariff]
+                fileType:
+                  type: string
+                  description: The type of the file to be uploaded
+                  enum: [png,jpg,jpeg,pdf]
+                userId:
+                  type: integer
+                  nullable: true
+                customerId:
+                  type: integer
+                  nullable: true
+                subscriptionId:
+                  type: integer
+                  nullable: true
+                tariffId:
+                  type: integer
+                  nullable: true
+        required: true
+      responses:
+        '200':
+          description: Successful URL creation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - url
+                properties:
+                  url:
+                    type: string
+                    description: The presigned URL
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /documents/{documentId}:
+    summary: Endpoint for downloading documents
+    description: Tariffs documents list
+    get:
+      summary: Download document
+      description:  Download document with given id
+      tags:
+        - Document
+      parameters:
+        - name: documentId
+          in: path
+          description: ID of the Document
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful fetching of document
+        '400':
+          $ref: '#/components/responses/400'
+        '404':
+          $ref: '#/components/responses/404'
+  /tariffs/calculate:
+    summary: Endpoint for calculating tariff options
+    description: Tariff calculator
+    post:
+      tags:
+        - Tariff
+      summary: Calculate tariffs
+      description: Calculates tariff options based on criteria
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - tariffId
+              - birthday
+              - insuranceStartDate
+              - tariffRestrictions
+              properties:
+                tariffId:
+                  type: integer
+                birthday:
+                  type: string
+                  format: date
+                insuranceStartDate:
+                  type: string
+                  format: date
+                tariffRestrictions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      tariffRestrictionId:
+                        type: integer
+                      tariffRestrictionTypeId:
+                        type: integer
+        required: true
+      responses:
+        '201':
+          description: All available tariff options
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - tariffOptions
+                  - additionalRestrictions
+                properties:
+                  additionalRestrictions:
+                    type: array
+                    items:
+                      type: string
+                  tariffOptions:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - tariffOptionId
+                        - tariffOptionName
+                        - tariffOptionDesc
+                        - tariffOptionPriceId
+                        - tariffOptionPrice
+                      properties:
+                        tariffOptionId:
+                          type: integer
+                        tariffOptionName:
+                          type: string
+                        tariffOptionDesc:
+                          type: string
+                        tariffOptionPriceId:
+                          type: integer
+                        tariffOptionPrice:
+                          type: integer
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /webhooks:
+    post:
+      tags:
+        - Webhook
+      summary: Create new webhook
+      description: Creates a new webhook for a specified trigger
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - url
+              properties:
+                url:
+                  type: string
+                headers:
+                  type: object
+                trigger:
+                  type: string
+                  format: Webhook triggers ['commission']
+                  default: commission
+        required: true
+      responses:
+        '201':
+          description: All webhooks
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - id
+                - url
+                - trigger
+                - userId
+                - secret
+                - path
+                properties:
+                  id:
+                    type: integer
+                  url:
+                    type: string
+                  headers:
+                    type: object
+                  userId:
+                    type: integer
+                  trigger:
+                    type: string
+                    format: Webhook triggers ['commission']
+                  secret:
+                    type: string
+                    format: /^.{64}$/
+                  path:
+                    type: string
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+    get:
+      tags:
+        - Webhook
+      summary: Get webhooks list
+      description: Gets all available webhooks and their configuration
+      responses:
+        '200':
+          description: All webhooks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhooks:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - id
+                      - url
+                      - trigger
+                      - userId
+                      properties:
+                        id:
+                          type: integer
+                        url:
+                          type: string
+                        headers:
+                          type: object
+                        userId:
+                          type: integer
+                        trigger:
+                          type: string
+                          format: Webhook triggers ['commission']
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /webhooks/${webhookId}/test:
+    get:
+      tags:
+        - Webhook
+      summary: Test a webhook
+      description: |
+        To verify that a received webhook call's integrity, there's a header key on every request to the webhook-URL. The key is `HTTP-X-BODY-SIGNATURE` and contains a 64 character string containing a hash of the payload and the webhook's secret. The webhook's secret is only displayed once and that's as part of the response when the webhook is created.
+
+        A verification on the receiver-side can be done with the following code.
+
+        ```
+        const hash = crypto
+            .createHash('sha256')
+            .update(response.body + webhookSecret)
+            .digest('base64')
+            .substring(0, 64)
+
+        const isValid = hash === response.headers['HTTP-X-BODY-SIGNATURE']
+        ```
+      parameters:
+      - name: webhookId
+        in: path
+        description: ID of the webhook to be tested
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Webhook ID which got test triggered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhookId:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /webhooks/${webhookId}:
+    delete:
+      tags:
+        - Webhook
+      summary: Delete a webhook
+      description: Deletes a stored webhook
+      parameters:
+      - name: webhookId
+        in: path
+        description: ID of the webhook to be deleted
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Webhook ID which got deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  webhookId:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/400'
+        '500':
+          $ref: '#/components/responses/500'
+  /payments:
+    get:
+      tags:
+        - Payments
+      summary: List subscription payments
+      description: >
+        Returns a list of all open, paid, and unpaid customer subscription payments
+        <br/><br/>
+        **Authorized Roles:**
+          * `Admin`
+          * `Accountant`
+      security:
+        - BearerAuthAdmin: []
+        - BearerAuthAccountant: []
+      parameters:
+        - name: format
+          in: query
+          description: Format of the expected results
+          required: false
+          schema:
+            type: string
+            enum: [csv]
+        - name: limit
+          in: query
+          description: Query limit used for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: offset
+          in: query
+          description: Query offset (page) used for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        200:
+          description: List of subscription payments
+          content:
+            application/json:
+              schema:
+                required: [payments]
+                properties:
+                  payments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Payment'
+            text/csv:
+              schema:
+                type: object
+                properties:
+                  items:
+                    $ref: '#/components/schemas/PaymentCSV'
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        500:
+          $ref: '#/components/responses/500'
+    patch:
+      summary: Batch update of payments
+      description: Batch update of payments
+      tags:
+        - Payments
+      security:
+        - BearerAuthAdmin: []
+        - BearerAuthAccountant: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payments]
+              properties:
+                payments:
+                  type: array
+                  items:
+                    type: object
+                    required: [id,status]
+                    properties:
+                      id:
+                        type: number
+                      status:
+                        type: number
+      responses:
+        200:
+          description: Result of the batch update of payments
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, failure]
+                properties:
+                  success:
+                    description: List of IDs that updated successfully
+                    type: array
+                    items:
+                      type: number
+                  failure:
+                    description: List of IDs that failed to update
+                    type: array
+                    items:
+                      type: number
+        204:
+          description: The request was successful but there were no payments in the body, so no updates in the DB
+        400:
+          $ref: '#/components/responses/400'
+        403:
+          $ref: '#/components/responses/403'
+        500:
+          $ref: '#/components/responses/500'
+  /payments/{paymentId}:
+    patch:
+      tags:
+        - Payments
+      summary: Update subscription payment
+      description: >
+        Update a subscription payment's status
+        <br/><br/>
+        **Authorized Roles:**
+          * `Admin`
+          * `Accountant`
+      security:
+        - BearerAuthAdmin: []
+        - BearerAuthAccountant: []
+      parameters:
+        - name: paymentId
+          in: path
+          description: Reference ID of the subscription payment
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Result of the payment update
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [paymentId]
+                properties:
+                  paymentId:
+                    description: Reference ID of the updated payment
+                    type: integer
+        400:
+          $ref: '#/components/responses/400'
+        401:
+          $ref: '#/components/responses/401'
+        403:
+          $ref: '#/components/responses/403'
+        404:
+          $ref: '#/components/responses/404'
+        500:
+          $ref: '#/components/responses/500'
+          
+  /status:
+    get:
+      security: []
+      tags:
+        - System
+      summary: Healthcheck
+      description: Check the status of the system
+      responses:
+        '200':
+          description: Successfull healthcheck
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  healthy:
+                    type: boolean
+        '500':
+          $ref: '#/components/responses/500'
+
+  /prospective-customers:
+    post:
+      security: []
+      tags:
+        - Customer
+      description: Register for product interest
+      summary: Register for product interest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - firstname
+                - lastname
+                - email
+                - birthday
+                - message
+              properties:
+                firstname:
+                  type: string
+                  description: Firstname of the prospective customer
+                lastname:
+                  type: string
+                  description: Lastname of the prospective customer
+                email:
+                  type: string
+                  maxLength: 255
+                  pattern: /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/
+                  description: Email of the prospective customer
+                birthday:
+                  type: string
+                  format: date
+                  description: Birthday of the prospective customer
+                message:
+                  type: string
+                  description: Message from the prospective customer
+        required: true
+      responses:
+        '200':
+          description: Successful registration of customer interest
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ['success']
+                properties:
+                  success:
+                    description: Status of the request
+                    type: boolean
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+  /contact:
+    post:
+      security: []
+      tags:
+        - Contact
+      description: Contact CMV support
+      summary: Contact support
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - message
+              properties:
+                name:
+                  type: string
+                  description: Name of the website visitor
+                email:
+                  type: string
+                  maxLength: 255
+                  pattern: /^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/
+                  description: Email of the website visitor
+                message:
+                  type: string
+                  description: Message from the website visitor
+        required: true
+      responses:
+        '200':
+          description: Successful request for contact support
+          content:
+            application/json:
+              schema:
+                type: object
+                required: ['success']
+                properties:
+                  success:
+                    description: Status of the request
+                    type: boolean
+        '429':
+          $ref: '#/components/responses/429'
+        '500':
+          $ref: '#/components/responses/500'
+
+components:
+  securitySchemes:
+    BearerAuthAdmin:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT for Role Admin
+    BearerAuthAccountant:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT for Role Accountant
+    BearerAuthSalesUser:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT for Role Sales User
+  responses:
+    '400':
+      description: Invalid input data provided
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '401':
+      description: Invalid email/password supplied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '403':
+      description: Forbidden action
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '404':
+      description: Object not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '429':
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    '500':
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          description: Error code
+          type: string
+        message:
+          description: Error message
+          type: string
+        details:
+          description: Error details
+          type: object
+    Customer:
+      type: object
+      required:
+        - title
+        - firstname
+        - lastname
+        - email
+        - address1
+        - postcode
+        - city
+        - countryCode
+        - bankAccount
+      properties:
+        id:
+          description: ID of the customer
+          type: integer
+        title:
+          type: string
+          nullable: true
+        firstname:
+          type: string
+        lastname:
+          type: string
+        email:
+          type: string
+        address1:
+          type: string
+        address2:
+          type: string
+        postcode:
+          type: string
+        city:
+          type: string
+        countryCode:
+          type: string
+          format: ISO 3166-2
+        language:
+          type: string
+          format: Supported language [de|en]
+        reference:
+          type: string
+        disabled:
+          type: boolean
+        birthday:
+          type: string
+          format: date
+        salesUserId:
+          type: integer
+        createdAt:
+          type: string
+          format: 'date-time'
+        updatedAt:
+          type: string
+          format: 'date-time'
+        bankAccount:
+          type: object
+          required: [iban, recipient]
+          properties:
+            iban:
+              type: string
+            recipient:
+              type: string
+    CustomerWithSubscription:
+      type: object
+      required:
+        - id
+        - title
+        - firstname
+        - lastname
+        - birthday
+        - email
+        - address1
+        - address2
+        - postcode
+        - city
+        - countryCode
+        - reference
+        - language
+        - disabled
+        - createdAt
+        - updatedAt
+        - bankAccount
+        - salesUserId
+        - tariffName
+        - tariffOptionName
+        - tariffOptionPrice
+        - subscriptionStatus
+        - subscriptionStartDate
+        - commission
+      properties:
+        id:
+          type: integer
+          description: ID of the customer
+        title:
+          type: string
+          nullable: true
+        firstname:
+          type: string
+        lastname:
+          type: string
+        birthday:
+          type: string
+          format: date
+        email:
+          type: string
+        address1:
+          type: string
+        address2:
+          type: string
+        postcode:
+          type: string
+        city:
+          type: string
+        countryCode:
+          type: string
+          format: ISO 3166-2
+        reference:
+          type: string
+        language:
+          type: string
+          format: Supported language [de|en]
+        disabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: 'date-time'
+        updatedAt:
+          type: string
+          format: 'date-time'
+        bankAccount:
+          type: object
+          required: [iban, recipient]
+          properties:
+            iban:
+              type: string
+            recipient:
+              type: string
+        salesUserId:
+          type: integer
+        tariffName:
+          type: string
+        tariffOptionName:
+          type: string
+        tariffOptionPrice:
+          type: integer
+        subscriptionStatus:
+          type: integer
+        subscriptionStartDate:
+          type: string
+          format: date
+        commission:
+          type: integer
+    Commission:
+      type: integer
+      required:
+        - id
+        - invoicingPeriod
+        - amount
+        - status
+        - customerId
+        - customerFirstname
+        - customerLastname
+        - tariffId
+        - tariffName
+        - tariffOptionId
+        - tariffOptionName
+      properties:
+        id:
+          description: Reference ID of the commission
+          type: integer
+        invoicingPeriod:
+          type: string
+          format: date
+        amount:
+          description: Commission amount in cents
+          type: integer
+          minimum: 0
+        status:
+          type: integer
+          description: >
+            Payment status
+              * `0` - Open
+              * `1` - Paid
+              * `2` - Cancelled
+          minimum: 0
+          maximum: 2
+        customerId:
+          description: Reference ID of the customer of the commission
+          type: integer
+        customerFirstname:
+          description: Commission's customer first name
+          type: string
+        customerLastname:
+          description: Commission's customer last name
+          type: string
+        salesUserId:
+          description: Reference ID of the sales user of the commission
+          type: integer
+        salesUserFirstname:
+          description: Commission's sales user first name
+          type: string
+        salesUserLastname:
+          description: Commission's sales user last name
+          type: string
+        tariffId:
+          description: Reference ID of the tariff of the commission's subscription
+          type: integer
+        tariffName:
+          description: Tariff name of the commission's subscription
+          type: string
+        tariffOptionId:
+          description: Reference ID of the tariff option of the commission's subscription
+          type: integer
+        tariffOptionName:
+          description: Tariff option name of the commission's subscription
+          type: string
+        reference:
+          description: Customer reference
+          type: string
+    CommissionReport:
+      type: object
+      required:
+        - invoicingPeriod
+        - salesUserId
+        - amountPaid
+        - amountOpen
+        - status
+        - bankAccountIban
+        - bankAccountHolder
+        - commissionIds
+        - salesUserFirstname
+        - salesUserLastname
+        - paidAt
+      properties:
+        invoicingPeriod:
+          type: string
+          format: date
+        amountOpen:
+          description: Commission amount that is not paid yet in cents
+          type: integer
+          minimum: 0
+        amountPaid:
+          description: Commission amount that is paid in cents
+          type: integer
+          minimum: 0
+        status:
+          type: integer
+          description: >
+            Payment status
+              * `0` - Open
+              * `1` - Paid
+              * `3` - Partially Paid
+          minimum: 0
+          maximum: 3
+        bankAccountIban:
+          description: IBAN of the Sales User
+          type: string
+        bankAccountHolder:
+          description: Bank Account Holder Name of the Sales User
+          type: string
+        commissionIds:
+          description: List of all related commission IDs for the given invoicing period
+          type: array
+          items:
+            type: integer
+        salesUserId:
+          description: Reference ID of the sales user of the commission
+          type: integer
+        salesUserFirstname:
+          description: Sales User firstname
+          type: string
+        salesUserLastname:
+          description: Sales User lastname
+          type: string
+        paidAt:
+          description: Last payment date
+          type: string
+          format: date
+          nullable: true
+    CommissionCSV:
+      type: integer
+      required:
+        - id
+        - invoicingPeriod
+        - amount
+        - status
+        - customerFirstname
+        - customerLastname
+        - tariffName
+        - tariffOptionName
+      properties:
+        id:
+          description: Reference ID of the commission
+          type: integer
+        invoicingPeriod:
+          type: string
+          format: date
+        amount:
+          description: Commission amount in cents
+          type: integer
+          minimum: 0
+        status:
+          type: integer
+          description: >
+            Payment status
+              * `0` - Open
+              * `1` - Paid
+              * `2` - Cancelled
+          minimum: 0
+          maximum: 2
+        customerFirstname:
+          description: Commission's customer first name
+          type: string
+        customerLastname:
+          description: Commission's customer last name
+          type: string
+        salesUserFirstname:
+          description: Commission's sales user first name
+          type: string
+        salesUserLastname:
+          description: Commission's sales user last name
+          type: string
+        tariffName:
+          description: Tariff name of the commission's subscription
+          type: string
+        tariffOptionName:
+          description: Tariff option name of the commission's subscription
+          type: string
+        reference:
+          description: Customer reference
+          type: string
+    PaymentCSV:
+      type: object
+      required:
+        - id
+        - month
+        - year
+        - amount
+        - status
+        - customerFirstname
+        - customerLastname
+        - customerBankAccountIban
+        - tariffName
+        - tariffOptionName
+      properties:
+        id:
+          description: Payment ID
+          type: integer
+        month:
+          description: Invoicing period month
+          type: integer
+          minimum: 0
+          maximum: 11
+        year:
+          description: Invoicing period year
+          type: integer
+        amount:
+          description: Payment amount in cents
+          type: integer
+          minimum: 0
+        status:
+          description: >
+            Payment status
+              * `0` - Open
+              * `1` - Paid
+              * `2` - Cancelled
+          type: integer
+          minimum: 0
+          maximum: 2
+        paidAt:
+          description: Date when payment was marked as paid
+          type: string
+          format: date-time
+        customerFirstname:
+          description: First name of the customer of the payment
+          type: string
+        customerLastname:
+          description: Last name of the customer of the payment
+          type: string
+        customerBankAccountIban:
+          description: IBAN of the customer
+          type: string
+        salesUserFirstname:
+          description: Firstname of the customer's sales user
+          type: string
+        salesUserLastname:
+          description: Lastname of the customer's sales user
+          type: string
+        tariffName:
+          description: Name of the subscription's tariff
+          type: string
+        tariffOptionName:
+          description: Name of the tariff's option
+          type: string
+    Payment:
+      type: object
+      required:
+        - id
+        - month
+        - year
+        - amount
+        - status
+        - customerId
+        - customerFirstname
+        - customerLastname
+        - customerBankAccountId
+        - customerBankAccountIban
+        - tariffId
+        - tariffName
+        - tariffOptionId
+        - tariffOptionName
+      properties:
+        id:
+          description: Payment ID
+          type: integer
+        month:
+          description: Invoicing period month
+          type: integer
+          minimum: 0
+          maximum: 11
+        year:
+          description: Invoicing period year
+          type: integer
+        amount:
+          description: Payment amount in cents
+          type: integer
+          minimum: 0
+        status:
+          description: >
+            Payment status
+              * `0` - Open
+              * `1` - Paid
+              * `2` - Cancelled
+          type: integer
+          minimum: 0
+          maximum: 2
+        paidAt:
+          description: Date when payment was marked as paid
+          type: string
+          format: date-time
+        customerId:
+          description: Reference ID of the customer of the payment
+          type: integer
+        customerFirstname:
+          description: First name of the customer of the payment
+          type: string
+        customerLastname:
+          description: Last name of the customer of the payment
+          type: string
+        customerBankAccountId:
+          description: Reference ID of the customer's bank account
+          type: integer
+        customerBankAccountIban:
+          description: IBAN of the customer
+          type: string
+        salesUserId:
+          description: Reference ID of the sales user
+          type: integer
+        salesUserFirstname:
+          description: Firstname of the customer's sales user
+          type: string
+        salesUserLastname:
+          description: Lastname of the customer's sales user
+          type: string
+        tariffId:
+          description: Reference ID of the tariff
+          type: integer
+        tariffName:
+          description: Name of the subscription's tariff
+          type: string
+        tariffOptionId:
+          description: Reference ID of the tariff's option
+          type: integer
+        tariffOptionName:
+          description: Name of the tariff's option
+          type: string
+    Tariff:
+      type: object
+      properties:
+        id:
+          description: ID of the tariff
+          type: integer
+        name:
+          type: string
+        descriptionTranslationKey:
+          type: string
+        url:
+          type: string
+        disabled:
+          type: boolean
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: 'date-time'
+        updatedAt:
+          type: string
+          format: 'date-time'
+        TariffRestrictions:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              restrictionTranslationKey:
+                type: string
+    TariffOption:
+      type: object
+      required:
+        - id
+        - name
+        - disabled
+      properties:
+        id:
+          description: ID of the tariff option
+          type: integer
+        name:
+          type: string
+        disabled:
+          type: boolean
+    TariffOptionPrice:
+      type: object
+      required:
+        - id
+        - minAge
+        - maxAge
+        - price
+      properties:
+        id:
+          description: ID of the tariff option price
+          type: integer
+        minAge:
+          type: integer
+          nullable: true
+        maxAge:
+          type: integer
+          nullable: true
+        price:
+          type: integer

@@ -1,0 +1,541 @@
+penapi: 3.0.0
+servers:
+  - description: PawDiet Petrics API
+    url: https://api.pawdiet.com/petrics-v1/
+info:
+  description: |
+    <p>Usage is subject to the terms specified in the Affiliate Breakpoint Inc. / Petrics Inc. agreement.</p>
+    <p>To access resources, you must pass an API Key in the <b>x-api-key</b> request header.</p>
+  version: "1.0.0"
+  title: PawDiet Petrics API
+  contact:
+    email: admin@affiliatebreakpoint.com
+tags:
+  - name: API Endpoints
+paths:
+  /ingredients:
+    get:
+      tags:
+        - API Endpoints
+      operationId: getIngredients
+      description: |
+        <p>This endpoint returns ingredient data. There is a <b>limit of 500 records</b> per call.</p>
+        <p>The <b>parent_id</b> can be used to re-create the ingredient tree structure.</p>
+      parameters:
+        - in: query
+          name: ingredient_id
+          description: PawDiet ingredient id
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - in: query
+          name: offset
+          description: number of ingredients to skip
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: valid response which includes ingredient records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  response:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                        format: int32
+                      limit:
+                        type: integer
+                        format: int32
+                      offset:
+                        type: integer
+                        format: int32
+                      ingredients:
+                        type: array
+                        items: 
+                          $ref: '#/components/schemas/Ingredient'
+        '400':
+            description: bad input parameter
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      example: "error"
+                    message:
+                      type: string
+                      example: "error message"
+        '403':
+            description: forbidden
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      example: "error"
+                    message:
+                      type: string
+                      example: "error message"
+        '429':
+            description: too many requests
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      example: "error"
+                    message:
+                      type: string
+                      example: "error message"
+        '504':
+            description: timeout
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      example: "error"
+                    message:
+                      type: string
+                      example: "error message"
+        '500':
+            description: server error (contact affiliate breakpoint)
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      example: "error"
+                    message:
+                      type: string
+                      example: "error message"
+      security:
+      - api_key: []
+  /products:
+    get:
+      tags:
+        - API Endpoints
+      operationId: getProducts
+      description: |
+        <p>This endpoint returns product data. There is a <b>limit of 100 records</b> per call.</p>
+        
+        <p>Each product will include the following fields</p>
+        
+        <ul>
+          <li>product_id - unique key for the product</li>
+          <li>brand</li>
+          <li>product_line</li>
+          <li>name</li>
+        </ul>
+        
+        <p>As an example, consider <b>Blue Buffalo Life Protection Formula Chicken and Brown Rice Recipe For Adult Dogs</b>.</p>
+        <p>For this product, the brand would be <b>Blue Buffalo</b>, the product line would be <b>Life Protection Formula</b>, and the name would be <b>Chicken and Brow Rice Recipe For Adult Dogs</b>.</p>
+        
+        <p>In general, the full product's name can be displayed by concatenating the <b>brand, product_line, and name</b> fields.</p>
+        
+        <ul>
+          <li>species - possible values are listed below.</li>
+          <ul>
+          <li>dog</li>
+          <li>cat</li>
+          <li>dog and cat</li>
+          </ul>
+        </ul>
+
+        <ul>
+          <li>form - possible values are listed below.</li>
+          <ul>
+            <li>dry</li>
+            <li>wet</li>
+            <li>frozen</li>
+            <li>freeze-dried</li>
+            <li>dehydrated</li>
+            <li>liquid</li>
+          </ul>
+        </ul>
+
+        <ul>
+          <li>type - possible values are listed below.</li>
+          <ul>
+            <li>formula</li>
+            <li>treat</li>
+            <li>dental</li>
+            <li>supplemental</li>
+          </ul>
+        </ul>
+
+        <ul>
+          <li>life_stage - possible values are listed below.</li>
+          <ul>
+            <li>all life stages</li>
+            <li>puppy</li>
+            <li>kitten</li>
+            <li>adult</li>
+            <li>senior</li>
+          </ul>
+        </ul>
+
+        <p>This life_stage has nothing to do with the AAFCO classification. This is the life stage that is implied by the packaging or brand website (in our option).</p>
+        <p>In other words, there are situations where <b>life_stage</b> may differ from the <b>aafco_life_stage</b>. For example, life_stage may be <b>adult</b>, whereas aafco_life_stage is <b>all life stages</b>.</p>
+
+        <ul>
+          <li>breed_size_min - minimum weight in pounds</li>
+          <li>breed_size_max - maximum weight in pounds</li>
+          <li>aafco - Whether or not the food has an AAFCO nutritional adequacy statement.</li>
+          <li>aafco_feeding_trial - Whether or not the food has undergone AAFCO feeding trials.</li>
+          <li>aafco_family_establishment - flag used to indiciate that the product is "feeding trial comparable".</li>
+        </ul>
+        
+        <p>aafco_family_establishment == True means that the product has <b>not undergone feeding trials</b>, but it is comparable in nutritional adequacy to <b>another product which has undergone feeding trials</b>.</p>
+        
+
+        <ul>
+          <li>aafco_life_stage - possible values are listed below.</li>
+          <ul>
+            <li>all life stages</li>
+            <li>maintenance</li>
+            <li>growth</li>
+            <li>growth and maintenance</li>
+            <li>growth, gestation and lactation</li>
+            <li>growth, gestation, lactation and maintenance</li>
+            <li>EMPTY RESPONSE</li>
+          </ul>
+        </ul>
+
+        <ul>
+          <li>image - The URL for the product's image (typically hosted on the product's manufacturer/brand website).</li>
+          <li>verbatim_ingredients - Ingredients taken directly* from the brand/manufacturer website.</li>
+        </ul>
+        
+        <p>*The verbatim_ingredients may contain minor modifications by PawDiet. We try to minify the modifications as much as possible. In cases where there are modifications, <b>the modifications are typically not material</b>.</p>
+
+        <ul>
+          <li>pawdiet_ingredients - modified ingredients which are obtained after processing the verbatim_ingredients.</li>
+          <li>nutrition - nutritional data returned as a list. This list will also contain information regarding calories.</li>
+          <li>raw_food - whether or not the food is marketed as entirely raw.</li>
+          <li>purchase_type - possible values are listed below.</li>
+          <ul>
+            <li>rx</li>
+            <li>otc</li>
+          </ul>
+        </ul>
+        
+        <ul>
+          <li>upc_codes - list of UPC codes associated with the product.</li>
+          <li>price_per_kcal - price per kcal using pawdiet data.</li>
+          <li>price_per_pound - price per pound using pawdiet data.</li>
+          <li>buy_url - URL to purchase product from retail partner.</li>
+          <li>last_modified - timestamp for when the product was last modified.</li>
+          <li>priority - pawdiet metric that measures the availiably of the product. Higher priority numbers indicate that the product is easier to find and purchase.</li>
+          <li>hold - Flag to indiciate that the product has been placed on hold.</li>
+        </ul>
+        
+        <p>Products that are <b>on hold</b> AND have a <b>priority score of zero (0)</b> are most likely <b>discontinued</b>.</p>
+        
+        <p>Products may enter/exit the hold status for many reasons. The hold status should not be used as an indicator in isolation.</p>
+      parameters:
+        - in: query
+          name: product_id
+          description: PawDiet product id
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - in: query
+          name: modified_after
+          description: UNIX timestamp in seconds
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: offset
+          description: number of products to skip
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: valid response which includes product records
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  response:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                        format: int32
+                      limit:
+                        type: integer
+                        format: int32
+                      offset:
+                        type: integer
+                        format: int32
+                      products:
+                        type: array
+                        items: 
+                          $ref: '#/components/schemas/Product'
+        '400':
+          description: bad input parameter
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "error message"
+        '403':
+            description: forbidden
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      example: "error"
+                    message:
+                      type: string
+                      example: "error message"
+        '429':
+            description: too many requests
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      example: "error"
+                    message:
+                      type: string
+                      example: "error message"
+        '504':
+            description: timeout
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      example: "error"
+                    message:
+                      type: string
+                      example: "error message"
+        '500':
+            description: server error (contact affiliate breakpoint)
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                      example: "error"
+                    message:
+                      type: string
+                      example: "error message"
+      security:
+      - api_key: []
+components:
+  schemas:
+    Product:
+      type: object
+      required:
+        - product_id
+        - brand
+        - product_line
+        - name
+        - species
+        - form
+        - type
+        - life_stage
+        - breed_size_min
+        - breed_size_max
+        - aafco
+        - aafco_feeding_trial
+        - aafco_family_establishment
+        - aafco_life_stage
+        - image
+        - verbatim_ingredients
+        - pawdiet_ingredients
+        - nutritions
+        - raw_food
+        - purchase_type
+        - upc_codes
+        - price_per_kcal
+        - price_per_pound
+        - buy_url
+        - last_modified
+        - priority
+        - hold
+      properties:
+        product_id:
+          type: integer
+          format: int32
+        brand:
+          type: string
+        product_line:
+          type: string
+        name:
+          type: string
+        species:
+          type: string
+        form:
+          type: string
+        type:
+          type: string
+        life_stage:
+          type: string
+        breed_size_min:
+          type: integer
+          format: int32
+        breed_size_max:
+          type: integer
+          format: int32
+        aafco:
+          type: boolean
+        aafco_feeding_trial:
+          type: boolean
+        aafco_family_establishment:
+          type: boolean
+        aafco_life_stage:
+          type: string
+        image:
+          type: string
+          format: uri
+        verbatim_ingredients:
+          type: string
+        pawdiet_ingredients:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              id:
+                type: integer
+                format: int32
+        nutritions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Nutrition'
+        raw_food:
+          type: boolean
+        purchase_type:
+          type: string
+        upc_codes:
+          type: array
+          items:
+            type: string
+        price_per_kcal:
+          type: number
+          format: decimal
+        price_per_pound:
+          type: number
+          format: decimal
+        buy_url:
+          type: string
+          format: uri
+        last_modified:
+          type: string
+        first_created:
+          type: string
+        priority:
+          type: integer
+          format: int32
+        hold:
+          type: boolean
+    Ingredient:
+      required:
+        - ingredient_id
+        - name
+        - artificial_color
+        - artificial_flavor
+        - artificial_preservative
+        - anonymous_meat
+        - animal_by_product
+        - grain
+        - parent_id
+      type: object
+      properties:
+        ingredient_id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        artificial_color:
+          type: boolean
+        artificial_flavor:
+          type: boolean
+        artificial_preservative:
+          type: boolean
+        anonymous_meat:
+          type: boolean
+        animal_by_product:
+          type: boolean
+        grain:
+          type: boolean
+        parent_id:
+          type: integer
+          format: int32
+        last_modified:
+          type: string
+        first_created:
+          type: string
+    Nutrition:
+      required:
+        - name
+        - quantity
+        - unit
+        - basis
+        - analysis
+      type: object
+      properties:
+        name:
+          type: string
+        quantity:
+          type: number
+          format: decimal
+        unit:
+          type: string
+        basis:
+          type: string
+        analysis:
+          type: string
+  securitySchemes:
+    api_key:
+      type: apiKey
+      in: header
+      name: "x-api-key"

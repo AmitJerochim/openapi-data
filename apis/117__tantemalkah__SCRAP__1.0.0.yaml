@@ -1,0 +1,935 @@
+penapi: 3.0.0
+
+info:
+  version: "1.0.0"
+  title: SCRAP - Secure Code Review Automated Platform
+  description: >-
+    SCRAP is a prototype for analysing code submissions by students in regards
+    to secure coding and to provide feedback. This API is the main interface
+    to the SCRAP server. Details on the whole project can be found on
+    [scrap.tantemalkah.at](https://scrap.tantemalkah.at).
+
+servers:
+  - description: SCRAP evaluation server (rate limited for unauthenticated accounts)
+    url: https://scrap.tantemalkah.at/api/v1
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/tantemalkah/SCRAP/1.0.0
+
+tags:
+  - name: auth
+    description: Only for authenticated users. The server might provide a `public` user.
+    externalDocs:
+      url: https://scrap.tantemalkah.at/docs/authentication.html
+  - name: public
+    description: Accessible without API key or other auth method.
+  
+paths:
+  /:
+    get:
+      summary: Retrieve the server and API meta information
+      description: >-
+        This endpoint serves as a sort of welcome page, providing some meta
+        information about the server and the API.
+      tags:
+        - public
+      responses:
+        '200':
+          description: Successful transfer of the server's meta info object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meta'
+
+  /scans:
+    get:
+      summary: List all available scans of a user
+      description: >-
+        Retrieve a list of your scans.<br><br>
+        
+        **Authentication**: This endpoint is only available with a valid API key.
+        The server might provide a `public` API key, which can be used for public
+        testing.
+      security: 
+      - ApiKeyAuth: []
+        ApiUser: []
+      tags:
+        - auth
+      responses:
+        '200':
+          description: Successful transfer of a list of scans.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfScans'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+          
+    post:
+      summary: Submit a new scan
+      description: >-
+        This operation is used to submit a new scan. This will usually be either
+        a single PHP file or a gzipped tar archive containing at least one PHP file.
+        Future version may adopt other scanners and languages. Consult the documentation
+        of the server you POST to, which file types are acceptable. Version 1.0.0 is designed
+        for use with PHP only.<br><br>
+        
+        **Authentication**: This endpoint is only available with a valid API key.
+        The server might provide a _public_ API key, which can be used for public
+        testing. If you use the `public` as an API key, be aware, that your scan
+        will be visible to every other public user. But the server will usually do
+        regular cleanups of public scans. Consult your server's documentation on
+        if and how often those cleanups are done.
+      security: 
+      - ApiKeyAuth: []
+        ApiUser: []
+      tags:
+        - auth
+      requestBody:
+        description: >-
+          If you POST to this endpoint, you have to submit at least a file
+          as part of a multipart/form-data body. Additionally you can use other
+          properties, described below, to customize the scan.
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                scanner:
+                  type: string
+                  description: >-
+                    Use this to scan only with one of the available scanners.
+                    If you omit this parameter, all deployed scanners will be used.
+                withIssues:
+                  type: boolean
+                  description: >-
+                    Set this to true, if the server should wait for the scan to finish and
+                    include a list of all issues found in the `issues` property of the response.
+                file:
+                  type: string
+                  format: binary
+                  description: >-
+                    The file or archive you want to be scanned. This should either
+                    be a single PHP file (`php`), or a gzipped tar archive (`.tgz` or `.tar.gz`).
+                    Other files will not be accepted.
+              required:
+                - file
+      responses:
+        '200':
+          description: >-
+            Sucessful submission of a new scan. The new scan object
+            is returned in the response body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/FileTooBig'
+        '415':
+          $ref: '#/components/responses/WrongFileType'
+
+  /scans/{id}:
+    get:
+      summary: Retrieve meta information for a single scan
+      description: >-
+        This operation provides the meta information for a single scan. This
+        includes the scan's current stage and progress, the number of found
+        issues and files in the uploaded file/package and the timestamps when
+        the scan was created (right after the upload completed) and the analysis
+        was completed.
+      security:
+        - ApiKeyAuth: []
+          ApiUser: []
+      tags:
+        - auth
+      parameters:
+        - $ref: '#/components/parameters/scanIdParam'
+      responses:
+        '200':
+          description: Sucessfully returned a scan object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Scan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete a single scan
+      description: >-
+        Delete one of your scans.<br><br>
+        
+        If the server provides a `public` API key, it might prohibit the deletion
+        of such _public_ scans and only delete them based on a regular interval.
+      security:
+        - ApiKeyAuth: []
+          ApiUser: []
+      tags:
+        - auth
+      parameters:
+        - $ref: '#/components/parameters/scanIdParam'
+      responses:
+        '204':
+          description: Sucessfully deleted the scan.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /scans/{id}/files:
+    get:
+      summary: Receive listing of all files of a scan
+      description: >-
+        This operation returns all files that are part of a scan, that is, the
+        one file if a single PHP file was uploaded or all files from the
+        uploaded .tgz archive.
+      security:
+        - ApiKeyAuth: []
+          ApiUser: []
+      tags:
+        - auth
+      parameters:
+        - $ref: '#/components/parameters/scanIdParam'
+      responses:
+        '200':
+          description: Successful transfer of a list of files
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfFiles'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /scans/{id}/files/{filepath}:
+    get:
+      summary: Retrieve a single file from a scan
+      description: >-
+        Returns the meta information of an uploaded file. The file itself
+        can be retrieved through its _blob_ endpoint, which is part of the
+        returned meta information.
+      security:
+        - ApiKeyAuth: []
+          ApiUser: []
+      tags:
+        - auth
+      parameters:
+        - $ref: '#/components/parameters/scanIdParam'
+        - $ref: '#/components/parameters/filePathParam'
+      responses:
+        '200':
+          description: Successful transfer of the file object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/File'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /scans/{id}/blob/{filepath}:
+    get:
+      summary: Receive a single file from a scan
+      description: >-
+        Returns the file as it was uploaded (or extracted from the uploaded archive)
+        
+        The **media type** of the response
+        depends on the file, but in most cases it will be _application/x-php_, especially
+        when the scan consists of a single file. If a whole project was uploaded,
+        it could be the case that other files than PHP files will be included in
+        an issue, depending on which scanners are available and how they are configured.
+      security:
+        - ApiKeyAuth: []
+          ApiUser: []
+      tags:
+        - auth
+      parameters:
+        - $ref: '#/components/parameters/scanIdParam'
+        - $ref: '#/components/parameters/filePathParam'
+      responses:
+        '200':
+          description: Successful transfer of the file.
+          content:
+            application/x-php:
+              schema:
+                type: string
+            text/html:
+              schema:
+                type: string
+            text/css:
+              schema:
+                type: string
+            application/javascript:
+              schema:
+                type: string
+            text/markdown:
+              schema:
+                type: string
+            text/plain:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /scans/{id}/issues:
+    get:
+      summary: Receive a listing of all issues found in a scan
+      description: >-
+        This operation returns a list of issues that were found in a scan.
+        If the scan did not find any issues, an empty array of items will
+        be returned.
+      security:
+        - ApiKeyAuth: []
+          ApiUser: []
+      tags:
+        - auth
+      parameters:
+        - $ref: '#/components/parameters/scanIdParam'
+      responses:
+        '200':
+          description: Successful transfer of a list of issues
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfIssues'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /scans/{id}/issues/{issueid}:
+    get:
+      summary: Receive a single issue from a scan
+      description: >-
+        This operation returns an issue object, which contains all information
+        to describe an issue found in the vulnerability scan. This contains:
+        
+        - The scanner and its rule that found the issue plus infos on how to use it standalone
+        
+        - The type of the vulnerability that was found
+        
+        - The slug to an explanation object which describes the vulnerability.
+        
+        - An array of affected files containing:
+          - The file path
+          - An array of relevant lines in the file, including a description
+        
+        For detailed informations on how the issues object works, refer to the
+        SCRAP documentation, that is linked in the `/` endpoint.
+      security:
+        - ApiKeyAuth: []
+          ApiUser: []
+      tags:
+        - auth
+      parameters:
+        - $ref: '#/components/parameters/scanIdParam'
+        - in: path
+          name: issueid
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful transfer of an issue object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /explanations:
+    get:
+      summary: Get a list of available explanations
+      tags:
+        - public
+      description: >-
+        This operation returns all explanations on code vulnerabilities
+        that are available in SCRAP. If you want to exclude stub explanations
+        which only provide links to further resources, use the `stub` parameter.
+      parameters:
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+        - in: query
+          name: stub
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: Set this to false, if you don't want to exclude stub explanations
+      responses:
+        '200':
+          description: Successful transfer of a list of explanations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfExplanations'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /explanations/{slug}:
+    get:
+      summary: Retrieve an explanation to a vulnerability
+      description: >-
+        This operation returns an explanation object, which contains a description
+        of a vulnerability and information on how to fix it. Additional ressources
+        may be linked to in the `references` array.
+      tags:
+        - public
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful transfer of an explanation object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Explanation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /scanners:
+    get:
+      summary: Retrieve a list of available scanners
+      description: >-
+        This operation retrieves a list of all the scanners that are used by
+        the SCRAP server to scan for vulnerabilities. The list consists
+        of the full scanner objects. At the moment, with only a few scanners
+        deployed, there is no need for an extra endpoint to retrieve single
+        scanners.
+      tags:
+        - public
+      responses:
+        '200':
+          description: Successful transfer of a list of scanners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Scanner'
+
+
+components:
+  parameters:
+    offsetParam:
+      in: query
+      name: offset
+      required: false
+      description: The (0-indexed) number of the first item to retrieve. Only use in combination with limit.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    limitParam:
+      in: query
+      name: limit
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 20
+      description: The amount of items to retrieve starting from offset.
+    scanIdParam:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: string
+        format: UUID
+      description: The UUID of a previously submitted scan.
+    filePathParam:
+      in: path
+      name: filepath
+      required: true
+      schema:
+        type: string
+        format: uri
+      description: >-
+        The path of a file within a scan. Either the uploaded filename itself,
+        or, if an archive was uploaded, the path of the file relative to the
+        archive's root directory.
+
+  responses:
+    NotFound:
+      description: The specified resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "404"
+              message: "The [item] you requested does not exist."
+              additionalInfo: "Use /[item] to get a list of scans."
+    Unauthorized:
+      description: You are not authorized to access this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: 401
+              message: "You are not authorized to access this resource"
+    BadRequest:
+      description: >-
+        At least one of the request parameters was malformed or the request
+        is otherwise not valid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: 400
+              message: "The parameter you provided is not valid."
+    FileTooBig:
+      description: >-
+        The uploaded file was too big. Especially if there is a `public` API key in
+        use, these limits might be rather low. Consult the servers documentation
+        on if and how big the upload limits are.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: 413
+              message: "The uploaded file is too big."
+              additionalInfo: "Public users only have file size limits for their scans."
+    WrongFileType:
+      description: >-
+        SCRAP will only accept either single PHP files or
+        gzipped tar archives, containing at least on .php file.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: 415
+              message: "The file type you provided is not valid."
+              additionalInfo: "User either .pdf or .tgz files."
+  
+  schemas:
+    Meta:
+      type: object
+      properties:
+        api:
+          type: string
+          description: Name of the API
+        version:
+          type: string
+          description: Version of the API
+        openapi_file:
+          type: string
+          format: path
+          description: Path to a YAML representation of the API definition
+        definition:
+          type: string
+          format: uri
+          description: Link to an API desription, such as provided by Swagger UI
+        documentation:
+          type: string
+          format: uri
+          description: Link to the documentation of the SCRAP project
+      example:
+        api: "scrap"
+        version: "1.0.0"
+        openapi_file: "/static/scrap_api.yaml"
+        definition: "https://app.swaggerhub.com/apis/tantemalkah/SCRAP/1.0.0"
+        documentation: "https://scrap.tantemalkah.at/docs"
+  
+    Paging:
+      type: object
+      properties:
+        count:
+          type: integer
+          minimum: 0
+        next:
+          type: string
+          format: uri
+        previous:
+          type: string
+          format: uri
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            additionalInfo:
+              type: string
+          required:
+            - code
+            - message
+
+    ListOfScans:
+      type: object
+      properties:
+        paging:
+          allOf:
+            - $ref: '#/components/schemas/Paging'
+          example:
+            count: 23
+            next: /api/v1/scans?limit=5&offset=10
+            previous: /api/v1/scans?limit=5&offset=0
+        items:
+          type: array
+          items:
+            type: string
+            format: uuid
+          example:
+            - "4fb9e66e-67a8-11ea-a2eb-983b8fc20c86"
+            - "16f324cc-2abb-455d-9561-7c460840b90a"
+            - "006739a6-66cf-4790-a89d-1bc60634e2c9"
+            - "2d37480c-67a8-11ea-a2eb-983b8fc20c86"
+            - "462e3fbe-67a8-11ea-a2eb-983b8fc20c86"
+
+    Scan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: object
+          properties:
+            stage:
+              type: string
+              enum: [loading, pending, analysing, done]
+              description: Describes the current stage in the analysis pipeline
+            percentage:
+              type: integer
+              minimum: 0
+              maximum: 100
+              description: Describes the progress in the current stage. Always 100 for _done_, and 0 for _pending_
+        issuesFound:
+          type: integer
+          minimum: 0
+          description: Number of issues that where found in this scan.
+        files:
+          type: integer
+          minimum: 1
+          description: >-
+            Number of files contained in the uploaded package.
+            1, if only a single file or a .tgz containing a single file was uploaded.
+        created:
+          type: string
+          format: date-time
+          description: Time when the file/package to scan was uploaded
+        analysed:
+          type: string
+          format: date-time
+          description: Time when the scan analysis was completed
+    
+    Scanner:
+      type: object
+      properties:
+        name:
+          type: string
+          description: "The name of the scanner"
+        slug:
+          type: string
+          description: "The slug representation of the scanner, which is used in issue objects"
+        version:
+          type: string
+          description: "The version number of the scanner, that is deployed in the SCRAP server"
+        uri:
+          type: string
+          format: uri
+          description: "A link to the scanners web site or repository"
+        comment:
+          type: string
+          format: markdown
+          description: "An optional comment describing how the scanner is used in SCRAP"
+      example:
+        name: "PHP_CodeSniffer"
+        slug: "phpcs"
+        version: "3.5.4"
+        uri: "https://github.com/squizlabs/PHP_CodeSniffer"
+        comment: "Using the [phpcs-security-audit v2](https://github.com/FloeDesignTechnologies/phpcs-security-audit)"
+      
+    ListOfIssues:
+      type: object
+      properties:
+        paging:
+          allOf:
+            - $ref: '#/components/schemas/Paging'
+          example:
+            count: 23
+            next: /api/v1/scans/42/issues?limit=3&offset=6
+            previous: /api/v1/scans/42/issues?limit=3&offset=0
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                minimum: 0
+              type:
+                type: string
+          example:
+            - id: 0
+              type: "SQLi"
+            - id: 1
+              type: "XSS"
+            - id: 2
+              type: "Remote File Inclusion"
+
+    Issue:
+      type: object
+      properties:
+        source:
+          type: object
+          properties:
+            scanner:
+              type: string
+              description: The slug of the scanner from which this issue was generated
+            rule:
+              type: string
+              description: The specific rule of the scanner, that triggered this issue
+            info:
+              type: string
+              format: uri
+              description: Link to a page with additional information on how to use the scanner on its own
+            cli:
+              type: string
+              description: Command line that the SCRAP server used to analyse the file(s)
+          required:
+            - scanner
+            - rule
+          example:
+            scanner: "phpcs"
+            rule: "Security.BadFunctions.Mysqli.WarnMysqlimysqli_query"
+            info: "https://github.com/FloeDesignTechnologies/phpcs-security-audit"
+            cli: "php scanners/phpcs/phpcs.phar --standard=scanners/phpcs-sa/Security -s --report=json scrap-upload-tmp"
+        type:
+          type: string
+          description: What type of vulnerability was found
+          example: "SQLi"
+        explanation:
+          type: string
+          description: Slug to an explanation.
+          example: "sqli_mysqli_dynamic_param"
+        affectedFiles:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+                format: uri
+              lines:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    num:
+                      type: integer
+                      minimum: 0
+                    linkedTo:
+                      type: integer
+                      minimum: 0
+                    characters:
+                      type: object
+                      properties:
+                        from:
+                          type: integer
+                          minimum: 0
+                        to:
+                          type: integer
+                          minimum: 0
+                    text:
+                      type: string
+                    description:
+                      type: string
+                  required:
+                    - num
+                    - characters
+          example:
+            - path: "index.php"
+              lines:
+                - num: 23
+                  characters:
+                    from: 5
+                    to: 63
+                  text: "$r = mysqli_query($conn, 'SELECT * FROM posts WHERE id = '.$id);"
+                  description: "MYSQLi function mysqli_query() detected with dynamic parameter"
+      
+    ListOfFiles:
+      type: object
+      properties:
+        paging:
+          $ref: '#/components/schemas/Paging'
+        items:
+          type: array
+          items:
+            type: string
+            format: uri
+            description: Link to the file's blob endpoint
+      example:
+        paging:
+          count: 3
+          next: ""
+          previous: ""
+        items:
+          - "/api/v1/scans/4fb9e66e-67a8-11ea-a2eb-983b8fc20c86/files/index.php"
+          - "/api/v1/scans/4fb9e66e-67a8-11ea-a2eb-983b8fc20c86/files/style.css"
+          - "/api/v1/scans/4fb9e66e-67a8-11ea-a2eb-983b8fc20c86/files/database.php"
+
+    File:
+      type: object
+      properties:
+        path:
+          type: string
+          format: uri
+          description: >-
+            File path in relation to the submitted scan root.
+            If a single file was submitted, then the path is the filename.
+        contentType:
+          type: string
+          format: media-type
+          description: >-
+            Media type of the file, as
+            [defined by IANA](https://www.iana.org/assignments/media-types/media-types.xhtml).
+            PHP files will receive a media type of `application/x-php`, as there
+            is no standardised media type for PHP files yet.
+        size:
+          type: integer
+          minimum: 0
+          description: Size of the file in byte.
+        blob:
+          type: string
+          format: uri
+          description: Link to the `blob` endpoint to download the file
+      example:
+        path: "index.php"
+        type: "application/x-php"
+        size: "3096"
+        blob: "/api/v1/scans/4fb9e66e-67a8-11ea-a2eb-983b8fc20c86/blob/index.php"
+
+    ListOfExplanations:
+      type: object
+      properties:
+        paging:
+          allOf:
+            - $ref: '#/components/schemas/Paging'
+          example:
+            count: 23
+            next: /api/v1/explanations?limit=1&offset=6
+            previous: /api/v1/explanations?limit=1&offset=4
+        items:
+          type: array
+          items:
+              $ref: '#/components/schemas/ShortExplanation'
+
+    ShortExplanation:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+      example:
+        name: SQL Injection through unsanitized `id` parameter
+        slug: sqli_unsanitized_id
+        type: SQLi
+    
+    Explanation:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+        isStub:
+          type: boolean
+        shortDescription:
+          type: string
+          format: markdown
+        longDescription:
+          type: string
+          format: markdown
+        howToFix:
+          type: string
+          format: markdown
+        references:
+          type: array
+          items:
+            type: string
+            format: uri
+      example:
+        name: SQL Injection through unsanitized `id` parameter
+        slug: sqli_unsanitized_id
+        type: SQLi
+        isStub: true
+        shortDescription: >-
+          **TODO**: add short description
+        longDescription: >-
+          **TODO**: add long description
+        howToFix: >-
+          **TODO**: add how to fix section
+        references:
+          - https://scrap.example.org/SQLi
+          - https://en.wikipedia.org/wiki/SQL_injection
+          - http://cis1.towson.edu/~cssecinj/modules/other-modules/database/sql-injection-introduction/
+  
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+    ApiUser:
+      type: apiKey
+      in: header
+      name: X-API-USER

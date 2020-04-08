@@ -1,0 +1,1156 @@
+openapi: 3.0.0
+info:
+  version: "2.1.0"
+  title: "ZOKO API"
+  termsOfService: "https://www.zoko.io/legal"
+  contact:
+    name: "Zoko Development Team"
+    email: "contact@zoko.io"
+  x-logo:
+    url: "https://zoko-static.s3.us-east-2.amazonaws.com/logo_api.jpeg"
+  description: |
+    # 2.1 Update
+
+    ### Introducing new message types for WhatsApp
+    - [Location](#tag/Message/paths/~1message/post)
+      - You can now send location details to your customer
+      - for example - location of the nearest branch, your next event etc
+
+    - [Rich Media Template](#tag/Message/paths/~1message/post) 
+      - Template messages with image, document, video or location header and a text body
+      - for example -  ticket QR code, appointment details with location etc
+      - *Contact us for details on approval process*
+
+    ### Language Support for WhatsApp Templates  
+    - You can now choose the language for the approved templates
+
+
+    # Overview
+    ZOKO REST APIs provide programmable access to reach your customers and conduct business on your approved social channels. 
+    The API identifies and authenticates you via an [API Key](#section/Authentication) provided. 
+    Responses are available as JSON.
+
+    > [Message](#tag/Message) resources should suffice if you are using the API just for outgoing communication. 
+    Otherwise, please do check out the [Webhook](#tag/Webhook) resources as well to achieve seemless 2-way communication.
+
+    # API Host
+    ```json
+    https://chat.zoko.io/v2
+    ```
+    *If you are looking for ZOKO API v1.0, you can find it [here](https://docs.zoko.io)*
+
+externalDocs:
+  description: "Swagger UI"
+  url: "https://app.swaggerhub.com/apis-docs/Greenarrow/ZOKO_API_v2.0"
+
+servers:
+  - url: "https://chat.zoko.io/v2"
+    description: "PRODUCTION"
+  - url: "https://test.chat.zoko.io/v2"
+    description: "TEST"
+
+tags:
+  - name: Message
+    description: |
+      Resources to communicate with your customers via social channel(s). These will help you send messages to your 
+      customers where they are.
+  - name: Customer
+    description: "Resources to get customer information"
+  - name: Webhook
+    description: |
+      Webhooks are nothing but user-defined HTTP callbacks where you can receive **event driven** notifications from us. 
+      This way you can get real-time information as soon as it happens. That's the bedrock of building a
+      robust 2-way communication system at your end.
+
+      Currently, 3 events are supported 
+
+      - `message:user:in` - incoming messages from your customers
+      - `message:store:out` - echoed outgoing messages you sent 
+      - `message:delivery:update` - delivery updates on outgoing messages 
+
+      You can register your webhook(s) to receive mutliple events.
+
+      > **Important:** Please note that the event requests posted to your webhooks expect a `HttpStatus 200` response within `5 seconds`. 
+      If not, the request will be considered as failed and set for retry. Each failed message has `5 retries` before failing completely.
+      Repeated failures will eventually lead to disabling of the respective webhook. 
+
+      If you choose to, webhook requests posted can contain a *challenge token* as query param under the key `token`. 
+      So make sure you add a challenge token when you create a webhook and the same token will be sent with each request on that webhook. 
+      This can be used for validate the legitimacy of the request at your end. 
+
+      ```json 
+      ?token=<your challenge token>
+      ```
+  - name: WhatsApp Group
+    description: |
+      The newest addition to ZOKO API. You will be able to create and maintain WhatsApp groups with these resources.
+
+      > **Important:** A Business API account cannot be added to an external group. You can create groups and invite others to join your group(s).
+      To invite members to your group, use the [Group Invite URL](#tag/WhatsApp-Group/paths/~1channels~1whatsapp~1group~1{id}~1inviteurl/get)
+
+  - name: Account
+    description: "Account level resources"
+
+paths:
+  /account/templates:
+    get:
+      tags:
+        - Account
+      summary: Get Message Templates
+      description: Retrieve approved templates for the account
+      responses:
+        200:
+          description: Approved template list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MessageTemplate"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /message:
+    post:
+      tags:
+        - Message
+      summary: Send Message
+      description: Send message to customer on a specific channel
+      requestBody:
+        description: Message data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessage"
+
+      responses:
+        200:
+          description: Sent Message Details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendMessageResponse"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /message/{id}:
+    get:
+      tags:
+        - Message
+      summary: Get Message
+      description: Retrieve message details
+      parameters:
+        - in: path
+          name: id
+          description: ID of message
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+    delete:
+      tags:
+        - Message
+      summary: Delete Message
+      description: |
+        Delete a message
+        > **Note:** Deletion is only from Zoko database and will not affect the actual message(s) at the customer's client application.
+      parameters:
+        - in: path
+          name: id
+          description: ID of message
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Message deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteMessageResponse"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /message/{id}/attachment/{attachmentId}:
+    get:
+      tags:
+        - Message
+      summary: Get Message Attachment
+      description: Download message attachment
+      parameters:
+        - in: path
+          name: id
+          description: ID of message
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: attachmentId
+          description: ID of attachment
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Attachment binary
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /message/{id}/history:
+    get:
+      tags:
+        - Message
+      summary: Get Message History
+      description: Retrieve message delivery history
+      parameters:
+        - in: path
+          name: id
+          description: ID of message
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Message delivery history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messageId:
+                    type: string
+                  history:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MessageDeliveryStatus"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /message/batch:
+    delete:
+      tags:
+        - Message
+      summary: Delete Messages (bulk)
+      description: |
+        Deletes a set of messages
+        > **Note:** Deletion is only from Zoko database and will not affect the actual message(s) at the customer's client application.
+      requestBody:
+        description: Messages to be deleted
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkMessages"
+      responses:
+        200:
+          description: Message deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteBulkMessageResponse"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /customer/{id}:
+    get:
+      tags:
+        - Customer
+      summary: Get Customer
+      description: Retrieve customer details
+      parameters:
+        - in: path
+          name: id
+          description: ID of customer
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Customer details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /customer/{id}/messages:
+    delete:
+      tags:
+        - Customer
+      summary: Delete Messages
+      description: |
+        Delete all messages for a customer. 
+        > **Note:** Deletion is only from Zoko database and will not affect the actual message(s) at the customer's client application.
+      parameters:
+        - in: path
+          name: id
+          description: ID of customer
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Message(s) deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /webhook:
+    get:
+      tags:
+        - Webhook
+      summary: List Webhooks
+      description: Retrieve all webhooks for the account
+      responses:
+        200:
+          description: Active webhook list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WebhookResponse"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+    post:
+      tags:
+        - Webhook
+      summary: Create Webhook
+      description: |
+        Create a new webhook
+      requestBody:
+        description: Webhook data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Webhook"
+
+      responses:
+        200:
+          description: Created webhook details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /webhook/{id}:
+    get:
+      tags:
+        - Webhook
+      summary: Get Webhook
+      description: Retrieve webhook details
+      parameters:
+        - in: path
+          name: id
+          description: ID of webhook
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Webhook details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+    put:
+      tags:
+        - Webhook
+      summary: Update Webhook
+      description: Update webhook details
+      requestBody:
+        description: Webhook data. Check Webhook schema for details.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Webhook"
+      parameters:
+        - in: path
+          name: id
+          description: ID of webhook
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Webhook details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+    delete:
+      tags:
+        - Webhook
+      summary: Delete Webhook
+      description: Delete an existing webhook
+      parameters:
+        - in: path
+          name: id
+          description: ID of webhook
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Webhook details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /channels/whatsapp/group:
+    get:
+      tags:
+        - WhatsApp Group
+      summary: List Groups
+      description: Retrieve all groups your account whatsapp number is a member of
+      responses:
+        200:
+          description: Active Group List
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WhatsappGroupId"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+    post:
+      tags:
+        - WhatsApp Group
+      summary: Create Group
+      description: Create new WhatsApp Group
+      parameters:
+        - in: query
+          name: subject
+          required: true
+          description: group subject
+          schema:
+            type: string
+            description: group subject
+      responses:
+        200:
+          description: Created WhatsApp Group
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappGroup"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /channels/whatsapp/group/{id}:
+    get:
+      tags:
+        - WhatsApp Group
+      summary: Get Group
+      description: Retrieve whatsapp group details
+      parameters:
+        - in: path
+          name: id
+          description: ID of whatsapp group
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: WhatsApp Group details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappGroupDetails"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /channels/whatsapp/group/{id}/members:
+    get:
+      tags:
+        - WhatsApp Group
+      summary: Get Group Members
+      description: Retrieve whatsapp group members
+      parameters:
+        - in: path
+          name: id
+          description: ID of whatsapp group
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: WhatsApp Group members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappGroupMembers"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+    delete:
+      tags:
+        - WhatsApp Group
+      summary: Delete Group Members
+      description: Delete whatsapp group members
+      parameters:
+        - in: path
+          name: id
+          description: ID of whatsapp group
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Group participants to be deleted.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhatsappGroupMembers"
+
+      responses:
+        200:
+          description: WhatsApp Group members
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+  /channels/whatsapp/group/{id}/inviteurl:
+    get:
+      tags:
+        - WhatsApp Group
+      summary: Get Group Invite URL
+      description: Retrieve whatsapp group invite url
+      parameters:
+        - in: path
+          name: id
+          description: ID of whatsapp group
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: WhatsApp Group Invite URL info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhatsappGroup"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+    delete:
+      tags:
+        - WhatsApp Group
+      summary: Delete Group Invite URL
+      description: delete whatsapp group invite url
+      parameters:
+        - in: path
+          name: id
+          description: ID of whatsapp group
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Deleted Info
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeleteResponse"
+        400:
+          description: 4xx and 5xx errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorModel"
+
+security:
+  - APIKeyAuth: []
+
+components:
+  securitySchemes:
+    APIKeyAuth:
+      type: apiKey
+      in: header
+      name: apikey
+      description: |
+        Authentication is done via `apikey` provided for your account
+
+        Include the following in your request header
+        ```json
+        apikey: "your_apikey_here"
+        ```
+
+  schemas:
+    Customer:
+      description: Customer model
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        channels:
+          type: array
+          items:
+            properties:
+              channel:
+                type: string
+                enum:
+                  - whatsapp
+              scopeId:
+                type: string
+                example: "+919998880000"
+
+    DeleteResponse:
+      description: Simple generic response for delete
+      properties:
+        status:
+          type: string
+          example: 200
+        message:
+          type: string
+          example: items(s) deleted
+        details:
+          type: string
+          example: deleted items count - xx
+
+    DeleteMessageResponse:
+      description: Message delete response
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: id of the message
+        status:
+          type: string
+          description: status of deletion
+          example: message deleted
+        description:
+          type: string
+          description: details of deletion
+          example: message {id} deleted
+
+    DeleteBulkMessageResponse:
+      description: Bulk Message delate response
+      properties:
+        deleted:
+          type: integer
+          description: number of messages deleted
+          example: 43
+        failed:
+          type: integer
+          description: number of messages failed
+          example: 7
+        messages:
+          type: array
+          description: message deletion details
+          items:
+            $ref: "#/components/schemas/DeleteMessageResponse"
+
+    BulkMessages:
+      description: Bulk messages list
+      required:
+        - messages
+      properties:
+        messages:
+          type: array
+          description: IDs of messages to be deleted
+          minItems: 1
+          maxItems: 50
+          items:
+            type: string
+
+    ErrorModel:
+      description: Error model for responses 4xx and 5xx
+      properties:
+        status:
+          type: integer
+          description: |
+            ### 
+            [HttpStatus 4xx and 5xx](https://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html#sec6.1.1)
+          example: 400
+        type:
+          type: string
+          enum:
+            - api_error
+            - authentication_error
+            - data_missing_error
+            - invalid_request_error
+            - rate_limit_error
+            - validation_error
+          example: invalid_request_error
+        message:
+          type: string
+          example: error details
+        timestamp:
+          type: string
+          format: date-time
+
+    Message:
+      description: Message data model
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: system ID of message
+        platformSenderId:
+          type: string
+          example: +919998880000
+          description: |
+            customer's social id. 
+
+            sender for incoming messages and recipient for outgoing messages 
+
+            *Please note that this is always the customer's number and never yours (you already know yours, don't you)*
+        platform:
+          type: string
+          enum:
+            - whatsapp
+        platformTimestamp:
+          type: string
+          format: date-time
+        direction:
+          type: string
+          enum:
+            - FROM_CUSTOMER
+            - FROM_STORE
+          description: |
+            direction of message
+
+            `FROM_CUSTOMER` - incoming messages
+
+            `FROM_STORE` - outgoing messages
+        type:
+          type: string
+          enum:
+            - text
+            - image
+            - document
+            - audio
+            - video
+            - template
+        text:
+          type: string
+          description: message content
+        fileUrl:
+          type: string
+          format: uri
+          description: url of the media file
+        fileCaption:
+          type: string
+          description: caption of the media file
+        deliveryStatus:
+          type: string
+          description: last known delivery status of the message
+          enum:
+            - sent
+            - delivered
+            - read
+            - failed
+        customer:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+        attachments:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+
+    MessageDeliveryStatus:
+      description: Message delivery status
+      properties:
+        deliveryChannel:
+          type: string
+          example: whatsapp
+        happendAt:
+          type: string
+          format: date-time
+        state:
+          type: string
+          example: delivered
+        details:
+          type: object
+          properties:
+            message:
+              type: string
+
+    MessageTemplate:
+      description: Message template
+      properties:
+        channel:
+          type: string
+          enum:
+            - whatsapp
+        templateId:
+          type: string
+          description: |
+            template id approved by the respective channel.
+
+            Used as `templateId` to [send message](#tag/Message/paths/~1message/post) of type `template`
+          example: greeting_01
+        isRichTemplate:
+          type: boolean
+          description: is the template a rich media template?
+          example: false
+        templateLanguage:
+          type: string
+          description: |
+            template id approved by the respective channel.
+
+            Used as `templateLanguage` to [send message](#tag/Message/paths/~1message/post) of type `template`
+          example: en
+        templateDesc:
+          type: string
+          description: template definition
+          example: Good morning {{1}}. How may I help you today?
+        templateVariableCount:
+          type: integer
+          description: |
+            Number of placeholders for the template. 
+
+            Array size of `templateArgs` in  [send message](#tag/Message/paths/~1message/post)
+          example: 1
+        active:
+          type: boolean
+          description: is the template active?
+          example: true
+
+    SendMessage:
+      description: SendMessage model used as request body for sending messages
+      required:
+        - channel
+        - recipient
+        - type
+      properties:
+        channel:
+          type: string
+          enum:
+            - whatsapp
+        recipient:
+          type: string
+          example: "919998880000"
+          description: For channel whatsapp -> E.164 format without leading +
+        group:
+          type: boolean
+          example: false
+          description: |
+            Is the recipient a group?  
+
+            defaulted to `false`, if not provided
+        type:
+          type: string
+          enum:
+            [
+              text,
+              image,
+              document,
+              audio,
+              video,
+              location,
+              template,
+              richTemplate,
+            ]
+          example: template
+        message:
+          type: string
+          description: |
+            Content of the message.
+
+            type `text` - contains text content of the message
+
+            type `image`,`document`, `audio`, `video` - contains the file URL
+
+            type `location` - contains latitude and longitude in the format `<latitude>:<longitude>`
+
+            type `template`, `richTemplate` - field is not used
+          minLength: 1
+          maxLength: 4096
+          example: null
+        caption:
+          type: string
+          description: |
+            Describes the specified `image`, `video` or `document` media. Do not use with `audio` media.
+
+          minLength: 1
+          maxLength: 1024
+          example: null
+        templateId:
+          description: |
+            Template ID
+
+            mandatory for message type `template` and `richTemplate`
+          type: string
+          example: "greeting"
+        templateArgs:
+          description: |
+            Template placeholder values in the same order as in the template. 
+
+            mandatory for message type `template` and `richTemplate`
+          minItems: 0
+          maxItems: n
+          type: array
+          items:
+            type: string
+            example: arg1
+        templateLanguage:
+          description: |
+            Template Language
+
+            Language is defaulted to `en` (English), if not provided
+
+            mandatory for message type `template` and `richTemplate` only if the template is not in default language `en`
+          type: string
+          example: "en"
+
+    SendMessageResponse:
+      description: SendMessage model
+      properties:
+        status:
+          type: string
+          example: 202
+        statusText:
+          type: string
+          example: Accepted
+        messageId:
+          type: string
+          format: uuid
+
+    WhatsappGroup:
+      description: Whatsapp Group Information
+      properties:
+        groupId:
+          type: string
+          example: 919876543210-11747334
+        inviteUrl:
+          type: string
+          format: uri
+          example: "https://chat.whatsapp.com/D9lbddfV8b01nDkH8QvNOR"
+
+    WhatsappGroupDetails:
+      description: Whatsapp Group Details
+      properties:
+        admins:
+          description: admins of the group
+          type: array
+          items:
+            type: string
+        createdDatetime:
+          type: string
+          format: date-time
+        creator:
+          type: string
+        participants:
+          description: members of the group
+          type: array
+          items:
+            type: string
+        subject:
+          description: group subject
+          type: string
+
+    WhatsappGroupId:
+      description: Whatsapp Group Information
+      properties:
+        groupId:
+          type: string
+          example: 919876543210-11747334
+
+    WhatsappGroupMembers:
+      description: Whatsapp Group Member
+      required:
+        - participants
+      properties:
+        participants:
+          type: array
+          description: member phone number E.164 format without leading +
+          minItems: 1
+          items:
+            type: string
+
+    Webhook:
+      description: Webhook input data
+      required:
+        - url
+        - events
+      properties:
+        url:
+          type: string
+          format: uri
+          example: "https://client.webhooklabs.com"
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+              - message:user:in
+              - message:store:out
+              - message:delivery:update
+          minItems: 1
+          example:
+            - message:user:in
+            - message:delivery:update
+        challengeToken:
+          type: string
+          description: Challenge Token for the webhook
+          maxLength: 200
+          example: client0_letmein
+
+    WebhookResponse:
+      description: Webhook response data
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+          example: "https://client.webhooklabs.com"
+        challengeToken:
+          type: string
+          example: CHALLENGE_TOKEN
+        events:
+          type: array
+          items:
+            type: string
+            enum:
+              - message:user:in
+              - message:store:out
+              - message:delivery:update

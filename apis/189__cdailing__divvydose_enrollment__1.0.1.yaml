@@ -1,0 +1,403 @@
+penapi: 3.0.0
+info:
+  description: |
+    The divvyDOSE API is organized around REST. Therefore, our API has predictable, resource-oriented URLs, and uses HTTP response codes to indicate the status of requests.
+    [https://www.divvydose.com](https://divvydose.com)
+  version: "1.0.1"
+  title: divvyDOSE Registration API
+  termsOfService: 'http://swagger.io/terms/'
+  contact:
+    email: it-services@divvydose.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+servers:
+# Added by API Auto Mocking Plugin
+# Added by API Auto Mocking Plugin
+  - description: divvyDOSE Registration API
+    url: 'https://registration.divvydose.com/register'
+
+tags:
+  - name: admin
+  
+paths:
+  /register:
+    post:
+      summary: Register a new lead with divvyDOSE
+      operationId: registerCustomer
+      tags: [partner]
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/register_200_response'
+        "409":
+          description: Duplicate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/register_409_response'
+        "422":
+          description: Incorrect/Missing Data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/register_422_response'
+      security:
+        - registration_auth: [
+            "write:register"
+          ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/registration_data'
+              
+  /register/test:
+    post:
+      summary: Test JSON Payload
+      operationId: ValidateJSON
+      tags: [partner]
+      responses:
+        "200":
+          description: Valid JSON payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/register_200_response'
+        "422":
+          description: Invalid JSON payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/register_422_response'
+      security:
+        - registration_auth: [
+            "write:register"
+          ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/registration_data'
+  
+  /admin/lookup_partner:
+    get:
+      summary: Lookup if API key exists for partner
+      operationId: lookupPartner
+      tags: [admin]
+      responses:
+        "200":
+          description: Partner Successfully Created
+        "409":
+          description: Partner Already Exists
+        "422":
+          description: Invalid request
+      security:
+        - registration_auth: [
+            "read:lookup"
+          ]
+      parameters:
+        - in: query
+          name: partner_name
+          schema:
+            type: string
+          required: True
+          description: Unique Name of Partner
+  
+  /admin/create_partner:
+    post:
+      summary: Create API key for partner
+      operationId: createPartner
+      tags: [admin]
+      responses:
+        "200":
+          description: Partner Successfully Created
+        "409":
+          description: Partner Already Exists
+        "422":
+          description: Invalid request
+      security:
+        - registration_auth: [
+            "read:lookup"
+          ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/create_partner'
+              
+  /admin/add_insurance:
+    post:
+      summary: Add insurance to blacklist
+      operationId: blacklistInsurnace
+      tags: [admin]
+      responses:
+        "200":
+          description: Insurance Successfully Added
+        "409":
+          description: Insurance is already blacklisted
+        "422":
+          description: Invalid request
+      security:
+        - registration_auth: [
+            "write:lookup"
+          ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/insurance_policy'
+
+components:
+  securitySchemes:
+    registration_auth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+      
+  schemas:
+    signup_info:
+      type: object
+      required:
+      - first_name
+      - last_name
+      - phone_number
+      - date_of_birth
+      properties:
+        first_name:
+          type: string
+          format: uuid
+          example: Cody
+        last_name:
+          type: string
+          example: Dailing
+        phone_number:
+          type: string
+          pattern: '^\d{10}$' 
+          example: "3097567268"
+        email:
+          type: string
+          format: email 
+          example: cody@divydose.com
+        date_of_birth:
+          type: string
+          format: date
+          example: "1991-11-23"
+        gender:
+          type: string
+          pattern: '^M|F$'
+          example: M
+        ssn:
+          type: string
+          pattern: '^\d{4}'
+          minLength: 4
+          maxLength: 4
+          example: "1234"
+  
+    addresses:
+      type: array
+      items:
+        $ref: '#/components/schemas/address'
+    
+    pharmacies:
+      type: array
+      items:
+        $ref: '#/components/schemas/pharmacy'
+    
+    insurances:
+      type: array
+      items:
+        $ref: '#/components/schemas/insurance'
+        
+    address:
+      type: object
+      required:
+      - line_1
+      - city
+      - state
+      - zip
+      properties:
+        line_1:
+          type: string
+          example: 4300 44th Ave Moline
+        line_2:
+          type: string
+          example: Apt 2
+        city:
+          type: string
+          example: Moline
+        state:
+          type: string
+          pattern: '^[A-Z]{2}]$'
+          example: IL
+        zip:
+          type: string
+          pattern: '^\d{6}$'
+          example: "60654"
+        type:
+          type: string
+          pattern: '^shipping|billing$'
+          example: billing
+    
+    pharmacy:
+      type: object
+      properties:
+        name:
+          type: string
+          example: CVS Pharmacy
+        store_number:
+          type: string
+          example: "8656"
+        phone_number:
+          type: string
+          pattern: '^\d{10}$' 
+          example: "3097887677"
+        line_1:
+          type: string
+          example: 2617 18th Avenue
+        line_2:
+          type: string
+        city:
+          type: string
+          example: Rock Island
+        state:
+          type: string
+          pattern: '^[A-Z]{2}]$'
+          example: IL
+        zip:
+          type: string
+          pattern: '^\d{6}$'
+          example: "61201"
+        type:
+          type: string
+          pattern: '^physical|online'
+          example: physical
+    
+    insurance:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: Caremark
+        member_id:
+          type: string
+          example: 6AU3CTEWK82
+        group:
+          type: string
+        bin:
+          type: string
+          example: "004390736"
+        pcn:
+          type: string
+          example: MGJD
+          
+    insurance_policy:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: Caremark
+        group:
+          type: string
+        bin:
+          type: string
+          example: "004390736"
+        pcn:
+          type: string
+          example: MGJD
+      required: [provider,group]
+   
+    registration_data:
+      type: object
+      properties:
+          signup_info:
+            $ref: '#/components/schemas/signup_info'
+          addresses:
+            $ref: '#/components/schemas/addresses'
+          pharmacies:
+            $ref: '#/components/schemas/pharmacies'
+          insurances:
+            $ref: '#/components/schemas/insurances'
+          allergies:
+            items:
+              type: string
+            uniqueItems: true
+            example: [aspirin, insulin]
+          conditions:
+            items:
+              type: string
+            uniqueItems: true
+            example: [high blood pressure, asthma]
+          medications:
+            items:
+              type: string
+            uniqueItems: true
+            example: [aspirin, gabapentin]
+          caregiver:
+            type: boolean
+            uniqueItems: true
+            example: False
+          promo_code:
+            type: string
+            example: CL0243
+      required: [signup_info]
+            
+    customer_check:
+      type: object
+      properties:
+        first_name:
+          type: string
+          format: uuid
+          example: Cody
+        last_name:
+          type: string
+          example: Dailing
+        date_of_birth:
+          type: string
+          format: date
+          example: "1991-11-23"
+    
+    register_200_response:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Success"
+          
+    register_409_response:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Duplicate"
+        previous_submission_date:
+          type: string
+          example: "2020-01-01"
+          
+    register_422_response:
+      type: object
+      properties:
+        message:
+          type: object
+          properties:
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  email:
+                    example: "field is not a valid format"
+          
+    create_partner:
+      type: object
+      properties:
+        partner_name:
+          type: string
+          example: divvyDOSE

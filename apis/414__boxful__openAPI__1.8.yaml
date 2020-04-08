@@ -1,0 +1,572 @@
+penapi: 3.0.0
+info:
+  version: "1.8"
+  title: Boxful Business Open API
+  contact:
+    email: steve@boxful.com.tw
+  description: >-
+    <p>如果需要用到API，需要先向企業客服小幫手申請企業戶專屬的API
+    Token以及Handle。<br>
+    申請完畢並且通知開通以後，需要將Token放在Header的Authorization中、將Handle放在User-Agent中。</p>
+    <p>正式機：https://www.boxful.com.tw/business/open_api<br>
+    測試機：http://tw.baoyicun.com/2b-storage/open_api</p>
+tags:
+  - name: orders
+    description: 訂單相關API
+  - name: storage
+    description: 庫存相關API
+  - name : reverse
+    description: 退貨申請相關API
+  - name: cvs
+    description: 串接超商電子地圖 (全家限定)
+paths:
+  /orders/add:
+    post:
+      tags:
+        - orders
+      summary: 新增訂單
+      operationId: addScheduleFromOpenApi
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+      security:
+        - API_User_Token: []
+        - API_User_Handle: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order_id
+                - recipient_name
+                - recipient_phone
+                - recipient_email
+                - logistic
+                - address
+                - goods
+              properties:
+                order_id:
+                  type: string
+                  description: 由企業戶平台產生的訂單編號
+                recipient_name:
+                  type: string
+                  description: 收件人姓名
+                recipient_phone:
+                  type: string
+                  description: 收件人電話
+                recipient_email:
+                  type: string
+                  description: 收件人電子信箱
+                logistic:
+                  type: integer
+                  description:  0 => 自行安排物流<br>
+                                1 => Boxful配送<br>
+                                2 => 全家超取<br>
+                                3 => 新竹物流<br>
+                                5 => 郵局<br>
+                                6 => 7-11超取
+                address:
+                  type: string
+                  description: 收件人地址(超取請代店址)
+                store_id:
+                  type: string
+                  description: 超商店號(全家店號需要去掉開頭的F)
+                store_name:
+                  type: string
+                  description: 超商店名
+                collection_amount:
+                  type: integer
+                  description: 代收貨款
+                instruction:
+                  type: string
+                  description: 訂單備註
+                goods:
+                  type: array
+                  description: 訂單商品內容
+                  items:
+                    type: object
+                    properties:
+                      sku:
+                        type: string
+                        description: 商品貨號
+                      retrieving_type:
+                        type: string
+                        description: piece_out => 揀貨出倉<br>
+                                     pallet_out => 棧板出倉<br>
+                                     item_out => 原箱出倉<br>
+                                     bundle_out => 商品組合
+                        enum:
+                          - piece_out
+                          - pallet_out
+                          - item_out
+                          - bundle_out
+                      count:
+                        type: integer
+                        description: 出貨數量
+        description: 建立訂單需要的JSON
+  '/orders/{order_id}':
+    delete:
+      tags:
+        - orders
+      summary: 取消訂單
+      operationId: cancelScheduleFromOpenApi
+      description: <strong>訂單的預設最晚取消時限是「預定出貨日前一日的晚間18時前」，如果逾時送取消的話系統會傳回錯誤訊息。</strong><br> (實際上依照各企業戶的不同協議會有不同設定，請依照2B前台該訂單預約記錄是否有出現取消鈕而定)
+      parameters:
+        - in: path
+          name: order_id
+          required: true
+          description: 使用在/orders/add中回傳的order_id來做刪除
+          schema:
+            type: integer
+          
+      responses:
+        '205':
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+      security:
+        - API_User_Token: []
+        - API_User_Handle: []
+    get:
+      tags:
+        - orders
+      summary: 透過訂單ID取得訂單出貨狀態以及相關資訊
+      operationId: getScheduleFromOpenApi
+      parameters:
+        - name: order_id
+          in: path
+          description: 使用在/orders/add中回傳的order_id來做查詢
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+      security:
+        - API_User_Token: []
+        - API_User_Handle: []
+  /ordersByCustomId/{custom_order_id}:
+    get:
+      tags: 
+        - orders
+      summary: 透過客製訂單編號查詢訂單資訊
+      operationId: getScheduleFromOpenApiByCustomId
+      parameters:
+        - name: custom_order_id
+          in: path
+          description: 使用客製訂單編號來做查詢
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+      security:
+        - API_User_Token: []
+        - API_User_Handle: []
+  /storage:
+    get:
+      tags:
+        - storage
+      summary: 取得企業戶的庫存資料
+      operationId: getStoredListFromOpenApi
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Storage'
+        '401':
+          description: Unauthorized
+      security:
+        - API_User_Token: []
+        - API_User_Handle: []
+  /reverse/{custom_order_id}:
+    get:
+      tags:
+        - reverse
+      summary: 取得單一訂單中可退貨的商品清單
+      operationId: getReverseFromOpenApi
+      parameters:
+        - name: custom_order_id
+          in: path
+          description: 使用客製訂單編號來做查詢
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReverseAbleGoods'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+      security:
+        - API_User_Token: []
+        - API_User_Handle: []
+    post:
+      tags: 
+        - reverse
+      summary: 提交退貨申請
+      operationId: sendReverseFromOpenApi
+      parameters:
+        - name: custom_order_id
+          in: path
+          description: 使用客製訂單編號來做查詢
+          required: true
+          schema:
+            type: string
+      security:
+        - API_User_Token: []
+        - API_User_Handle: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - phone
+                - logistic
+                - goods
+              properties:
+                name:
+                  type: string
+                  description: 退貨取件人姓名
+                phone:
+                  type: string
+                  description: 退貨取件人電話
+                address:
+                  type: string
+                  description: 退貨取件地址，FamiPort退件可不填寫
+                logistic:
+                  type: string
+                  description: 退貨方式：<br>
+                               hct => 新竹物流<br>
+                               fami => 全家C2B退貨
+                goods:
+                  type: array
+                  description: 退貨商品內容
+                  items:
+                    type: object
+                    properties:
+                      shipment_goods_id:
+                        type: integer
+                        description: 請填入查詢API獲得的ID
+                      count:
+                        type: integer
+                        description: 退貨數量
+        description: 退貨申請的JSON  
+      responses:
+        '200':
+          description: 如果選擇全家退貨成功，data欄位會顯示退貨代碼
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '401':
+          description: Unauthorized
+  /cvs/famiMap:
+    get:
+      tags:
+        - cvs
+      summary: 丟入指定參數與callback網址，會轉去全家的電子地圖，然後回傳店號等相關資料
+      operationId: familymartMapSend
+      parameters:
+        - in: query
+          name: redirect
+          description: 資料回傳的網址
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: order_id
+          description: 訂單編號，這個值會跟著回傳資料一起回來，可以作為辨識資料 (非必填)
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/CvsResponseQuery'
+        '400':
+          description: Bad Request
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+      security:
+        - API_User_Token: []
+        - API_User_Handle: []
+servers:
+  - url: 'https://www.boxful.com.tw/business/open_api'
+    description: 正式機
+  - url: 'http://tw.baoyicun.com/2b-storage/open_api'
+    description: 測試機
+components:
+  securitySchemes:
+    API_User_Token:
+      type: apiKey
+      name: Authorization
+      in: header
+    API_User_Handle:
+      type: apiKey
+      name: User-Agent
+      in: header
+  schemas:
+    Order:
+      type: object
+      properties:
+        logistics_date:
+          type: string
+          format: date
+          description: 出貨日期
+        type_label:
+          type: string
+          description: 物流方向
+        address:
+          type: string
+          description: 配送地址
+        name:
+          type: string
+          description: 收件人
+        phone:
+          type: string
+          description: 收件人電話
+        instruction:
+          type: string
+          description: 訂單備註
+        remark:
+          type: string
+          description: 由Boxful新增的註記
+        2b_schedule_id:
+          type: integer
+          description: Boxful系統中的訂單編號，也就是orders中需要的order_id
+        collect_amount:
+          type: integer
+          description: 代收貨款
+        vendor_order_id:
+          type: string
+          description: 由企業戶自定義的訂單編號
+        wms_order_id:
+          type: integer
+          description: Boxful的WMS系統中的編號
+        item_list:
+          type: array
+          items:
+            type: object
+            properties:
+              item_name:
+                type: string
+                description: 商品名稱
+              item_sku:
+                type: string
+                description: 商品SKU
+              item_barcode:
+                type: string
+                description: 商品條碼
+              item_qty:
+                type: integer
+                description: 數量
+              item_expiry_date:
+                type: string
+                format: date
+                description: 商品效期
+              retrieving_type:
+                type: string
+                enum:
+                  - item_out
+                  - pallet_out
+                  - piece_out
+                  - bundle_out
+                description: 出貨方式
+              retrieving_type_label:
+                type: string
+                description: 出貨方式的名稱
+        logistics_vendor:
+          type: string
+          description: 物流方式 (物流業者)
+        logistics_status:
+          type: string
+          description: 物流狀態 
+        logistics_code:
+          type: string
+          description: 物流單號 (追蹤碼)
+    Storage:
+      type: object
+      properties:
+        item_shipment_id:
+          type: integer
+          description: Boxful內部物品編號，可忽略
+        item_label:
+          type: string
+          description: 商品名稱
+        item_sku:
+          type: string
+          description: 商品SKU
+        item_desc:
+          type: string
+          description: 商品描述
+        store_date:
+          type: string
+          format: date
+          description: 入庫日期
+        expiry_date:
+          type: string
+          format: date
+          description: 有效期限
+        list:
+          type: array
+          items:
+            type: object
+            properties:
+              retrieving_type:
+                type: string
+                enum:
+                  - item_out
+                  - pallet_out
+                  - piece_out
+                  - bundle_out
+                description: 出貨方式
+              code:
+                type: string
+                description: 出貨代號，可忽略
+              count:
+                type: integer
+                description: 庫存數量
+              status_label:
+                type: string
+                description: 庫存狀態
+    ReverseAbleGoods:
+      type: object
+      properties:
+        id:
+          description: 物品ID，退貨申請時就請用這個ID
+          type: integer
+        shipment_id:
+          description: 此處無用途
+          type: integer
+        balance_count:
+          description: 訂單中剩餘數量
+          type: integer
+        total_count:
+          description: 訂單中原始數量
+          type: integer
+        retrieve_type:
+          description: 退貨方式
+          type: string
+          enum:
+            - item_out
+            - pallet_out
+            - piece_out
+        parent_id:
+          description: 此處無用途
+          type: integer
+        label:
+          description: 品名
+          type: string
+        barcode:
+          description: 商品條碼
+          type: string
+        sku:
+          description: SKU
+          type: string
+        expirt_date:
+          description: 商品效期
+          type: string
+    CvsResponseQuery:
+      type: object
+      properties:
+        cvsid:
+          description: 當初送來的訂單編號
+          type: string
+        cvsspot:
+          type: string
+          description: 超商店號
+        name:
+          type: string
+          description: 超商店名
+        tel:
+          type: string
+          description: 超商電話
+        addr:
+          type: string
+          description: 超商地址
+    ApiResponse:
+      description: 從Boxful API回傳的資料都會以這個Json來包裝，並將資料放在data中
+      type: object
+      properties:
+        status:
+          type: integer
+          description: API回傳的HTTP狀態碼
+        data:
+          type: string
+          description: 如果有資料，會將json包在這個裡面
+        message:
+          type: string
+          description: 錯誤訊息

@@ -1,0 +1,668 @@
+penapi: 3.0.0
+servers:
+  - description: Fleximize Production
+    url: https://api.fleximize.com/api/v2
+info:
+  description: | 
+    Welcome to the Fleximize API!  
+    
+    If you encouter any problems or have any questions and inquiries, please contact the development team. Thank you.
+  version: "2.0.0"
+  title: Fleximize Applications API
+  contact:
+    email: development@fleximize.com
+paths:
+  /get_token:
+    post:
+      summary: Gets authentication token
+      description: > 
+        Gets authentication token using credentials.
+        
+          Token is valid for **7 days**. After that new token should be optained using the same endpoint
+      operationId: getToken
+      security: []
+      tags:
+        - authorisation
+      requestBody:
+        description: |
+          Fleximize uses API token to allow access to the API called JWT. You can get your own token or ask fleximize admin to generate it for you.
+  
+          All Fleximize endpoints require authorization using the API token, which is expected to be included in all API requests to the server in a header that looks like the following: 
+  
+          **Authorization: Bearer {yourtokenhere}**
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/loginCredentials'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/loginCredentials'
+      responses:
+        '200':
+          $ref: '#/components/responses/authToken'
+        '401':
+          $ref: '#/components/responses/Unautheticated'
+  /application:
+    post:
+      summary: Submits loan application
+      description: Submits loan application
+      operationId: postApplication
+      tags: 
+        - application
+      requestBody:
+        description: |
+          New loan application can be submitted through this endpoint
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/application'
+            encoding:
+              company:
+                contentType: application/json
+      responses:
+        '200':
+          $ref: '#/components/responses/appSubmitted'
+        '401':
+          $ref: '#/components/responses/Unautheticated'
+        '400':
+          $ref: '#/components/responses/error'
+  /application/{application_id}:
+    get:
+      summary: Get current application status by `application_id`
+      description: Get current application status by `application_id`
+      operationId: getApplicationStatus
+      tags: 
+        - application
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          description: application_id value returned in in the `/application` response
+          schema:
+            type: string
+            example: flex1abcd2efg34hij
+      responses:
+        '200':
+          description: Successful response from the server
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  application_status:
+                    allOf:
+                      - $ref: '#/components/schemas/app_status'
+                      - type: string
+                      - description: Current application status
+                      - example: Approved
+                  internal_score_status:
+                    type: string
+                    description: String describing if application passed, failed or have been referred for manual review
+                    example: PASSED
+                  internal_id:
+                    type: string
+                    description: Client internall ID
+                  
+  /application/document-types:
+    get:
+      summary: Gets list of allowed document types to upload
+      description: > 
+        Gets list of allowed document types to upload.
+        Each of ID returned is used as "document_type" paremeter in "upload" endpoint
+      operationId: getAllowedDocTypes
+      tags: 
+        - application
+        - documents
+      responses:
+        '200':
+          description: Response with list of all alowed document types ID and description
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: Document ID
+                      example: 1
+                    type:
+                      type: string
+                      description: Document type description
+                      example: Bank Statement
+          links:
+            document_type:
+              description: >
+                The `id` value returned in the response can be used as
+                the `document_type` parameter in `POST /application/{application_id}/upload`.
+              operationId: postApplicationDocuments
+              requestBody: "$response.body#/0/id"
+              parameters:
+                document_type: "$response.body#/0/id"
+          
+        '401':
+          $ref: '#/components/responses/Unautheticated'
+        '400':
+          $ref: '#/components/responses/error'
+  /application/{application_id}/upload:
+    post:
+      summary: Post application related document
+      description: Post document related to application
+      operationId: postApplicationDocuments
+      tags: 
+        - application
+        - documents
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          description: application_id value returned in in the `/application` response
+          schema:
+            type: string
+            example: flex1abcd2efg34hij
+      requestBody:
+        description: |
+          New loan application documents can be uploaded through this endpoint
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: 
+                - document_type
+                - file
+              properties:
+                document_type:
+                  type: integer
+                  format: int32
+                  description: One of `id` values returned by `/application/document-types` response
+                  example: 1
+                file:
+                  type: string
+                  format: binary
+                  description: Document file being uploaded
+                
+      responses:
+        '200':
+          $ref: '#/components/responses/ok'
+        '401':
+          $ref: '#/components/responses/Unautheticated'
+        '400':
+          $ref: '#/components/responses/error'
+          
+components:
+  schemas:
+          
+    loginCredentials:
+      title: Get token by credentials
+      description: Login credentials object
+      type: object
+      required: 
+        - user_name
+        - password
+      properties:
+        user_name:
+          type: string
+          maxLength: 255
+          format: email
+          description: Account username. Usually email address
+          example: example@example.com
+        password:
+          description: Account password
+          type: string
+          format: password
+          example: somepassword
+          
+    app_status:
+      type: string
+      enum:
+        - Approved
+        - Approved (Offer Expired)
+        - Cancelled
+        - Deposited
+        - Failed
+        - Under Review
+        - Test
+          
+    application:
+      title: Application object
+      description: Application object
+      type: object
+      required:
+        - business_type_id
+        - company_name
+        - title_id
+        - first_name
+        - last_name
+        - phone
+        - email
+        - loan_amount
+        - term
+        - funding_urgency
+        - loan_purpose_id
+        - other_purpose
+        - privacy_policy_consent
+        - cra_checks_consent
+        - refer_consent
+        - company
+      properties:
+        business_type_id:
+          type: integer
+          enum: [1, 2, 3, 4]
+          description: >
+            Business Type:
+              * `1` - Sole Trader
+              * `2` - Non-Limited Partnership
+              * `3` - Limited Company
+              * `4` - Limited Partnership (LLP)
+                
+        company_name:
+          type: string
+          maxLength: 75
+          description: Company Name
+          example: "Example Company Name"
+                
+        registration_number:
+          type: string
+          maxLength: 8
+          nullable: true
+          description: Company Registration Number
+          example: 12345678
+          
+        title_id:
+          $ref: '#/components/schemas/title_id'
+          
+        first_name:
+          $ref: '#/components/schemas/first_name'
+              
+        last_name:
+          $ref: '#/components/schemas/last_name'
+              
+        phone:
+          type: string
+          minLength: 8
+          maxLength: 80
+          pattern: ^(0|\+)\d+$
+          description: Applicant phone number
+          example: "0123456789"
+              
+        email:
+          type: string
+          maxLength: 255
+          format: email
+          pattern: ^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$
+          description: Applicant email address
+          example: example@example.com
+              
+        loan_amount:
+          type: number
+          format: double
+          minimum: 5000
+          maximum: 500000
+          description: Loan amount
+          example: 30000
+              
+        term:
+          type: integer
+          minimum: 1
+          maximum: 48
+          description: Loan term
+          example: 24
+          
+        funding_urgency:
+          type: integer
+          enum: [1, 2, 3]
+          description: >
+            How quick funds are required:
+              * `1` - As soon as possible
+              * `2` - Within a few weeks
+              * `3` - I just want to see what's available
+                
+        loan_purpose_id:
+          type: integer
+          enum: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+          description: >
+            Loan purpose:
+              * `1` - Hire staff
+              * `2` - Management buyout
+              * `3` - Marketing
+              * `4` - Moving premises
+              * `5` - Fulfil an order or contract
+              * `6` - Pay a due bill
+              * `7` - Pay HMRC
+              * `8` - Pay staff
+              * `9` - Purchase stock
+              * `10` - Purchase equipment
+              * `11` - Refinance debt
+              * `12` - Refurbish premises
+              * `13` - Upgrade website
+              * `14` - Business expansion
+              * `15` - Working capital / cash flow
+              * `16` - Other (please specify)
+          
+        other_purpose:
+          type: string
+          minLength: 3
+          maxLength: 1000
+          description: Loan purpose needed when loan purpose id is 15, 16
+              
+        internal_id:
+          type: string
+          maxLength: 255
+          description: Your internal ID
+          example: AB123456
+              
+        notes:
+          type: string
+          maxLength: 255
+          description: Notes
+              
+        is_test:
+          type: boolean
+          description: When set to true, the application will not be reviewed
+                
+        privacy_policy_consent:
+          type: boolean
+          description: 
+            When set to true, you are confirming that your client has consented to Fleximize and its group of companies using their personal information in the ways described in the [Privacy Policy](https://fleximize.com/terms-of-use/privacy-policy) and [Terms of Website Use](https://fleximize.com/terms-of-use/privacy-policy).   
+            
+            
+            **Fleximize won't be able to process an application without _privacy_policy_consent_ set to true**
+                
+        cra_checks_consent:
+          type: boolean
+          description:
+            When set to true you are confirming that your client authorises Fleximize to perform credit reference agency (CRA) searches on the business, directors, any individuals supplied as part of the application, and their financial associates. A record of this search will be recorded against all applicants and may be seen by other companies if they carry out a credit enquiry. Before submitting this application, please confirm that you have obtained the consent of all individuals concerned and provided them a copy of our [Privacy Policy](https://fleximize.com/terms-of-use/privacy-policy). For more information on how we and the CRAs use your information, please refer to our [Privacy Policy](https://fleximize.com/terms-of-use/privacy-policy).  
+            
+            
+            **Fleximize won't be able to process an application without _cra_checks_consent_ set to true**
+            
+        refer_consent:
+          type: boolean
+          description: 
+            If Fleximize are unable to provide the finance requested, this consent allows us to refer the credit application and personal details to our carefully selected panel of brokers and lenders to assist in obtaining credit.
+          
+        company:
+          $ref: '#/components/schemas/company'
+          
+    company:
+      type: object
+      description: Object holding company data
+      required:
+        - monthly_sales
+        - trading_date
+        - same_address
+        - registered_address
+        - directors
+      properties:
+        vat_no:
+          type: string
+          maxLength: 15
+          description: Company Vat Number
+          example: GB999999973
+        monthly_sales:
+          type: number
+          format: double
+          description: Company monthly sales value
+          example: 50000
+        date_of_creation:
+          type: string
+          format: date
+          description: 'Company incorporation date. Format: YYYY-MM-DD'
+          example: '2012-12-12'
+        trading_date:
+          type: string
+          format: date
+          description: When company have started to trade
+          example: '2012-12-12'
+        same_address:
+          type: boolean
+          description: If is set to true, trading address is not required
+        registered_address:
+          $ref: '#/components/schemas/address'
+        trading_address:
+          $ref: '#/components/schemas/address'
+        directors:
+          type: array
+          items:
+            $ref: '#/components/schemas/person'
+        shareholders:
+          type: array
+          items:
+            $ref: '#/components/schemas/person'
+          
+    address:
+      type: object
+      required:
+        - abode_name_no
+        - street
+        - town
+        - postcode
+      properties:
+        abode_name_no:
+          type: string
+          maxLength: 250
+          description: > 
+            Building Name or Number   
+            
+            **Required for first director*
+          example: 51
+        street:
+          type: string
+          maxLength: 250
+          description: >
+            Street name   
+            
+            **Required for first director*
+          example: John Street
+        street2:
+          type: string
+          maxLength: 250
+          description: >
+            Address second line   
+            
+            **Required for first director*
+          example: John Street
+        town:
+          type: string
+          maxLength: 50
+          description: >
+            Town name   
+            
+            **Required for first director*
+          example: Ipswich
+        county:
+          type: string
+          maxLength: 50
+          description: >
+            County name   
+            
+            **Required for first director*
+          example: Suffolk
+        postcode:
+          type: string
+          maxLength: 20
+          description: >
+            Postocode   
+            
+            **Required for first director*
+          example: IP3 0AH
+        
+    person:
+      allOf:
+        - type: object
+          description: Person object
+          required:
+            - first_name
+            - last_name
+            - date_of_birth
+            - residential_type_id
+          properties:
+            title_id:
+              $ref: '#/components/schemas/title_id'
+            first_name:
+              $ref: '#/components/schemas/first_name'
+            last_name:
+              $ref: '#/components/schemas/last_name'
+            date_of_birth:
+              type: string
+              format: date
+              description: 'Person date of birth. Format: YYYY-MM-DD'
+              example: '1980-12-12'
+            major_shareholder:
+              type: boolean
+              default: false
+              description: Set to true if person holds 25% or more shares
+            residential_type_id:
+              type: integer
+              enum: [1, 2, 3, 4]
+              description: >
+                Person Title:
+                  * `1` - Homeowner
+                  * `2` - Living with Partner
+                  * `3` - Tenant
+                  * `4` - Other
+        - $ref: '#/components/schemas/address'
+        - type: object
+          required:
+            - move_in_date
+          properties: 
+            move_in_date:
+              $ref: '#/components/schemas/move_in_date'
+            previous_addresses:
+              type: array
+              items:
+                allOf:
+                  - type: object
+                    description: Person previous addresses.      
+                           
+                      
+                      *Required if move_in_date is not over 3 years ago*
+                  - $ref: '#/components/schemas/address'
+                  - type: object
+                    required:
+                      - move_in_date
+                    properties:
+                      move_in_date:
+                        $ref: '#/components/schemas/move_in_date'
+                
+
+    title_id:
+      type: integer
+      enum: [1, 2, 3, 4, 5]
+      description: >
+        Person Title:
+          * `1` - Mr
+          * `2` - Mrs
+          * `3` - Miss
+          * `4` - Ms
+          * `5` - Dr
+          
+    first_name:
+      type: string
+      maxLength: 80
+      description: Person first name
+      example: John
+      
+    last_name:
+      type: string
+      maxLength: 80
+      description: Person last name
+      example: Doe
+    
+    move_in_date:
+      type: string
+      format: date
+      description: |
+        Approximate move-in date. Format: YYYY-MM-DD
+              
+        **Required for first director*
+      example: '1980-12-12'
+      
+  securitySchemes:
+    bearerAuth:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      
+  responses:
+    Unauthorized:
+      description: Access token is missing or invalid
+    Unautheticated:
+      description: Invalid credentials
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Invalid credentials
+    
+    authToken:
+      description: Returned authorisation token to use for all requests
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              token:
+                type: string
+                description: Bearer token
+                example: d290f1ee6c544b0190e6d701748f0851
+    appSubmitted:
+      description: Returns application ID and status
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              application_id:
+                type: string
+                description: Unique application ID
+                example: d290f1ee6c544b0190e6d701748f0851
+              internal_score_status:
+                type: string
+                description: Internal checks status
+                example: PASSED
+      links:
+        application_id:
+          $ref: '#/components/links/applicationId'
+        path.application_id:
+          description: >
+            The `application_id` value returned in the response can be used as
+            the `application_id` parameter in various application related requests.
+          operationId: getApplicationStatus
+          parameters:
+            application_id: "$response.body#/application_id"
+    error:
+      description: Error response from server
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    ok:
+      description: OK response from server
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: File uploaded
+          
+  links:
+    applicationId:
+      description: >
+        The `application_id` value returned in the response can be used as
+        the `application_id` parameter in various application related requests.
+      operationId: postApplicationDocuments
+      parameters:
+        application_id: "$response.body#/application_id"
+    
+security:
+  - bearerAuth: []

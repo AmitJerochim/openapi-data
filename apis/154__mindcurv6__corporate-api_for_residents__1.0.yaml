@@ -1,0 +1,537 @@
+penapi: 3.0.1
+info:
+  title: Corporate API for residents.
+  version: "1.0"
+paths:
+  /residenttimerange/{uuid}:
+    get:
+      summary: Get one resident time range identified by UUID.
+      tags:
+        - resident
+      operationId: getResident
+      parameters:
+        - $ref: "#/components/parameters/ResidentTimeRangeUUID"
+        - $ref: "#/components/parameters/TransactionUuid"
+      responses:
+        '200':
+          description: The resident for the given UUID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResidentTimeRange'
+        '404':
+          description: Resident not found for the given UUID.
+        default:
+          description: Technical error.
+    put:
+      summary: Update a resident time range.
+      tags:
+        - resident
+      operationId: updateResident
+      parameters:
+        - $ref: "#/components/parameters/ResidentTimeRangeUUID"
+        - $ref: "#/components/parameters/TransactionUuid"
+        - $ref: "#/components/parameters/SourceSystem"
+        - $ref: "#/components/parameters/SourceUser"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResidentTimeRangeUpdate"
+      responses:
+        '200':
+          description: |
+            The resident was updated successfully.
+
+            The updated resident is returned in the result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResidentTimeRange'
+        '400':
+          description: Invalid input parameters for the resident.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationFailed"
+        '404':
+          description: Resident to update not found.
+        default:
+          description: Technical error.
+    delete:
+      summary: Delete resident time range for the given UUID.
+      tags:
+        - resident
+      operationId: deleteResident
+      parameters:
+        - $ref: "#/components/parameters/ResidentTimeRangeUUID"
+        - $ref: "#/components/parameters/TransactionUuid"
+        - $ref: "#/components/parameters/SourceSystem"
+        - $ref: "#/components/parameters/SourceUser"
+      responses:
+        '202':
+          description: |
+            Resident entity was deleted successfully.
+
+            The most recent data of the deleted data set is returned in the response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResidentTimeRange"
+        '404':
+          description: Resident not found for the given UUID.
+        default:
+          description: Technical error.
+  /residenttimerange:
+    post:
+      summary: Create a new resident time range.
+      tags:
+        - resident
+      operationId: createResident
+      parameters:
+        - $ref: "#/components/parameters/TransactionUuid"
+        - $ref: "#/components/parameters/SourceSystem"
+        - $ref: "#/components/parameters/SourceUser"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResidentTimeRangeCreate'
+      responses:
+        '200':
+          description: |
+            Resident update was processed.
+
+            The newly created resident is returned in the result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResidentTimeRange'
+        '400':
+          description: Invalid input parameters for the resident.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationFailed"
+        default:
+          description: Technical error.
+  /property/{propertyId}/residenttimerange:
+    post:
+      summary: Search residents in context of a property.
+      tags:
+        - resident
+      operationId: searchResidents
+      parameters:
+        - $ref: "#/components/parameters/PropertyId"
+        - $ref: "#/components/parameters/PropertyIdType"
+        - $ref: "#/components/parameters/TransactionUuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResidentSearch"
+      responses:
+        '200':
+          description: The residents matching the search criteria.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResidentSearchResult"
+        '400':
+          description: Invalid input parameters, e.g. property ID type not supported by the backend.
+        '404':
+          description: The property does not exist.
+        default:
+          description: Technical error.
+  /property/{propertyId}/unit/{unitUuid}/maintained:
+    put:
+      summary: Mark the consumption unit as maintained.
+      tags:
+        - resident
+      operationId: markUnitMaintained
+      parameters:
+        - $ref: "#/components/parameters/PropertyId"
+        - $ref: "#/components/parameters/PropertyIdType"
+        - $ref: "#/components/parameters/UnitUUID"
+        - $ref: "#/components/parameters/TransactionUuid"
+      responses:
+        '204':
+          description: Consumption unit marked as maintained.
+        default:
+          description: Technical error.
+components:
+  parameters:
+    PropertyId:
+      description: |
+        The property identifier in requests.
+
+        The type of identifier is given in query parameter ``idType``:
+
+        * ``PROPERTY_ACCOUNT``: The account number of a property in ERP systems.
+
+        * ``PROPERTY_NUMBER``: The organizational number of a property in billing systems.
+
+        * ``UUID``: The technical UUID of the property in ista format, i.e. without dashes and in capital letters.
+      name: propertyId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 32
+    PropertyIdType:
+      description: The type of property identifier in parameter ``propertyId``.
+      name: idType
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [PROPERTY_ACCOUNT, PROPERTY_NUMBER, UUID]
+    ResidentTimeRangeUUID:
+      description: The resident identifier in ista format, i.e. without dashes and in capital letters.
+      name: uuid
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/ResidentTimeRangeUUID"
+    SourceSystem:
+      name: X-Source-System
+      in: header
+      required: true
+      schema:
+        description: The system sending the change.
+        type: string
+        minLength: 1
+        maxLength: 40
+    SourceUser:
+      name: X-Source-User
+      in: header
+      required: true
+      schema:
+        description: |
+          Description of the user responsible for the change.
+
+          This can be a backoffice user at ista, or the identifier of a customer in a portal.
+        type: string
+        minLength: 1
+        maxLength: 40
+    TransactionUuid:
+      description: |
+        A transaction UUID used to associate operation calls between systems.
+
+        The UUID is given in ista format, i.e. without dashes and in capital letters.
+
+        Rules:
+        * When a transaction UUID is given in the request, the receiving system **uses** it for logging
+        and passes it to other systems.
+        * When no transaction UUID is given in the request, the receiving system **creates** it
+        and subsequently uses it for logging and passes it to other systems.
+      name: X-Transaction-Uuid
+      in: header
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 32
+        example: "F4FF402B9BEB4BD0AB0AE6485464FE3B"
+    UnitUUID:
+      description: The identifier of a consumption unit in ista format, i.e. without dashes and in capital letters.
+      name: unitUuid
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 32
+        maxLength: 32
+  schemas:
+    CompanyName:
+      description: |
+        Company name of the resident.
+
+        This is required when the resident represents a company and first/last name do not apply,
+        or can be used in addition to first and last name to further describe the resident.
+      type: string
+      minLength: 1
+      maxLength: 40
+    ConsumerUUID:
+      description: |
+        UUID of a consumer in ista format, i.e. without dashes and with capital letters.
+
+        This reference is given when a resident is considered to be equal to this consumer.
+      type: string
+      minLength: 32
+      maxLength: 32
+    UnitUUID:
+      description: |
+        UUID of a consumption in ista format, i.e. without dashes and with capital letters.
+
+        All residents are linked to exactly one consumption unit.
+      type: string
+      minLength: 32
+      maxLength: 32
+    FirstName:
+      description: |
+        First name of the resident.
+      type: string
+      minLength: 1
+      maxLength: 40
+    IdAtCustomer:
+      description: |
+        Functional or technical ID of the resident as defined by the customer (used e.g. for data exchange).
+      type: string
+      minLength: 1
+      maxLength: 20
+    Invalid:
+      description: States that a resident time range is currently in invalid state and must be validated.
+      type: object
+      properties:
+        from:
+          description: The start date of the invalid status.
+          type: string
+          format: date
+        reason:
+          description: |
+            The reason why the resident is invalid.
+
+            **Draft status**
+
+            * ``UNIT_INVALID``: The consumption unit does no longer exist, i.e. it is no longer valid.
+
+            * ``CONSUMER_GAP``: There are not always consumers maintained for the consumption unit and time range of the resident.
+
+            * ``REFERENCED_CONSUMER_NO_OVERLAP``: There is no overlap in validity periods of the resident
+            and the referenced consumer.
+
+            * ``OTHER``: There is another reason for invalidity, which is stated in field ``other``.
+          type: string
+          enum:
+            - UNIT_INVALID
+            - CONSUMER_GAP
+            - REFERENCED_CONSUMER_NO_OVERLAP
+            - OTHER
+        other:
+          description: |
+            Technical description of reason ``OTHER``.
+
+            This is not meant to be displayed to a customer, but to be used by support.
+
+            It can be used as interim solution when new reasons are added over time.
+          type: string
+          minLength: 1
+          maxLength: 200
+      required:
+        - from
+        - reason
+    LastName:
+      description: |
+        Last name of the resident.
+
+        This is required when no company name is present.
+      type: string
+      minLength: 1
+      maxLength: 40
+    PropertyNumber:
+      description: The number of a billing property residents belong to.
+      type: string
+      minLength: 10
+      maxLength: 10
+    ResidentSearch:
+      type: object
+      description: |
+        Search parameters for residents.
+
+        For now, searching is possible based on consumption unit UUIDs.
+      properties:
+        units:
+          description: Consumption unit UUIDs to search residents.
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/UnitUUID"
+      required:
+        - units
+    ResidentSearchResult:
+      description: |
+        Result of a resident search including:
+
+        * The list of residents found for the given units.
+
+        * The list of requested units where no resident data is maintained at the moment.
+      type: object
+      properties:
+        units:
+          description: The list of resident time ranges found for the search criteria.
+          type: array
+          items:
+            $ref: "#/components/schemas/ResidentUnit"
+        notFound:
+          description: The list of requested consumption unit UUIDs where no residents are maintained.
+          type: array
+          items:
+            description: UUID of a consumption unit in ista format, i.e. no dashes and in capital letters.
+            type: string
+            minLength: 32
+            maxLength: 32
+      required:
+        - units
+        - notFound
+    ResidentTimeRange:
+      description: description
+      type: object
+      allOf:
+        - properties:
+            propertyNumber:
+              $ref: "#/components/schemas/PropertyNumber"
+            unit:
+              $ref: "#/components/schemas/UnitUUID"
+          required:
+            - propertyNumber
+            - unit
+        - $ref: "#/components/schemas/ResidentTimeRangeAttributes"
+    ResidentTimeRangeAttributes:
+      description: |
+        This data type describes a resident from the point of view of a property administrator or property owner.
+
+        The resident relates a person to a consumption unit for a certain time range.
+
+        It does not represent the identity of a person across consumption units or properties.
+
+        Time range objects are always given in the context of a unit, which maintains links to
+        consumption unit and property.
+      type: object
+      properties:
+        uuid:
+          $ref: "#/components/schemas/ResidentTimeRangeUUID"
+        consumer:
+          $ref: "#/components/schemas/ConsumerUUID"
+        firstName:
+          $ref: "#/components/schemas/FirstName"
+        lastName:
+          $ref: "#/components/schemas/LastName"
+        companyName:
+          $ref: "#/components/schemas/CompanyName"
+        idAtCustomer:
+          $ref: "#/components/schemas/IdAtCustomer"
+        validFrom:
+          $ref: "#/components/schemas/ValidFrom"
+        validTo:
+          $ref: "#/components/schemas/ValidTo"
+        invalid:
+          $ref: "#/components/schemas/Invalid"
+      required:
+        - uuid
+    ResidentTimeRangeCreate:
+      description: |
+        Data needed for creation of a new resident time range.
+      type: object
+      properties:
+        propertyNumber:
+          $ref: "#/components/schemas/PropertyNumber"
+        unit:
+          $ref: "#/components/schemas/UnitUUID"
+        consumer:
+          $ref: "#/components/schemas/ConsumerUUID"
+        firstName:
+          $ref: "#/components/schemas/FirstName"
+        lastName:
+          $ref: "#/components/schemas/LastName"
+        companyName:
+          $ref: "#/components/schemas/CompanyName"
+        idAtCustomer:
+          $ref: "#/components/schemas/IdAtCustomer"
+        validFrom:
+          $ref: "#/components/schemas/ValidFrom"
+        validTo:
+          $ref: "#/components/schemas/ValidTo"
+      required:
+        - source
+        - unit
+        - validFrom
+    ResidentTimeRangeUpdate:
+      description: |
+        Attributes of a resident time range to update.
+      type: object
+      properties:
+        consumer:
+          $ref: "#/components/schemas/ConsumerUUID"
+        firstName:
+          $ref: "#/components/schemas/FirstName"
+        lastName:
+          $ref: "#/components/schemas/LastName"
+        companyName:
+          $ref: "#/components/schemas/CompanyName"
+        idAtCustomer:
+          $ref: "#/components/schemas/IdAtCustomer"
+        validFrom:
+          $ref: "#/components/schemas/ValidFrom"
+        validTo:
+          $ref: "#/components/schemas/ValidTo"
+    ResidentTimeRangeUUID:
+      description: |
+        UUID as primary identifier of a resident time range in ista format, i.e. without dashes and in capital letters.
+      type: string
+      minLength: 32
+      maxLength: 32
+      example: "137EC17D43594CC39BEAD7A11F3A0731"
+    ResidentUnit:
+      description: The reference from a resident to consumption unit and property.
+      type: object
+      properties:
+        propertyNumber:
+          $ref: "#/components/schemas/PropertyNumber"
+        unit:
+          $ref: "#/components/schemas/UnitUUID"
+        residents:
+          description: |
+            The residents maintained for this unit.
+          type: array
+          items:
+            $ref: "#/components/schemas/ResidentTimeRangeAttributes"
+      required:
+        - propertyNumber
+        - unit
+        - residents
+    ValidationFailed:
+      description: Response in case invalid resident data was submitted.
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationMessage"
+      required:
+        - messages
+    ValidationMessage:
+      description: Message on failed resident data validation.
+      type: object
+      properties:
+        message:
+          description: Technical error message describing the reason of validation failure.
+          type: string
+          minLength: 1
+          maxLength: 255
+        code:
+          description: |
+            A code identifying the reason of validation failure.
+
+            This enables a front end to provide user-friendly and internationalized messages.
+          type: string
+          minLength: 1
+          maxLength: 10
+      required:
+        - message
+    ValidFrom:
+      description: |
+        The validity period begin of the resident.
+
+        If not present, it means that the begin is not known and we assume the resident is always valid in the past.
+      type: string
+      format: date
+      example: '2019-12-27'
+    ValidTo:
+      description: |
+        The validity period end of the resident.
+
+        If not present, it means that the resident is considered valid in the future without limitation.
+      type: string
+      format: date
+      example: '2019-12-27'

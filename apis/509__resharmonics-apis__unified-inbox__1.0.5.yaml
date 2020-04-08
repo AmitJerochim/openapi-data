@@ -1,0 +1,954 @@
+penapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/resharmonics-apis/unified-inbox/1.0.5
+  - description: Rerum
+    url: https://app.rerumapp.uk/staging/unified-inbox
+info:
+  description: Unified Inbox API
+  version: "1.0.5"
+  title: Unified Inbox
+  contact:
+    email: dgalitsyn@resharmonics.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: Channels
+    description: Operations regarding channels
+  - name: Threads
+    description: Operations regarding threads
+  - name: Contacts
+    description: Operations regarding contacts
+  - name: Messages
+    description: Operations regarding messages in a thread
+  - name: Users
+    description: Operations ragrading users in PMS
+paths:
+  /channels:
+    get:
+      tags:
+        - Channels
+      summary: Get a list of available channels and counts
+      security: 
+        - ApiKeyAuth: []
+      operationId: GET_channel_list
+      description: |
+        This call will return you a list of available channels for logged in user. This list will contain counts for OPEN inbox items. The counts will be a part of this call as well.
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelListResults'
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+                format: int32
+              description: The total result count
+            Link:
+              schema:
+                type: string
+              description: A Link header for pagination navigation (see rfc5988)
+        '403':
+          description: Username or password incorrect
+        '400':
+          description: Bad Request
+  '/channels/{channelId}/threads':
+    get:
+      tags:
+        - Channels
+      summary: Get list of threads for channel
+      description: |
+        This call will return you a list of threads for the specified channel for the logged in user.
+      operationId: GET_channel_threads
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          description: Channel Id
+          required: true
+          schema:
+            type: string
+            format: uuid  
+        - name: status 
+          in: query
+          schema:
+            type: string
+            enum: [OPEN, CLOSED, STARTED, COMPLETED]
+          description: The status of the thread
+        - name: firstName
+          in: query
+          schema:
+            type: string
+        - name: lastName
+          in: query
+          schema:
+            type: string
+        - name: email
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: number
+        - name: pageSize
+          in: query
+          description: Page size
+          required: false
+          schema:
+            type: number    
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThreadListResults'
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+                format: int32
+              description: The total result count
+            Link:
+              schema:
+                type: string
+              description: A Link header for pagination navigation (see rfc5988)
+        '403':
+          description: Username or password incorrect      
+        '400':
+          description: Bad Request
+  '/threads/{threadId}/messages':
+    get:
+      tags:
+        - Threads
+      summary: Get list of messages for a thread
+      description: |
+        This call will return you a list of messages for a particular thread.
+      operationId: GET_thread_messages
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: threadId
+          in: path
+          description: Thread Id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: number
+        - name: pageSize
+          in: query
+          description: Page size
+          required: false
+          schema:
+            type: number    
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessagesListResults'
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+                format: int32
+              description: The total result count
+            Link:
+              schema:
+                type: string
+              description: A Link header for pagination navigation (see rfc5988)
+        '403':
+          description: Username or password incorrect      
+        '400':
+          description: Bad Request
+  '/threads/{threadId}':
+    get:
+      tags: 
+        - Threads
+      summary: Get a single thread
+      description: |
+        This call will return information about a single thread
+      operationId: GET_threads
+      security: 
+        - ApiKeyAuth: []
+      parameters: 
+        - name: threadId
+          in: path
+          description: Thread id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Thread object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Thread'
+        '403':
+          description: Username or password incorrect      
+        '400':
+          description: Bad Request        
+  /threads:
+    post:
+      tags:
+        - Threads
+      summary: Create a thread for a channel
+      description: |
+        This call will create a new thread for a specified channel
+      operationId: POST_threads
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: channelId
+          in: query
+          description: Channel ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: The required data to create a new thread.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateThread'
+      responses:
+        '201':
+          description: Returns newly created thread
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Thread'
+        '403':
+          description: Username or password incorrect      
+        '400':
+          description: Bad Request        
+  '/contacts/{contactId}':
+    get:
+      tags:
+        - Contacts
+      summary: Get contact information
+      description: |
+        This call will return information about a contact, and counts for attached issues and bookings
+      operationId: GET_contact
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: contactId
+          in: path
+          description: Contact Id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Contact information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contact'
+        '403':
+          description: Username or password incorrect      
+        '400':
+          description: Bad Request
+        '404':
+          description: Contact not found
+  '/contacts/{contactId}/issues':
+    get:
+      tags:
+        - Contacts
+      summary: Get contact issues
+      description: |
+        This call will return listing of contacts related issues
+      operationId: GET_contact_issues
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: contactId
+          in: path
+          description: Contact Id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of issues related to the contact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueListResults'
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+                format: int32
+              description: The total result count      
+        '403':
+          description: Username or password incorrect
+        '400':
+          description: Bad Request
+  '/contacts/{contactId}/bookings':
+    get:
+      tags:
+        - Contacts
+      summary: Get contact bookings
+      description: |
+        This call will return listing of contacts related bookings
+      operationId: GET_contact_bookings
+      security: 
+        - ApiKeyAuth: []
+      parameters:
+        - name: contactId
+          in: path
+          description: Contact Id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of bookings related to the contact
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingListResults'
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+                format: int32
+              description: The total result count      
+        '403':
+          description: Username or password incorrect
+        '400':
+          description: Bad Request         
+  /messages:
+    post:
+      tags:
+        - Messages
+      summary: Create new message for thread
+      description: |
+        This will add a message onto a specified thread
+      operationId: POST_messages
+      security: 
+        - ApiKeyAuth: []
+      parameters: 
+        - name: threadId
+          in: query
+          description: Thread Id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: The required data to create a new message.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMessage'      
+      responses:
+        '201':
+          description: OK
+        '403':
+          description: Username or password incorrect
+        '400':
+          description: Bad Request  
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Search users inside PMS
+      description: |
+        This will bring back filtered list of users based on search criteria
+      operationId: GET_users
+      security: 
+        - ApiKeyAuth: []
+      parameters: 
+        - name: firstName
+          in: query
+          description: First Name
+          required: false
+          schema:
+            type: string
+        - name: lastName
+          in: query
+          description: Last Name
+          required: false
+          schema:
+            type: string
+        - name: email
+          in: query
+          description: Email Address
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number
+          required: false
+          schema:
+            type: number    
+        - name: pageSize
+          in: query
+          description: Pagesize
+          required: false
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+                format: int32
+              description: The total result count
+            Link:
+              schema:
+                type: string
+              description: A Link header for pagination navigation (see rfc5988)
+        '403':
+          description: Username or password incorrect
+        '400':
+          description: Bad Request
+components:
+  schemas:
+    BookingListResults: 
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Booking'
+    Booking:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        created:
+          type: string
+          format: date-time
+        bookingReference:
+          type: string
+          
+    IssueListResults:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Issue'
+      example:
+        results:
+          - id: 7fb3fa65-102d-4171-8797-d0ba0069def4
+            created: "2020-01-21T17:32:28Z"
+            status: "OPEN"
+            priority:
+              id: f1937e95-1f3c-4707-88f1-bf7be3b3e405
+              name: "Priority 1"
+              targetResponse: 5
+              targetResolution: 6
+            type:
+              id: 3b1b575a-629c-40ce-bff6-9d4b144dd0d1
+              name: "Urgent"
+            subject: "Please clean this"
+            description: "Please clean this issue description"
+            responseTargetDate: "2020-01-21T17:32:28Z"
+            resolutionTargetDate: "2020-01-21T17:32:28Z"
+          - id: 052a43eb-79d5-441c-8945-ef5a24a6abf9
+            created: "2020-01-21T17:32:28Z"
+            status: "OPEN"
+            priority:
+              id: 8cc54519-4239-4418-a67d-76fce62b950f
+              name: "Priority 1"
+              targetResponse: 5
+              targetResolution: 6
+            type:
+              id: 972b7147-43b0-4732-80bb-fba3901b9dc2
+              name: "Urgent"
+            subject: "Please clean this"
+            description: "Please clean this issue description"
+            responseTargetDate: "2020-01-21T17:32:28Z"
+            resolutionTargetDate: "2020-01-21T17:32:28Z"
+          - id: e955212d-7f26-4828-a42b-b92318110d19
+            created: "2020-01-21T17:32:28Z"
+            status: "OPEN"
+            priority:
+              id: e6b45547-41eb-4c11-b181-a487b68adb6b
+              name: "Priority 1"
+              targetResponse: 5
+              targetResolution: 6
+            type:
+              id: 2ff2158e-489c-4334-943a-1801721af2b3
+              name: "Urgent"
+            subject: "Please clean this"
+            description: "Please clean this issue description"
+            responseTargetDate: "2020-01-21T17:32:28Z"
+            resolutionTargetDate: "2020-01-21T17:32:28Z"  
+    Issue:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        created:
+          type: string
+          format: date-time  
+        status:
+          type: string
+          enum: [OPEN, STARTED, RESOLVED, CLOSED]
+        priority:
+          $ref: '#/components/schemas/IssuePriority'
+        type:
+          $ref: '#/components/schemas/IssueType'
+        subject:
+          type: string
+        description:
+          type: string
+        responseTargetDate:
+          type: string
+          format: date-time
+        resolutionTargetDate:
+          type: string
+          format: date-time
+    IssueType:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    IssuePriority:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        targetResponse:
+          type: number
+          format: int32
+        targetResolution:
+          type: number
+          format: int32
+    Contact:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        created:
+          type: string
+          format: date-time
+        firstName:
+          type: string
+        lastName:
+          type: string  
+        email:
+          type: string
+        phone:
+          type: string
+        company:
+          $ref: '#/components/schemas/CompanyDetails'
+        websiteUrl:
+          type: string
+        owner:
+          $ref: '#/components/schemas/User'
+      example:
+        id: f503da25-1d81-4a3e-8e63-89963700d6de
+        created: "2020-01-21T17:32:28Z"
+        firstName: "John"
+        lastName: "Appleseed"
+        email: "john@appleseed.com"
+        phone: "+01234567890"
+        company:
+          id: 30f2747d-6440-488e-9edf-409ad9f37e22
+          name: "ACME Corporation"
+        websiteUrl: "https://www.appleseed.com"
+        owner:
+          id: e6bae74d-81bf-41f4-8244-0e06c880ed61
+          firstName: "User 1"
+          lastName: "Lastname"
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+      example:
+        results:
+          - id: a69c3590-3cd6-44db-ab0d-acbe3f7fd98b
+            firstName: John
+            lastName: Appleseed
+            email: email@resharmonics.com
+          - id: 7ae6eb15-2644-44b2-8b3d-b536c77e0a34
+            firstName: Tiffany
+            lastName: Aguilar
+            email: email2@resharmonics.com
+          - id: 60c425af-bd6b-417e-992b-f51ce765804b
+            firstName: Aaron
+            lastName: Price
+            email: aaron.price@example.com
+    CompanyDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    MessagesListResults:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+      example:
+        results:
+          - id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8ao
+            created: "2020-01-21T17:32:28Z"
+            visibility: PUBLIC
+            type: MESSAGE
+            assignee:
+              id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8ae
+              type: CONTACT
+              companyName: Acme Company
+              contactFirstName: John
+              contactLastName: Appleseed
+              email: john@appleseed.com
+              telephone: 02345909654
+              propertyCount: 6
+              address:
+                addressLine1: 1 Street
+                addressLine2:
+                city: Birmingham
+                postcode: B3 1AP
+                country: United Kingdom
+                isoCountry2: GB
+            body: This is the original message that came through a channel
+          - id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8aq
+            created: "2020-01-22T09:32:28Z"
+            visibility: PRIVATE
+            type: MESSAGE
+            responsible:
+              id: a69c3590-3cd6-44db-ab0d-acbe3f7fd98b
+              firstName: John
+              lastName: Appleseed
+              email: email@resharmonics.com
+            body: This is an internal note, regarding the message that came in first.
+          - id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8am
+            created: "2020-01-22T17:32:28Z"
+            visibility: PUBLIC
+            type: EMAIL
+            assignee:
+              id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8aw
+              type: CONTACT
+              companyName: Resharmonics
+              contactFirstName: Test
+              contactLastName: Support
+              email: info@resharmonics.com
+              telephone: 1234567890
+              propertyCount: 0
+              address:
+                addressLine1: "31 Lionel Street"
+                addressLine2:
+                city: Birmingham
+                postcode: B3 1AP
+                country: United Kingdom
+                isoCountry2: GB
+            body: This is an email to the client, confirming there is work to be done.
+    CreateMessage:
+      type: object
+      required: 
+        - visibility
+        - type
+        - body
+      properties:
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        type:
+          type: string
+          enum: [EMAIL, NOTE, MESSAGE]
+        body:
+          type: string
+      example:
+        visibility: PUBLIC
+        type: NOTE
+        body: This is a private note for the thread
+    Message:
+      type: object
+      required:
+        - id
+        - created
+        - visibility
+        - body
+      properties:
+        id:
+          type: string
+          format: uuid
+        assignee:
+          $ref: '#/components/schemas/ContactDetails'
+        responsible:
+          $ref: '#/components/schemas/User'
+        created:
+          type: string
+          format: date-time
+        visibility:
+          type: string
+          enum: [PUBLIC, PRIVATE]
+        type:
+          type: string
+          enum: [EMAIL, NOTE, MESSAGE]
+        body:
+          type: string
+    ThreadListResults:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Thread'
+      example:
+        results:
+          - id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8er
+            assignee:
+              id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8aw
+              type: CONTACT
+              companyName: Acme Company
+              contactFirstName: John
+              contactLastName: AppleSeed
+              email: john@appleseed.com
+              telephone: 1234567890
+              propertyCount: 6
+              address:
+                addressLine1: "1 Street"
+                addressLine2:
+                city: Birmingham
+                postcode: B3 1AP
+                country: United Kingdom
+                isoCountry2: GB
+            responsible:
+              id: a69c3590-3cd6-44db-ab0d-acbe3f7fd98b
+              firstName: John
+              lastName: Appleseed
+              email: email@resharmonics.com
+            created: "2020-01-22T09:32:28Z"
+            tag: EMAIL
+            status: OPEN
+          - id: 3cb8bf1b-5bb9-4442-a182-90c50c96e845
+            assignee:
+              id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8aw
+              type: CONTACT
+              companyName: ACME Company
+              contactFirstName: John
+              contactLastName: Appleseed
+              email: john@appleseed.com
+              telephone: 1234567890
+              propertyCount: 6
+              address:
+                addressLine1: "1 Street"
+                addressLine2:
+                city: Birmingham
+                postcode: B3 1AP
+                country: United Kingdom
+                isoCountry2: GB
+            responsible:
+              id: 60c425af-bd6b-417e-992b-f51ce765804b
+            firstName: Aaron
+            lastName: Price
+            email: aaron.price@example.com   
+            created: "2020-01-22T09:32:28Z"
+            tag: EMAIL
+            status: OPEN
+    CreateThread:
+      type: object
+      required: 
+        - assignee
+        - tag
+        - message
+      properties:
+        assignee:
+          $ref: '#/components/schemas/ContactDetails'
+        tag:
+          type: string
+          enum: [EMAIL, AIRBNB, BOOKINGDOTCOM]
+        message:
+          $ref: '#/components/schemas/Message'
+      example:
+        assignee:
+          id: 3cb8bf1b-5bb9-4442-a182-90c50c96e845
+        tag: EMAIL
+        message:
+          type: EMAIL
+          body: This is a body of the email
+    Thread:
+      type: object
+      required:
+        - id
+        - created
+        - tag
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        assignee:
+          $ref: '#/components/schemas/ContactDetails'
+        responsible:
+          $ref: '#/components/schemas/User'
+        created:
+          type: string
+          format: date-time
+        tag:
+          type: string
+          enum: [EMAIL, AIRBNB, BOOKINGDOTCOM]
+        status:
+          type: string
+          enum: [OPEN, STARTED, CLOSED, COMPLETED]
+      example:
+        id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8er
+        assignee:
+          id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8aw
+          type: CONTACT
+          companyName: Acme Company
+          contactFirstName: John
+          contactLastName: AppleSeed
+          email: john@appleseed.com
+          telephone: 1234567890
+          propertyCount: 6
+          address:
+            addressLine1: "1 Street"
+            addressLine2:
+            city: Birmingham
+            postcode: B3 1AP
+            country: United Kingdom
+            isoCountry2: GB
+        responsible:
+          id: a69c3590-3cd6-44db-ab0d-acbe3f7fd98b
+          firstName: John
+          lastName: Appleseed
+          email: email@resharmonics.com
+        created: "2020-01-22T09:32:28Z"
+        tag: EMAIL
+        status: OPEN
+    ChannelListResults:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Channel'
+      example:
+        results:
+          - id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8ae
+            name: All Channels
+            count: 30
+          - id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8ar
+            name: Assgined To Me
+            count: 5
+          - id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8ad
+            name: AirBnB
+            count: 20
+          - id: 3cb8bf1b-5bb9-4442-a182-90c50c96e8ag
+            name: Booking.com
+            count: 15
+    Channel:
+      type: object
+      required:
+        - id
+        - name
+        - count
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        count:
+          type: string
+          format: int32
+    ContactDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - CONTACT
+            - COMPANY
+        companyName:
+          type: string
+        contactFirstName:
+          type: string
+        contactLastName:
+          type: string
+        email:
+          type: string
+        telephone:
+          type: string
+        propertyCount:
+          type: number
+        address:
+          $ref: '#/components/schemas/Address'
+    Address:
+      type: object
+      properties:
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        city:
+          type: string
+        postcode:
+          type: string
+        country:
+          type: string
+          description: The country name
+        isoCountry2:
+          type: string
+          description: The ISO 3166-1 alpha-2 country code
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-auth-token

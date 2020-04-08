@@ -1,0 +1,992 @@
+penapi: 3.0.0
+info:
+  title: E-Commerce API
+  version: "draft-oas3"
+  description: >2-
+     **Common**
+    All endpoints expect the following headers: * the cookies returned by
+    /tokens * `Accept-Language` with a single 2 letters language code (ISO
+    639-1) * `Currency` with the currency code (ISO 4217) * `UserId`
+
+    All endpoints return the following headers: * `Content-Language` using 2
+    letters language codes (ISO 639-1). Can be a list if there is a mix of
+    languages. * `Currency` with the same value as requested * `UserId` with the
+    same value as requested * For GET endpoints: `Vary: UserId, Currency,
+    Accept-Language`
+
+    A field with *null* value is never returned.
+
+    All endpoints accept an optional query parameter `fields` that filters the
+    returned structure of the *resource* (i.e. doesn't concern the collection
+    fields like pageSize). Only the first level of the resource structure can be
+    filtered, so the nested fields in objects are ignored. `fields` contains a
+    list of field names. For example, GET /orders?fields=header will return only
+    the field `header`, but GET /orders?fields=id won't work because there is no
+    field called `id` in the Order resource at first level. All collection
+    endpoints accept an optional boolean query parameter `itemsTotalCountOnly`
+    that will return only `itemsTotalCount` as a response. It's useful to get
+    counts of cart entries, orders pending approval, etc.
+
+    **Typical cart usage for anonymous** 1. create a token (if you have an
+    anonymous cart token cookie, the cart created during your last access token
+    life will be retrieved in backend) 1. get /users/anonymous (cartId is
+    returned *only* if a previous cart was created during your last access token
+    life) 1. post /carts to add a product => the cartId is returned 1. get
+    /carts/cartId
+
+    **Typical cart usage for authenticated customer** 1. create a token (if you
+    have an anonymous cart token cookie, the cart created in anonymous will be
+    merged with your existing authenticated cart) 1. get /users/userId => cartId
+    is returned 1. get /carts/cartId
+
+    **Prices**: by default, all prices are excluding taxes. For a price
+    including taxes, the field name contains the suffix 'IncludingTaxes'.
+
+    **Slug**: meaningful resource identifier complying with URL restrictions.
+    Backend services are responsible for providing the slugs (they are either
+    automatically generated or manually typed for SEO stakes).
+
+    **Dates**: RFC 3339, section 5.6 
+servers:
+  - url: 'https://{webshop-domain}/rest-api/v1'
+    variables:
+      webshop-domain:
+        default: orexad.com
+        enum:
+          - www.test.fr.com
+          - www.test.de.com
+          - www.test.nl.nl
+          - www.test.it.com
+tags:
+  - name: tokens
+    description: >-
+      Security token required to use the API (even anonymous user must get a
+      valid token)
+  - name: users
+    description: Customer login
+  - name: cms/blocks
+    description: Elementary content element
+  - name: cms/menus
+    description: Menu tree
+  - name: accounts
+    description: Customer account. An account has one or many attached users.
+  - name: account-managers
+  - name: branches
+    description: Physical Rubix points of service
+  - name: promotions
+    description: >-
+      Promotion campains including advantages that the customer can 'unlock'
+      according to his/her expense
+  - name: carts
+    description: >-
+      Shopping cart. A cart entry is identified by entryNumber and
+      entryDetailNumber.
+  - name: quotations
+  - name: orders
+    description: Omnicanal orders
+  - name: search-items
+  - name: erp-sku-details
+    description: 'Product data from ERP (including price, stock, label, etc.)'
+paths:
+  /tokens:
+    post:
+      tags:
+        - tokens
+      summary: Create a token
+      requestBody:
+        description: >-
+          Credentials: user and client/application. For anonymous access:
+          `userName=anonymous`, without password.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userName:
+                  type: string
+                password:
+                  type: string
+                clientId:
+                  type: string
+                clientSecret:
+                  type: string
+      responses:
+        '200':
+          description: Success. Return the created token as cookie
+          headers:
+            Set-Cookie:
+              description: >-
+                - Session token used for sticky session (JSESSIONID)<br> -
+                Anonymous cart token for hybrid mode (cmssiteidWeb-cart)<br> -
+                Access token for hybrid mode (rbx-apiAccessToken)<br> -
+                Expiration date of the access token (rbx-apiExpirationDate)<br>
+                - User ID (rbx-currentUserId) 
+              schema:
+                type: string
+                example: >-
+                  JSESSIONID=abcde12345; Path=/; Secure; HttpOnly
+                  cmssiteidWeb-cart=abcde12345; Path=/; Secure; HttpOnly
+                  rbx-apiAccessToken=abcde12345; Path=/; Secure; HttpOnly
+                  rbx-apiExpirationDate=yyyy-MM-dd HH:mm:00; Path=/; Secure
+                  rbx-currentUserId=abcde12345; Path=/; Secure 
+        '400':
+          description: Invalid input
+  '/cms/blocks/{blockId}':
+    get:
+      tags:
+        - cms/blocks
+      summary: Get a specific content block
+      parameters:
+        - name: blockId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/EnumBlockId'
+        - name: productId
+          in: query
+          schema:
+            type: string
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+        - name: pageId
+          in: query
+          schema:
+            type: string
+        - name: htmlTag
+          in: query
+          description: >-
+            HTML tag that will encapsulate each CMS component included in the
+            block
+          schema:
+            type: string
+        - name: cssClasses
+          in: query
+          description: >-
+            CSS classes that will be applied to each CMS component included in
+            the block
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CmsBlock'
+        '400':
+          description: Invalid input
+  '/cms/menus/{menuId}':
+    get:
+      tags:
+        - cms/menus
+      summary: Get a specific menu
+      parameters:
+        - name: menuId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/EnumMenuId'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  entries:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CmsMenu'
+          headers:
+            Suggested-Refresh-Rate:
+              description: >-
+                Time in seconds after which it is suggested to repeat the same
+                request. Example: user menu that contains the number of orders
+                to be approved that needs to be refreshed regularly.
+              schema:
+                type: integer
+        '400':
+          description: Invalid input
+  '/accounts/{accountId}':
+    get:
+      tags:
+        - accounts
+      summary: Get a specific account
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '400':
+          description: Invalid input
+  '/users/{userId}':
+    get:
+      tags:
+        - users
+      summary: Get a specific user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+  '/account-managers/{accountManagerId}':
+    get:
+      tags:
+        - account-managers
+      summary: Get a specific account manager
+      parameters:
+        - name: accountManagerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountManager'
+        '400':
+          description: Invalid input
+  '/branches/{branchId}':
+    get:
+      tags:
+        - branches
+      summary: Get a specific branch
+      parameters:
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+        '400':
+          description: Invalid input
+  '/promotions/{promotionId}':
+    get:
+      tags:
+        - promotions
+      summary: Get a specific promotion
+      parameters:
+        - name: promotionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Promotion'
+        '400':
+          description: Invalid input
+  /promotions:
+    get:
+      tags:
+        - promotions
+      summary: Get promotions
+      parameters:
+        - $ref: '#/components/parameters/pageNumber'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Collection'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Promotion'
+        '400':
+          description: Invalid input
+  '/carts/{cartId}':
+    get:
+      tags:
+        - carts
+      summary: Get a specific cart
+      parameters:
+        - in: path
+          name: cartId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: entriesPageNumber
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: entriesPageSize
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Invalid input
+  /carts:
+    post:
+      tags:
+        - carts
+      summary: 'Update my cart. Includes adding, updating and deleting its entries'
+      requestBody:
+        required: true
+        description: >-
+          To add entries, provide `quantity` and `erpSkuId`<br> To update
+          entries, provide `entryNumber`, `entryDetailNumber` and `quantity`<br>
+          To delete entries, provide `entryNumber`, `entryDetailNumber` and
+          `quantity` with value 0<br> Operations can be mixed for multiple
+          entries.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                header:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                entries:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      entryNumber:
+                        type: string
+                      entryDetailNumber:
+                        type: string
+                      quantity:
+                        type: number
+                        format: float
+                      erpSkuId:
+                        type: string
+      responses:
+        '200':
+          description: >-
+            Success If `entries[].actionPerformed == DELETED` then only the
+            following entry fields are sent back: `entryNumber`, `entryNumber`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  header:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      entriesTotalCount:
+                        type: integer
+                      subtotalAmount:
+                        type: number
+                        format: float
+                      taxesAmount:
+                        type: number
+                        format: float
+                      deliveryAmount:
+                        type: number
+                        format: float
+                      totalAmount:
+                        type: number
+                        format: float
+                      totalAmountIncludingTaxes:
+                        type: number
+                        format: float
+                  entries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        actionPerformed:
+                          type: string
+                          enum:
+                            - CREATED
+                            - UPDATED
+                            - DELETED
+                        entryNumber:
+                          type: string
+                        entryDetailNumber:
+                          type: string
+        '400':
+          description: Invalid input
+  /quotations:
+    get:
+      tags:
+        - quotations
+      summary: Get quotations
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/pageNumber'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Collection'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Quotation'
+        '400':
+          description: Invalid input
+  /orders:
+    get:
+      tags:
+        - orders
+      summary: Get orders
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/pageNumber'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Collection'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Order'
+        '400':
+          description: Invalid input
+components:
+  schemas:
+    CmsBlock:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/EnumBlockId'
+        html:
+          type: string
+    CmsMenu:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/EnumMenuId'
+        label:
+          type: string
+        tag:
+          description: >-
+            Any complementary information. Can be a counter tag (ex: number of
+            products in a category for a CATEGORY_LINK, number of quotations for
+            a MY_QUOTATIONS_LINK, etc.) or 'NEW' tag on a new entry.
+          type: string
+        slug:
+          type: string
+        image:
+          $ref: '#/components/schemas/Media'
+        color:
+          type: string
+          format: hexadecimal-color
+        type:
+          type: string
+          enum:
+            - CATEGORY_LINK
+            - CMS_LINK
+            - EXTERNAL_LINK
+            - NO_LINK
+            - MY_ACCOUNT_LINK
+            - MY_PROFILE_LINK
+            - MY_COST_CENTER_CONSUMPTION_LINK
+            - MY_ADDRESSES_LINK
+            - MY_ORDERS_LINK
+            - MY_ORDER_APPROVALS_LINK
+            - MY_QUOTATIONS_LINK
+            - MY_WISH_LIST_LINK
+            - MY_COMPARATOR_LINK
+            - MY_COMPANY_LINK
+            - MY_COMPANY_ADDRESSES_LINK
+            - MY_COMPANY_USERS_LINK
+            - MY_COMPANY_COST_CENTERS_LINK
+            - MY_COMPANY_REPORTS_LINK
+            - MY_COMPANY_SUBSIDIARIES_LINK
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/CmsMenu'
+    Account:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        branchId:
+          type: string
+        accountManagerId:
+          type: string
+        logo:
+          $ref: '#/components/schemas/Media'
+    Branch:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    AccountManager:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        profilePicture:
+          $ref: '#/components/schemas/Media'
+    Media:
+      type: object
+      properties:
+        id:
+          type: string
+        absoluteUrl:
+          type: string
+        title:
+          type: string
+        alternativeDescription:
+          type: string
+    ProductPrice:
+      description: >-
+        Example (excluding taxes) : 1€ per 2 millimeters, 0.5€ per millimeter,
+        sold by lots of 10 millimeters, 5€ per 10 millimeters - 1€ per 2
+        millimeters => `basePrice` `currency` per `basePriceQuantity` `unit` -
+        0.5€ per millimeter => `unitPrice` `currency` per `unit` - sold by lots
+        of 10 millimeters => sold by lots of `soldByQuantity` `unit` - 5€ per 10
+        millimeters => `soldByPrice` `currency` per `soldByQuantity` `unit`
+
+        As most of the product prices has `soldByQuantity=1` and/or
+        `basePriceQuantity=1`, the related fields are not returned in these
+        situations and the unitPrice must be used instead (4 possible use
+        cases).
+      type: object
+      properties:
+        basePrice:
+          type: number
+          format: float
+        basePriceQuantity:
+          type: number
+          format: float
+        basePriceIncludingTaxes:
+          type: number
+          format: float
+        unitPrice:
+          description: Always equals 1
+          type: number
+          format: float
+        unitPriceQuantity:
+          type: number
+          format: float
+        unitPriceIncludingTaxes:
+          type: number
+          format: float
+        soldByPrice:
+          type: number
+          format: float
+        soldByQuantity:
+          type: number
+          format: float
+        soldByPriceIncludingTaxes:
+          type: number
+          format: float
+        unit:
+          type: object
+          properties:
+            code:
+              type: string
+            nameSingular:
+              type: string
+            namePlural:
+              type: string
+        minimumQuantity:
+          description: The prices can be applied only when `quantity >= minimumQuantity`
+          type: number
+          format: float
+        maximumQuantity:
+          description: The prices can be applied only when `quantity <= maximumQuantity`
+          type: number
+          format: float
+    Cart:
+      type: object
+      properties:
+        header:
+          type: object
+          properties:
+            id:
+              type: string
+            entriesTotalCount:
+              type: integer
+            entriesPageNumber:
+              type: integer
+            entriesPageSize:
+              type: integer
+            subtotalAmount:
+              type: number
+              format: float
+            taxesAmount:
+              type: number
+              format: float
+            deliveryAmount:
+              type: number
+              format: float
+            totalAmount:
+              type: number
+              format: float
+            totalAmountIncludingTaxes:
+              type: number
+              format: float
+        entries:
+          type: array
+          items:
+            type: object
+            properties:
+              entryNumber:
+                type: integer
+              entryDetailNumber:
+                type: integer
+              productId:
+                description: Not returned if the product is not in the assortment
+                type: string
+              productImage:
+                $ref: '#/components/schemas/Media'
+              erpSkuId:
+                type: string
+              erpLabel:
+                type: string
+              slug:
+                type: string
+              quantity:
+                type: number
+                format: float
+              price:
+                $ref: '#/components/schemas/ProductPrice'
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        accountId:
+          type: string
+        title:
+          type: string
+        name:
+          type: string
+        cartId:
+          type: string
+        defaultLanguage:
+          description: To be used when the client's user has not selected any language
+          type: string
+        defaultCurrency:
+          description: To be used when the client's user has not selected any currency
+          type: string
+        languages:
+          type: array
+          items:
+            type: string
+        currencies:
+          type: array
+          items:
+            type: string
+        searchFieldHintText:
+          type: string
+        punchout:
+          type: object
+          properties:
+            cartToErpActionLabel:
+              type: string
+              example: '"Cart to ERP"'
+            cartToErpUrl:
+              example: '"https://[...]/punchout/cxml/requisition"'
+              type: string
+            cancelUrl:
+              type: string
+              example: '"https://[...]/punchout/cxml/cancel"'
+        roles:
+          type: array
+          items:
+            type: string
+    Quotation:
+      type: object
+      properties:
+        header:
+          type: object
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+              enum:
+                - OPEN
+        entries:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+    Order:
+      type: object
+      properties:
+        header:
+          type: object
+          properties:
+            id:
+              type: string
+            status:
+              type: string
+              enum:
+                - PENDING_FOR_APPROVAL
+        entries:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+    SearchItem:
+      type: object
+      properties:
+        id:
+          type: string
+    Promotion:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - ORDER_DISCOUNT
+            - REWARDS
+            - DELIVERY_FEES_DISCOUNT
+        headerBannerBackgroundUrl:
+          type: string
+        cartPageBannerBackgroundUrl:
+          type: string
+        rewardPageBannerBackgroundUrl:
+          type: string
+        backgroundColor:
+          type: string
+        thresholds:
+          type: array
+          items:
+            type: number
+            format: float
+        spentAmount:
+          type: number
+          format: float
+        amountToSpentBeforeNextThreshold:
+          type: number
+          format: float
+        reachedThreshold:
+          type: number
+          format: float
+        messageForReachedThreshold:
+          $ref: '#/components/schemas/TemplateString'
+        messageToReachNextThreshold:
+          $ref: '#/components/schemas/TemplateString'
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+    Address:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - SHIPPING
+            - BILLING
+            - UNLOADING
+            - CONTACT
+        streetName:
+          type: string
+        streetNumber:
+          type: string
+        zipCode:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        contactTitle:
+          type: string
+        contactCompany:
+          type: string
+        contactPoBox:
+          type: string
+        contactPhone1:
+          type: string
+        contactPhone2:
+          type: string
+        contactFax:
+          type: string
+        contactEmail:
+          type: string
+        contactFirstName:
+          type: string
+        contactLastName:
+          type: string
+        contactMiddleName:
+          type: string
+        contactDepartment:
+          type: string
+    ErpSkuDetails:
+      type: object
+      properties:
+        type:
+          type: string
+        canBeAddedToCart:
+          type: boolean
+    Collection:
+      type: object
+      properties:
+        pageNumber:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+        itemsTotalCount:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+    EnumBlockId:
+      type: string
+      enum:
+        - top-bar-left
+        - top-bar-right
+        - mini-cart-banner
+        - footer
+    EnumMenuId:
+      type: string
+      enum:
+        - primary
+        - user
+    GenericError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        fields:
+          type: array
+          items:
+            type: object
+            properties:
+              fieldName:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+    TemplateString:
+      type: object
+      description: String including typed variables
+      properties:
+        message:
+          type: string
+          description: 'String with variables inserted with the format `{reference}`'
+          example: 'You''ve added {2} products in the cart ({0} {taxes})'
+        variables:
+          type: array
+          items:
+            type: object
+            properties:
+              reference:
+                type: integer
+              value:
+                type: string
+              type:
+                type: string
+                enum:
+                  - PRICE
+                  - NUMBER
+                  - STRING
+  parameters:
+    pageNumber:
+      name: pageNumber
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    pageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1

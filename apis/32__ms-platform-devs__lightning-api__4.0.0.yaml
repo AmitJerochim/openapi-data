@@ -1,0 +1,1130 @@
+openapi: 3.0.0
+info:
+  description: >
+    ## Lightning Data REST API
+
+    ### Response `Content-Types` header
+
+    The `binary/octet-stream` response content type is GeoJSON data encoded into
+    protocol buffers ([geobuf](https://github.com/mapbox/geobuf)). Decoded, the
+    data is the same as the JSON/GeoJSON content types (in particular, it is a
+    *lossless* compression). Where available, we recommend that you accept
+    protocol buffer output for your application if you have been previously
+    using GeoJSON responses, because it typically makes responses 6–8 times
+    smaller (2–2.5 times smaller with gzip compression, which is also enabled by
+    default for sufficiently large queries), and because it allows for fast,
+    incremental parsing.
+
+
+    There is also a vector tile endpoint that serves protocol buffers, but these
+    are explicitly in the [Mapbox Vector Tile
+    specification](https://www.mapbox.com/vector-tiles/specification/). That is
+    to say, they do not decode into GeoJSON, and that this encoding is *lossy*,
+    due to projection transformation and quantization onto a 4096x4096
+    coordinate space.
+
+    ### Response `Cache-Control` header
+
+    Note that if you ask the API for a response that is "closed" (such as a
+    defined time range in the past), then the server will respond with an
+    aggressive `Cache-Control` such as `public, max-age=31536000`. This is
+    because large queries are expensive to run, and very unlikely to change.
+
+
+    However if you make an open-ended query, or use a `time` parameter that
+    closes in the future, then the `Cache-Control` expires much sooner:
+    currently after 60 seconds. Note that due to latency from source to service,
+    there is a five-minute grace period in which any data contained in the
+    underlying database is not considered "complete" and a re-request is advised
+    through the `Cache-Control` header.
+
+
+    This applies to all `/strikes` endpoints. This is particularly useful for
+    ensuring that Mapbox GL maps will use vector tiles dynamically, since the
+    `Cache-Control` header is respected in [Mapbox GL
+    Native](https://github.com/mapbox/mapbox-gl-native/pull/2617) and in [Mapbox
+    GL JS](https://github.com/mapbox/mapbox-gl-js/issues/1946).
+    
+    ## Lightning Data WebSockets
+    
+    This service supports providing data by WebSockets but unfortunately Open-API specs don't have WebSocket support so this is the extent of the documentation for it.
+    **NOTE:** This service differs greatly from v2/3 of the API
+    
+    ### Establishing a connection and getting data
+    
+    When you first establish a connection to `wss://${hostDomain}/v4?token=${jwt}` you will only receive heartbeats. The service will wait for you to specify what data you are interested in.
+    
+    You do so by sending it a message like so:
+    
+    ```json
+      {
+        "action": "SET_PREFERENCES"
+        "bbox": [-180, -90, 180, 90],
+        "providers": ["TOA", "MOCK"],
+        "directions": ["CLOUD"],
+        "pathToGenerateAlong": [[-180,-90],[-90,-45],[0,0]],
+        "format": "application/vnd.google-earth.kml+xml"
+      }
+    ```
+    
+    
+    It will either respond with an error:
+
+    ```json
+      {
+        type: "SET_PREFERENCES_ERROR"
+        error: "Error parsing 'bbox': MinLon/minLat cannot be higher that maxLon/maxLat"
+      }
+    ```
+    
+    Or it will send a succesful response like so:
+    
+    ```json
+      {
+        "type": "PREFERENCES_APPLIED",
+        "preferences": {
+          "bbox": [-180, -90, 180, 90],
+          "providers": ["TOA", "MOCK"],
+          "directions": ["CLOUD"],
+          "pathToGenerateAlong": [[-180,-90],[-90,-45],[0,0]],
+          "fromTime": "2019-10-12T00:00:00.000Z",
+          "format": "application/vnd.google-earth.kml+xml",
+          "limit": 10000
+      }
+    ```
+    
+    **NOTE:** `fromTime` and `limit` are included because they may be returned. However they are used for getting historical data over WebSockets, and this functionality is not live at launch. When this is functional, it will then return any strikes since the fromTime (so long as that was within 3 hours ago), and it formats those strikes as requested. After the preferences applied message, you will immediately receive any real-time strikes, so depending on how long the historical strikes query takes you may receive real-time data before receiving the historical data.
+    
+    ### Disconnections
+    The WebSockets will reset every 2 hours, this is controlled by AWS and cannot be changed. We suggest that you open a second socket when the first is due to reset to ensure there are no missed strikes.
+    
+    We have added the ability to get historical data over WebSockets to limit the annoyance this may cause, but this functionality will not be live at launch.
+    
+    You can of course use the REST API to fill in any missing data if you would prefer.
+    
+    ### When lightning data is received
+    
+    When lightning is received it is immediately sent, however we reserve the right to aggreggate multiple strikes into a single message in the future. To this end, it sends the equivalent of a collection of strikes even if an individual strike is sent, so for KML you will get a complete XML document that may only contain one Placemark. It is up to the client to handle merging that into any data they may already have.
+    
+    ```json
+      {
+        "type": "LIGHTNING_STRIKES_RECEIVED",
+        "lightningStrikes": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns=\"http://www.opengis.net/kml/2.2\"><Document><Placemark><name>Lightning Strike</name><description>Time:2019-11-05T11:22:34.000Z, Current:-22.3kA, Type:GROUND</description><ExtendedData><Data name=\"date_time\"><value>2019-11-05T11:22:34.000Z</value></Data><Data name=\"ellipse_bearing\"><value>3</value></Data><Data name=\"ellipse_major_axis\"><value>2</value></Data><Data name=\"ellipse_minor_axis\"><value>1.2</value></Data><Data name=\"kA\"><value>-22.3</value></Data><Data name=\"strike_type\"><value>GROUND</value></Data><Data name=\"GDOP\"><value>2.3</value></Data><Data name=\"source\"><value>toa</value></Data><Data name=\"name\"><value>Lightning Strike</value></Data><Data name=\"description\"><value>Time:2019-11-05T11:22:34.000Z, Current:-22.3kA, Type:GROUND</value></Data></ExtendedData><Point><coordinates>-130,25</coordinates></Point></Placemark></Document></kml>"
+      }
+    ```
+    
+    Data from toa or transpower are sent as soon as we receive it, but they are not guarenteed to be in order as there may be propogation delays further upstream and strikes may be delayed by up to 5 minutes. Mock strikes are generated and sent every minute.
+    
+    ### Heartbeats
+    
+    The service will send a heartbeat every 2 minutes to tell you the service and connection is still alive
+    
+    ```json
+      {
+        "type": "HEARTBEAT",
+        "rate": "cron(0/2 * * * ? *)"
+      }
+    ```
+    
+    You may test this earlier by sending an `ECHO` message:
+    
+    #### ECHO
+    
+    ```json
+      {
+        "action": "ECHO",
+        "payload": "Are you there?"
+      }
+    ```
+    
+    The service will respond with the payload of the message back.
+    
+    ```json
+      {
+        "type": "ECHO",
+        "payload": "Are you there?"
+      }
+    ```
+  version: "4.0.0"
+  title: Lightning API
+  termsOfService: 'https://www.metocean.co.nz/apis/'
+  contact:
+    email: PlatformsDev@metservice.com
+tags:
+  - name: strikes
+    description: Lightning strikes
+  - name: providers
+    description: Lightning data providers
+  - name: directions
+    description: Lightning direction data types
+
+paths:
+  /strikes:
+    get:
+      tags:
+        - strikes
+      summary: Recent and historical lightning strikes
+      description: >
+        Finds lightning strikes by spatio-temporal extent and other parameters.
+        
+        **NOTE:** Only includes strikes that have already happened, i.e., it doesn't forecast strikes. Please contact us about our Lightning Prediction Algorithm which does nowcast forecasting if you would like this capability.
+        
+        ## Providers
+        
+        Strikes from multiple upstream data providers are retrievable in the same query but Lightning strikes are only unique **for a given provider**. Therefore different lightning providers **may** return (potentially different) data about the same physical phenonemon. Therefore, be particularly careful about reporting a *count* of returned data.
+        
+        ## Accept header
+        
+        Note that the response structure can change depending on the `Accept` header passed in to the API endpoint. By default, the service will return GeoJSON.
+        
+        ## Formats
+        
+        It can also also encode this as Geobuprotocol buffers (Geobuf). By request, it can alternatively return KML, a bespoke MetService JSON format originally designed under the Blitzen service, and CSV. 
+        
+        For the CSV the properties are the same as for the GeoJSON response object, with the addition of `lat` and `lon` properties that correspond to the latitude and longitude of the returned strike. The *order* of the returned columns should be static but we recommend that you always read the CSV header to determine the position of a particular property in the response.
+        
+        ## Compression
+        
+        All responses are compressed with gzip if above a (small) threshold size.
+      operationId: getStrikes
+      parameters:
+        - $ref: '#/components/parameters/DateTime'
+        - $ref: '#/components/parameters/BBox'
+        - $ref: '#/components/parameters/Providers'
+        - $ref: '#/components/parameters/Directions'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/PathToGenerateAlong'
+      responses:
+        '200':
+          description: OK - A list of lightning strikes
+          content:
+            application/vnd.geo+json:
+              schema:
+                $ref: '#/components/schemas/LightningFeatureCollectionV3'
+            application/octet-stream:
+              schema:
+                externalDocs:
+                  description: Geobuf
+                  url: https://app.swaggerhub.com/apis-docs/ms-platform-devs/lightning-api/4.0.0
+            application/vnd.google-earth.kml+xml:
+              schema:
+                type: string
+                example: "<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns=\"http://www.opengis.net/kml/2.2\"><Document><Placemark><name>Lightning Strike</name><description>Time:2019-11-05T11:22:34.000Z, Current:-22.3kA, Type:GROUND</description><ExtendedData><Data name=\"date_time\"><value>2019-11-05T11:22:34.000Z</value></Data><Data name=\"ellipse_bearing\"><value>3</value></Data><Data name=\"ellipse_major_axis\"><value>2</value></Data><Data name=\"ellipse_minor_axis\"><value>1.2</value></Data><Data name=\"kA\"><value>-22.3</value></Data><Data name=\"strike_type\"><value>GROUND</value></Data><Data name=\"source\"><value>transpower</value></Data><Data name=\"nanoseconds_remainder\"><value>22</value></Data><Data name=\"sensor_chi_squared\"><value>1.4</value></Data><Data name=\"sensor_reporting_sensors\"><value>4</value></Data><Data name=\"sensor_degrees_freedom\"><value>1.1</value></Data><Data name=\"sensor_range_normalised_signal\"><value>112</value></Data><Data name=\"sensor_information\"><value>AxT</value></Data><Data name=\"sensor_rise_time\"><value>242</value></Data><Data name=\"sensor_peak_time\"><value>262</value></Data><Data name=\"name\"><value>Lightning Strike</value></Data><Data name=\"description\"><value>Time:2019-11-05T11:22:34.000Z, Current:-22.3kA, Type:GROUND</value></Data></ExtendedData><Point><coordinates>-130,25</coordinates></Point></Placemark></Document></kml>"
+            text/csv:
+              schema:
+                type: string
+                example: "lon,lat,dateTime,kA,strike_type,source,unixTime,GDOP,ellipse_bearing,ellipse_major_axis,ellipse_minor_axis\n-130,25,2019-11-05T11:22:34.000Z,-22.3,GROUND,toa,1572952954,2.3,3,2,1.2"
+            application/vnd.metraweather.blitzen:
+              schema:
+                $ref: '#/components/schemas/BlitzenVersion3'
+            application/vnd.metraweather.blitzen.v1:
+              schema:
+                $ref: '#/components/schemas/BlitzenVersion1'
+            application/vnd.metraweather.blitzen.v2:
+              schema:
+                $ref: '#/components/schemas/BlitzenVersion2'
+            application/vnd.metraweather.blitzen.v3:
+              schema:
+                $ref: '#/components/schemas/BlitzenVersion3'
+            application/vnd.metraweather.lightning.geo+json.v2:
+              schema:
+                $ref: '#/components/schemas/LightningFeatureCollectionV2'
+            application/vnd.metraweather.lightning.geo+json.v3:
+              schema:
+                $ref: '#/components/schemas/LightningFeatureCollectionV3'
+        '400':
+          description: Bad Request
+  /strikes/tile:
+    get:
+      tags:
+        - strikes
+      summary: TileJSON metadata for the lightning tileset
+      description: >
+        Returns [TileJSON](https://github.com/mapbox/tilejson-spec/) metadata
+        for a tileset. The TileJSON object describes a map's resources, like
+        tiles, name, description, spatial bounds, and attribution.
+      operationId: getStrikesVectorTileMetadata
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TileJSON'
+  '/strikes/tile/{z}/{x}/{y}.pbf':
+    get:
+      tags:
+        - strikes
+      summary: Find strikes by XYZ tile
+      description: >
+        Vector tile endpoint for obtaining strikes in the Mapbox Vector Tile [specification](https://www.mapbox.com/vector-tiles/specification/).
+
+        ## Spatial filtering
+        
+        The `bbox` parameter now performs an intersection with the extent of the tile given by the XYZ tuple. That is to say, if the tile covers `[110, 50] to [150, 80]`, and the bbox covers `[90,30] to [120, 65]`, you will get all data between
+        `[110, 50] to [120, 65]`.
+        
+        ## Computation vs compression
+        
+        The payload is much smaller than GeoJSON (by virtue of the
+        use of protocol buffers) but computation is a little longer (due to
+        projection and quantisation). However in certain circumstances (such as
+        rendering a Mapbox GL web map) there will be no need to parse the
+        result.
+        
+        ## Non-reversible lossy compression of lat/lon
+
+        This is not a lossless compression since data is first loaded
+        from the database in its native WGS84 coordinate system, projected to
+        Spherical Mercator, and then quantized onto a tile of dimension
+        4096x4096. Naturally this is intended for visual display on a web map
+        capable of rendering vector tiles, and therefore suits a zoomable view
+        that overcomes this limitation.
+
+        Decoded, the properties on the response features are the same as for the
+        non-tile `/stikes` endpoint.
+      operationId: getStrikesVectorTile
+      parameters:
+        - $ref: '#/components/parameters/DateTime'
+        - $ref: '#/components/parameters/BBox'
+        - $ref: '#/components/parameters/Providers'
+        - $ref: '#/components/parameters/Directions'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/PathToGenerateAlong'
+        - name: x
+          in: path
+          required: true
+          description: x-column tile coordinate
+          schema:
+            type: integer
+            minimum: 0
+        - name: 'y'
+          in: path
+          required: true
+          description: >-
+            y-row tile coordinate, in *de facto*/Spherical
+            Mercator/OpenStreetMap/"slippy map" convention (not TMS)
+          schema:
+            type: integer
+            minimum: 0
+        - name: z
+          in: path
+          required: true
+          description: zoom level
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 22
+      responses:
+        '200':
+          description: OK
+          content:
+            application/vnd.mapbox-vector-tile:
+              schema:
+                $ref: '#/components/schemas/LightningFeatureCollectionV3'
+        '400':
+          description: Bad Request
+        '404':
+          description: Tile coordinates out of bounds
+  /providers:
+    get:
+      tags:
+        - providers
+      summary: List of upstream data providers that are available.
+      description: >-
+        Providers are presented in a JSON object with numeric keys and string
+        values. There can be an arbitrary number of keys. String values may
+        change. This endpoint is provided for documentation and database
+        introspection only.
+      operationId: getProviders
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Providers'
+  /directions:
+    get:
+      tags:
+        - directions
+      summary: List of direction data types that are available.
+      description: >-
+        Directions are presented in a JSON object with numeric keys and string
+        values. There can be an arbitrary number of keys. String values may
+        change. Values are unique. This endpoint is provided for documentation
+        and database introspection only.
+      operationId: getDirections
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Available strike direction
+                additionalProperties:
+                  type: string
+                  enum:
+                    - CLOUD
+                    - GROUND
+externalDocs:
+  description: More documentation on Github
+  url: 'https://github.com/metocean/lightning'
+# - url: 'https://lightning.metoceanview.com/api/v3'
+servers:
+  - url: 'Not yet launched'
+components:
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      description: >-
+        Limits the number of strikes to return. If the amount of strikes equals
+        the limit, use the offset to finish download the rest of the strikes
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: '100'
+    Offset:
+      name: offset
+      in: query
+      description: 'Skips this many records, useful to finish a query that hit its limit'
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: '0'
+    DateTime:
+      name: time
+      in: query
+      description: >-
+        Inclusive time range; results are guaranteed to be within this temporal
+        extent. Follows MetOcean [API
+        conventions](https://github.com/metocean/api-conventions#bounding-box).
+
+
+        Do not confuse this with the `times` parameter in the MetOcean API
+        convention, which is not accepted by this API since this API is not
+        capable of creating a timeseries. We recommend 15 minute chunks or
+        smaller, may not exceed 3 hours
+      required: false
+      schema:
+        type: string
+        format: dateTime
+        default: >-
+          A period of time representing 15 minutes from the moment the query is
+          made.
+    Providers:
+      name: providers
+      in: query
+      description: Lightning providers to limit the result set to.
+      required: false
+      schema:
+        type: string
+        enum:
+          - toa
+          - transpower
+          - mock
+        default: toa
+    Directions:
+      name: directions
+      in: query
+      description: >-
+        Filter for a particular lightning direction. `CLOUD` (cloud-to-cloud) or
+        `GROUND` (cloud-to-ground). Omitting this parameter results in both
+        types being returned.
+      required: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+            - CLOUD
+            - GROUND
+        default: 'CLOUD,GROUND'
+    BBox:
+      name: bbox
+      in: query
+      description: >-
+        Filter the strikes geospatially by bounding box. Follows MetOcean [API
+        conventions](https://github.com/metocean/api-conventions#bounding-box).
+
+
+        Wraps around the Meridian, so that `150,_,200,__` turns into two bboxes,
+        one covering `150,_,180,__` and one covering `-180,_,-160,__` (where `_`
+        and `__` represent the two latitudes).
+      required: false
+      schema:
+        type: array
+        items:
+          type: number
+        default: '-180,-90,180,90'
+    PathToGenerateAlong:
+      name: pathToGenerateAlong
+      in: query
+      description: >-
+        Only used with the mock provider.
+        
+        A series of lon/lat pairs making up a path that mock data will generate
+        along. The mock storm will follow this path so that it will start at the
+        start of the path at `T00:00:00.000Z` each day, and be at the end of the
+        path by `23:59:59.999Z`. The generated storm is randomly distributed
+        around this point within `+/- 5` latitude and longitude
+      required: false
+      schema:
+        type: array
+        items:
+          type: number
+  schemas:
+    Providers:
+      type: object
+      description: Lightning provider domain and bounding box
+      additionalProperties:
+        type: object
+        required:
+          - domain
+          - bounds
+        properties:
+          domain:
+            type: string
+            description: Domain of the address where the lightning data was sourced.
+            example: lightning.metconnect.com.au
+          bounds:
+            $ref: '#/components/schemas/PolygonGeometry'
+    LightningFeatureCollectionV3:
+      type: object
+      description: GeoJSON feature collection
+      required:
+        - type
+        - features
+      externalDocs:
+        url: 'http://geojson.org/geojson-spec.html#feature-collection-objects'
+      properties:
+        type:
+          type: string
+          enum:
+            - FeatureCollection
+          description: >
+            A GeoJSON feature collection is a collection of GeoJSON feature
+            objects. Features represent individual lightning strikes, and are
+            ordered with respect to "`dateTime`", in descending order (i.e. most
+            recent first).
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/LightningFeatureV3'
+    LightningFeatureCollectionV2:
+      type: object
+      description: GeoJSON feature collection
+      required:
+        - type
+        - features
+      externalDocs:
+        url: 'http://geojson.org/geojson-spec.html#feature-collection-objects'
+      properties:
+        type:
+          type: string
+          enum:
+            - FeatureCollection
+          description: >
+            A GeoJSON feature collection is a collection of GeoJSON feature
+            objects. Features represent individual lightning strikes, and are
+            ordered with respect to "`dateTime`", in descending order (i.e. most
+            recent first).
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/LightningFeatureV2'
+    LightningFeatureV3:
+      type: object
+      description: 'GeoJSON feature, with lightning-specific properties'
+      discriminator:
+        propertyName: geometry
+      required:
+        - geometry
+        - properties
+        - type
+        - id
+      externalDocs:
+        url: 'http://geojson.org/geojson-spec.html#feature-objects'
+      properties:
+        type:
+          type: string
+          enum:
+            - Feature
+          description: >
+            A GeoJSON feature object, which must have a `geometry` member (a
+            geometry object) and a `properties` object (with a versioned
+            schema).
+        geometry:
+          $ref: '#/components/schemas/Point'
+        id:
+          type: string
+          description: A Base64 encoded id, calculated using the lat/lon, source, time, direction, kA.
+          example: InRvYV8xNTcyOTUyOTU0Xy0yMi4zX0dST1VORF8tMTMwXzI1Ig==
+        properties:
+          type: object
+          required:
+            - dateTime
+            - unixTime
+            - source
+            - strike_type
+          properties:
+            nanoseconds_remainder:
+              type: integer
+              description: 'an integer value that when left-padded with zeroes to six digits and appended to the dateTime gives the time of strike with nanosecond- resolution'
+              example: 935264
+            sensor_chi_squared:
+              type: number
+              description: 'a decimal value of the chi-squared confidence value for the strike'
+              example: 0.0
+            sensor_degrees_freedom:
+              type: integer
+              description: 'an integer value representing the number of degrees of freedom used when calculating the strike location'
+              example: 1
+            sensor_information:
+              type: string
+              description: "a string describing the kind of sensor information used in computing the strike location (This could be a combination of ’A’ angle,’S’ signal or ’T’ time, with 'x' representing not used)"
+              example: 'AxT'
+            sensor_peak_time:
+              type: integer
+              description: 'Peak-to-zero time of the waveform in microseconds'
+              example: 30.2
+            sensor_range_normalised_signal:
+              type: number
+              description: 'a decimal value of the signal normalized for range'
+              example: -95.4
+            sensor_reporting_sensors:
+              type: integer
+              description: 'an integer count of the number of sensors that reported the strike'
+              example: 2
+            sensor_rise_time:
+              type: integer
+              description: 'Risetime of the waveform in microseconds'
+              example: 0.7
+            source:
+              type: string
+              enum:
+                - toa
+                - transpower
+                - mock
+              description: The provider that reported this strike
+              example: transpower
+            GDOP:
+              type: integer
+              description: >
+                Geometric Dilution of Precision. A value that is calculated from
+                the location of the lightning strike with respect to the
+                location of the sensors used in its detection. A smaller GDOP
+                means a more accurate location calculation. Only reported by
+                certain providers.
+              minimum: 0
+              maximum: 255
+              example: 2
+            dateTime:
+              type: string
+              format: dateTime
+              description: >
+                Date and time at which the lightning is reported to have
+                happened. Given by all providers, but the *precise* meaning of
+                the given time is at their discretion.
+              example: '2019-11-05T11:22:34.294Z'
+            unixTime:
+              type: number
+              format: integer
+              description: >
+                Date and time at which the lightning is reported to have
+                happened, represented as UNIX Epoch time (seconds since epoch).
+              example: 1572952954
+            ellipse_bearing:
+              type: number
+              description: >
+                The error ellipse azimuth of the major axis in degrees. 0°
+                represents north, +90° represents east, -90° represents west,
+                etc. Since an ellipse is symmetrical the centre, an azimuth of
+                +315° (or +135°) is the same ellipse as the one having an
+                azimuth of ±45°. Only reported by certain providers.
+              example: -42.8
+            ellipse_major_axis:
+              type: number
+              description: >
+                Length of the major axis of an error ellipse, in kilometres. The
+                error ellipse is centred at the location of the lightning
+                strike. The error ellipse represents an area with a 95%
+                confidence level that the lightning strike did occur within the
+                area. Only reported by certain providers.
+              example: 3.02
+            ellipse_minor_axis:
+              type: number
+              description: >
+                Length of the minor axis of an error ellipse, in kilometres. The
+                error ellipse is centred at the location of the lightning
+                strike. The error ellipse represents an area with a 95%
+                confidence level that the lightning strike did occur within the
+                area. Only reported by certain providers.
+              example: 1.26
+            kA:
+              type: number
+              description: >
+                Stroke amplitude value ("size"), in kiloamperes. Not all
+                providers have a method of accurately measuring this value, so
+                it is nullable.
+              example: -43.4
+            strike_type:
+              type: string
+              enum:
+                - CLOUD
+                - GROUND
+              description: |
+                The type of strike, whether cloud-to-cloud or cloud-to-ground.
+              example: GROUND
+    LightningFeatureV2:
+      type: object
+      description: 'GeoJSON feature, with lightning-specific properties'
+      discriminator:
+        propertyName: geometry
+      required:
+        - geometry
+        - properties
+        - type
+        - id
+      externalDocs:
+        url: 'http://geojson.org/geojson-spec.html#feature-objects'
+      properties:
+        type:
+          type: string
+          enum:
+            - Feature
+          description: >
+            A GeoJSON feature object, which must have a `geometry` member (a
+            geometry object) and a `properties` object (with a versioned
+            schema).
+        geometry:
+          $ref: '#/components/schemas/Point'
+        id:
+          type: string
+          description: A Base64 encoded id, calculated using the lat/lon, source, time, direction, kA.
+          example: InRvYV8xNTcyOTUyOTU0Xy0yMi4zX0dST1VORF8tMTMwXzI1Ig==
+        properties:
+          type: object
+          required:
+            - observation_time
+            - direction
+          properties:
+            observation_time:
+              type: string
+              format: dateTime
+              description: >
+                Date and time at which the lightning is reported to have
+                happened. Given by all providers, but the *precise* meaning of
+                the given time is at their discretion.
+            amplitude:
+              type: number
+              description: >
+                Stroke amplitude value ("size"), in kiloamperes. Not all
+                providers have a method of accurately measuring this value, so
+                it is nullable.
+            direction:
+              type: string
+              enum:
+                - CLOUD
+                - GROUND
+              description: |
+                The type of strike, whether cloud-to-cloud or cloud-to-ground.
+    BlitzenVersion1:
+      type: object
+      description: Bespoke MetService lightning format, v1
+      properties:
+        latitude:
+          type: number
+          description: The latitude of the strike
+        longitude:
+          type: number
+          description: The longitude of the strike
+        timeMillis:
+          type: number
+          description: Epoch milliseconds. The number of seconds after Jan 1 1970 UTC that this occurred, convert this to local time using the- appropriate Date library.
+        current:
+          type: number
+          description: The amplitude of the strike in kA with polarity (+/-)
+        direction:
+          type: string
+          enum:
+            - CLOUD
+            - GROUND
+          description: |
+            The type of strike, whether CLOUD (cloud-to-cloud) or GROUND (cloud-to-ground).
+    BlitzenVersion2:
+      type: object
+      description: Bespoke MetService lightning format, v2
+      properties:
+        latitude:
+          type: number
+          description: The latitude of the strike
+        longitude:
+          type: number
+          description: The longitude of the strike
+        timeMillis:
+          type: number
+          description: Epoch milliseconds. The number of seconds after Jan 1 1970 UTC that this occurred, convert this to local time using the- appropriate Date library.
+        dateTime:
+          type: string
+          description: a datetime string in UTC in the format YYYY-MM-dd'T'hh:ss:mm.SSS'Z'
+        amplitude:
+          type: number
+          description: The amplitude of the strike in kA with polarity (+/-)
+        direction:
+          type: string
+          enum:
+            - CLOUD
+            - GROUND
+          description: |
+            The type of strike, whether CLOUD (cloud-to-cloud) or GROUND (cloud-to-ground).
+        ellipse:
+          type: object
+          description: a json object containing error ellipse data
+          properties:
+            major:
+              type: number
+              description: length of the major axis in kilometers
+              default: -1
+            minor:
+              type: number
+              description: length of the minor axis in kilometers
+              default: -1
+            bearing:
+              type: number
+              description: the orientation of the error ellipse in degrees
+              default: -1
+    BlitzenVersion3:
+      type: object
+      description: Bespoke MetService lightning format, v3
+      properties:
+        latitude:
+          type: number
+          description: The latitude of the strike
+        longitude:
+          type: number
+          description: The longitude of the strike
+        timeMillis:
+          type: number
+          description: Epoch milliseconds. The number of seconds after Jan 1 1970 UTC that this occurred, convert this to local time using the- appropriate Date library.
+        nanosecondsRemainder:
+          type: number
+          description: an integer value that when left-padded with zeroes to six digits and appended to the dateTime gives the time of strike with nanosecond- resolution
+          default: 0
+        dateTime:
+          type: string
+          description: a datetime string in UTC in the format YYYY-MM-dd'T'hh:ss:mm.SSS'Z'
+        amplitude:
+          type: number
+          description: The amplitude of the strike in kA with polarity (+/-)
+        direction:
+          type: string
+          enum:
+            - CLOUD
+            - GROUND
+          description: |
+            The type of strike, whether CLOUD (cloud-to-cloud) or GROUND (cloud-to-ground).
+        ellipse:
+          type: object
+          description: a json object containing error ellipse data
+          properties:
+            major:
+              type: number
+              description: length of the major axis in kilometers
+              default: -1
+            minor:
+              type: number
+              description: length of the minor axis in kilometers
+              default: -1
+            bearing:
+              type: number
+              description: the orientation of the error ellipse in degrees
+              default: -1
+        sensorDetails:
+          type: object
+          description: a json object containing details about the sensors used to record the strike
+          properties:
+              chiSquared:
+                description: a decimal value of the chi-squared confidence value for the strike
+                type: number
+                default: 0.0
+              reportingSensors:
+                description: an integer count of the number of sensors that reported the strike
+                type: number
+                default: 0
+              degreesFreedom:
+                description: an integer value representing the number of degrees of freedom used when calculating the strike location
+                type: number
+                default: 0
+              rangeNormalizedSignal:
+                description: a decimal value of the signal normalized for range
+                type: number
+                default: 0.0
+              sensorInformation:
+                description: a string describing the kind of sensor information used in computing the strike location (This could be a combination of ’A’ angle,’S’ signal or ’T’ time, with 'x' representing not used)
+                type: string
+                default: ""
+              riseTime:
+                description: Risetime of the waveform in microseconds
+                type: number
+                default: 0.0
+              peakTime:
+                description: Peak-to-zero time of the waveform in microseconds
+                default: 0.0
+    PointGeometry:
+      type: object
+      description: GeoJSON geometry
+      discriminator:
+        propertyName: type
+      required:
+        - type
+      externalDocs:
+        url: 'http://geojson.org/geojson-spec.html#geometry-objects'
+      properties:
+        type:
+          type: string
+          enum:
+            - Point
+          description: GeoJSON geometry type
+    PolygonGeometry:
+      type: object
+      description: GeoJSON geometry
+      discriminator:
+        propertyName: type
+      required:
+        - type
+      externalDocs:
+        url: 'http://geojson.org/geojson-spec.html#geometry-objects'
+      properties:
+        type:
+          type: string
+          enum:
+            - Polygon
+          description: GeoJSON geometry type
+        bbox:
+          type: array
+          maxItems: 4
+          minItems: 4
+          items:
+            type: number
+          example:
+            - 110.512
+            - -43.9368
+            - 159.998
+            - -5.0013
+        coordinates:
+          $ref: '#/components/schemas/Polygon'
+    Polygon:
+      type: array
+      example:
+        - - - 110.512
+            - -43.9368
+          - - 110.512
+            - -5.0013
+          - - 159.998
+            - -5.0013
+          - - 159.998
+            - -43.9368
+          - - 110.512
+            - -43.9368
+      items:
+        type: array
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Point2D'
+    Point2D:
+      type: array
+      maxItems: 2
+      minItems: 2
+      items:
+        type: number
+      example:
+        - 110.512
+        - -43.9368
+    Point:
+      type: object
+      description: GeoJSON single-part point geometry
+      externalDocs:
+        url: 'http://geojson.org/geojson-spec.html#id2'
+      allOf:
+        - $ref: '#/components/schemas/PointGeometry'
+        - properties:
+            coordinates:
+              $ref: '#/components/schemas/Point2D'
+    TileJSON:
+      type: object
+      description: TileJSON
+      externalDocs:
+        url: 'https://github.com/mapbox/tilejson-spec/'
+      required:
+        - tilejson
+        - tiles
+      properties:
+        tilejson:
+          type: string
+          example: 2.2.0
+          description: >
+            A semver.org style version number. Describes the version of the
+            TileJSON spec that is implemented by this JSON object.
+        name:
+          type: string
+          default: null
+          example: 'metocean://archive-lightning'
+          description: >
+            A name describing the tileset. The name can contain any legal
+            character. Implementations SHOULD NOT interpret the name as HTML.
+        description:
+          type: string
+          default: null
+          example: >-
+            Archived lightning strikes collected by MetOcean Solutions from
+            upstream providers
+          description: >
+            A text description of the tileset. The description can contain any
+            legal character. Implementations SHOULD NOT interpret the
+            description as HTML.
+        version:
+          type: string
+          default: 1.0.0
+          example: 3.0.0
+          description: >
+            A semver.org style version number. When changes across tiles are
+            introduced, the minor version MUST change. This may lead to cut off
+            labels. Therefore, implementors can decide to clean their cache when
+            the minor version changes. Changes to the patch level MUST only have
+            changes to tiles that are contained within one tile. When tiles
+            change significantly, the major version MUST be increased.
+            Implementations MUST NOT use tiles with different major versions.
+        attribution:
+          type: string
+          default: null
+          example: >-
+            <a href="http://www.metocean.co.nz/" target="_blank">&copy; MetOcean
+            Solutions</a>
+          description: >
+            Contains an attribution to be displayed when the map is shown to a
+            user. Implementations MAY decide to treat this as HTML or literal
+            text. For security reasons, make absolutely sure that this field
+            can't be abused as a vector for XSS or beacon tracking.
+        template:
+          type: string
+          default: null
+          example: '{{#__teaser__}}{{NAME}}{{/__teaser__}}'
+          description: >-
+            Contains a mustache template to be used to format data from grids
+            for interaction. See
+            https://github.com/mapbox/utfgrid-spec/tree/master/1.2 for the
+            interactivity specification.
+        legend:
+          type: string
+          default: null
+          example: 'Red strikes are cloud-to-ground, grey strikes are cloud-to-cloud'
+          description: >
+            Contains a legend to be displayed with the map. Implementations MAY
+            decide to treat this as HTML or literal text. For security reasons,
+            make absolutely sure that this field can't be abused as a vector for
+            XSS or beacon tracking.
+        scheme:
+          type: string
+          enum:
+            - xyz
+            - tms
+          example: xyz
+          description: >
+            Influences the y  direction of the tile coordinates.  The
+            global-mercator (aka Spherical Mercator) profile is assumed.
+        tiles:
+          type: array
+          items:
+            type: string
+          example:
+            - 'https://lightning.metoceanview.com/api/v3/strikes/{z}/{x}/{y}.pbf'
+          description: >
+            An array of tile endpoints. {z}, {x} and {y}, if present, are
+            replaced with the corresponding integers. If multiple endpoints are
+            specified, clients may use any combination of endpoints. All
+            endpoints MUST return the same content for the same URL. The array
+            MUST contain at least one endpoint.
+        grids:
+          type: array
+          items:
+            type: string
+          default: []
+          description: >
+            An array of interactivity endpoints. {z}, {x} and {y}, if present,
+            are replaced with the corresponding integers. If multiple endpoints
+            are specified, clients may use any combination of endpoints. All
+            endpoints MUST return the same content for the same URL. If the
+            array doesn't contain any entries, interactivity is not supported
+            for this tileset. See
+            https://github.com/mapbox/utfgrid-spec/tree/master/1.2 for the
+            interactivity specification.
+        data:
+          type: array
+          items:
+            type: string
+          default: []
+          description: >
+            An array of data files in GeoJSON format. {z}, {x} and {y}, if
+            present, are replaced with the corresponding integers. If multiple
+            endpoints are specified, clients may use any combination of
+            endpoints. All endpoints MUST return the same content for the same
+            URL. If the array doesn't contain any entries, then no data is
+            present in the map.
+        minzoom:
+          type: integer
+          example: 0
+          minimum: 0
+          maximum: 30
+          description: |
+            An integer specifying the minimum zoom level.
+        maxzoom:
+          type: integer
+          example: 22
+          minimum: 0
+          maximum: 30
+          description: |
+            An integer specifying the maximum zoom level. MUST be >= minzoom.
+        bounds:
+          type: array
+          items:
+            type: number
+          example:
+            - -180
+            - -85.05112877980659
+            - 180
+            - 85.0511287798066
+          default:
+            - -180
+            - -90
+            - 180
+            - 90
+          description: >
+            The maximum extent of available map tiles. Bounds MUST define an
+            area covered by all zoom levels. The bounds are represented in
+            WGS:84 latitude and longitude values, in the order left, bottom,
+            right, top. Values may be integers or floating point numbers.
+        center:
+          type: array
+          items:
+            type: number
+          example:
+            - -76.275329586789
+            - 39.153492567373
+            - 8
+          default: null
+          description: >
+            The first value is the longitude, the second is latitude (both in
+            WGS:84 values), the third value is the zoom level as an integer.
+            Longitude and latitude MUST be within the specified bounds. The zoom
+            level MUST be between minzoom and maxzoom. Implementations can use
+            this value to set the default location. If the value is null,
+            implementations may use their own algorithm for determining a
+            default location.

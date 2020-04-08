@@ -1,0 +1,1107 @@
+openapi: 3.0.0
+servers:
+  - description: classmate CLOUD test server
+    url: https://www.simus-systems.net/cloud4lh
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/scharrer/classmate_CLOUD/1.0.1
+info:
+  description: API for calculating CAD part manufacturing costs, by simus systems GmbH
+  version: "1.0.1"
+  title: classmate CLOUD API
+  contact:
+    email: scharrer@simus-systems.com
+  license:
+    name: commercial
+tags:
+  - name: WebService
+paths:
+  /api/analyze:
+    post:
+      tags:
+        - WebService
+      summary: Analyzes a CAD model and converts it to S3D.
+      description: |
+        Allows you to upload a CAD file to the classmate CLOUD server,
+        where it is inspected and converted to the intermediate format S3D.  
+        
+        On success, the response contains the resulting S3D file, as well as
+        metadata collected during the analysis.
+      parameters:
+        - in: query
+          name: version
+          description: |
+            The API version.
+          required: true
+          schema:
+            type: string
+            enum: ["1.0"]
+        - in: query
+          name: language
+          description: |
+            The language to use for localized strings.  
+            In the rest of the API specification, this is referred to as 
+            the "request language".
+          schema:
+            type: string
+            enum: ["en", "de"]
+            default: "en"
+      requestBody:
+        content:
+          multipart/form-data:
+             schema:
+              type: object
+              properties: # Request parts
+                model:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: |
+            Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyzeResponse'
+        '400':
+          description: |
+            Request was malformed, or the uploaded model was rejected.
+          content:
+            text/plain:
+              schema:
+                description: |
+                  Internal error message.
+                example: |
+                  Invalid value passed for query parameter 'language'.
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorList'
+        '401':
+          description: |
+            Invalid username or password.
+        '402':
+          description: |
+            This classmate CLOUD user account's license has expired, or has no
+            more calculations left.
+        '403':
+          description: |
+            This classmate CLOUD user account does not have API privileges.
+        '500':
+          description: |
+            A timeout or unexpected error occurred.
+  /api/calculate:
+    post:
+      tags:
+        - WebService
+      summary: Performs a classmate CLOUD calculation on an S3D model.
+      description: |
+        Allows you to upload an S3D file that was previously produced by the
+        `/api/analyze` path, and performs a classmate CLOUD calculation
+        for the CAD model that it represents.
+        
+        On success, the response contains the calculation results.
+      parameters:
+        - in: query
+          name: version
+          description: |
+            The API version.
+          required: true
+          schema:
+            type: string
+            enum: ["1.0"]
+        - in: query
+          name: language
+          description: |
+            The language to use for localized strings.  
+            In the rest of the API specification, this is referred to as 
+            the "request language".
+          schema:
+            type: string
+            enum: ["en", "de"]
+            default: "en"
+      requestBody:
+        content:
+          multipart/form-data:
+             schema:
+              type: object
+              properties: # Request parts
+                json:
+                  $ref: '#/components/schemas/CalculateRequest'
+      responses:
+        '200':
+          description: |
+            Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalculateResponse'
+        '400':
+          description: |
+            Request was malformed, or the uploaded model was rejected.
+          content:
+            text/plain:
+              schema:
+                description: |
+                  Internal error message.
+                example: |
+                  Invalid value passed for query parameter 'language'.
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorList'
+        '401':
+          description: |
+            Invalid username or password.
+        '402':
+          description: |
+            This classmate CLOUD user account's license has expired, or has no
+            more calculations left.
+        '403':
+          description: |
+            This classmate CLOUD user account does not have API privileges.
+        '500':
+          description: |
+            A timeout or unexpected error occurred.
+security:
+  - basicAuth: []
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+  schemas:
+    AnalyzeResponse:
+      example:
+        version: '1.0'
+        language: en
+        nativeFileName: hinge23.sldprt
+        modelName: hinge23
+        modelDimensions:
+          type: rectangular
+          l: 120
+          w: 50
+          h: 40
+        boreholeCount: 0
+        annotations: []
+        s3dModel: WlMzRAEAAAAAAAO8DAAAH4sIAAAAAAAAAO19...
+      type: object
+      properties:
+        version:
+          description: |
+            The API version.
+          type: string
+        language:
+          description: |
+            The request language.
+          type: string
+        nativeFileName:
+          description: |
+            The file name of the uploaded model (if specified in the
+            `Content-Disposition` multipart header in the request).
+          type: string
+        modelName:
+          description: |
+            The name of the model.
+          type: string
+        modelDimensions:
+          $ref: '#/components/schemas/ModelDimensions'
+        material:
+          $ref: '#/components/schemas/MaterialDescription'
+        possibleRawMaterial:
+          $ref: '#/components/schemas/RawMaterialDescription'
+        boreholeCount:
+          description: |
+            The number of boreholes found in the model.
+          type: number
+        annotations:
+          description: |
+            Annotations found in the model.
+          type: array
+          items:
+            $ref: '#/components/schemas/Annotation'
+        s3dModel:
+          description: |
+            The uploaded CAD model, converted to S3D (as a Base64-encoded
+            string).
+          type: string
+          format: binary
+    CalculateRequest:
+      example:
+        lotSize: 100
+        rawMaterial:
+          id: 00006578
+        model: WlMzRAEAAAAAAAO8DAAAH4sIAAAAAAAAAO19...
+      type: object
+      properties:
+        lotSize:
+          description: |
+            The lot size to use in the calculation.
+            
+            Higher lot sizes typically result in lower calculated costs per
+            unit.
+          type: integer
+          default: 1
+        rawMaterial:
+          $ref: '#/components/schemas/RawMaterialChoice'
+        surfaceTreatments:
+          description: |
+            Identifiers of the surface treatments that should be included in the
+            calculation (if any).
+          type: array
+          items:
+            type: string
+        annotations:
+          description: |
+            **[Not yet implemented.]**  
+            List of the annotations that should be considered in the
+            calculation.  
+            (If these differ from the annotations returned by `/api/analyze`,
+            they are assigned to existing boreholes on a best-effort basis.)
+          type: array
+          items:
+            $ref: '#/components/schemas/Annotation'
+        calculationFactors:
+          $ref: '#/components/schemas/CalculationFactors'
+        model:
+          description: |
+            The Base64-encoded S3D file that was received as the `s3dModel`
+            property of an `/api/analyze` response.
+          type: string
+          format: binary
+      required:
+        - rawMaterial
+    CalculateResponse:
+      type: object
+      example:
+        version: '1.0'
+        language: de
+        lotSize: 10
+        rawMaterial:
+          id: '00006578'
+          name: 'FL 50x40'
+          material:
+            group: St
+            localizedGroupName: Steel
+            number: '1.0122'
+            name: EN10277-S235JRG2C
+        costs:
+          manufacturingCostsPerUnit: 18.03
+          purchasePricePerUnit: 25.08
+          purchasePriceWithProgrammingPerUnit: 26.82
+          manufacturingCosts: 180.30
+          purchasePrice: 250.80
+          purchasePriceWithProgramming: 268.20
+      properties:
+        version:
+          description: |
+            The API version.
+          type: string
+        language:
+          description: |
+            The request language.
+          type: string
+        lotSize:
+          description: |
+            The lot size that was chosen in the request.
+          type: string
+        rawMaterial:
+          $ref: '#/components/schemas/RawMaterialDescription'
+        consideredAreaRatio:
+          description: |
+        costs:
+          $ref: '#/components/schemas/CostSummary'
+        costReport:
+          $ref: '#/components/schemas/CostReport'
+    ErrorList:
+      description: |
+        One or more error messages.
+      type: object
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Error'
+    Annotation:
+      description: |
+        An annotation found in a CAD model.
+      example:
+        type: thread
+        toleranceTable: H7
+      type: object
+      properties:
+        type:
+          description: |
+            The annotation type.
+    CalculationFactors:
+      description: |
+        Values for adjusting the cost calculation.
+      properties:
+        hourlyRate:
+          description: |
+            Multiplication factor for the hourly rate of the machines and
+            staff.  
+            (Increasing this value increases the calculated costs.)
+          type: number
+          default: 1.0
+        setupTime:
+          description: |
+            Multiplication factor for the make-ready time of the machines.  
+            (Increasing this value increases the calculated costs.)
+          type: number
+          default: 1.0
+        cuttingParams:
+          description: |
+            Multiplication factor for the cutting parameters (maximum feed,
+            cutting speed, cutting depth) of the machine tools.  
+            (Increasing this value *decreases* the calculated costs.)
+          type: number
+          default: 1.0
+        additionalTime:
+          description: |
+            Multiplication factor for the secondary processing time (operation
+            time, tool change time, clamping time, unload and load time) of the
+            machine tools.  
+            (Increasing this value increases the calculated costs.)
+          type: number
+          default: 1.0
+    CostReport:
+      description: |
+        Detailed breakdown of the calculated costs.
+      properties:
+        summary:
+          $ref: '#/components/schemas/CostReportSummary'
+        machines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CostReportMachineTimes'
+        stages:
+          $ref: '#/components/schemas/CostReportStages'
+        localizedMessages:
+          description: |
+            Informational messages generated during the calculation.  
+            [Localization not yet implemented - currently always in German.]
+          type: array
+          items:
+            type: string
+    CostReportSummary:
+      description: |
+      properties:
+        unitCosts:
+          $ref: '#/components/schemas/CostReportUnitCosts'
+        manufacturingCosts:
+          $ref: '#/components/schemas/CostReportManufacturingCosts'
+        purchasePrice:
+          $ref: '#/components/schemas/CostReportPurchasePrice'
+        purchasePriceWithProgramming:
+          $ref: '#/components/schemas/CostReportPurchasePriceWithProgramming'
+        manufacturingTime:
+          $ref: '#/components/schemas/CostReportTimes'
+    CostReportUnitCosts:
+      description: |
+        Breakdown of `costReport.summary.manufacturingCosts.unitCosts`, i.e. the
+        manufacturing costs per unit without machine setup or programming.
+      properties:
+        material:
+          description: |
+            Costs for the raw material [EUR/unit].  
+            (See `rawMaterial`.)
+          type: number
+        roughShaping:
+          description: |
+            Costs for rough-shaping operations such as milling [EUR/unit].  
+            (For a breakdown, see `costReport.stages.roughShaping`.)
+          type: number
+        postTreatment:
+          description: |
+            Costs for post-treatment operations such as deburring [EUR/unit].  
+            (For a breakdown, see `costReport.stages.postTreatment`.)
+          type: number
+        surfaceTreatment:
+          description: |
+            "Costs for surface-treatment operations [EUR/unit].  
+            (For a breakdown, see `costReport.stages.surfaceTreatment`.)
+          type: number
+        additions:
+          description: |
+            Additional manufacturing costs [EUR/unit].  
+            (For a breakdown, see `costReport.stages.additions`.)
+          type: number
+    CostReportManufacturingCosts:
+      description: |
+        Breakdown of `costs.manufacturingCostsPerUnit`, i.e. the manufacturing
+        costs per unit without programming.
+      properties:
+        setupCostsPerUnit:
+          description: |
+            The setup costs divided by the lot size [EUR/unit].  
+            (For a breakdown, see `costReport.stages.setup`.)
+          type: number
+        unitCosts:
+          description: |
+            Unit costs [EUR/unit].  
+            (For a breakdown, see `costReport.summary.unitCosts`.)
+          type: number
+    CostReportPurchasePrice:
+      description: |
+        Breakdown of `costs.purchasePricePerUnit`, i.e. the purchase price per
+        unit without programming.
+      properties:
+        manufacturing:
+          description: |
+            Manufacturing costs without programming [EUR/unit].  
+            (Same as `costs.manufacturingCostsPerUnit`. For a breakdown, see
+            `costReport.summary.manufacturingCosts`.)
+          type: number
+        administration:
+          description: |
+          type: number
+        generalSales:
+          description: |
+          type: number
+        reject:
+          description: |
+          type: number
+        specialSales:
+          description: |
+          type: number
+        profit:
+          description: |
+          type: number
+    CostReportPurchasePriceWithProgramming:
+      description: |
+        Breakdown of `costs.purchasePriceWithProgrammingPerUnit`, i.e. the
+        purchase price per unit.
+      properties:
+        manufacturing:
+          description: |
+            Manufacturing costs without programming [EUR/unit].  
+            (Same as `costs.manufacturingCostsPerUnit`. For a breakdown, see
+            `costReport.summary.manufacturingCosts`.)
+          type: number
+        programming:
+          description: |
+            Costs for programming the machines [EUR/unit].  
+            (For a breakdown, see `costReport.stage.programming`.).
+          type: number
+        programmingAdditions:
+          description: |
+            Additional costs for programming [EUR/unit].
+          type: number
+        administration:
+          description: |
+          type: number
+        generalSales:
+          description: |
+          type: number
+        reject:
+          description: |
+          type: number
+        specialSales:
+          description: |
+          type: number
+        profit:
+          description: |
+          type: number
+    CostReportTimes:
+      description: |
+        Breakdown of the manufacturing time.
+      properties:
+        totalSetupTime:
+          description: |
+            Total setup time [min]. *(Attention - not per unit!)*  
+            `= sum(costReport.machine[*].tr)`  
+            `= sum(costReport.stage.setup[*].tr)`
+          type: number
+        unitTime:
+          description: |
+            Production time per unit [min/unit].  
+            `= sum(costReport.machine[*].te)`  
+            `= sum(costReport.stage.*[*].te)`
+          type: number
+    CostReportMachineTimes:
+      description: |
+        Detailed times for a specific machine involved in the manufacturing
+        process.  
+        (Total time for one machine is `tr + lotSize * te`; the other times are
+        components of `te`.)
+      properties:
+        id:
+          description: |
+            Identifier of the machine.
+          type: string
+        localizedName:
+          description: |
+            Name of the machine, in the request language.
+          type: string
+        tr:
+          description: |
+            Setup time [min]. *(Attention - not per unit!)*
+          type: number
+        te:
+          description: |
+            Time per unit [min/unit]. (`= tg + tv`)
+          type: number
+        tg:
+          description: |
+            Productive time [min/unit]. (`= thu + tnb`)
+          type: number
+        tv:
+          description: |
+            Allowance time [min/unit]. (Estimated based on `tg`.)
+          type: number
+        thu:
+          description: |
+            Main time [min/unit].
+          type: number
+        tnb:
+          description: |
+            Controllable secondary time [min/unit]. (`= tverf + tw + tsp + tbe`)
+          type: number
+        tverf:
+          description: |
+            Traversing time [min/unit].
+          type: number
+        tw:
+          description: |
+            Tool change time [min/unit].
+          type: number
+        tsp:
+          description: |
+            Clamping time [min/unit].
+          type: number
+        tbe:
+          description: |
+            Load/unload time [min/unit].
+          type: number
+    CostReportStages:
+      description: |
+        Detailed breakdown of the times and costs by manufacturing stage.
+      properties:
+        setup:
+          description: |
+            Costs and times for machine setup.
+          type: array
+          items:
+            $ref: '#/components/schemas/CostReportMachineSetup'
+        programming:
+          description: |
+            Costs and times for programming the machines.
+          type: array
+          items:
+            $ref: '#/components/schemas/CostReportMachineProgramming'
+        roughShaping:
+          description: |
+            Costs and times for rough-shaping operations, such as milling.
+          type: array
+          items:
+            $ref: '#/components/schemas/CostReportMachineOperation'
+        postTreatment:
+          description: |
+            Costs and times for post-treatment operations, such as deburring.
+          type: array
+          items:
+            $ref: '#/components/schemas/CostReportMachineOperation'
+        surfaceTreatment:
+          description: |
+            Costs for surface-treatment operations, such as Zinc coating.
+          type: array
+          items:
+            $ref: '#/components/schemas/CostReportSurfaceTreatment'
+        additions:
+          $ref: '#/components/schemas/CostReportAdditions'
+    CostReportMachineSetup:
+      description: |
+        Setup costs and times for a single machine.
+      properties:
+        machine:
+          description: |
+            Machine identifier.  
+            (One of the values of `costReport.machines[*].id`).
+          type: string
+        tr:
+          description: |
+          type: number
+        trPerUnit:
+          description: |
+          type: number
+        costs:
+          description: |
+          type: number
+    CostReportMachineProgramming:
+      description: |
+        Programming costs and times for a single machine.
+      properties:
+        machine:
+          description: |
+            Machine identifier.  
+            (One of the values of `costReport.machines[*].id`).
+          type: string
+        time:
+          description: |
+          type: number
+        costs:
+          description: |
+          type: number
+    CostReportMachineOperation:
+      description: |
+        Costs and times for a single machining operation.
+      properties:
+        machine:
+          description: |
+            Machine identifier.  
+            (One of the values of `costReport.machines[*].id`).
+          type: string
+        type:
+          description: |
+            The type of machining operation.  
+            **[Not yet implemented.]**
+          type: string
+        localizedType:
+          description: |
+            The type of machining operation, in the request language.
+          type: string
+        thu:
+          description: |
+            Main time [min/unit].
+          type: number
+        te:
+          description: |
+            Unit time [min/unit]. (= `thu` + secondary time + allowance time)
+          type: number
+        costs:
+          description: |
+            Costs for the operation [EUR/unit].
+          type: number
+    CostReportSurfaceTreatment:
+      description: |
+        Costs and times for a single surface treatment.
+      properties:
+        id:
+          description: |
+            Surface treatment identifier.
+          type: string
+        localizedName:
+          description: |
+            Surface treatment name in the request language.
+          type: string
+        te:
+          description: |
+            Duration of the surface treatment [min/unit].  
+            **[Not yet implemented]**
+          type: number
+        costs:
+          description: |
+            Costs of the surface treatmen [EUR/unit].
+          type: number
+    CostReportAdditions:
+      description: |
+        Additional manufacturing costs that aren't associated with a specific
+        manufacturing stage.
+      properties:
+        materialSpecialDirectCosts:
+          description: |
+            Special direct costs for the material [EUR/unit].
+          type: number
+        materialOverheadCosts:
+          description: |
+            Material overhead costs [EUR/unit].
+          type: number
+        materialRiskCosts:
+          description: |
+            Material risk costs [EUR/unit].  
+            (Covers unknown losses in material.)
+          type: number
+        productionOverheadCosts:
+          description: |
+            Production overhead costs [EUR/unit].
+          type: number
+        productionRiskCosts:
+          description: |
+            Production risk costs [EUR/unit].  
+            (Covers unknown losses in production.)
+          type: number
+        siteAdministrationCosts:
+          description: |
+            Site administration costs [EUR/unit].
+          type: number
+    CostSummary:
+      description: |
+        Summary of the calculated costs for manufacturing the given lot size of
+        the uploaded part.
+      example:
+        manufacturingCostsPerUnit: 18.03
+        purchasePricePerUnit: 25.08
+        purchasePriceWithProgrammingPerUnit: 26.82
+        manufacturingCosts: 180.30
+        purchasePrice: 250.80
+        purchasePriceWithProgramming: 268.20
+      properties:
+        manufacturingCostsPerUnit:
+          description: |
+            The manufacturing costs (per unit, in EUR)
+          type: number
+        purchasePricePerUnit:
+          description: |
+            The purchase price without programming (per unit, in EUR)
+          type: number
+        purchasePriceWithProgrammingPerUnit:
+          description: |
+            The purchase price including programming (per unit, in EUR)
+          type: number
+        manufacturingCosts:
+          description: |
+            `manufacturingCostsPerUnit` × `lotSize`
+          type: number
+        purchasePrice:
+          description: |
+            `purchasePricePerUnit` × `lotSize`
+          type: number
+        purchasePriceWithProgramming:
+          description: |
+            `purchasePriceWithProgrammingPerUnit` × `lotSize`
+          type: number
+    Error:
+      description: |
+        An error message.  
+        For errors that may be of interest to end users, `messageKey`
+        and `localizedMessage` are usually set.  
+        For errors meant to be read only by API developers, usually only
+        `internalMessage` is set.
+      example:
+        key: Analyze.error.fileTypeVersion
+        arguments:
+          version: SolidEdge V14
+        localizedMessage: File type version not supported (SolidEdge V14).
+      properties:
+        key:
+          description: |
+            A message key identifying the type of error.
+          type: string
+        arguments:
+          description: |
+            A map containing additional string or number values that useful for
+            constructing a localized error message from the message key.
+          type: object
+        localizedMessage:
+          description: |
+            A human-readable version of the error message, in the request
+            language.
+          type: string
+        internalMessage:
+          description: |
+            An internal error message in English, meant to be read by developers
+            and not end-users.
+          type: string
+    MaterialChoice:
+      description: |
+        The material that the existing product (raw material) is made of.
+        
+        Specify this to define a custom semi-finished product.  
+        Must not be specified together with a pre-defined semi-finished product
+        (`rawMaterial.id`).
+      properties:
+        group:
+          description: |
+            Material group identifier.  
+            (See table "Material groups", column "Abbreviation", in the
+            <a href="https://classmate.cloud/cloudUserSettings">settings</a> of the
+            classmate CLOUD API user account.)
+            
+            This is used for selecting suitable machines during calculation, and
+            for determining the material cost if `number` is not specified.
+          type:
+            string
+        number:
+          description: |
+            Numerical designation of the material according to DIN EN.  
+            (See table "Materials", column "Material number", in the
+            [settings](https://classmate.cloud/cloudUserSettings) of the
+            classmate CLOUD API user account.)
+            
+            This is used for determining the material cost, if necessary.
+          type:
+            string
+      required:
+        - group
+    MaterialDescription:
+      description: |
+        Description of a material.
+        
+        In `AnalyzeResponse`, this describes a material identified based on data
+        stored in the CAD model (if found).  
+        In `CalculateResponse`, this describes the material that was actually
+        used in the calculation.
+      example:
+        group: St
+        localizedGroupName: Steel
+        number: '1.0577'
+        name: EN10277-S355J2
+      properties:
+        group:
+          description: |
+            Material group identifier (if available).  
+            (See table "Material groups", column "Abbreviation", in the
+            [settings](https://classmate.cloud/cloudUserSettings) of the
+            classmate CLOUD API user account.)
+          type: string
+        localizedGroupName:
+          description: |
+            Material group name, in the language specified in the request (if
+            available).  
+            (See table "Material groups", column "Name", in the
+            [settings](https://classmate.cloud/cloudUserSettings) of the
+            classmate CLOUD API user account.)
+          type: string
+        number:
+          description: |
+            Numerical designation of the material according to DIN EN (if
+            available).  
+            (See table "Materials", column "Material number", in the
+            [settings](https://classmate.cloud/cloudUserSettings) of the
+            classmate CLOUD API user account.)
+          type: string
+        name:
+          description: |
+            Designation of the material according to DIN EN (if available).  
+            (See table "Materials", column "Name", in the
+            [settings](https://classmate.cloud/cloudUserSettings) of the
+            classmate CLOUD API user account.)
+          type: string
+    ModelDimensions:
+      description: |
+        Dimensions of a CAD model (in mm).  
+        The `type` specifies how the dimensions are expressed.
+      example:
+        type: round tube
+        l: 100
+        da: 25
+      properties:
+        type:
+          $ref: '#/components/schemas/SemiFinishedProductType'
+        l: 
+          description: |
+            Length of the model in mm (always present).
+          type: number
+        w: 
+          description: |
+            Width of the model in mm (present for `type`=`RECTANGULAR`/`SHEET`).
+          type: number
+        h: 
+          description: |
+            Height of the model in mm (present for `type`=`RECTANGULAR`).
+          type: number
+        da: 
+          description: |
+            Outer diameter of the model in mm (present for
+            `type`=`ROUND`/`TUBE_ROUND`).
+          type: number
+        di: 
+          description: |
+            Outer diameter of the model in mm (present for `type`=`TUBE_ROUND`).
+          type: number
+        s: 
+          description: |
+            Thickness of the model in mm (present for `type`=`SHEET`).
+          type: number
+    RawMaterialDescription:
+      description: |
+        Description of a raw material (that is, an existing product from which a
+        part can be machined).
+        
+        In `AnalyzeResponse`, this describes a possible raw material picked by
+        classmate CLOUD.  
+        In `CalculateResponse`, this describes the raw material that was
+        actually used as the basis for the calculation.
+      example:
+        id: '00003534'
+        name: 'BL 4'
+        material:
+          group: St
+          localizedGroupName: Steel
+          number: '1.0577'
+          name: EN10277-S355J2
+        shape:
+          type: sheet
+          s: 4.0
+      properties:
+        id:
+          description: |
+            The identifier under which the pre-defined semi-finished product is
+            stored in classmate CLOUD.  
+            (See table "Semi-finished products", column "Identifier", in the
+            [settings](https://classmate.cloud/cloudUserSettings) of the
+            classmate CLOUD API user account.)
+        name:
+          description: |
+            The name of the pre-defined semi-finished product.  
+            (See table "Semi-finished products", column "Name", in the
+            [settings](https://classmate.cloud/cloudUserSettings) of the
+            classmate CLOUD API user account.)
+        material:
+          $ref: '#/components/schemas/MaterialDescription'
+        shape:
+          $ref: '#/components/schemas/SemiFinishedProductShape'
+        preCut:
+          $ref: '#/components/schemas/SemiFinishedProductPreCut'
+    RawMaterialChoice:
+      description: |
+        The existing product (semi-finished product or custom blank) from which
+        the part should be machined.  
+        You can specify one of the following combinations of properties:
+        * `id`:  
+          The raw material is the uncut semi-finished product with the given  
+          identifier.
+        * `material` + `shape` + `preCut`:  
+          The raw material is the specified pre-cut blank produced from the  
+          specified semi-finished product.
+        
+        Additionally, if `id` is not specified, you may specify one of
+        `pricePerUnit`, `pricePerKg`, `pricePerM`, or `pricePerSqrM` – otherwise
+        the calculation estimates a raw material purchase price based on
+        `material`.
+      example:
+        id: '00004164'
+      properties:
+        id:
+          description: |
+            The identifier of a pre-defined semi-finished product stored in
+            classmate CLOUD.  
+            (See table "Semi-finished products", column "Identifier", in the
+            [settings](https://classmate.cloud/cloudUserSettings) of the
+            classmate CLOUD API user account.)
+            
+            Specify this if you want to use one of your pre-defined
+            semi-finished products.  
+            All required data about material, shape, and price is retrieved from
+            there.
+          type: string
+        material:
+          $ref: '#/components/schemas/MaterialChoice'
+        shape:
+          $ref: '#/components/schemas/SemiFinishedProductShape'
+        preCut:
+          $ref: '#/components/schemas/SemiFinishedProductPreCut'
+        pricePerUnit:
+          description: |
+            The purchase price per unit [EUR].  
+            (Only allowed if a pre-cut was specified.)
+          type: number
+        pricePerKg:
+          description: |
+            The purchase price per kilogram [EUR/kg].
+          type: number
+        pricePerM:
+          description: |
+            The purchase price per meter [EUR/m].  
+            (Only allowed for bar/tube-shaped raw materials.)
+          type: number
+        pricePerSqrM:
+          description: |
+            The purchase price per square meter [EUR/m²].  
+            (Only allowed for sheet/plate-shaped raw materials.)
+          type: number
+    SemiFinishedProductPreCut:
+      description: |
+        The pre-cut length (for tubes and rods), or pre-cut rectangle
+        (for sheets).
+        
+        Specify this if you want to use a fully-defined pre-cut blank (rather
+        than a variable-length semi-finished product) as the existing product.
+      example:
+        l: 50
+      properties:
+        l: 
+          description: |
+            Pre-cut length in mm.
+          type: number
+        w: 
+          description: |
+            Pre-cut width in mm. (Only allowed for raw materials of type `SHEET`.)
+          type: number
+    SemiFinishedProductShape:
+      description: |
+        Shape of a semi-finished product (i.e. an uncut raw material).
+      example:
+        type: round tube
+        da: 25
+      properties:
+        type:
+          $ref: '#/components/schemas/SemiFinishedProductType'
+        l: 
+          description: |
+            Length of the model in mm (always present).
+          type: number
+        w: 
+          description: |
+            Width of the model in mm (present for `type`=`RECTANGULAR`/`SHEET`).
+          type: number
+        h: 
+          description: |
+            Height of the model in mm (present for `type`=`RECTANGULAR`).
+          type: number
+        da: 
+          description: |
+            Outer diameter of the model in mm (present for
+            `type`=`ROUND`/`TUBE_ROUND`).
+          type: number
+        di: 
+          description: |
+            Inner diameter of the model in mm (present for `type`=`TUBE_ROUND`).
+          type: number
+        s: 
+          description: |
+            Thickness of the model in mm (present for `type`=`SHEET`).
+          type: number
+    SemiFinishedProductType:
+      description: |
+        The type of semi-finished product.  
+        * `RECTANGULAR`:  
+          Bar with solid rectangle profile, a.k.a. flat or square bar.  
+          (width `w` × height `h`)
+        * `HEXAGONAL`:  
+          Bar with solid hexagonal profile, a.k.a. hex bar.  
+          [Geometry description not yet implemented]
+        * `ROUND`:  
+          Bar with solid circular profile, a.k.a. round bar.  
+          (diameter `da`)
+        * `HALF_ROUND`:  
+          Bar with solid semi-circle profile, a.k.a. half-round bar.  
+          (diameter `da`)  
+        * `TUBE_RECTANGULAR`:  
+          Bar with hollow rectangular profile.  
+          [Geometry description not yet implemented]
+        * `TUBE_ROUND`:  
+          Bar with hollow circular profile, a.k.a tube/pipe.  
+          (outer diameter `da`, inner diameter `di`)
+        * `PROFILE_I`:  
+          Bar with 'I' profile, a.k.a. beam.  
+          (width `w` × height `h`; thickness `s`)
+        * `PROFILE_L`:  
+          Bar with 'L' profile, a.k.a. angle bar.  
+          (width `w` × height `h`; thickness `s`)
+        * `PROFILE_T`:  
+          Bar with 'T' profile, a.k.a. T-bar.  
+          (width `w` × height `h`; thickness `s`)
+        * `PROFILE_U`:  
+          Bar with 'U' profile, a.k.a. channel.  
+          (width `w` × height `h`; thickness `s`)
+        * `SHEET`:  
+          Flat sheet or plate.  
+          (thickness `s`)
+        
+        [Currently, only the types `RECTANGULAR`, `ROUND`, `TUBE_ROUND`, and
+        `SHEET` are supported for defining a *custom* semi-finished product, but
+        all types can appear in the description of a *pre-defined* semi-finished
+        product.]
+      type: string
+      enum:
+        - RECTANGULAR
+        - HEXAGONAL
+        - ROUND
+        - HALF_ROUND
+        - TUBE_RECTANGULAR
+        - TUBE_ROUND
+        - PROFILE_I
+        - PROFILE_L
+        - PROFILE_T
+        - PROFILE_U
+        - SHEET

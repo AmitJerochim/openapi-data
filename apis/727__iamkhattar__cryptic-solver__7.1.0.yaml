@@ -1,0 +1,392 @@
+penapi: 3.0.0
+info:
+  description: A cryptic crossword is a puzzle in which each word of the cryptic clue is treated as an individual clue to the final answer.  The cryptic clue follows the conventions of British Cryptic Crosswords. Typically, a cryptic crossword consists of two parts- the definition and the wordplay. The definition is either a synonym of the answer or semantically close to it and is usually in the start or end of the clue. The wordplay is an alternate route to the definition. The wordplay indicates how to structure the cryptic clue to reach the answer. There are many types of wordplays, some of them include Anagrams, Double Definitions and Reversals. Unlike its American counterpart, cryptic crosswords require the solver to ignore the “surface meaning” of the sentence to solve the clue. The solver must look for keywords which indicate operations that have to be performed to get the solution.
+    <br/><br/> Cryptic Solver API is organized around REST. The API has predictable resource-oriented URLs, accepts JSON-encoded request bodies and returns JSON-encoded responses, and uses standard HTTP response codes, authentication and verbs.
+    <br/><br/>The Cryptic Solver API uses conventional HTTP response codes to indicate the success or failure of an API request. In general- Codes in the 2xx range indicate success. Codes in the 4xx range indicate an error that failed given the information provided (e.g a required parameter was ommited). Codes in the 5xx range indicate an error with the Cryptic Solver API servers.
+    
+  version: "7.1.0"
+  title: Cryptic Solver API
+  contact:
+    email: shivamkhattar1@gmail.com
+externalDocs:
+  url: https://devweb2019.cis.strath.ac.uk/vib16216-nodejs/
+  description: Use the Cryptic Solver Web App
+servers:
+# Added by API Auto Mocking Plugin
+# Added by API Auto Mocking Plugin
+  - description: Available Servers
+    url: https://devweb2019.cis.strath.ac.uk/vib16216-nodejs
+
+tags:
+  - name: public
+    description: Accessible to everyone
+  - name: user
+    description: Accessible to only users
+paths:
+
+  /api/auth:
+    post:
+      summary: Login a User
+      description: The endpoint allows a user to login and receive a x-auth-token. This x-auth-token can be used to access private endpoints within this API.
+      tags:
+        - user
+      requestBody:
+        description: The user can send their email and password through the request body to receive their x-auth-token. The email must be a valid email and the password must be atleast 6 characters long.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSchema'
+            example: 
+              email: useremail@host.com
+              password: userpassword
+            
+      responses:
+        '500':
+          description: There was a server error. Try again later.
+          content:
+            application/json:
+              examples:
+                ServerError:
+                  value: Server Error
+              schema:
+                 $ref: '#/components/schemas/ServerErrorSchema'
+          
+        '400':
+          description: The user has not provided either their email or password or both.
+          content:
+            application/json:
+              examples:
+                BadRequest:
+                  value:
+                    errors: [{value: invalid-email,msg: Please include a valid email, param: email, location: body}]
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BadRequestSchema'
+                  
+        '200':
+          description: The user has provided the correct credentials. The user's x-auth-token is returned.
+          content:
+            application/json:
+              examples:
+                SuccessfullResponse:
+                  value:
+                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+          
+
+    get:
+      summary: Get a users details.
+      description: The endpoint returns the user details corresponding to the x-auth-token provided. Details such as email and an array of the users past searches is returned.
+      tags:
+        - public
+      parameters:
+        - in: header
+          name: x-auth-token
+          schema:
+            $ref: '#/components/schemas/AuthTokenSchema'
+          required: true
+          description: Token provided when logging in or registering the user.
+      responses:
+        '500':
+          description: There was a server error. Try again later.
+          content:
+            application/json:
+              examples:
+                ServerError:
+                  value: Server Error
+              schema:
+                 $ref: '#/components/schemas/ServerErrorSchema'
+                  
+        '401':
+          description: Token provided is either invalid or no token was provided.
+          content:
+            application/json:
+              examples:
+                InvalidToken:
+                  value:
+                    msg: Invalid Token
+                NoToken:
+                  value:
+                    msg: No Token, authorization denied
+              schema:
+                $ref: '#/components/schemas/TokenErrorSchema'
+                
+        '200':
+          description: The token was verified and corresponds to a valid user. The user details are returned.
+          content:
+            application/json:
+               examples:
+                SucessfulResponse:
+                  value:
+                    _id: user-id
+                    email: useremail@host.com
+                    history: [{ _id: clue-id, clue: badly pare the fruit, length: 4}, { _id: clue-id, clue: report account, length: 4}]
+               schema:
+                  $ref: '#/components/schemas/UserDetailsSchema'
+                  
+  /api/history:
+    post:
+      summary: Add a clue to users history
+      description: The endpoint allows the user to add a particular clue to their history. The user is located using the x-auth-token provided on login or registration.
+      tags:
+        - user
+      parameters:
+        - in: header
+          name: x-auth-token
+          schema:
+            $ref: '#/components/schemas/AuthTokenSchema'
+          required: true
+          description: Token provided when logging in or registering the user.
+      requestBody:
+        description: The user can send clue and length through the request body to add it to thier history.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClueSchema'
+            example: 
+              clue: badly pare the fruit
+              length: 4
+      responses:
+        '500':
+          description: There was a server error. Try again later.
+          content:
+            application/json:
+              examples:
+                ServerError:
+                  value: Server Error
+              schema:
+                 $ref: '#/components/schemas/ServerErrorSchema'
+                
+        '400':
+          description: The user has not provided either the clue or length is not a number.
+          content:
+            application/json:
+              examples:
+                BadRequest:
+                  value:
+                    errors: [{value: no-clue,msg: Please include a clue, param: clue, location: body}]
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BadRequestSchema'     
+                      
+        '401':
+          description: Token provided is either invalid or no token was provided.
+          content:
+            application/json:
+              examples:
+                InvalidToken:
+                  value:
+                    msg: Invalid Token
+                NoToken:
+                  value:
+                    msg: No Token, authorization denied
+              schema:
+                $ref: '#/components/schemas/TokenErrorSchema'
+                
+        '200':
+          description: The token was verified and corresponds to a valid user. The clue was successfully added to the user's history.
+          content:
+            application/json:
+              examples:
+                SucessfulResponse:
+                  value: [{_id: clue-id, clue: Badly pare the fruit, length: 4},{_id: clue-id, clue: Report Account, length: 4}]
+              schema:
+                $ref: '#/components/schemas/UserHistorySchema'
+                    
+  /api/solve:
+    post:
+      summary: Solve cryptic clues
+      description: The endpoint returns solutions to any given cryptic clue clue and length.
+      tags:
+        - public
+      requestBody:
+        description: The user can send clue and length through the request body to add it to thier history.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClueSchema'
+            example: 
+              clue: badly pare the fruit
+              length: 4
+      responses:
+        '500':
+          description: There was a server error. Try again later.
+          content:
+            application/json:
+              examples:
+                ServerError:
+                  value: Server Error
+              schema:
+                 $ref: '#/components/schemas/ServerErrorSchema'
+                 
+        '400':
+          description: The user has not provided either the clue or length is not a number.
+          content:
+            application/json:
+              examples:
+                BadRequest:
+                  value:
+                    errors: [{value: no-clue,msg: Please include a clue, param: clue, location: body}]
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BadRequestSchema'    
+                      
+        '200':
+          description: The server has successfully determined the results and ranked them. This is now returned.
+          content:
+            application/json:
+              examples:
+                SucessfulResponse:
+                  value: [{solution: PEAR, reason: This clue is an Anagram Clue. The anagram indicator is BADLY. The definition is THE FRUIT. PEAR is a synonym of THE FRUIT. If we anagram PARE we get PEAR, percentage: 100%}]
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SolutionItemSchema'
+
+  /api/users:
+    post:
+      summary: Register a user
+      description: The endpoint allows a user to register and receive a x-auth-token to access private endpoints within this API.
+      tags:
+        - public
+      requestBody:
+        description: The user can send their email and password through the request body to register and receive their x-auth-token. The email must be a valid email and the password must be atleast 6 characters long.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSchema'
+            example: 
+              email: useremail@host.com
+              password: userpassword
+            
+      responses:
+        '500':
+          description: There was a server error. Try again later.
+          content:
+            application/json:
+              examples:
+                ServerError:
+                  value: Server Error
+              schema:
+                 $ref: '#/components/schemas/ServerErrorSchema'
+                 
+        '400':
+          description: The user has not provided either an email or password or both.
+          content:
+            application/json:
+              examples:
+                BadRequest:
+                  value:
+                    errors: [{value: invalid-email,msg: Please include a valid email, param: email, location: body}]
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BadRequestSchema'      
+        '200': 
+          description: The user was registered sucessfully and the x-auth-token is returned.
+          content:
+            application/json:
+              examples:
+                SuccessfullResponse:
+                  value:
+                    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+
+components:
+  schemas:
+    UserSchema:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    ClueSchema:
+      type: object
+      properties:
+        clue:
+          type: string
+        length:
+          oneOf:
+            - type: number
+            - type: string
+    UserHistoryItem:
+      type: object
+      properties:
+        _id:
+          type: string
+        clue:
+          type: string
+        length:
+          type: number
+    SolutionItemSchema:
+      type: object
+      properties:
+        solution:
+          type: string
+        reason:
+          type: string
+        percentage:
+          type: string
+    UserHistorySchema:
+      type: array
+      items:
+        $ref: '#/components/schemas/UserHistoryItem'
+    UserDetailsSchema:
+      type: object
+      properties:
+        _id:
+          type: string
+        email:
+          type: string
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserHistoryItem'
+    BadRequestSchema:
+      type: object
+      properties:
+        value:
+          type: string
+        msg:
+          type: string
+        param:
+          type: string
+        location:
+          type: string
+    TokenErrorSchema:
+      type: object
+      properties:
+        msg:
+          type: string
+    ServerErrorSchema:
+      type: string
+    AuthTokenSchema:
+      type: string

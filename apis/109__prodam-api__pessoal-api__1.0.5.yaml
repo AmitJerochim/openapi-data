@@ -1,0 +1,451 @@
+penapi: 3.0.1
+
+info:
+  title: Pessoal
+  description: 
+    API de serviços que agrupa funcionalidades de consultas aos cadastros nos sistemas gestão de pessoas com o objetivo de automatizar, padronizar e simplificar a integração aos processos administrativos da área de recursos humanos.
+    A API de pessoal oferece informações do colaborador público que é a pessoa que ocupa legalmente um cargo, uma função pública ou outro vínculo com objetivo de prestar serviços à sociedade e as entidades públicas, visando ao interesse público e ao bem comum, exercendo as atribuições e responsabilidades previstas.
+    A API de pessoal é ofertada para instituições e parceiros previamente autorizados, por meio de Acordo de Cooperação Técnica. Dessa forma, o contato inicial deve ser realizado junto à autarquia. 
+    As instituições habilitadas precisam ainda seguir as orientações técnicas para integração dos serviços, de modo a garantir a aplicação dos requisitos de segurança e interoperabilidade estabelecido.
+    Para utilizar dos exemplos você pode usar a chave api chave especial para testar os filtros de autorização.
+  
+  termsOfService: https://portal.prodam.am.gov.br/pessoal/terms/
+  
+  contact:
+    name: Suporte de API
+    url: http://portal.prodam.am.gov.br/suporte
+    email: api@prodam.am.gov.br
+  
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  
+  version: "1.0.5"
+  
+externalDocs:
+  description: Saiba mais sobre as APIs da PRODAM
+  url: http://portal.prodam.am.gov.br/catalogo
+
+servers:
+- url: https://administracao.prodam.am.gov.br/pessoal
+  description: Servidor de Produção
+- url: https://administracao-sandbox.prodam.am.gov.br/pessoal
+  description: Servidor de Sandbox
+  
+tags:
+- name: VPs
+  description: Informações das Visões de Pessoal.
+- name: Órgãos
+  description: Informações dos Orgãos na estrutura das organizações.
+- name: Matrículas
+  description: Informações das Matrículas do Servidor.
+- name: Servidores
+  description: Informações do Servidor.
+
+paths:
+  /vps:
+    get:
+      tags:
+      - VPs
+      summary: Informações da visão de pessoal.
+      description: Consulta as informações das visões de pessoal.
+      operationId: consultaVP
+      
+      parameters:
+        - in: query
+          name: situacao
+          schema:
+            type: string
+            enum: [ATIVO,INATIVO]
+          required: false
+        - in: query
+          name: nivel
+          schema:
+            type: string
+            enum: [ESTADUAL,MUNICIPAL]
+          required: false
+        - in: query
+          name: atividade
+          schema:
+            type: string
+            enum: [EXECUTIVO,LEGISLATIVO,JUDICIÁRIO,FISCALIZAÇÃO,DEFENSORIA,AGENCIA,CONSELHO,PRIVADO,FUNDAÇÃO,PREVIDÊNCIA,INSTITUTO]
+          required: false
+          
+      responses:
+        200:
+          description: Ok Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/vps'
+      security:
+      - auth:
+        - write:pessoal
+        - read:pessoal
+      
+  /orgaos:
+    get:
+      tags:
+      - Órgãos
+      summary: Informações dos órgãos.
+      description: Consulta os órgãos de uma VP.
+      operationId: consultaOrgao
+      
+      parameters:
+        - in: query
+          name: vp
+          schema:
+            type: integer
+            minLength: 2
+            maxLength: 2
+          required: true
+        - in: query
+          name: codigo
+          schema:
+            type: integer
+            minLength: 3
+            maxLength: 3
+          required: false
+            
+      responses:
+        200:
+          description: Ok Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orgaos'
+        204:
+          description: No Content
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      security:
+      - auth:
+        - write:pessoal
+        - read:pessoal
+  /matriculas:
+    get:
+      tags:
+      - Matrículas
+      summary: Informações das matrículas.
+      description: Consulta as matrículas do servidor.
+      operationId: consultaMatricula
+      
+      parameters:
+        - in: query
+          name: orgao
+          schema:
+            type: integer
+            minLength: 3
+            maxLength: 3
+          required: true
+        - in: query
+          name: cpf
+          schema:
+            type: integer
+            minLength: 11
+            maxLength: 11
+          required: true
+            
+      responses:
+        200:
+          description: Ok Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/matriculas'
+        204:
+          description: No Content
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      security:
+      - auth:
+        - write:pessoal
+        - read:pessoal
+  /servidores:
+    get:
+      tags:
+      - Servidores
+      summary: Informações dos servidores.
+      description: Consulta os dados do servidor.
+      operationId: consultaServidor
+      
+      parameters:
+        - in: query
+          name: matricula
+          schema:
+            type: string
+            minLength: 9
+            maxLength: 9
+          required: true
+            
+      responses:
+        200:
+          description: Ok Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/servidores'
+        204:
+          description: No Content
+          content: {}
+        404:
+          description: Not Found
+          content: {}
+      security:
+      - auth:
+        - write:pessoal
+        - read:pessoal    
+components:
+  schemas:
+    vps:
+      type: array
+      items:
+        type: object
+        properties:
+          vp: 
+            type: "string"
+          descricao:
+            type: "string"
+          situacao:
+            type: "string"
+            enum: [ATIVO,INATIVO]
+          nivel:
+            type: "string"
+            enum: [ESTADUAL,MUNICIPAL]
+          atividade:
+            type: "string"
+            enum: [EXECUTIVO,LEGISLATIVO,JUDICIÁRIO,FISCALIZAÇÃO,DEFENSORIA,AGENCIA,CONSELHO,PRIVADO,FUNDAÇÃO,PREVIDÊNCIA,INSTITUTO]
+        required:
+        - vp
+        - descricao
+        - situacao
+        - nivel
+        - atividade
+      example:
+      - vp: "01"
+        descricao: "ESTADO DO AMAZONAS"
+        situacao: "ATIVO"
+        nivel: "ESTADUAL"
+        atividade: "EXECUTIVO"
+      - vp: "86"
+        descricao: "DEFENSORIA PUBLICA DO ESTADO DO A"
+        situacao: "ATIVO"
+        nivel: "ESTADUAL"
+        atividade: "DEFENSORIA"
+      - vp: "98"
+        descricao: "PREFEITURA MUNICIPAL DE MANAUS"
+        situacao: "ATIVO"
+        nivel: "MUNICIPAL"
+        atividade: "EXECUTIVO"
+    
+    orgaos:
+      type: array
+      items:
+        type: object
+        properties:
+          codigo: 
+            type: "string"
+          sigla:
+            type: "string"
+          descricao:
+            type: "string"
+        required:
+        - codigo
+        - sigla
+        - descricao
+      example:
+      - codigo: "007"
+        sigla: "SEFAZ"
+        descricao: "SECRETARIA DA FAZENDA"
+      - codigo: "01"
+        sigla: "CASA CIVIL"
+        descricao: "CASA CIVIL"
+      - codigo: "031"
+        sigla: "AMAZONPREV"
+        descricao: "AMAZONPREV-FUNDO PREVIDENCIARIO DO ESTADO DO AMAZONAS"
+    matriculas:
+      type: array
+      items:
+        type: object
+        properties:
+          codigoOrgao: 
+            type: "string"
+          siglaOrgao:
+            type: "string"
+          matricula:
+            type: "string"
+          nome:
+            type: "string"
+          vinculo:
+            type: "string"
+          descricaoVinculo:
+            type: "string"
+          situacaoMatricula:
+            type: "string"
+          descricaoSituacaoMatricula:
+            type: "string"
+          dataSituacao:
+            type: "string"
+          situacao:
+            type: "string"
+        required:
+        - codigoOrgao
+        - siglaOrgao
+        - matricula
+        - nome
+        - vinculo
+        - descricaoVinculo
+        - situacaoMatricula
+        - descricaoSituacaoMatricula
+        - dataSituacao
+        - situacao
+      example:
+      - codigoOrgao: "013"
+        siglaOrgao: "SEAD"
+        matricula: "01205567E"
+        nome: "FERNANDA ELIS JANAINA MACEDO DE OLIVEIRA"
+        vinculo: "D"
+        descricaoVinculo: "D - SEM VINC.EM"
+        situacaoMatricula: "AI"
+        descricaoSituacaoMatricula: "AI - PAGAMENTO INDENIZATORIO"
+        dataSituacao: "18/11/2019"
+        situacao: "A"
+      - codigoOrgao: "013"
+        siglaOrgao: "SEAD"
+        matricula: "01205567F"
+        nome: "FERNANDA ELIS JANAINA MACEDO DE OLIVEIRA"
+        vinculo: "D"
+        descricaoVinculo: "D - SEM VINC.EM"
+        situacaoMatricula: "A0"
+        descricaoSituacaoMatricula: "A0 - EXERCICIO REGULAR"
+        dataSituacao: "19/11/2019"
+        situacao: "A"
+    
+    servidores:
+      type: object
+      properties:
+        cargo: 
+          type: "string"
+        descricaoCargo:
+          type: "string"
+        funcao:
+          type: "string"
+        cpf:
+          type: "string"
+        nome:
+          type: "string"
+        descricaoVinculo:
+          type: "string"
+        dataIngresso:
+          type: "string"
+        codigoUnidadeAdministrativa:
+          type: "string"
+        descricaoUnidadeAdministrativa:
+          type: "string"
+        codigoOrgao:
+          type: "string"
+        descricaoOrgao:
+          type: "string"
+        siglaOrgao:
+          type: "string"
+        situacaoAtual:
+          type: "string"
+        dataInicioSituacaoAtual:
+          type: "string"
+        descricaoSituacaoAtual:
+          type: "string"
+        cep:
+          type: "string"
+        logradouro:
+          type: "string"
+        bairro:
+          type: "string"
+        numero:
+          type: "string"
+        municipio:
+          type: "string"
+        uf:
+          type: "string"
+        complemento:
+          type: "string"
+        email:
+          type: "string"
+        telefone:
+          type: "string"
+        celular:
+          type: "string"
+        fax:
+          type: "string"
+      required:
+      - cargo
+      - descricaoCargo
+      - funcao
+      - cpf
+      - nome
+      - descricaoVinculo
+      - dataIngresso
+      - codigoUnidadeAdministrativa
+      - descricaoUnidadeAdministrativa
+      - codigoOrgao
+      - descricaoOrgao
+      - siglaOrgao
+      - situacaoAtual
+      - dataInicioSituacaoAtual
+      - descricaoSituacaoAtual
+      - cep
+      - logradouro
+      - bairro
+      - numero
+      - municipio
+      - uf
+      - complemento
+      - email
+      - telefone
+      - celular
+      - fax
+        
+      example:
+      - cargo: "A-12-0"
+        descricaoCargo: "ASSESSOR I"
+        funcao: "NAO INFORMADO"
+        cpf: "71280057220"
+        nome: "FERNANDA ELIS JANAINA M OLIVEIRA"
+        descricaoVinculo: "D - SEM VINC.EMPREG."
+        dataIngresso: "01/11/2019"
+        codigoUnidadeAdministrativa: "013300000000000"
+        descricaoUnidadeAdministrativa: "GABINETE DO SECRETARIO"
+        codigoOrgao: "013"
+        descricaoOrgao: "SEC.DE ADMINISTRACAO E GESTAO"
+        siglaOrgao: "SEAD"
+        situacaoAtual: "A0"
+        dataInicioSituacaoAtual: "19/11/2019"
+        descricaoSituacaoAtual: "EXERCICIO REGULAR"
+        cep: "69055021"
+        logradouro: "JOAQUIM NABUCO"
+        bairro: "CENTRO"
+        numero: "222"
+        municipio: "MANAUS"
+        uf: "AM"
+        complemento: "C"
+        email: "fernanda@sead.am.gov.br"
+        telefone: "92 32335955"
+        celular: "92 984144455"
+        fax: "92 21211655"
+
+  securitySchemes:
+    auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: http://localhost:8081/prodam/oauth
+          scopes:
+            write:consignado: Alterar Conta
+            read:consignado: Ler Conta
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header

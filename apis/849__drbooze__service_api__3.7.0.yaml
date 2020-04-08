@@ -1,0 +1,652 @@
+penapi: 3.0.1
+info:
+  title: Dr. Booze API
+  description: API for the Dr. Booze server.
+  version: "3.7.0"
+servers:
+  - url: 'localhost:8080/booze'
+paths:
+  /auth/register:
+    post:
+      tags:
+        - auth
+      summary: Registers a new user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+              required: 
+                - username
+                - password
+                - email
+      responses:
+        '200':
+          description: Successfully registered.
+        '403':
+          description: The entered username, email or password is invalid.
+        '409':
+          description: The entered username or email already exists.
+  /auth/login:
+    post:
+      tags:
+          - auth
+      summary: Logs an user in.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Successfully logged in. The JWT will be returned.
+          content:
+            application/json:
+              schema:
+                properties:
+                  token:
+                    type: string
+        '401':
+          description: The username or password is wrong.
+  /auth/verify/{token}:
+    get:
+      tags:
+          - auth
+      summary: Verifies the email of the user using the token that was send with the url inside the verification email.
+      parameters: 
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Returns "Successfully verified."
+        '403':
+          description: Returns "Failure. The user might already be verified."
+  /auth/request-password-change:
+    post:
+      tags:
+          - auth
+      summary: Request the change of the password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                email:
+                  type: string
+              required:
+                - email
+      responses:
+        '200':
+          description: 
+            The email for the password change has been sent. It contains the pin to change the password.
+        '403':
+          description: The email of this user hasn't been verified yet.
+        '404':
+          description: 
+            No user exists with the given email.
+  /auth/change-password:
+    put:
+      tags: 
+        - auth
+      summary: Changes the password of an user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                pin:
+                  type: integer
+                  description: The unique pin, that was sent with the request-password-change email.
+                password:
+                  type: string
+                  description: The new password.
+              required:
+                - pin
+                - password
+      responses:
+        '200':
+          description: The password was successfully changed.
+        '403':
+          description: The new password is not valid.
+        '404':
+          description: The given token does not exist.
+        '410':
+          description: The given token has expired.
+  /manage/user:
+    get:
+      tags: 
+        - manage
+      summary: Returns the user.
+      security:
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+      responses:
+        '200':
+          description: Returns the user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          description: The details of the user haven't been inserted yet.
+  /manage/details:
+    post:
+      tags:
+        - manage
+      summary: Sets the details of an user. 
+      security:
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+      requestBody:
+        description: First name and last name are optional.
+        content:
+          application/json:
+            schema:
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                gender:
+                  type: string
+                birthday:
+                  type: number
+                weight:
+                  type: number
+                height:
+                  type: number
+              required: 
+                - gender
+                - birthday
+                - weight
+                - height
+      responses:
+        '200':
+          description: Returns the user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: At least one of the given credentials is invalid.
+  /manage/alcohols/{type}:
+    get:
+      tags: 
+        - manage
+      summary: Returns all alcohols of this type.
+      security:
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Returns all alcohols of this type.
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items: 
+                    $ref: '#/components/schemas/Alcohol'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The given type does not exist.
+  /manage/drinks:
+    get:
+      tags: 
+        - manage
+      summary: Returns all drinks that the user drank.
+      security: 
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+      responses:
+        '200':
+          description: Returns all drinks the user drank.
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items: 
+                    $ref: '#/components/schemas/Drink'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /manage/drinks/{count}:
+    get:
+      tags: 
+        - manage
+      summary: Returns fifteen drinks that the user drank sorted by the date descending.
+      security: 
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+        - name: count
+          in: path
+          required: true
+          schema:
+            type: number
+          description:
+            The position of the the first result (multiplied by fifteen)
+      responses:
+        '200':
+          description: Returns fifteen drinks that the user drank.
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items: 
+                    $ref: '#/components/schemas/Drink'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  /manage/drinks/:
+    post:
+      tags: 
+        - manage
+      summary: Adds a drink to an user.
+      security: 
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                alcoholId:
+                  type: integer
+                drankDate:
+                  type: number
+                longitude:
+                  type: number
+                latitude:
+                  type: number
+      responses:
+        '200':
+          description: Successfully added.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: No alcohol has been found with the given alcohol id.
+  /manage/drinks/{id}:
+    delete:
+      tags: 
+        - manage
+      summary: Removes a drink of an user.
+      security: 
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Successfully removed.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: No drink has been found with the given drink id.
+  /manage/favourites/{type}:
+    get:
+      tags: 
+        - manage
+      summary: Returns the favourite alcohols of an user of this type.
+      security:
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Returns the favourite alcohols of an user of this type.
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items: 
+                    $ref: '#/components/schemas/Alcohol'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The given type does not exist.
+  /manage/favourites/{id}:
+    post:
+      tags: 
+        - manage
+      summary: Adds a new favourite alcohol to an user.
+      security:
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Successfully added.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The given alcohol does not exist.
+    delete:
+      tags: 
+        - manage
+      summary: Removes a favourite alcohol of an user.
+      security:
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Successfully removed.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The given alcohol does not exist.
+  /manage/personal-alcohols/{type}:
+    get:
+      tags: 
+        - manage
+      summary: Returns the personal alcohols of an user of this type.
+      security:
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Returns the favourite alcohols of an user of this type.
+          content:
+            application/json:
+              schema:
+                  type: array
+                  items: 
+                    $ref: '#/components/schemas/Alcohol'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The given type does not exist.
+  /manage/personal-alcohols:
+    post:
+      tags: 
+        - manage
+      summary: Adds a new personal alcohol.
+      security:
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                type:
+                  type: string
+                name:
+                  type: string
+                category:
+                  type: string
+                percentage:
+                  type: number
+                amount:
+                  type: number
+              required: 
+                - type
+                - name
+                - percentage
+                - amount
+      responses:
+        '200':
+          description: Successfully added.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: At least one of the inputs is invalid.
+  /manage/personal-alcohols/{id}:
+   delete:
+      tags: 
+        - manage
+      summary: Archives a personal alcohol.
+      security:
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Successfully archived.
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          description: The alcohol does not belong to the user.
+        '404':
+          description: The given alcohol does not exist.
+  /manage/challenges:
+    get:
+      tags: 
+        - manage
+      summary: Manage all user challenges.
+      description: Check the user challenges if they succeeded and/or send them new ones.
+      security: 
+        - bearerAuth: []
+      parameters: 
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: JWT
+          required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                properties:
+                  challenges:
+                    type: array
+                    minItems: 3
+                    maxItems: 3
+                    items:
+                      $ref: '#/components/schemas/Challenge'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+components:
+  schemas:
+    User:
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        gender:
+          type: string
+        birthday:
+          type: number
+          description: Represents the number of milliseconds since January 1, 1970, 00:00:00 GMT.
+        height:
+          type: integer
+        weight:
+          type: integer
+        points:
+          type: integer
+    Alcohol:
+      properties:
+        id:
+          type: integer
+        type: 
+          type: string
+          enum:
+            - BEER
+            - WINE
+            - COCKTAIL
+            - LIQUOR
+        name:
+          type: string
+        percentage:
+          type: number
+        amount:
+          type: integer
+    Drink:
+      properties:
+        id:
+          type: number
+        alcohol:
+          $ref: '#/components/schemas/Alcohol'
+        drankDate:
+          type: number
+        longitude:
+          type: number
+        latitude:
+          type: number
+    Challenge:
+      properties:
+        amount:
+          type: number
+        params:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChallengeParameter'
+        desc:
+          type: string
+    ChallengeParameter:
+      properties:
+        param:
+          type: number
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+     UnauthorizedError:
+      description: The authentication token is missing or invalid.
+tags: 
+  - name: auth
+    description: Every authentication related http method.
+  - name: manage
+    description: Every http method which can be called when an user is authenticated.
+security: 
+  - bearerAuth: []

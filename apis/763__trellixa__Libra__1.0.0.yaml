@@ -1,0 +1,167 @@
+penapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/trellixa/Libra/1.0.0
+info:
+  version: "1.0.0"
+  title: API for Libra Project
+  description: >-
+    API for Libra Admission Control service.
+security:
+  - accessCode:
+      - read
+      - write
+paths:
+  /transactions:
+    post:
+      summary: Submit a new signed request to the associated Libra validator.
+      description: >-
+        Submit a new signed transaction request to the associated Libra validator.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignedTransaction"
+      responses:
+        '201':
+          description: Created
+        '400':
+          $ref: '#/components/responses/BadRequest' 
+        '401':
+          $ref: '#/components/responses/Unauthorized' 
+
+components:
+  responses:
+    BadRequest:
+      description: Bad request was received
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: The specified resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    SignedTransaction:
+      type: object
+      required:
+        - transaction
+        - publicKey
+        - signature
+      properties:
+        transaction:
+          $ref: '#/components/schemas/Transaction'
+        publicKey: 
+          type: string
+          format: binary
+          minLength: 32
+          maxLength: 32
+        signature:
+          type: string
+          format: binary
+          minLength: 64
+          maxLength: 64
+
+    Transaction:
+      type: object
+      required:
+        - senderAccountId
+        - sequenceNumber
+        - payload
+        - expirationTime
+      properties:
+        senderAccountId:
+          $ref: '#/components/schemas/AccountAddress'
+        sequenceNumber:
+          type: integer
+          format: uint64
+        payload:
+          $ref: '#/components/schemas/TransactionPayload'
+        gasMaxAmount:
+          type: integer
+          format: int64
+        gasUnitPrice:
+          type: integer
+          format: int64
+        expirationTime:
+          type: string
+          format: duration
+    
+    AccountAddress:
+      type: string
+      format: binary
+      minLength: 32
+      maxLength: 32
+
+    TransactionPayload:
+      oneOf:
+        - $ref: '#/components/schemas/Script'
+        - $ref: '#/components/schemas/Module'
+
+    Script:
+      type: object
+      description: Script type used in a transaction that executes code.
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          format: binary
+        args:
+          type: array
+          items: 
+            $ref: '#/components/schemas/TransactionArgument'
+          
+    TransactionArgument:
+      oneOf:
+        - type: integer
+          format: uint64
+        - $ref: '#/components/schemas/AccountAddress'
+        - type: array
+          items:
+            type: integer
+            format: uint8
+        - type: boolean
+
+    Module:
+      type: object
+      description: Module type used in a transaction that publishes code.
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          format: binary
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+  
+  securitySchemes:
+    accessCode:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: 'https://crypto.trellixa.io/oauth/authorize'
+          tokenUrl: 'https://crypto.trellixa.io/oauth/token'
+          scopes:
+            write: allows modifying resources
+            read: allows reading resources

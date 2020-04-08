@@ -1,0 +1,226 @@
+penapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Formicidae User API
+  description: "庫存回報系統API"
+
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/pet94/ZAPI-User/1.0.0
+
+tags:
+  - name: auth
+    description: 身份驗證相關API
+  - name: form
+    description: 回報API
+  - name: transfer
+    description: 調貨API
+    
+paths:
+  /v1/token:
+    get:
+      tags: [auth]
+      summary: 交換token (firebase token to pica token)
+      operationId: get-token
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  state:
+                    type: string
+                  permission:
+                    type: string
+        '401':
+          description: 無效的firebase token
+  /v1/setting/pwd:
+    put:
+      tags: [auth]
+      summary: 更新密碼
+      operationId: update-pwd
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                new:
+                  type: string
+                confirm:
+                  type: string
+      responses:
+        '200':
+          description: ok
+        '400':
+          description: invalid input
+        '401':
+          description: unauthrize
+        '500':
+          description: internal server error
+  /v1/form:
+    get:
+      tags: [form]
+      summary: 取得回報表格
+      operationId: get-form
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: d
+          required: false
+          schema:
+            type: string
+          description: 日期
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetForm'
+        '400':
+          description: bad request
+        '500':
+          description: internal server error
+    post:
+      tags: [form]
+      summary: 回報表格
+      operationId: post-form
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostForm'
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: bad request
+        '500':
+          description: internal server error
+  /v1/transfer:
+    post:
+      tags: [transfer]
+      summary: 回報調貨
+      operationId: post-transfer
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostTransfer'
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: bad request
+        '500':
+          description: internal server error
+components:
+  schemas:
+    PostTransfer:
+      type: object
+      properties:
+        date:
+          type: string
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              transferQTY:
+                type: integer
+                description: 補貨量
+    PostForm:
+      type: object
+      properties:
+        date:
+          type: string
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              purchaseQTY:
+                type: integer
+                description: 補貨量
+              stockQTY:
+                type: integer
+                description: 盤點量(架上貨量)
+              inventoryQTY:
+                type: integer
+                description: 庫存量
+        discount:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              salesQTY:
+                type: integer
+                description: 銷售量
+    GetForm:
+      type: object
+      properties:
+        name:
+          type: string
+        date:
+          type: string
+        products:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              category:
+                type: string
+              purchaseQTY:
+                type: integer
+                description: 補貨量
+              stockQTY:
+                type: integer
+                description: 盤點量(架上貨量)
+              inventoryQTY:
+                type: integer
+                description: 庫存量
+        discount:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              category:
+                type: string
+              salesQTY:
+                type: integer
+                description: 銷售量
+
+  securitySchemes:
+    ApiKeyAuth:        # arbitrary name for the security scheme
+      type: apiKey
+      in: header       # can be "header", "query" or "cookie"
+      name: Auth-Token  # name of the header, query parameter or cookie

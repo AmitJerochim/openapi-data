@@ -1,0 +1,315 @@
+penapi: 3.0.0
+
+info:
+  title: Campground and Recreation Sites API
+  description: |
+    ## API Usage from a mobile client
+
+    The typical use case for a mobile client of this API is as follows:
+
+    1. Call the *Request detailed records for all sites* (`GET /sites`) endpoint for the users' language of choice to completely populate the list of sites. Store the `sites_sha1` value from that payload.
+    2. On a regular schedule, call the *Request a summary of all sites* (`GET /sites-summary`) endpoint to check for changes in the site data. If the summary has the same `sites_sha1` that was stored previously, there were no changes. Otherwise, store the new `sites_sha1` value and iterate through the client's database of sites:
+        1. If the client `site_id` does not appear in the summary, delete that site from the client database.
+        2. If the client `changed_ts` value is earlier (lower) than that in the summary, temporarily save the corresponding `site_id` value(s). 
+    3. If there are saved `site_id` value(s) from step 2.2, call the *Request detailed record(s) for one or some sites* (`GET /sites/{site_id}`) endpoint and pass the saved `site_id` value(s). Replace the client's copy of the site(s) with the data in the response. Also replace the associated site(s) images via the `image_url` field.
+
+    If necessary, the client may calculate its own SHA1 hash to compare with that returned by the API:
+
+    1. Iterate through the sites in ascending order by `site_id`.
+    2. Gather the `site_id` and `changed_ts` values as strings for each site.
+    3. Concatenate all the strings together (`<site_id_1><changed_ts_1><site_id_2><changed_ts_2><site_id_3>`...) without delimiters and take the SHA1 hash of the entire string.
+
+    *While it is always possible for the client to calculate its own SHA1 hashes, these are provided by the server to a) simplify the client's work, and b) guard against a client deleting records missing from a truncated response (per step 2.1, above). A truncated JSON payload should be invalid, so if the `sites_sha1` hash is absent, the response should be abandoned.*
+    
+    
+    ## Base API URIs
+
+    - Production: `https://api.yukon.ca/campground-and-recreation/v1`
+    - UAT: `https://api.cms-uat.yukon.ca/campground-and-recreation/v1`
+
+    The URI standard for production Government of Yukon APIs is:
+
+        https://api.yukon.ca/<service-name>/v<major-version-number>/<resource>
+
+    ## Authentication
+
+    All requests are authenticated using an `api-key` HTTP header passed with each request.
+
+    Authentication is optional for the development and User Acceptance Test (UAT) environments.
+
+    ## Language
+
+    The choice of language for the site data is made using the `accept-language` HTTP header passed with each request.
+
+    The first two characters of the header value must be either `en` or `fr`. Any other value will be interpreted as `en`.
+
+    ## HTTP status codes
+
+    - `200 OK`: The request succeeded.
+    - `400 Bad Request`: There is a syntax error in the request parameters.
+    - `401 Unauthorized`: The `api-key` header is absent or its value is invalid.
+    - `404 Not Found`: The requested endpoint does not exist.
+
+    If a request does not match any records, that is still a successful request with an empty `data` list.
+    
+    ## Version history
+    
+    - 1.2.2 (2019-11-18): Change in API URI standard.
+    - 1.2.1 (2019-10-28): The `highway_name` field is no longer mandatory, for sites not near a highway. Added some `image_url` field details. Added version history section.
+    - 1.2.0 (2019-10-24): Simplified a few list fields into single strings. Simplified the `image` object into a `image_url` string. Removed several fields no longer needed (particularly Boolean fields). Specified which fields are mandatory. Specified that `longitude` is negative for all Yukon coordinates.
+    - 1.1.0 (2019-10-08): Simplified the `images` list field into a single `image` object.
+    - 1.0.0 (2019-10-01): Initial OpenAPI definition.
+    
+  version: "1.3.0"
+  contact:
+    email: eservices@gov.yk.ca
+
+servers:
+  - url: https://virtserver.swaggerhub.com/GOY/CampgroundAndRecreationSi0
+    description: SwaggerHub API Auto Mocking
+  - url: https://api.yukon.ca/campground-and-recreation/v1
+    description: Production
+  - url: https://api.cms-uat.yukon.ca/campground-and-recreation/v1
+    description: UAT
+
+# Apply the API key globally to all operations
+security:
+  - ApiKeyAuth: [] # use the same name as under securitySchemes
+
+paths:
+  /sites:
+    get:
+      summary: Request detailed records for all sites
+      operationId: allSites
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Sites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SiteDetail'
+                  sites_count:
+                    type: integer
+                    example: 1
+                  sites_sha1:
+                    type: string
+                    description:  SHA1 hash of concatenation of string forms of all site_id and changed_ts records in data list
+                    example: f4f460ca2ae2d81efd4f28cc22682edbb8e493cd
+        '400':
+          description: There is a syntax error in the request parameters.
+        '401':
+          $ref: "#/components/responses/UnauthorizedError"
+        '404': 
+          description: The requested endpoint does not exist.
+  /sites/{site_id}:
+    get:
+      summary: Request detailed record(s) for one or some sites
+      operationId: someSites
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - in: path
+          name: site_id
+          description: One or more unique site identifiers.
+          example: [123,124,85]
+          required: true
+          schema:
+            type: array
+            items:
+              type: integer
+      responses:
+        '200':
+          description: Sites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SiteDetail'
+                  sites_count:
+                    type: integer
+                    example: 1
+                  sites_sha1:
+                    type: string
+                    description:  SHA1 hash of concatenation of string forms of all site_id and changed_ts records in data list
+                    example: f4f460ca2ae2d81efd4f28cc22682edbb8e493cd
+        '400':
+          description: There is a syntax error in the request parameters.
+        '401':
+          description: The api-key header is absent or its value is invalid.
+        '404': 
+          description: The requested endpoint does not exist.
+  /sites-summary:
+    get:
+      summary: Request a summary of all sites
+      operationId: summarySites
+      parameters:
+      - $ref: '#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Sites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SiteSummary'
+                  sites_count:
+                    type: integer
+                    example: 1
+                  sites_sha1:
+                    type: string
+                    description:  SHA1 hash of concatenation of string forms of all site_id and changed_ts records in data list
+                    example: f4f460ca2ae2d81efd4f28cc22682edbb8e493cd
+        '400':
+          description: There is a syntax error in the request parameters.
+        '401':
+          $ref: "#/components/responses/UnauthorizedError"
+        '404': 
+          description: The requested endpoint does not exist.
+
+components:
+  securitySchemes:
+    ApiKeyAuth:     # arbitrary name for the security scheme
+      type: apiKey
+      in: header    # can be "header", "query" or "cookie"
+      name: api-key # name of the header, query parameter or cookie
+      description: eServices-assigned API access key (required for production URI only)
+  responses:
+    UnauthorizedError:
+      description: The api-key header is absent or its value is invalid.
+  parameters:
+    AcceptLanguage:
+      in: header
+      name: accept-language
+      description: The first two characters of the header value must be either en or fr . Any other value will be interpreted as en.
+      required: true
+      schema:
+        type: string
+        enum: [en, fr]
+
+  schemas:
+    SiteDetail:
+      type: object
+      required:
+        - site_id
+        - changed_ts
+        - site_name
+        - region
+        - latitude
+        - longitude
+        - outhouse
+        - boat_launch
+        - beach
+        - trail
+        - playground
+        - outhouse_accessible
+      properties:
+        site_id:
+          type: integer
+          example: 123
+        changed_ts:
+          type: integer
+          example: 1339832142
+        site_name:
+          type: string
+          description: Site name
+          example: Cheechako Hill
+        site_types:
+          type: array
+          items:
+            type: string
+          example: [Camping, History and Culture, Wildlife and Landscape]
+        region:
+          type: string
+          items:
+            type: string
+          example: Klondike
+        latitude:
+          type: number
+          description: Decimal latitude (+ve for Yukon)
+          example: 63.94360000
+        longitude:
+          type: number
+          description: Decimal longitude (-ve for Yukon)
+          example: -139.33685001
+        highway_name: 
+          type: string
+          description: Primary highway name and number
+          example: North Klondike Highway (2)
+        highway_km: 
+          type: number
+          description: Primary highway distance (km) to tenth of a km
+          example: 712.7
+        secondary_road_name: 
+          type: string
+          description: Secondary highway name
+          example: Bonanza Creek Road
+        secondary_road_km: 
+          type: number
+          description: Secondary highway distance (km) to tenth of a km
+          example: 14.0
+        warning: 
+          type: string
+          description: Warning
+          example: The Goldfields loop is an active mining region.\nPlease respect private property. 🤪
+        site_directions: 
+          type: string
+          description: Directions to 
+          example: Travelling northbound turn left off the highway and follow the Bonanza Creek Road for 14 km. À bientôt !
+        site_description: 
+          type: string
+          description: Description of site
+          example: An interpretive panel tells the story behind Cheechako Hill and the good fortune of "Cheechako" Oliver O'Millet. You can also read about some of the mechanisms used to mine uphill.
+        image_url: 
+          type: string
+          description: URL from which to directly download the site's image. 
+          example: https://stockimagesahoy.ca/cheechako_hill.jpg
+        outhouse: 
+          type: boolean
+          description:  Outhouse?
+          example: true
+        outhouse_accessible: 
+          type: boolean
+          description:  Wheelchair-accessible outhouse?
+          example: false
+        trail: 
+          type: boolean
+          description:  Nearby trail?
+          example: true
+        playground: 
+          type: boolean
+          description:  Playground?
+          example: true
+        boat_launch: 
+          type: boolean
+          description:  Boat launch?
+          example: false
+        beach: 
+          type: boolean
+          description:  Beach?
+          example: false
+    SiteSummary:
+      type: object
+      required:
+        - site_id
+        - changed_ts
+      properties:
+        site_id:
+          type: integer
+          example: 123
+        changed_ts:
+          type: integer
+          example: 1339832142

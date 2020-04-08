@@ -1,0 +1,1417 @@
+openapi: 3.0.0 
+info:
+  description: This is a high level hardware control API for the Vodacomm Telco Kiosks. It
+    serves as a bridge between the Kiosk hardware and the Azimut dynamic
+    dashboards.
+  version: "1.0.0-oas3"
+  title: HardwareSDK
+  contact:
+    email: asad.murtaza@wavetec.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: hardware
+    description: 'Secured Hardware-only calls [ Main ]'
+    
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/asad.murtaza/hardware/1.0.0-oas3
+
+    
+paths:
+  /initiate_transaction:
+    post:
+      tags:
+        - hardware
+      summary: >-
+        This API call generates a transaction id, which will be used accross a
+        single transaction. It also returns the status of hardwares required in
+        the specified flow along with the inventory.
+                  
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/transactionHardware'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+          
+      requestBody:
+        description: Object that describes the transaction type and provides the list of Hardware to be used.
+        required : true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transaction_type:
+                  type: string
+                  description: The transaction type would be provided by Vodacom to enable us catagorizing our data and keeping track of the transaction
+                  enum:
+                    - "new_sim_sale"
+                    - "top_up"
+                  example:
+                    "new_sim_sale"
+                    
+                hardware:
+                  type : array
+                  description: This param contains the list of hardware which will be   required by Vodacom in there upcoming transaction.
+                  items:
+                    type : string
+                    enum :
+                      - "sim_dispenser"
+                      - "fingerprint_scanner"
+                      - "camera"
+                      - "document_scanner"
+                      - "printer"
+                      - "barcode_scanner"
+                      - "ups"
+  
+                  example: 
+                    ["sim_dispenser",
+                    "fingerprint_scanner",
+                    "camera",
+                    "barcode_scanner",
+                    "document_scanner",
+                    "printer",
+                    "ups"
+                    ]
+
+  
+  /pay_and_dispense/{transaction_id}:
+  
+    get:
+      tags:
+        - hardware
+      summary: >-
+        This API call will return the current status of the on going pay and dispense call.
+      parameters:
+        - name : 'transaction_id'
+          in: path
+          required: true
+          schema:
+            type: string
+            example : "1574654514548611"
+            
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/payAndDispenseStatus'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+          
+          
+  /pay_and_dispense:
+  
+    post:
+      tags:
+        - hardware
+      summary: >-
+        This API call will perform payment processing of the
+        provided transaction Id. It will further automate the
+        Sim dispensing process based on the payment status.
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/payAndDispense'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+          
+      requestBody:
+        description: This object will recieve the Transaction ID ( previously generated ) and payment amount for the on going transaction.
+        required : true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                    
+                transaction_id:
+                  type: string
+                  description: The transaction id would be same as the one generated in the initiate_transaction API to enable us catagorizing our data and keeping track of the transaction
+                  example: "1574654514548611"  
+                
+                amount:
+                  type: string
+                  description: The price amount that would be charged to the end user.
+                  example: "3.25"
+                  
+                order_id:
+                  type: string
+                  description: It would be the order id provided by Vodacom to update into their db.
+                  example: "515165454"
+                
+                currency:
+                  type : string
+                  description : The currency in which payment is made.
+                  example : "ZAR"
+                  
+                sim_card_type:
+                  type : string
+                  enum:
+                    - "standard"
+                    - "half_cut"
+                  example: "standard"
+          
+  /pay_and_dispense/cancel:
+    post:
+      tags:
+        - hardware
+      summary: >-
+        This API call will cancel the transaction if payment hasn't been done yet.
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/genericResponse'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+          
+      requestBody:
+        description: This object will recieve the Transaction ID ( previously generated ) for the on going transaction.
+        required : true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                    
+                transaction_id:
+                  type: string
+                  description: The transaction id would be same as the one generated in the initiate_transaction API to enable us catagorizing our data and keeping track of the transaction
+                  example: "1574654514548611"  
+
+  /pos/initiate_payment:
+    post:
+      tags:
+        - hardware
+      summary: >-
+        This API call will perform payment processing of the
+        provided transaction Id.
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/initiatePayment'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+          
+      requestBody:
+        description: This object will recieve the Transaction ID ( previously generated ) and payment amount for the on going transaction.
+        required : true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                    
+                transaction_id:
+                  type: string
+                  description: The transaction id would be same as the one generated in the initiate_transaction API to enable us catagorizing our data and keeping track of the transaction
+                  example: "1574654514548611"  
+                
+                amount:
+                  type: string
+                  description: The price amount that would be charged to the end user.
+                  example: "3.25"
+                
+                currency:
+                  type : string
+                  description : The currency in which payment is made.
+                  example : "ZAR"
+                  
+  /pos/initiate_payment/cancel:
+    post:
+      tags:
+        - hardware
+      summary: >-
+        This API call will cancel the payment processing of the
+        provided transaction Id.
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/genericResponse'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+          
+      requestBody:
+        description: This object will recieve the Transaction ID ( previously generated ) and payment amount for the on going transaction.
+        required : true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                    
+                transaction_id:
+                  type: string
+                  description: The transaction id would be same as the one generated in the initiate_transaction API to enable us catagorizing our data and keeping track of the transaction
+                  example: "1574654514548611"  
+                
+  /pos/payment_status:
+    post:
+      tags:
+        - hardware
+      summary: >-
+        This API call will return the real time status of 
+        the initiate_payment API call. 
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/initiatePaymentStatus'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+          
+      requestBody:
+        description: This object will recieve the Transaction ID ( previously generated ) for the on going transaction.
+        required : true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                    
+                transaction_id:
+                  type: string
+                  description: The transaction id would be same as the one generated in the initiate_transaction API to enable us catagorizing our data and keeping track of the transaction
+                  example: "1574654514548611"  
+
+
+  /sim_dispenser/readICCID:
+    post:
+      tags:
+        - hardware
+      summary: This will move the SimCard to the reading position and return the ICCID if the operation is successful.
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+                $ref : '#/components/schemas/simDispenserIccid'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'  
+      
+      requestBody:
+        required : true
+        content:
+          application/json:
+            schema:
+              $ref : '#/components/schemas/simDispenserInput'     
+
+  /sim_dispenser/dispense_sim:
+    post:
+      tags:
+        - hardware
+      summary: "This will dispense the sim card to the user."
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+                $ref : '#/components/schemas/genericResponse'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'    
+      
+      requestBody:
+        required : true
+        content:
+          application/json:
+            schema:
+              $ref : '#/components/schemas/simDispenserInput'   
+                  
+  /sim_dispenser/reject_sim:
+    post:
+      tags:
+        - hardware
+      summary: This will move the sim card to the rejected sim cards pocket.
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+                $ref : '#/components/schemas/genericResponse'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'    
+
+      requestBody:
+        required : true
+        content:
+          application/json:
+            schema:
+              $ref : '#/components/schemas/simDispenserInput'           
+     
+  /sim_dispenser/get_status:
+    get:
+      tags:
+        - hardware
+      summary: This will return the status of the selected sim card dispenser based on sim_dispenser_id.
+      parameters:
+        - name : 'transaction_id'
+          in: query
+          required: true
+          schema:
+            type: string
+            example : "1574654514548611"
+        
+        - name : "sim_dispenser_id"
+          in: query
+          required: true
+          description: This param will represent the Sim dispenser ID upon which the operation has to be performed. It is due to the possibility of Cascading multiple dispensers to dispense different type of sim cards.
+          schema:
+            type: string
+            enum: 
+              - "00"
+              - "01"
+              - "02"
+              - "03"
+            example: "00"
+  
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/simDispenserStatus'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'    
+
+                
+  /ups/get_status:
+    get:
+      tags:
+        - hardware
+      summary: This will provide update regarding the UPS status.
+      parameters:
+        - name : 'transaction_id'
+          in: query
+          required: true
+          schema:
+            type: string
+            example : "1574654514548611"
+            
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref : '#/components/schemas/upsStatus'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'   
+          
+          
+  /camera/take_picture:
+    post:
+      tags:
+        - hardware
+      summary: This will receive capture the image from camera and perform liveness detection on it.
+
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref : '#/components/schemas/takePicture'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+
+      requestBody:
+        required : true
+        content:
+          application/json:
+            schema:
+              $ref : '#/components/schemas/transactionIdInput' 
+                  
+  /camera/get_status:
+    get:
+      tags:
+        - hardware
+      summary: This will return current status of camera.
+      parameters:
+        - name : 'transaction_id'
+          in: query
+          required: true
+          schema:
+            type: string
+            example : "1574654514548611"
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref : '#/components/schemas/cameraStatus'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+                
+  /barcode_scanner/start:
+    post:
+      tags:
+        - hardware
+      summary: This will start the barcode scanner and waits for certain time period(timeout) for document to be placed on the scanner. After the document has been placed, data will be returned.
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref : '#/components/schemas/barcodeRead' 
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'      
+
+      requestBody:
+        
+        required : true
+        content:
+          application/json:
+            schema:
+              $ref : '#/components/schemas/transactionIdInputTimeout' 
+                  
+  /barcode_scanner/stop:
+    post:
+      tags:
+        - hardware
+      summary: This will stop the barcode scanner.
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+              $ref : '#/components/schemas/genericResponse' 
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error' 
+
+      requestBody:
+        
+        required : true
+        content:
+          application/json:
+            schema:
+              $ref : '#/components/schemas/transactionIdInput'
+                  
+  /barcode_scanner/get_status:
+    get:
+      tags:
+        - hardware
+      summary: This will return the barcode scanner status.
+      parameters:
+        - name : 'transaction_id'
+          in: query
+          required: true
+          schema:
+            type: string
+            example : "1574654514548611"
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+              $ref : '#/components/schemas/barcodeStatus' 
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error' 
+                  
+  /document_scanner/start:
+    post:
+      tags:
+        - hardware
+      summary: This API call will start the document scanner and waits for certain time period(timeout) for document to be placed on the scanner. After the document has been placed, scanned image and the OCR data will be returned.
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+            schema:
+              $ref : '#/components/schemas/documentRead' 
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+
+      requestBody:
+        
+        required : true
+        content:
+          application/json:
+            schema:
+              $ref : '#/components/schemas/transactionIdInputTimeout' 
+                  
+  /document_scanner/stop:
+    post:
+      tags:
+        - hardware
+      summary: This will stop the document scanner.
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+            schema:
+              $ref : '#/components/schemas/genericResponse' 
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+
+      requestBody:
+        
+        required : true
+        content:
+          application/json:
+            schema:
+              $ref : '#/components/schemas/transactionIdInput'
+                        
+  /document_scanner/get_status:
+    get:
+      tags:
+        - hardware
+      summary: This will return the document scanner status.
+      parameters:
+        - name : 'transaction_id'
+          in: query
+          required: true
+          schema:
+            type: string
+            example : "1574654514548611"
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+            schema:
+               $ref : '#/components/schemas/documentStatus' 
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'
+                        
+  /fingerprint_scanner/start:
+    post:
+      tags:
+        - hardware
+      summary: This API call will start the fingerprint reader and waits for certain time period for user thumb based on the timeout value.After the thumb has been placed,it will return the encoded data.
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+            schema:
+              $ref : '#/components/schemas/fingerprintRead' 
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'  
+
+      requestBody:
+        
+        required : true
+        content:
+          application/json:
+            schema:
+              $ref : '#/components/schemas/transactionIdInputTimeout' 
+                        
+  /fingerprint_scanner/stop:
+    post:
+      tags:
+        - hardware
+      summary: This API call will stop the fingerprint reader.
+
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+            schema:
+              $ref : '#/components/schemas/genericResponse'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'  
+
+      requestBody:
+        
+        required : true
+        content:
+          application/json:
+            schema:
+              $ref : '#/components/schemas/transactionIdInput'
+                        
+  /fingerprint_scanner/get_status:
+    get:
+      tags:
+        - hardware
+      summary: This will return the fingerprint reader status.
+      parameters:
+        - name : 'transaction_id'
+          in: query
+          required: true
+          schema:
+            type: string
+            example : "1574654514548611"
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+            schema:
+              $ref : '#/components/schemas/fingerprintStatus'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error' 
+                        
+  /printer/print:
+    post:
+      tags:
+        - hardware
+      summary: This will print the receipt based on the input template.
+
+              
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+             schema:
+               $ref : '#/components/schemas/print' 
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error'    
+
+      requestBody:
+        
+        required : true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transaction_id:
+                  type: string
+                  description: The transaction id would be same as the one generated in the initiate_transaction API to enable us catagorizing our data and keeping track of the transaction
+                  example: "1574654514548611"
+                template:
+                  type: object
+                  properties:
+                    header_image:
+                      description: It will be base64 encoded JPG.
+                      type : string
+                      example: 
+                        "data:image/jpeg;base64,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"
+
+                    body:
+                      type: object
+                      description: "It will contain the receipt data in Key:Value pair embeded with the formating tags. Formatiing tags allowed are : <b>Bold</b> , <i>Italic</i> , <u>Underlined</u> \n line break"
+                      example: "{\"<b>Name</b>\":\"Hello\" , \"<u>Name</u>\":\"0215412151\"}"
+                    
+                    footer:
+                      description: It will be simple text string that will be printed at the bottom of the reciept.
+                      type : string
+                      example: "Thank you for reading"
+
+                        
+  /printer/get_status:
+    get:
+      tags:
+        - hardware
+      summary: This will return the printer status.
+      parameters:
+        - name : 'transaction_id'
+          in: query
+          required: true
+          schema:
+            type: string
+            example : "1574654514548611"
+      responses:
+        '200':
+         description: Successful
+         content:
+           application/json:
+            schema:
+              $ref : '#/components/schemas/printerStatus'
+        '400':
+          description: 'Invalid request'
+        '500':
+          description: 'Internal server error' 
+          
+components:
+  schemas:
+    transactionHardware:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '01'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - 'success'
+            - 'failed'
+          example: 'success'
+        data:
+          type: object
+          properties:
+            hardware_details:
+              type: object
+              properties:
+                sim_dispenser:
+                  $ref: '#/components/schemas/simDispenserStatus'
+                fingerprint_scanner:
+                  $ref: '#/components/schemas/fingerprintStatus'
+                barcode_scanner:
+                  $ref: '#/components/schemas/barcodeStatus'
+                document_scanner:
+                  $ref: '#/components/schemas/documentStatus'
+                camera:
+                  $ref: '#/components/schemas/cameraStatus'
+                printer:
+                  $ref: '#/components/schemas/printerStatus'
+                ups:
+                  $ref : '#/components/schemas/upsStatus'
+            transaction_id:
+              type: string
+              example: '1574654514548611'
+
+    initiatePayment:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '01'
+
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "transaction_success"
+            - "transaction_failed"
+
+          example: "transaction_success"
+          
+        payment_id:
+          description : This transaction id would be generated by POS as per told by Vodacomm to maintain their financial record.
+          type: string
+          example : "55744410102061"
+          
+        
+
+    initiatePaymentStatus:
+      type: object
+      properties:
+        payment_id :
+          type: string
+          description: It is the transaction reference id generated by the POS
+          example : "556325215"
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '01'
+            - '91'
+            - '90'
+            - '92'
+
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "transaction_success"
+            - "transaction_failed"
+            - "awaiting_card_swipe"
+            - "processing_payment"
+            - "error_in_pos"
+
+          example: "transaction_success"
+
+        additional_fields:
+          type: object
+          description: This will be the transaciton data provided by the payment faciliator.
+          properties:
+            network_status:
+              type: string
+              example : "approved_by_network"
+            seller_message:
+              type: string
+              example : "payment_complete"
+            type:
+              type: string
+              example : "autorized"    
+
+    payAndDispense:
+      type: object
+      properties:
+        callback_url:
+          type: string
+          example: 'http://localhost:8888/pay_and_dispense/1574654514548611'      
+              
+    payAndDispenseStatus:
+      type: object
+      properties:
+        payment_transaction_id :
+          type: string
+          description: It is the transaction reference id generated by the POS
+          example : "556325215"      
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '01'
+            - '02'
+            - '20'
+            - '91'
+            - '90'
+            - '92'
+
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "transaction_success"
+            - "transaction_failed"
+            - "error_in_sim_dispenser"
+            - "dispensing_sim_card"
+            - "awaiting_card_swipe"
+            - "processing_payment"
+            - "error_in_pos"
+
+          example: "transaction_success"
+        order_id:
+          type: string
+          description: It would be the order id provided by Vodacom to update into their db.
+          example: "515165454"
+                  
+        additional_fields:
+          type: object
+          description: This will be the transaciton data provided by the payment faciliator.
+          properties:
+            network_status:
+              type: string
+              example : "approved_by_network"
+            seller_message:
+              type: string
+              example : "payment_complete"
+            type:
+              type: string
+              example : "authorized"
+              
+        update_order_status:
+          type: object
+          description: This will contain the update order and payment insertion into VCOZA DB status
+          properties:
+            callback_status:
+              type: string
+              enum:
+                - "200"
+                - "401"
+                - "500"
+                - "424"
+              example : "200"
+              
+            retry_attempts:
+              type: string
+              enum:
+                - "remaining"
+                - "exhausted"
+              example: "exahausted"
+
+    simDispenserStatus:
+      type: object
+      properties:
+        sim_dispenser_id:
+          type : string
+          description: This param will represent the Sim dispenser ID upon which operation has to been performed.
+          enum: 
+            - "00"
+            - "01"
+            - "02"
+            - "03"
+          example: "00"
+        sim_count:
+          type: integer
+          example: 25
+        simcard_depleted:
+          type: boolean
+          description: "Indicates if the pyhsical quantity of sim cards in stacker has exhausted or not"
+          example: false        
+        rejectbin_count:
+          type: integer
+          example: 3   
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '03'
+            - '21'
+            - '22'
+            - '23'
+            - '24'
+            - '25'
+            - '26'
+            - '27'
+            - '28'
+            - '29'
+            - '30'
+            - '31'
+            - '32'
+            - '33'
+            - '34'
+            - '35'
+            - '36'
+            - '37'
+            - '38'
+            - '39'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+
+            - "working"
+            - "not_found"
+            - "card_jam"        
+            - "sensor_error"          
+            - "abnormal_long_card"
+            - "abnormal_short_card"
+            - "disability_of_recycling_card"
+            - "ic_card_magnet_error"
+            - "disable_to_move_card_to_ic_card_position"
+            - "manually_move_card"
+            - "received_card_counter_overflow"
+            - "motor_error"
+            - "short_circuit_power_supply"
+            - "activation_of_card_false"
+            - "command_out_of_ic_card_support"
+            - "disability_of_ic_card"
+            - "command_out_of_current_ic_card_support"
+            - "ic_card_transmission_error"
+            - "ic_card_transmission_overtime"
+            - "cpu/sam_non_compliance_to_emv_standard"
+            - "not_reset"
+          example: "working"
+
+    simDispenserIccid:
+      type: object
+      properties:
+        sim_dispenser_id:
+          type : string
+          description: This param will represent the Sim dispenser ID upon which operation has to been performed.
+          enum: 
+            - "00"
+            - "01"
+            - "02"
+            - "03"      
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '01'
+            - '19'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "success"
+            - "failed"
+            - "ICCID maping error"
+          example: "success"
+        iccid:
+          type: string
+          example: "8941006220444594069"
+
+    upsStatus:
+      type: object
+      properties:
+        backup_time:
+          description: "The backup time is returned in Minutes"
+          type: integer
+          example: 20
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '03'            
+            - '40'
+            - '41'
+            - '42'
+            - '43'
+          example: '40'
+        status_description:
+          type: string
+          enum:
+            - "on_mains"  
+            - "not_found"            
+            - "on_battery"
+            - "ups_overload"
+            - "battery_low"
+            - "fatal_error"
+          example: "on_battery"
+
+    genericResponse:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '01'
+            - '02'
+            
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "success"
+            - "failed"
+            - 'error'
+          example: "success"
+
+    cameraStatus:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '02'
+            - '03'
+            - '50'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "working"
+            - "error"
+            - "not_found"
+            - "preview_not_available"
+          example: "working"
+
+    takePicture:
+      type: object
+      properties:
+        live_person:
+          type: boolean
+          example : True
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '01'
+            - '02'
+            - '50'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "success"
+            - "failed"
+            - "error"
+            - "preview_not_available"
+          example: "success"
+        image:
+          type: string
+          description: Image is encoded in base64. The format would be JPG.
+          example: 
+            "data:image/jpeg;base64,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"
+
+    barcodeStatus:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '02'
+            - '03'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "working"
+            - "error"
+            - "not_found"
+          example: "working"
+
+    barcodeRead:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '01'
+            - '02'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "success"
+            - "failed"
+            - "error"
+          example: "success"
+        barcodeData:
+          type: string
+          description: "The returned barcode data would be HEX string. It would be the raw data (encoded in base64) which is read from the barcode"
+          example: "IjAxIEEwIDJGIDFFIDU1IDgxIDhBIDExIDRCIDIzIDIwIDIwIDY1IDY2IEEyIg=="
+
+    documentStatus:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '02'
+            - '03'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "working"
+            - "error"
+            - "not_found"
+          example: "working"
+          
+    documentRead:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '01'
+            - '02'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "success"
+            - "failed"
+            - "error"
+          example: "success"
+        document_ocr:
+          description: The data obtained after OCR would be returned as a key:value pair. The number of returned pairs would depend on the document type.
+          type: object
+          properties:
+            scanned_field_1 :
+              type: string
+              example: "scanned_field1_data"
+            
+            scanned_field_2 :
+              type: string
+              example: "scanned_field2_data"
+        
+        document_image:
+          description: Image is encoded in base64. The format would be JPG.
+          type : string
+          example : 
+            "data:image/jpeg;base64,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"
+              
+          
+
+    fingerprintStatus:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '02'
+            - '03'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "working"
+            - "error"
+            - "not_found"
+          example: "working"
+
+    fingerprintRead:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '01'
+            - '02'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "success"
+            - "failed"
+            - "error"
+          example: "success"
+        fingerprint_iso:
+          description: "Scanned fingerprint in ISO/IEC 19794-2 Standard"
+          type: string
+          example: "0921312391293129423434534534534443"
+          
+        fingerprint_wsq:
+          description: "Scanned fingerprint in WSQ format encoded in Base64"
+          type: string
+          example: 
+            "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"          
+          
+        
+          
+    printerStatus:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '02'
+            - '03'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "working"
+            - "error"
+            - "not_found"
+          example: "working"
+
+    print:
+      type: object
+      properties:
+        status_code:
+          type: string
+          enum:
+            - '00'
+            - '01'
+            - '02'
+          example: '00'
+        status_description:
+          type: string
+          enum:
+            - "success"
+            - "failed"
+            - "error"
+          example: "working"
+    
+    simDispenserInput:
+      type : object
+      properties:
+        transaction_id:
+          type: string
+          description: The transaction id would be same as the one generated in the initiate_transaction API to enable us catagorizing our data and keeping track of the transaction
+          example: "1574654514548611"
+        sim_dispenser_id:
+          type : string
+          description: This param will represent the Sim dispenser ID upon which the operation has to be performed. It is due to the possibility of Cascading multiple dispensers to dispense different type of sim cards.
+          enum: 
+            - "00"
+            - "01"
+            - "02"
+            - "03"
+          example: "00"
+          
+    transactionIdInput:
+      type : object
+      properties:
+        transaction_id:
+          type: string
+          description: The transaction id would be same as the one generated in the initiate_transaction API to enable us catagorizing our data and keeping track of the transaction
+          example: "1574654514548611"
+          
+    transactionIdInputTimeout:
+      type : object
+      properties:
+        transaction_id:
+          type: string
+          description: The transaction id would be same as the one generated in the initiate_transaction API to enable us catagorizing our data and keeping track of the transaction
+          example: "1574654514548611"
+        timeout:
+          type : integer
+          description: Timeout for the device in seconds.
+          example: 10
+        
+    hardwareList:
+      type : string
+      enum :
+        - "sim_dispenser"
+        - "fingerprint_scanner"
+        - "camera"
+        - "document_scanner"
+        - "printer"
+        - "barcode_scanner"
+        - "ups"

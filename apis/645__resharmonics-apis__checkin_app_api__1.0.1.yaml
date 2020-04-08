@@ -1,0 +1,403 @@
+penapi: 3.0.0
+servers: []
+info:
+  description: All the calls needed for guests to check themselves. This includes pictures of passports and deposits being registered against the users cards
+  version: "1.0.1"
+  title: Check In App API
+  contact:
+    email: dgalitsyn@resharmonics.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: Bookings
+    description: Booking related API calls
+  - name: Payments
+    description: Payment related API calls
+  - name: Arrival
+    description: Arrival related API calls
+  - name: Utils
+    description: Misc calls for descriptive data
+paths:
+  '/bookings/check':
+    get:
+      tags:
+        - Bookings
+      summary: Get and validate that a room stay is ready to be checked in.
+      operationId: GET_bookings_check
+      description: |
+        Pass the roomstay id to get check in data. 
+      parameters:
+        - in: query
+          name: roomstayReference
+          description: Roomstay number.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Room Stay object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomStay'
+        '400':
+          description: bad input parameter
+        '404': 
+          description: No roomstay found
+  '/bookings/{roomstayId}/guests':
+    get:
+      tags:
+        - Bookings
+      summary: Get list of guests for given room stay
+      operationId: GET_bookings_guests
+      description: |
+        Provide the room stay uuid to get a list of available guests. Can be guest stays or guests.
+      parameters:
+        - in: path
+          name: roomstayId
+          description: Roomstay UUID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of guests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Guest'
+        '404':
+          description: Room stay not found
+        '400':
+          description: Bed Request
+    post:
+      tags:
+        - Bookings
+      summary: Add new guest to a room stay
+      operationId: POST_bookings_guests
+      description: |
+        Endpoint to add a guest stay to room stay
+      parameters:
+        - in: path
+          name: roomstayId
+          description: Roomstay UUID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Guest'
+      responses:
+        '201':
+          description: Guest created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guest'
+        '400':
+          description: Bad Request
+    patch:
+      tags:
+        - Bookings
+      summary: Change the guests attributes
+      operationId: PATCH_bookings_guests
+      description: | 
+        Endpoint to patch guests attributes
+      parameters:
+        - in: path
+          name: roomstayId
+          description: Roomstay UUID
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Guest'
+      responses:
+        '200':
+          description: Guest updated
+        '400':
+          description: Bad Request
+  /paymentIntents:
+    post:
+      tags:
+        - Payments
+      summary: Create a stripe payment intent
+      operationId: POST_payment_intent
+      description: | 
+        Create a payment intent for a deposit amount
+      responses:
+        '201':
+          description: Created Payment Intent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentIntent'
+        '400':
+          description: Bad Request
+    put:
+      tags:
+        - Payments
+      summary: Finalise the card hold
+      operationId: PUT_payment_intent
+      description: | 
+        This endpoint will finalise the card holding functionality with stripe
+      responses:
+        '200':
+          description: The payment intent has been confirmed and a charge is on hold for the given card
+        '400': 
+          description: Bad Request
+  '/arrival-information/{roomstayId}':
+    get:
+      tags:
+        - Arrival
+      summary: Use this endpoint to get the arrival information for a given room stay.  
+      operationId: GET_arrival_room_stay
+      description: | 
+        This endpoint will return earrival information for a given room stay.
+      parameters:
+        - in: path
+          name: roomstayId
+          description: Roomstay UUID
+          required: true
+          schema:
+            type: string
+            format: uuid  
+      responses:
+        '200':
+          description: EArrival information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EArrival'
+  '/countries':
+    get:
+      tags:
+        - Utils
+      summary: Use this endpoint to get a list of active countries
+      operationId: GET_utils_countries
+      description: |
+        This endpoint will return list of active countries on the system
+      responses:
+        '200':
+          description: List of countries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Country'
+  '/nationalities':
+    get:
+      tags:
+        - Utils
+      summary: Use this endpoint to get a list of active nationalities
+      operationId: GET_utils_nationality
+      description: |
+        This endpoint will return a list of nationalities that are active on the system
+      responses:
+        '200':
+          description: List of nationalities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Nationality'
+components:
+  schemas:
+    EArrival:
+      type: object
+      properties:
+        coordiantes:
+          type: object
+          $ref: '#/components/schemas/Coordinates'
+        additionalInformation:
+          type: string
+        address:
+          type: object
+          $ref: '#/components/schemas/Address'
+        codes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Code'
+    Code:
+      type: object
+      properties:
+        label:
+          type: string
+        code:
+          type: string
+    Coordinates:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: float
+        long:
+          type: number
+          format: float
+    PaymentIntent:
+      type: object
+      properties:
+        id:
+          type: string
+    Nationality:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    RoomStay:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        maxOccupancy:
+          type: number
+        guestStays:
+          type: array
+          items:
+            $ref: '#/components/schemas/Guest'
+        unit:
+          type: object
+          $ref: '#/components/schemas/Unit'
+        rate:
+          type: object
+          $ref: '#/components/schemas/Rate'
+    Guest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        nationality:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        passportNumber:
+          type: string
+        address:
+          type: object
+          $ref: '#/components/schemas/Address'
+        identification:
+          type: array
+          items:
+            $ref: '#/components/schemas/Identification'
+    Identification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [PASSPORT, PHOTO, SIGNATURE]
+        body:
+          type: string
+    Address:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        addressLine1:
+          type: string
+        city:
+          type: string
+        postcode:
+          type: string
+        country:
+          type: object
+          $ref: '#/components/schemas/Country'
+    Country:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        alpha2:
+          type: string
+        alpha3:
+          type: string
+    Rate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+    Unit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    InventoryItem:
+      type: object
+      required:
+        - id
+        - name
+        - manufacturer
+        - releaseDate
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        name:
+          type: string
+          example: Widget Adapter
+        releaseDate:
+          type: string
+          format: date-time
+          example: '2016-08-29T09:12:33.001Z'
+        manufacturer:
+          $ref: '#/components/schemas/Manufacturer'
+    Manufacturer:
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: ACME Corporation
+        homePage:
+          type: string
+          format: url
+          example: 'https://www.acme-corp.com'
+        phone:
+          type: string
+          example: 408-867-5309
+      type: object

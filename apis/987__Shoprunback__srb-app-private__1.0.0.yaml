@@ -1,0 +1,224 @@
+penapi: 3.0.0
+info:
+  description: |
+    This is the part of the exposed API that is considered private. It is subject
+    to change without notice and should not be used in your integrations
+  version: "1.0.0"
+  title: Shoprunback Private API. 
+  contact:
+    email: dev@shoprunback.com
+servers:
+  - url: 'https://dashboard.shoprunback.com/api/v1'
+tags:
+  - name: Wrappers
+    description: Api Calls related to the wrappers service
+paths:
+  /companies:
+    post:
+      tags: 
+        - Company
+      security: 
+        - Token: []
+      summary: Create a company
+      description: >-
+        Creates a new company. Can only be called by 
+        user who already are the first owner of the
+        company.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Company'
+      responses:
+        201:
+          description: The created company
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+
+  /wrappers/colissimo/check_address:
+    post:
+      tags:
+        - Wrappers
+      security:
+        - Token: []
+      summary: Checks address validity for the Colissimo service
+      description: |
+        Asks the Colissimo API whether the requested address is valid 
+        and if it is eligibible to the mailbox picking service
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                origin:
+                  $ref: '#/components/schemas/Address'
+      responses:
+        '200':
+          description: The address is eligible to mailbox picking
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: 
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: Address is eligible!
+        '400': 
+          description: The address is ineligible for mailbox picking
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: 
+                    type: integer
+                    example: 400
+                  message:
+                    type: string
+                    example: Address is ineligible for mailbox picking!
+        '500':
+          description: There was an error processing the request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Something went wrong
+
+components:
+  securitySchemes:
+    Token:
+      description: >
+        For accessing the API a valid token must be passed in all protected
+        queries in
+
+        the 'Authorization' header.|
+
+        Your token is auto-generated and available on the ShopRunBack Retailer
+        Dashboard.|
+
+        The following syntax must be used in the 'Authorization' header :
+
+            Token token=xxxxxx
+      type: apiKey
+      name: Authorization
+      in: header
+  schemas:  
+    CountryCode:
+      type: string
+      example: FR
+      description: ISO code (ISO 3166-1 alpha-2)
+    Address:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Address UUID
+          example: 1f27f9d9-3b5c-4152-98b7-760f56967deb
+          readOnly: true
+        line1:
+          type: string
+          description: First line of the address
+          example: 66, avenue des Champs-Elysees
+        line2:
+          type: string
+          description: Second line of the address
+          example: 2nd floor, Office 42
+        zipcode:
+          type: string
+          description: The postal/zid code of the address
+          example: '75008'
+        country_code:
+          $ref: '#/components/schemas/CountryCode'
+        city:
+          type: string
+          description: The name of the city
+          example: Paris VIII
+      required:
+        - line1
+        - zipcode
+        - city
+        - country_code
+    Company:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Your company UUID
+          example: 8e16127f-b279-4c44-bb57-d02e99d8f281
+          readOnly: true
+        name:
+          type: string
+          description: Your company name
+          example: Apple Inc.
+        slug:
+          type: string
+          description: Your company slug
+          example: apple
+        address1:
+          type: string
+          description: First part of your address
+          example: 1 infinite loop
+        address2:
+          type: string
+          description: Second part of your address
+          example: IL1
+        zipcode:
+          type: string
+          description: Your company zipcode
+          example: '95014'
+        state:
+          type: string
+          description: State of your company
+          example: CA
+        country_code:
+          $ref: '#/components/schemas/CountryCode'
+        contact_email:
+          type: string
+          description: Contact email
+          example: contact@apple.com
+        website_url:
+          type: string
+          description: Your company's website URL
+          example: 'http://www.apple.com'
+        phone_number:
+          type: string
+          description: Your company's public phone number
+          example: 1-800-275-2273
+        logo_url:
+          type: string
+          description: Your company's logo URL
+          example: >-
+            http://www.meadowlarkproject.com/wp-content/uploads/2015/10/apple-computer-rainbow-273x300.png
+        reasons:
+          type: array
+          description: Array of reason codes
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/ReasonCode'
+        auth_token:
+          type: string
+          description: >-
+            An authentication token to emit API calls on 
+            behalf of the company. <em>Only available to 
+            company owners.</em>
+          readOnly: true
+    ReasonCode:
+      type: string
+      enum:
+        - doesnt_fit
+        - quality
+        - damaged
+        - wrong
+        - incorrect
+        - delay
+        - reconsider
+      example: doesnt_fit

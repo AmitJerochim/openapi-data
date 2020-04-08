@@ -1,0 +1,1661 @@
+openapi: 3.0.2
+info:
+  version: "1.1.0"
+  title: ReadyAPI TestEngine API
+  description: >-
+    A REST based API testing framework; submit Ready API/SoapUI projects using your
+    favorite HTTP client, one of the existing open-source clients/tools on
+    GitHub to run API tests either asynchronously or synchronously:
+    - Generate your own client from this specification: https://app.swaggerhub.com/apis/smartbear/readyapi-testengine
+    - Use our Jenkins plugin: https://support.smartbear.com/downloads/readyapi/
+
+  contact:
+    name: SmartBear Software
+    url: http://smartbear.com/
+    email: sales@smartbear.com
+
+  license:
+    name: SmartBear Terms of Use
+    url: https://smartbear.com/terms-of-use/
+
+servers:
+  - url: /api/v1
+    description: Basepath
+
+paths:
+  /testjobs:
+    get:
+      tags:
+        - testjob
+      summary: Returns test run results stored in TestEngine.
+      description: >-
+        Use this operation to get results of the latest test runs stored in TestEngine.
+      operationId: getTestjobs
+      parameters:
+        - name: fetch
+          in: query
+          required: false
+          description: Number of testjobs to return. Use `ALL´ to get all testjobs.
+          schema:
+            anyOf:
+              - type: string
+                enum:
+                  - ALL
+              - type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                description: The array of executed test jobs.
+                items:
+                  $ref: '#/components/schemas/TestJobSummary'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+    post:
+      tags:
+        - testjob
+      summary: Executes a ReadyAPI project.
+      description: >-
+        Use this operation to send a ReadyAPI test project to TestEngine.
+        You command TestEngine to execute the entire project, or an
+        individual test suite or test case in it. The body of the request should be a
+        ReadyAPI project file. Either send the .xml file as is, or zip it.
+        A zip is needed to send in a composite project or when sending in a project with file dependencies.
+      operationId: postProjectTestjob
+      parameters:
+        - $ref: '#/components/parameters/testSuiteParam'
+        - $ref: '#/components/parameters/testCaseParam'
+        - $ref: '#/components/parameters/environmentParam'
+        - $ref: '#/components/parameters/asyncParam'
+        - $ref: '#/components/parameters/callbackParam'
+        - $ref: '#/components/parameters/clientCertParam'
+        - $ref: '#/components/parameters/clientCertPasswordParam'
+        - $ref: '#/components/parameters/projectPasswordParam'
+        - $ref: '#/components/parameters/hostAndPortParam'
+        - $ref: '#/components/parameters/tagsParam'
+        - $ref: '#/components/parameters/proxyHostParam'
+        - $ref: '#/components/parameters/proxyPortParam'
+        - $ref: '#/components/parameters/proxyUsernameParam'
+        - $ref: '#/components/parameters/proxyPasswordParam'
+        - $ref: '#/components/parameters/timeoutParam'
+      requestBody:
+        description: ReadyAPI project and dependencies if needed.
+        required: true
+        content:
+          application/zip:
+            schema:
+              type: string
+              format: binary
+          application/xml:
+            schema:
+              type: string
+              format: binary
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                zip:
+                  type: string
+                  format: binary
+                project:
+                  type: string
+                  format: binary
+              additionalProperties:
+                type: string
+                format: binary
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestJobReport'
+            application/junit+xml:
+              schema:
+                type: string
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        412:
+          description: >-
+            Request contains unresolved files needed to execute the test job. It can be
+            data sources, attachment or client certificates mentioned in test job
+            but not provided in the request. Resend the request with all mentioned files.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UnresolvedFile'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+    delete:
+      tags:
+        - admin
+      summary: Deletes testjobs
+      description: >-
+        Delete jobs older than the specified date. If a date is not provided, `maxDaysToKeep` and `maxJobsToKeep`
+        value is taken from the configuration file and either config deleting more number of jobs will be the considered.
+        The default values can be changed by changing `maxDaysToKeep` and `maxJobsToKeep` in the configuration file.
+      operationId: deleteTestJobs
+      parameters:
+        - name: before
+          in: query
+          required: false
+          description: Testjobs older than this date/time will be deleted.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: Test jobs were successfully deleted
+          content:
+            application/json:
+              schema:
+                type: integer
+                description: number of deleted jobs
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  '/testjobs/{testjobId}':
+    delete:
+      tags:
+        - testjob
+      summary: Cancels the specified testjob
+      description: >-
+        Use this operation to stop the run specified by <i>testjobId</i>. You
+        can find the testjobId in the response to your testjob request,
+        or you can send a GET <code>/testjobs</code> request to the
+        TestEngine.
+      operationId: cancelTestjob
+      parameters:
+        - $ref: '#/components/parameters/testjobIdParam'
+      responses:
+        200:
+          description: Testjob canceled
+        404:
+          description: The specified test run was not found
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  '/testjobs/{testjobId}/report':
+    get:
+      tags:
+        - testjob
+      summary: Returns the status and result of the specified testjob.
+      description: >-
+        Use this operation to get information on the testjob specified
+        by <i>testjobId</i>.  You can find in the response to your testjob
+        request , or you can send a GET <code>/testjobs</code> request to TestEngine.
+      operationId: getTestjobReport
+      parameters:
+        - $ref: '#/components/parameters/testjobIdParam'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestJobReport'
+            application/junit+xml:
+              schema:
+                type: string
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        404:
+          description: The specified test job was not found
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  '/testjobs/{testjobId}/transactions':
+    get:
+      tags:
+        - testjob
+      summary: Returns the transaction logs for the specified test job.
+      description: >-
+        Use this operation to get transaction logs (individual request and
+        response of executed test steps) of the test job specified by
+        <i>test jobID</i>.  You can find it in the response of your test job
+        request , or you can send a GET <code>/testjobs/{testjobId}/logs</code>
+        request to TestEngine.
+      operationId: getTransactions
+      parameters:
+        - $ref: '#/components/parameters/testjobIdParam'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HarLogRoot'
+        404:
+          description: The specified test job was not found
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  '/testjobs/{testjobId}/transactions/{transactionId}':
+    get:
+      tags:
+        - testjob
+      summary: Gets message exchange for a test step test job transaction
+      description: >-
+        A particular test job of a test step is referred as transaction. Use
+        this operation to get the request and response for a transaction in HAR
+        format.
+      operationId: getTransaction
+      parameters:
+        - $ref: '#/components/parameters/testjobIdParam'
+        - name: transactionId
+          description: >-
+            The id of the transaction (test step test job) to get the message
+            exchange (request and response) for.
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HarLogRoot'
+        404:
+          description: The specified test job or transaction was not found
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  /testjobs/stats/current:
+    get:
+      tags:
+        - stats
+      description: TestEngine statistics
+      summary: Returns the number of currently running and queued jobs
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageStatistics'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  /testjobs/stats/peak:
+    get:
+      tags:
+        - stats
+      description: TestEngine peak statistics
+      summary: Returns peak usage statistics grouped per hour
+      parameters:
+        - in: query
+          name: from
+          description: The timestamp to return statistics from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          description: The timestamp to return statistics to
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PeakUsageStatistics'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  /testjobs/stats/count:
+    get:
+      tags:
+        - stats
+      description: TestEngine run statistics
+      summary: Returns running and queued counts per hour
+      parameters:
+        - in: query
+          name: from
+          description: The timestamp to return statistics from, default will be 24 hours
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          description: The timestamp to return statistics to
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JobCountStatistics'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  /testjobs/stats/wait:
+    get:
+      tags:
+        - stats
+      description: TestEngine run statistics
+      summary: Returns maximum and average wait times for a selected period
+      parameters:
+        - in: query
+          name: from
+          description: The timestamp to return statistics from, default will be 24 hours
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          description: The timestamp to return statistics to
+          schema:
+            type: string
+            format: date-time
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JobWaitStatistics'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  /users:
+    get:
+      tags:
+        - user
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                description: Array of active users
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+    post:
+      tags:
+        - user
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/User'
+  '/users/{username}':
+    get:
+      tags:
+        - user
+      parameters:
+        - name: username
+          in: path
+          description: The username to request information for
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        403:
+          description: The authenticated user does not have access to the requested user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        404:
+          description: The user does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+    put:
+      tags:
+        - user
+      parameters:
+        - in: path
+          name: username
+          description: The username to update information for
+          required: true
+          schema:
+            type: string
+      requestBody:
+        $ref: '#/components/requestBodies/User'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        403:
+          description: The authenticated user does not have access to the requested user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        404:
+          description: The user does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+    delete:
+      tags:
+        - user
+      parameters:
+        - in: path
+          name: username
+          description: The username to request information for
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: User deleted successfully
+        403:
+          description: The authenticated user does not have access to the requested user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        404:
+          description: user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  /token:
+    get:
+      description: >-
+        This will provide a JWT token with a short validity, and can be used
+        to connect to WebSocket
+      tags:
+        - user
+      responses:
+        200:
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+    post:
+      description: >-
+        This will provide a token with a long validity, and can be used
+        to connect to anything but the websocket.
+      tags:
+        - user
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+    delete:
+      description: Delete the token provided in the body.
+      tags:
+        - user
+      requestBody:
+        description: Token to be deleted.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Token'
+      responses:
+        200:
+          description: OK
+        404:
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  /tokens:
+    delete:
+      description: Delete all tokens for the authenticated users.
+      tags:
+        - user
+      responses:
+        200:
+          description: OK
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  /auditlog:
+    get:
+      tags:
+        - admin
+      parameters:
+        - name: userName
+          in: query
+          required: false
+          description: The username to request information for
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: false
+          description: 'start date and time, example: 2017-07-21T17:32:28Z'
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: 'end date and time, example: 2017-07-21T17:32:28Z'
+          schema:
+            type: string
+            format: date-time
+        - name: sortOrder
+          in: query
+          required: false
+          description: Optional parameter for sorting the list on the time.
+          schema:
+            type: string
+            enum:
+              - DESC
+              - ASC
+            default: DESC
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditEvent'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+  /analytics:
+    get:
+      tags:
+        - misc
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsProviderDetails'
+        404:
+          description: Analytics disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /version:
+    get:
+      description: Get version of the TestEngine server
+      tags:
+        - misc
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Version'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /license:
+    get:
+      tags:
+        - admin
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseDetails'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    post:
+      tags:
+        - admin
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+      requestBody:
+        description: License file (.zip or .key) and activation info.
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                activationInfo:
+                  $ref: '#/components/schemas/LicenseActivationInfo'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FloatingLicenseServerInfo'
+
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicenseDetails'
+        400:
+          description: Unable to install or activate license
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      tags:
+        - admin
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+      summary: This will deactivate the license.
+      responses:
+        200:
+          description: OK, Successfully deactivated
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /license/reclaim:
+    post:
+      tags:
+        - admin
+      summary: Forces an update of the license session
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+      responses:
+        200:
+          description: OK
+        503:
+          description: Unable to reclaim the license
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+  /settings:
+    get:
+      tags:
+        - admin
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+      summary: Retrieve current settings from the server
+      operationId: getServerSettings
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerSettings'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+    put:
+      tags:
+        - admin
+      security:
+        - TokenSecured: []
+        - basicAuth: []
+      summary: Update the settings on the server
+      operationId: updateServerSettings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServerSettings'
+      responses:
+        200:
+          description: Settings successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerSettings'
+        default:
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  requestBodies:
+    User:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/User'
+  securitySchemes:
+    TokenSecured:
+      type: http
+      description: Preferred authentication scheme.
+      scheme: bearer
+      in: header
+    basicAuth:
+      type: http
+      description: Alternative authentication scheme. Credentials should be sent preemptively.
+      scheme: basic
+  parameters:
+    testCaseParam:
+      name: testCaseName
+      description: The name of the test case to run.
+      in: query
+      required: false
+      schema:
+        type: string
+    testSuiteParam:
+      name: testSuiteName
+      description: The name of the test suite to run.
+      in: query
+      required: false
+      schema:
+        type: string
+    environmentParam:
+      name: environment
+      description: The target environment for test job.
+      in: query
+      required: false
+      schema:
+        type: string
+    asyncParam:
+      name: async
+      description: >-
+        Specifies when TestEngine replies:<br/>`true` -
+        Immediately.<br/>`false` - After the test job is over.
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: true
+    callbackParam:
+      name: callback
+      description: 'The URL, to which the results will be posted.'
+      in: query
+      required: false
+      schema:
+        type: string
+    clientCertParam:
+      name: clientCertFileName
+      description: The name of the separately provided client certificate file.
+      in: query
+      required: false
+      schema:
+        type: string
+    clientCertPasswordParam:
+      name: clientCertPassword
+      description: The password for the separately provided client certificate file.
+      in: query
+      required: false
+      schema:
+        type: string
+    projectPasswordParam:
+      name: projectPassword
+      description: The password used to decrypt an encrypted project file.
+      in: query
+      required: false
+      schema:
+        type: string
+    hostAndPortParam:
+      name: hostAndPort
+      description: >-
+        The endpoint to be used for HTTP requests sent by this test, in the
+        format host:[port].
+      in: query
+      required: false
+      schema:
+        type: string
+    tagsParam:
+      name: tags
+      description: >-
+        A comma-separated list of tags identifying the test cases to be run
+        when executing the test
+      in: query
+      required: false
+      schema:
+        type: string
+    proxyHostParam:
+      name: proxyHost
+      description: the HTTP proxy host
+      in: query
+      required: false
+      schema:
+        type: string
+    proxyPortParam:
+      name: proxyPort
+      description: the proxy port
+      in: query
+      required: false
+      schema:
+        type: string
+    proxyUsernameParam:
+      name: proxyUsername
+      description: the proxy username
+      in: query
+      required: false
+      schema:
+        type: string
+    proxyPasswordParam:
+      name: proxyPassword
+      description: the proxy password
+      in: query
+      required: false
+      schema:
+        type: string
+    testjobIdParam:
+      name: testjobId
+      description: The unique identifier of a test job
+      in: path
+      required: true
+      schema:
+        type: string
+    timeoutParam:
+      name: timeout
+      description: the timeout in seconds for running the test job (the queue time is not included)
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int64
+  responses:
+    ErrorResponse:
+      description: An error has occurred
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorMessage'
+  schemas:
+    TestJobSummary:
+      type: object
+      description: Data structure for test job summary.
+      properties:
+        userName:
+          type: string
+          description: The name of the user who made the test job request.
+        projectName:
+          type: string
+          description: The name of the executed project.
+        status:
+          type: string
+          description: >-
+            Current test job status. If the assertion fail, the test is also
+            FAILED.
+          enum:
+            - QUEUED
+            - RUNNING
+            - CANCELED
+            - FINISHED
+            - FAILED
+        totalTime:
+          type: integer
+          description: Time taken (ms) to run the test job.
+          format: int64
+        startTime:
+          type: integer
+          description: The timestamp of the test job start.
+          format: int64
+        submitTime:
+          type: integer
+          description: The timestamp of when the test job was submitted.
+          format: int64
+        queueTime:
+          type: integer
+          description: Time spent in QUEUED state before starting.
+          format: int64
+        testjobId:
+          type: string
+          description: The identifier of the test run.
+        executionParameters:
+          $ref: '#/components/schemas/ExecutionParameters'
+        message:
+          type: string
+          description: Error message for the test job.
+    TestJobReport:
+      allOf:
+        - $ref: '#/components/schemas/TestJobSummary'
+        - type: object
+          required:
+            - testSuiteResultReports
+          properties:
+            testSuiteResultReports:
+              type: array
+              description: The array of reports for test suites in the test job.
+              items:
+                $ref: '#/components/schemas/TestSuiteResultReport'
+    UnresolvedFile:
+      type: object
+      properties:
+        fileName:
+          type: string
+          description: Name of the unresolved file
+    TestStepResultReport:
+      type: object
+      description: Data structure for test step results in the report.
+      properties:
+        testStepName:
+          type: string
+          description: The name of the test step
+        testStepType:
+          type: string
+          description: The type of the test step
+        totalTestStepTime:
+          type: integer
+          description: Time taken (ms) to run the test step.
+          format: int64
+        assertionStatus:
+          type: string
+          description: Specifies if the assertions failed or succeeded.
+          enum:
+            - UNKNOWN
+            - PASS
+            - FAIL
+            - CANCELED
+        requestTimings:
+          $ref: '#/components/schemas/RequestTimings'
+        transactionId:
+          type: string
+          description: The transaction id to identify a particular test job of a test step.
+        transaction:
+          type: string
+          description: The path to the transaction
+        messages:
+          type: array
+          description: Error messages returned by the assertions.
+          items:
+            type: string
+    RequestTimings:
+      type: object
+      description: Timings for a request withing a test step
+      properties:
+        readTime:
+          type: integer
+          description: Response read time (ms) for a http request.
+          format: int64
+        totalRequestTime:
+          type: integer
+          description: Total time (ms) taken by http request.
+          format: int64
+        connectionTime:
+          type: integer
+          description: Connection creation time (ms).
+          format: int64
+        timeToFirstByte:
+          type: integer
+          description: Time taken (ms) to receive first byte.
+          format: int64
+        connectTime:
+          type: integer
+          description: Time taken (ms) to connect
+          format: int64
+        timeStamp:
+          type: integer
+          description: Time when request started
+          format: int64
+    TestCaseResultReport:
+      type: object
+      description: Data structure for the test results report of the test case test job.
+      required:
+        - testStepResultReports
+      properties:
+        testCaseName:
+          type: string
+          description: The name of the test case the report is for.
+        totalTestCaseTime:
+          type: integer
+          description: Time taken (ms) to run the test case.
+          format: int64
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+        testStepResultReports:
+          type: array
+          description: The array of test step result reports.
+          items:
+            $ref: '#/components/schemas/TestStepResultReport'
+    TestSuiteResultReport:
+      type: object
+      description: Results of a test suite test job.
+      required:
+        - testCaseResultReports
+      properties:
+        testSuiteName:
+          type: string
+          description: The test suite name.
+        totalTestSuiteTime:
+          type: integer
+          description: Time taken (ms) to run the test suite.
+          format: int64
+        testCaseResultReports:
+          type: array
+          description: An array of test case test job results.
+          items:
+            $ref: '#/components/schemas/TestCaseResultReport'
+    HarLogRoot:
+      type: object
+      properties:
+        log:
+          $ref: '#/components/schemas/HarLog'
+    HarLog:
+      type: object
+      properties:
+        version:
+          type: string
+        creator:
+          $ref: '#/components/schemas/HarCreator'
+        browser:
+          $ref: '#/components/schemas/HarBrowser'
+        pages:
+          type: array
+          items:
+            $ref: '#/components/schemas/HarPage'
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/HarEntry'
+        comment:
+          type: string
+    HarCreator:
+      type: object
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        comment:
+          type: string
+    HarBrowser:
+      type: object
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        comment:
+          type: string
+    HarPage:
+      type: object
+      properties:
+        startedDateTime:
+          type: string
+        id:
+          type: string
+        title:
+          type: string
+        pageTimings:
+          $ref: '#/components/schemas/HarPageTimings'
+        comment:
+          type: string
+    HarPageTimings:
+      type: object
+      properties:
+        onContentLoad:
+          type: integer
+          format: int64
+        onLoad:
+          type: integer
+          format: int64
+        comment:
+          type: string
+    HarEntry:
+      type: object
+      properties:
+        pageref:
+          type: string
+        startedDateTime:
+          type: string
+        time:
+          type: integer
+          format: int64
+        request:
+          $ref: '#/components/schemas/HarRequest'
+        response:
+          $ref: '#/components/schemas/HarResponse'
+        cache:
+          $ref: '#/components/schemas/HarCache'
+        timings:
+          $ref: '#/components/schemas/HarTimings'
+        serverIPAddress:
+          type: string
+        connection:
+          type: string
+        comment:
+          type: string
+    HarRequest:
+      type: object
+      properties:
+        method:
+          type: string
+        url:
+          type: string
+        httpVersion:
+          type: string
+        cookies:
+          type: array
+          items:
+            $ref: '#/components/schemas/HarCookie'
+        headers:
+          type: array
+          items:
+            $ref: '#/components/schemas/HarHeader'
+        queryString:
+          type: array
+          items:
+            $ref: '#/components/schemas/HarQueryString'
+        postData:
+          $ref: '#/components/schemas/HarPostData'
+        headersSize:
+          type: integer
+          format: int64
+        bodySize:
+          type: integer
+          format: int64
+        comment:
+          type: string
+    HarResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          format: int32
+        statusText:
+          type: string
+        httpVersion:
+          type: string
+        cookies:
+          type: array
+          items:
+            $ref: '#/components/schemas/HarCookie'
+        headers:
+          type: array
+          items:
+            $ref: '#/components/schemas/HarHeader'
+        content:
+          $ref: '#/components/schemas/HarContent'
+        redirectURL:
+          type: string
+        headersSize:
+          type: integer
+          format: int64
+        bodySize:
+          type: integer
+          format: int64
+        comment:
+          type: string
+    HarCache:
+      type: object
+      properties:
+        beforeRequest:
+          $ref: '#/components/schemas/HarCacheRequest'
+        afterRequest:
+          $ref: '#/components/schemas/HarCacheRequest'
+        comment:
+          type: string
+    HarTimings:
+      type: object
+      properties:
+        blocked:
+          type: integer
+          format: int64
+        connect:
+          type: integer
+          format: int64
+        send:
+          type: integer
+          format: int64
+        wait:
+          type: integer
+          format: int64
+        receive:
+          type: integer
+          format: int64
+        ssl:
+          type: integer
+          format: int64
+        comment:
+          type: string
+    HarCookie:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        path:
+          type: string
+        domain:
+          type: string
+        expires:
+          type: string
+        httpOnly:
+          type: boolean
+          default: false
+        secure:
+          type: boolean
+          default: false
+        comment:
+          type: string
+    HarHeader:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        comment:
+          type: string
+    HarContent:
+      type: object
+      properties:
+        size:
+          type: integer
+          format: int64
+        compression:
+          type: integer
+          format: int64
+        mimeType:
+          type: string
+        text:
+          type: string
+        comment:
+          type: string
+    HarQueryString:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        comment:
+          type: string
+    HarCacheRequest:
+      type: object
+      properties:
+        expires:
+          type: string
+          format: date-time
+        lastAccess:
+          type: string
+          format: date-time
+        hitCount:
+          type: integer
+          format: int64
+        comment:
+          type: string
+        etag:
+          type: string
+    HarPostData:
+      type: object
+      properties:
+        mimeType:
+          type: string
+        params:
+          type: array
+          items:
+            $ref: '#/components/schemas/HarParam'
+        text:
+          type: string
+        comment:
+          type: string
+    HarParam:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        fileName:
+          type: string
+        contentType:
+          type: string
+        comment:
+          type: string
+    User:
+      description: >-
+        User object containing the basic user information which will be returned
+        for the current user or when the user with role ADMIN tries to get all
+        user information.
+      properties:
+        userName:
+          type: string
+        password:
+          type: string
+        admin:
+          type: boolean
+    AuditEvent:
+      description: Object containing the log details.
+      properties:
+        eventTime:
+          type: string
+          format: date-time
+        userName:
+          type: string
+        eventType:
+          type: string
+        eventData:
+          type: object
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: integer
+    AnalyticsProviderDetails:
+      description: Object containing details of analytics provider.
+      properties:
+        provider:
+          type: string
+          description: name of the analytics provider.
+        token:
+          type: string
+          description: token for provider.
+    Version:
+      description: Object containing version of the TestEngine server.
+      properties:
+        version:
+          type: string
+          description: TestEngine server version.
+    LicenseDetails:
+      description: Details of the licence installed.
+      properties:
+        licensedModule:
+          type: string
+        userName:
+          type: string
+        organization:
+          type: string
+        startDate:
+          type: string
+          description: The timestamp of activation.
+          format: date-time
+        expireDate:
+          type: string
+          description: The timestamp of expiration.
+          format: date-time
+        licenseId:
+          type: string
+        professional:
+          type: boolean
+        fixed:
+          type: boolean
+        expired:
+          type: boolean
+        trial:
+          type: boolean
+        maxConcurrentJobs:
+          type: integer
+          format: int32
+        active:
+          type: boolean
+    UsageStatistics:
+      description: Usage statistics for TestEngine
+      properties:
+        running:
+          description: Number of currently running jobs
+          type: integer
+        queued:
+          description: Number of currently queued jobs
+          type: integer
+    PeakUsageStatistics:
+      description: Peak value usage statistics for one hour
+      allOf:
+        - $ref: '#/components/schemas/UsageStatistics'
+        - type: object
+          properties:
+            from:
+              type: string
+              format: date-time
+            to:
+              type: string
+              format: date-time
+            maxConcurrentJobs:
+              description: The limit of the concurrent jobs at this time
+              type: integer
+              format: int32
+    JobCountStatistics:
+      description: Running / Queued statics for one hour
+      allOf:
+        - $ref: '#/components/schemas/UsageStatistics'
+        - type: object
+          properties:
+            from:
+              type: string
+              format: date-time
+            to:
+              type: string
+              format: date-time
+    JobWaitStatistics:
+      description: Maximum and average wait time
+      properties:
+        from:
+          type: string
+          format: date-time
+          description: time since we need statics from.
+        to:
+          type: string
+          format: date-time
+          description: time till we need statics.
+        maxWaitTime:
+          type: integer
+          format: int64
+          description: time in millis
+        avgWaitTime:
+          type: integer
+          format: int64
+          description: time in millis
+    ExecutionParameters:
+      description: Details about the type of the test, what test case or test suite is requested.
+      properties:
+        testSuiteName:
+          description: Name of test suite if present in request parameters
+          type: string
+        testCaseName:
+          description: Name of test case if present in request parameters
+          type: string
+        tags:
+          description: List of tags specified in request.
+          type: array
+          items:
+            type: string
+
+    FloatingLicenseServerInfo:
+      type: object
+      description: Data structure to specify a floating license server
+      properties:
+        host:
+          type: string
+          description: Host name or IP address of the floating license server
+        port:
+          type: integer
+          description: The port of the floating license server
+
+    LicenseActivationInfo:
+      type: object
+      required:
+        - email
+        - firstName
+        - lastName
+      properties:
+        email:
+          type: string
+          format: email
+          example: foo@bar.com
+        firstName:
+          type: string
+          example: Foo
+        lastName:
+          type: string
+          example: Bar
+        title:
+          type: string
+        company:
+          type: string
+          example: My Company
+        address:
+          type: string
+          example: 1 Gold Bolvd
+        city:
+          type: string
+          example: San Francisco
+        zipCode:
+          type: string
+          example: 94401
+        state:
+          type: string
+          example: CA
+        country:
+          type: string
+          example: USA
+        phone:
+          type: string
+          example: +1 206 555 0100
+    ErrorMessage:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        details:
+          type: string
+    ServerSettings:
+      description: Settings for the server that can be updated while the server is running
+      properties:
+        maxDaysToKeep:
+          description: >-
+            The number of days jobs will be kept when ´DELETE /testjobs´ is called without the ´before´ parameter.
+            It accepts only 0 , -1 and positive integer values.
+            To disable this config use -1 as value.
+          type: integer
+          format: int32
+        maxJobsToKeep:
+          description: >-
+            The number of jobs will be kept when ´DELETE /testjobs´ is called without the ´before´ parameter.
+            It accepts only 0 , -1 and positive integer values.
+            To disable this config use -1 as value.
+          type: integer
+          format: int32
+        allowedConnectTargets:
+          description: External targets that the tests are allowed to connect to.
+          type: array
+          items:
+            type: string
+        allowedFilePaths:
+          description: Paths that the tests are allowed to read from/write to.
+          type: array
+          items:
+            type: string
+    Token:
+      description: Token to be used instead of basic auth
+      properties:
+        token:
+          type: string

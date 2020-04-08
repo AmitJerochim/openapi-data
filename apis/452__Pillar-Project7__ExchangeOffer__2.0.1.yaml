@@ -1,0 +1,428 @@
+penapi: 3.0.0
+servers:
+  - url: 'https://virtserver.swaggerhub.com/maxp/ExchangeOffer/'
+info:
+  description: >
+    This is the Pillar Project Exchange Crypto Asset Offer Engine.  
+    You can find out more about the  at
+    [http://pillar.roject.io](http://pillarproject.io)
+  version: "2.0.1"
+  title: Pillar Project Exchange Offer Engine
+  termsOfService: 'http://pillarproject.io/terms/'
+  contact:
+    email: exchange@pillar.io
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: offers
+    description: Everything about your Offers
+  - name: orders
+    description: Order for taking offers
+paths:
+  /v2/offers:
+    get:
+      tags:
+        - offers
+      summary: Finds offers by name
+      description: Returns empty array in the request and external offers through sockets [model Offer]
+      operationId: findOffersByName
+      parameters:
+        - name: pillarId
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: fromAssetAddress
+          in: query
+          description: for example "0x62b9f8741bf53a6986a5411c0557c30f6f11f3af"
+          required: true
+          schema:
+            type: string
+        - name: toAssetAddress
+          in: query
+          description: for example "0x62b9f8741bf53a6986a5411c0557c30f6f11f3af"
+          required: true
+          schema:
+            type: string
+        - name: quantity
+          in: query
+          description: any positive amount. Defaults to 1
+          required: false
+          schema:
+            type: number
+        - name: walletId
+          in: query
+          description: for example "1daa6a4c-6d70-4d60-9717-3e6191088e3d". Defaults to legacy wallet.
+          required: false
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Operation succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: 
+                    type: array
+                    items: 
+                      type: object
+                example: []
+        '400':
+          description: Operation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        description: error message here
+  '/v2/orders':
+    post:
+      tags:
+      - orders
+      summary: Create order
+      description: RequestExternalOrder can be used in body. Response has a property "type" which indicates whether the client should do a simple transaction (type -> regular) or sign and send received "transactionObj" (type -> blockchain).
+      operationId: createOrder
+      parameters:
+      - in: header
+        name: pillarId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: header
+        name: trackId
+        required: true
+        description: Same one passed to the client in the offer step.
+        schema:
+          type: string
+          format: uuid
+      
+      requestBody:
+        $ref: '#/components/requestBodies/order'
+      responses:
+        '200':
+          description: Operation succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '400':
+          description: Operation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        description: error message here
+  '/v2/orders/allowance':
+    post:
+      tags:
+      - orders
+      summary: Set allowance for token in provider
+      description: .
+      operationId: setAllowance
+      parameters:
+      - in: header
+        name: pillarId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: header
+        name: trackId
+        required: true
+        description: Same one passed to the client in the offer step.
+        schema:
+          type: string
+          format: uuid
+      
+      requestBody:
+        $ref: '#/components/requestBodies/allowance'
+      responses:
+        '200':
+          description: Operation succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TransactionObj'
+        '400':
+          description: Operation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        description: error message here
+  '/v2/orders/{id}/status':
+    get:
+      tags:
+        - orders
+      summary: Get order status
+      description: >-
+        This is used to fetch order status
+      operationId: getOrderStatus
+      parameters:
+        - name: id
+          in: path
+          description: order ID
+          required: true
+          schema:
+            type: string
+            example: '5c6311c85cd081187cca4d29'
+        - name: pillarId
+          in: header
+          description: ID of user
+          required: true
+          schema:
+            type: string
+            format: '5c6311c85cd081187cca4d29'
+      responses:
+        '200':
+          description: Operation succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      generalStatus:
+                        type: string
+                        example: 'pending'
+                      message:
+                        type: string
+                        example: 'Waitting for order confirmation'
+                        description: 'OPTIONAL message provided with status'
+        '400':
+          description: Operation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        description: error message here
+
+externalDocs:
+  description: Find out more about Swagger
+  url: 'http://swagger.io'
+  
+components:
+  schemas:
+    Asset:
+      type: object
+      properties:
+        code:
+          type: string
+          example: PLR
+        decimals:
+          type: number
+          example: 18
+        address:
+          type: string
+          example: '0xa7f4447a701e09a2b63876746d8ad7db47691de2'
+    Order:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: '5c77a685ab4acb001ecba343'
+        receiveQuantity:
+          type: string
+          example: '0'
+          description: 'Currenttly returns 0, but implementation in-progress'
+        payQuantity:
+          type: string
+          example: '0.2'
+          description: 'Quantity to be transferred client -> market maker'
+        fromAsset:
+          $ref: '#/components/schemas/Asset'
+        toAsset:
+          $ref: '#/components/schemas/Asset'
+        payToAddress:
+          type: string
+          example: '0xa7f4447a701e09a2b63876746d8ad7db47691de2'
+          description: 'Address to which the client should send funds'
+        type:
+          type: string
+          enum:
+            - blockchain
+            - regular
+        transactionObj:
+          description: 'The field "transactionObj" will only appear if order type is "blockchain"'
+          allOf:
+           - $ref: '#/components/schemas/TransactionObj'
+    Offer:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: 'Shapeshift'
+          description: 'Use this to identify the external exchange'
+        _id:
+          type: string
+          example: '5d6e4ca369d1fd0640dad88d'
+          description: 'Used for internal compatibility'
+        description:
+          type: string
+          example: ''
+          description: 'Currently empty string, maybe will be filled in the future'
+        fromAsset: 
+          $ref: '#/components/schemas/Asset'
+        toAsset:
+          $ref: '#/components/schemas/Asset'
+        askRate:
+          description: 'Decimal point may vary, the accuracy depends on individual exchanges'
+          type: string
+          example: '0.15848949875'
+        minQuantity:
+          description: 'Decimal point may vary, the accuracy depends on individual exchanges'
+          type: string
+          example: '2.44849849895'
+        maxQuantity:
+          description: 'Decimal point may vary, the accuracy depends on individual exchanges'
+          type: string
+          example: '1864189400.5785'
+        allowanceSet:
+          description: 'Indicator telling if allowance has been set.'
+          type: boolean
+          example: false
+        trackId:
+          description: 'Id used by the exchange to provide same offer for ordering step if possible.'
+          type: string
+          example: '594ca2e7-44ed-492b-954d-73ce1e5d85b7/5e60bf7e60ee920129f41907'
+    TransactionObj:
+      type: object
+      properties:
+        nonce:
+          type: string
+          example: '8'
+        to:
+          type: string
+          example: '0xa7f4447a701e09a2b63876746d8ad7db47691de2'
+        gasLimit:
+          type: string
+          example: '100000'
+        gasPrice:
+          type: string
+          example: '40'
+        chainId:
+          type: string
+          example: '1'
+        value: 
+          type: string
+          example: '0'
+        data:
+          type: string
+          example: '0x18978e8200000000000000000000000000000000000000000a00d00000c00'
+  requestBodies:
+    allowance:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - token
+              - provider
+            properties:
+              provider:
+                type: string
+                description: selects external order provider
+                example: 'SHAPESHIFT-SHIM'
+              fromAssetAddress:
+                type: string
+                description: selects asset to exchange FROM
+                example: '0xa7f4447a701e09a2b63876746d8ad7db47691de2'
+              toAssetAddress:
+                type: string
+                description: selects asset to exhange TO
+                example: '0xa7f4447a701e09a2b63876746d8ad7db47691de2'
+              walletId:
+                type: string
+                description: selects to which wallet allowance is being set
+                example: '1daa6a4c-6d70-4d60-9717-3e6191088e3d'
+    # offer:
+    #   required: true
+    #   content:
+    #     application/json:
+    #       schema:
+    #         type: object
+    #         properties:
+    #           quantity:
+    #             type: number
+    #           provider:
+    #             type: string
+    #             description: selects external order provider
+    #             example: 'SHAPESHIFT-SHIM'
+    #           fromAssetAddress:
+    #             type: string
+    #             description: selects asset to exchange FROM
+    #             example: '0xa7f4447a701e09a2b63876746d8ad7db47691de2'
+    #           toAssetAddress:
+    #             type: string
+    #             description: selects asset to exhange TO
+    #             example: '0xa7f4447a701e09a2b63876746d8ad7db47691de2'
+      
+
+    order:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              quantity:
+                type: number
+              provider:
+                type: string
+                description: selects external order provider
+                example: 'SHAPESHIFT-SHIM'
+              fromAssetAddress:
+                type: string
+                description: selects asset to exchange FROM
+                example: '0xa7f4447a701e09a2b63876746d8ad7db47691de2'
+              toAssetAddress:
+                type: string
+                description: selects asset to exhange TO
+                example: '0xa7f4447a701e09a2b63876746d8ad7db47691de2'
+              walletId:
+                type: string
+                description: selects to which wallet is making the order. Defaults to legacy.
+                example: '1daa6a4c-6d70-4d60-9717-3e6191088e3d'
+        
+
+  securitySchemes:
+    taker-auth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

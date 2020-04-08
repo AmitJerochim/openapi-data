@@ -1,0 +1,1200 @@
+openapi: 3.0.0
+info:
+  title: api
+  version: 1.1.1
+  description: |
+    REST API of PollMaker Service
+    ## Overview
+
+    Poll Maker use REST (Representational State Transfer), the standard way of accessing
+    resources over the web.
+
+    It is done through four standard HTTP operations.
+
+      * GET
+      * POST (create)
+      * PUT (update)
+      * DELETE
+
+    The _R_ in _REST_ refers to the representation (or format) of the resource
+    being accessed.
+
+    In our case, it is the web-standard [JSON](www.json.org) (JavaScript Object
+    Notation) format.
+
+
+    ### HTTP requests
+
+    Section | Component             | Description
+    --------|-----------------------|------------------------------------------------------------------------------------------
+    Action  | HTTP operation | GET - retrieve a resource</br> PUT - replace a resource</br>POST - create a resource</br>DELETE - delete a resource
+    Action  | HTTPS | The secure web protocol. It ensures that requests are encrypted between the application and the API
+    Action  | api.poll-maker.com | The API gateway location
+    Action  | /v1/ | The API version 
+    Action  | /orders | The address of the resource you are accessing, orders in this case
+    Request Header  | X-Auth-Token: xxxxx | The session security token x, is obtained on login via the /session API, and identifies amongst other things, the active account of the client using the API
+    Request Header  | Content-Type: application/json | Request format type. This should always be set as indicated to json only
+    Request Header  | Accept: application/json; charset=UTF-8 | Response format type. This should always be set as indicated to json only
+    Request Body  | Only required for PUT or POST requests | JSON format
+
+
+    ### HTTP Response
+
+    Section | Component             | Description
+    --------|-----------------------|------------------------------------------------------------------------------------------
+    HTTP status code  | 200 OK | Request executed fine.
+    HTTP status code  | 201 Created | Response to a POST that results in a creation.
+    HTTP status code  | 204 No Content | Response to a successful request that won't be returning a body (like a DELETE request).
+    HTTP status code  | 400 Bad Request | The request was invalid or cannot be served. The exact error should be explained in the error payload.
+    HTTP status code  | 401 Unauthorized | The request requires an user authentication.
+    HTTP status code  | 403 Forbidden | The server understood the request, but is refusing it or the access is not allowed (authenticated user doesn't have access to the resource).
+    HTTP status code  | 404 Not found | When a non-existent resource is requested.
+    HTTP status code  | 422 Unprocessable Entity | Used for validation errors (e.g. if an image cannot be formatted or mandatory fields are missing in the payload).
+    HTTP status code  | 500 Internal Server Error | Tells the client something happened on the server and their request by itself was perfectly valid. The client can continue and try again with the request without modification.
+    Response Body  | Request results, if any | JSON format.
+
+    ### Errors
+
+    Error responses contain a 4xx or 5xx HTTP status and a body with the format described by:
+    #/components/schemas/ErrorResponse.
+    ErrorResponse contains the code field that represents a fault code.
+    Below the error ranges used:
+      * 0-100: Common Errors throwable by different endpoint
+      * 200-299: Poll Errors throwable by Poll Endpoint
+      * 300-399: Option Errors throwable by Poll Option Endpoint
+      * 400-499: Option Errors throwable by Poll Vote Endpoint
+
+    ### Paging
+
+    Paging could be applied to a subset of endpoints returning a list of entries for some requests. 
+    We are going to use the standard way of solving this problem by encoding the paging information in a URI query:
+
+      /api/v1/foos?page=0&size=10
+
+    A paged request will returns a paged response with the Page object envelop (see Page model).
+    Below a Page response sample:
+
+    ```json
+      {
+        content : [
+            { ...  },
+            { .... },
+            ...
+        ],
+        first: true,
+        last: false,
+        size : 5,
+        totalElements : 50,
+        totalPages : 10,
+        number : 0
+      }
+    ``` 
+
+    If pagination is declared as mandatory for a rest resource, the __size__ parameter is mandatory.
+    If not present an HTTP __404 Not found__ error is returned.
+    If the page is not available an HTTP __404 Not found__ error is returned.
+
+    The page number is zero-based index. If there are no results, a Page object is returned with a 0 length __content__ array.
+
+    ### Sorting
+
+    To have your results sorted on a particular property, add a sort URL parameter with the name of the property you want to sort the results on.
+    You can control the direction of the sort by appending a "," to the the property name plus either _asc_ or _desc_. 
+
+    To sort the results by more than one property, keep adding as many _sort=PROPERTY_ parameters as you need.
+
+    Below a sort request sample:
+
+      http://localhost:8080/api/v1/foos?page=1&size=10&sort=field1,desc&sort=field2,asc
+
+
+    ### Date & Time
+
+    As for the [OpenApi 2.0](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/2.0.md) specification, _date_ and _date-time_ format are codified in json as string
+    following [RFC3339](https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#anchor14) definition:
+
+      * date-time string: as defined by date-time - [RFC3339](https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#anchor14)
+      * date string:  as defined by full-date - [RFC3339](https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#anchor14)
+      * time string:  as defined by partial-time - [RFC3339](https://xml2rfc.tools.ietf.org/public/rfc/html/rfc3339.html#anchor14)
+
+  contact:
+    name: Dario Frongillo
+    url: 'http://www.list-group.com/'
+    email: d.frongillo@list-group.com
+  termsOfService: 'http://www.list-group.com/'
+  license:
+    name: MIT
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/dario-frongillo/workshop-poll-maker/1.1.1
+  - url: http://localhost:3000/poll-maker/v1
+    description: Dev server
+security:
+  - api-auth-token: [] # apply security to all endpoints, to override it apply on a single endpoint security: []  
+paths:
+  /session:
+    post:
+      tags:
+        - Session
+      operationId: newSession
+      summary: Obtain access token
+      description: Perform login to obtain an access token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              PollReqExample1:
+                $ref: '#/components/examples/LoginRequestExample1'
+      responses:
+        '201':
+          description: It return the new Poll successfully created
+          headers:
+            x-auth-token:
+              description: The session token
+              schema:
+                type: string
+                example: 37f0454e-3d51-41a4-90d5-9c1e6424ca61
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+              examples:
+                PollExample1:
+                  $ref: '#/components/examples/SessionExample1'
+        '400':
+          description: Login failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ErrorResponseExample1:
+                  $ref: '#/components/examples/ErrorResponseExample1'                
+          x-list-error-codes:
+            errors:
+              - code: 100
+                when:  Bad credentials
+              - code: 101
+                when:  Service Down
+      security: []
+
+  /polls:
+    get:
+      parameters:
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/sizeParam'
+        - $ref: '#/components/parameters/sortParam'
+        - name: pollDescription
+          in: query
+          description: a string contained in the poll description
+          schema:
+            type: string
+      operationId: findPolls
+      summary: Find all Polls
+      description: It return a paged list of Polls
+      tags:
+        - Poll
+      responses:
+        '200':
+          description: It return the Polls available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollListPage'
+              examples:
+                PollListPageExample1:
+                  $ref: '#/components/examples/PollListPageExample1'
+        '401':
+          description: Not authenticated
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ErrorResponseExample1:
+                  $ref: '#/components/examples/ErrorResponseExample1'      
+          x-list-error-codes:
+            errors:
+              - code: 10
+                when: Missing required parameter (page or size)
+    post:
+      tags:
+        - Poll
+      operationId: insertPoll
+      summary: Insert a new Poll
+      description: Insert a new Poll to ask a question to the users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Poll'
+            examples:
+              PollReqExample1:
+                $ref: '#/components/examples/PollReqExample1'
+      responses:
+        '201':
+          description: It return the new Poll successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Poll'
+              examples:
+                PollExample1:
+                  $ref: '#/components/examples/PollExample1'
+        '400':
+          description: Bad request, Poll insertion is failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ErrorResponseExample1:
+                  $ref: '#/components/examples/ErrorResponseExample1'      
+          x-list-error-codes:
+            errors:
+              - code: 200
+                when: Poll Question is empty
+              - code: 201
+                when: Poll Question Too Long
+        '401':
+          description: Not authenticated
+
+
+  /polls/{id}/details:
+    get:
+      operationId: findPollDetailsById
+      tags:
+        - Poll
+      summary: Find a poll by Id
+      description: Return the Poll
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollDetails'
+              examples:
+                PollDetailsExample:
+                  $ref: '#/components/examples/PollDetailsExample1'
+        '401':
+          description: Not authenticated
+
+  /polls/{id}:
+    get:
+      operationId: findPollByPollId
+      tags:
+        - Poll
+      summary: Find a poll by Id
+      description: Return the Poll
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Poll'
+        '401':
+          description: Not authenticated
+
+    put:
+      operationId: updatePollById
+      tags:
+        - Poll
+      summary: Update a Poll By Id
+      description: Update one of mine poll
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Poll'
+            examples:
+              PollReqExample1:
+                $ref: '#/components/examples/PollReqExample1'
+      responses:
+        '204':
+          description: Poll successfully updated
+        '401':
+          description: Not authenticated
+        '403':
+          description: You have not the privilegy to perform this operation. Only the owner can upate a Poll
+        '400':
+          description: Bad request, Poll insertion is failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ErrorResponseExample1:
+                  $ref: '#/components/examples/ErrorResponseExample1'      
+          x-list-error-codes:
+            errors:
+              - code: 200
+                when: Poll Question is empty
+              - code: 201
+                when: Poll Question Too Long
+        '404':
+          description: Poll not Exist
+
+    delete:
+      operationId: deletePollById
+      tags:
+        - Poll
+      summary: Delete a Poll by Id
+      description: Delete one of mine Poll and its votes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      responses:
+        '204':
+          description: Poll successfully updated
+        '401':
+          description: Not authenticated
+        '403':
+          description: You have not the privilegy to perform this operation. Only the owner can upate a Poll
+        '404':
+          description: Poll not Exist
+
+  /polls/{id}/options:
+    post:
+      operationId: insertOptionByPollId
+      tags:
+        - Option
+      summary: insert an option on a poll
+      description: The owner of a poll can insert an option
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Option'
+            examples:
+              VoteExample1:
+                $ref: '#/components/examples/VoteExample1'
+      responses:
+        '201':
+          description: Option is Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Option'
+        '400':
+          description: Invalid Option
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ErrorResponseExample1:
+                  $ref: '#/components/examples/ErrorResponseExample1'      
+          x-list-error-codes:
+            errors:
+              - code: 300
+                when: Poll Option Value too long
+        '401':
+          description: Not authenticated
+        '403':
+          description: You have not the privilegy to perform this operation. Only the owner can upate a Poll
+        '404':
+          description: Poll Not Exist
+    get:
+      operationId: findAllOptionsByPollId
+      tags:
+        - Option
+      summary: find all the options of a poll
+      description: return all the options available for a poll
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      responses:
+        '200':
+          description: it return the Vote
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Option'
+        '401':
+          description: Not authenticated
+        '404':
+          description: Poll Not Exist
+
+  /polls/{id}/options/{optionId}:
+    get:
+      operationId: findOptionByPollIdAndOptionId
+      tags:
+        - Option
+      summary: Find a specific option
+      description: Return the Option
+      parameters:
+        - name: id
+          description: Poll Id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+        - name: optionId
+          description: Option Id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      responses:
+        '200':
+          description: it return the Option
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Option'
+              examples:
+                OptionExample1:
+                  $ref: '#/components/examples/OptionExample1'
+        '401':
+          description: Not authenticated
+        '404':
+          description: Poll or Vote Not Exist
+    delete:
+      operationId: deleteOptionByPollIdAndOptionId
+      tags:
+        - Option
+      summary: Delete a specific option
+      description: Delete the Option
+      parameters:
+        - name: id
+          description: Option Id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+        - name: optionId
+          description: Option Id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      responses:
+        '204':
+          description: Option Deleted
+        '401':
+          description: Not authenticated
+        '403':
+          description: You have not the privilegy to perform this operation. Only the owner can upate a Poll
+        '404':
+          description: Option Not Exist
+
+  /polls/{id}/votes:
+    post:
+      operationId: insertVoteByPollId
+      tags:
+        - Vote
+      summary: perform a vote of the poll
+      description: perform a vote of the poll
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+        - name: overwriteExistingVote
+          in: query
+          description: if true eventually overwrite existing vote ( default behavior false)
+          schema:
+            type: boolean
+          required: false  
+          example: true            
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vote'
+            examples:
+              VoteExample1:
+                $ref: '#/components/examples/VoteExample1'
+      responses:
+        '201':
+          description: Vote is Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vote'
+        '401':
+          description: Not authenticated
+        '404':
+          description: Poll Not Exist
+        '400':
+          description: Vote is failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ErrorResponseExample1:
+                  $ref: '#/components/examples/ErrorResponseExample1'      
+          x-list-error-codes:
+            errors:
+              - code: 300
+                when: Empty option
+              - code: 301
+                when: Invalid option
+
+  /polls/{id}/votes/{voteId}:
+    get:
+      operationId: findVoteByPollIdAndVoteId
+      tags:
+        - Vote
+      summary: Find a specific vote
+      description: Return the Vote
+      parameters:
+        - name: id
+          description: Poll Id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+        - name: voteId
+          description: Vote Id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      responses:
+        '200':
+          description: it return the Vote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vote'
+              examples:
+                VoteExample1:
+                  $ref: '#/components/examples/VoteExample1'
+        '401':
+          description: Not authenticated
+        '403':
+          description: You have not the privilegy to perform this operation. Only the owner of the vote can access to the vote info
+        '404':
+          description: Poll or Vote Not Exist
+    put:
+      operationId: updateVoteByPollIdAndVoteId
+      tags:
+        - Vote
+      summary: Update a specific vote
+      description: Update a Vote
+      parameters:
+        - name: id
+          description: Poll Id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+        - name: voteId
+          description: Vote Id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vote'
+            examples:
+              VoteExample1:
+                $ref: '#/components/examples/VoteExample1'
+      responses:
+        '204':
+          description: Vote successfully updated
+        '401':
+          description: Not authenticated
+        '403':
+          description: You have not the privilegy to perform this operation. Only the owner of the vote can update the vote
+        '404':
+          description: Poll or Vote Not Exist
+          x-list-error-codes:
+            errors:
+              - code: 400
+                when: The current user have already voted the poll
+              - code: 401
+                when: Empty option
+              - code: 402
+                when:  Invalid option
+    delete:
+      operationId: deleteVoteByPollIdAndVoteId
+      tags:
+        - Vote
+      summary: Delete a specific vote
+      description: Delete a Vote
+      parameters:
+        - name: id
+          description: Poll Id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+        - name: voteId
+          description: Vote Id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      responses:
+        '204':
+          description: Poll successfully deleted
+        '401':
+          description: Not authenticated
+        '403':
+          description: You have not the privilegy to perform this operation. Only the owner of the vote can delete the vote
+        '404':
+          description: Poll or Vote Not Exist
+  /polls/{id}/computed-results:
+    get:
+      operationId: getComputedResults
+      tags:
+        - ComputedResult
+      summary: Get the results of a poll
+      description: Return results of a poll
+      parameters:
+        - name: id
+          description: Poll Id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          examples:
+            IndexExample:
+              $ref: '#/components/examples/IndexExample'
+      responses:
+        '200':
+          description: it return the Vote
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComputedResult'
+              examples:
+                VoteExample1:
+                  $ref: '#/components/examples/ComputedResultExample1'
+        '401':
+          description: Not authenticated
+        '403':
+          description: You have not the privilegy to perform this operation
+        '404':
+          description: Poll Not Exist
+components:
+  examples:
+    LoginRequestExample1:
+      value:
+        username: ADMIN
+        password: mypwd
+        locale: en
+    SessionExample1:
+      value:
+        user:
+          username: ADMIN
+          password: mypwd
+          firstname: paolo
+          lastname: rossi
+          email: paaaolo@gmail.com
+          roles:
+            - Voter
+            - Poller
+
+    IndexExample:
+      value:
+        1
+
+    PollExample1:
+      value:
+        id: 1
+        question: Who Will win Serie A ?
+        options:
+          - id: 1
+            value: Juventus
+          - id: 2
+            value: Inter
+      summary: A sample Of returned Poll
+
+    PollReqExample1:
+      value:
+        question: Who Will win Serie A ?
+      summary: A sample Of request to insert a Poll
+    PollDetailsExample1:
+      value:
+        question: Who Will win Serie A ?
+        options:
+          - value: Juventus
+          - value: Inter
+      summary: A sample Poll Details without vote
+    VoteExample1:
+      value:
+        id: 1
+        option:
+          id: 1
+          value: Inter
+      summary: A sample Of Vote of an option Poll
+    OptionExample1:
+      value:
+        id: 1
+        value: Inter
+    VoteListExample1:
+      value:
+        - id: 1
+          option:
+            id: 1
+            value: Juventus
+        - id: 2
+          option:
+            id: 1
+            value: Inter
+      summary: A sample Of list of votes related to a Poll
+
+    PollListPageExample1:
+      value:
+        first: true
+        last: false
+        size: 2
+        totalElements: 300
+        totalPages: 150
+        number: 0
+        contents:
+          - id: 1
+            question: Who Will win Serie A ?
+            createdAt: 2019-12-03T11:49:30.852000+01:00
+            options:
+              - id: 1
+                value: Juventus
+              - id: 2
+                value: Inter
+          - id: 2
+            question: Who Will win Serie B ?
+            options:
+              - id: 1
+                value: Pisa
+              - id: 2
+                value: Livorno
+            createdAt: 2019-12-03T11:49:30.852000+01:00
+      summary: A sample Of returned Poll
+
+    ComputedResultExample1:
+      value:
+        pollId: 1
+        totalVotes: 2
+        results:
+          - count: 1
+            percent: 50.0
+            option:
+              id: 1
+              value: Inter
+          - count: 1
+            percent: 50.0
+            option:
+              id: 2
+              value: Juventus
+      summary: A sample Of computed result of a Poll
+      
+    ErrorResponseExample1:
+      value:
+        - error:
+            code: 1
+            message: Operation Failed
+            userTitle: Operation Failed
+            userMessage: Operation Failed
+            internal:
+              exception: Fatal Exception
+              stack: it.list.exception
+      summary: A sample Of Error response
+  parameters:
+    pageParam:
+      description: The page number (zero-based index)
+      name: page
+      in: query
+      required: true
+      schema:
+        type: integer
+      examples:
+        zero:
+          value: 0
+          summary: A sample of page index
+    sizeParam:
+      name: size
+      in: query
+      description: The number of records per page
+      required: true
+      schema:
+        type: integer
+      examples:
+        zero:
+          value: 30
+          summary: A sample of page index
+    sortParam:
+      name: sort
+      in: query
+      required: false
+      description: 'The fields to sort (example sort=field1,desc&sort=field2,asc)'
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+      examples:
+        sort1:
+          value: sort=field1,desc&sort=field2,asc
+          summary: A sample of sort
+  securitySchemes:
+    api-auth-token:
+      type: apiKey
+      in: header
+      name: x-auth-token
+  schemas:
+    Option:
+      title: Option
+      type: object
+      description: An Option of a Poll
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          description: |
+            Unique id of an option
+        value:
+          type: string
+          minLength: 1
+          maxLength: 60
+          description: value of the option
+    Poll:
+      title: Poll
+      type: object
+      description: A poll is an election, or a survey of people's opinions to ask inside the platform
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          description: Unique Identifier of a Poll
+        question:
+          type: string
+          minLength: 1
+          maxLength: 60
+          description: question to ask to the users
+        editable:
+          type: boolean
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+        - question
+        - createdAt
+    PollDetails:
+      title: Poll Details
+      type: object
+      description: The details of a Poll
+      allOf:
+        - $ref: '#/components/schemas/Poll'
+        - type: object
+          # all other properties specific to a `Dog`
+          properties:
+            options:
+              type: array
+              items:
+                $ref: '#/components/schemas/Option'
+            myVote:
+              description: Vote of the current user about this poll
+              $ref: '#/components/schemas/Vote'
+
+
+    User:
+      title: User
+      type: object
+      description: User of poll service
+      properties:
+        username:
+          type: string
+          minLength: 5
+          maxLength: 20
+        password:
+          type: string
+          format: password
+          writeOnly: true
+          minLength: 8
+          maxLength: 20
+        firstname:
+          type: string
+          minLength: 1
+          maxLength: 20          
+        lastname:
+          type: string
+          maxLength: 20          
+        email:
+          type: string
+          format: email
+        roles:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/UserRoleEnum'
+      required:
+        - username
+        - password
+        - firstname
+        
+    UserRoleEnum:
+      type: string
+      enum:
+        - Voter
+        - Pollster
+    ErrorData:
+      title: ErrorData
+      type: object
+      description: It represents the reason for a failure of an operation
+      properties:
+        code:
+          type: integer
+          format: int64
+          description: It represents a fault reason code.
+        message:
+          type: string
+          description: A description of the error raised
+        userTitle:
+          type: string
+          description: A short description of the error raised, useful to use as an error popup title
+        userMessage:
+          type: string
+          description: A more detailed description of the error raised, useful to use as an error popup message
+        internal:
+          $ref: '#/components/schemas/ErrorInternal'
+      required:
+        - code
+        - message
+        - userTitle
+        - userMessage
+    ErrorInternal:
+      title: ErrorInternal
+      type: object
+      properties:
+        exception:
+          type: string
+        stack:
+          type: string
+          description: |-
+            It represents stacktrace of the error raised by the backend.
+            It is valued only in dev environment
+      required:
+        - it.list.poll.rest.exception
+    ErrorResponse:
+      title: ErrorResponse
+      type: object
+      description: It represents a Failure of API call.
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorData'
+      required:
+        - error
+    Vote:
+      title: Vote
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+          writeOnly: false
+        option:
+          $ref: '#/components/schemas/Option'
+        executedAt:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+        - id
+        - option
+    OptionCount:
+      title: Option total Counts
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
+        percent:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+        option:
+          $ref: '#/components/schemas/Option'
+      required:
+        - id
+        - option
+    ComputedResult:
+      title: ComputedResult
+      type: object
+      properties:
+        totalVotes:
+          description: total votes of a polls
+          type: integer
+          format: int64
+          readOnly: true
+        results:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OptionCount'
+      required:
+        - option
+    LoginRequest:
+      title: LoginRequest
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        locale:
+          type: string
+    Session:
+      title: Session
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        locale:
+          type: string
+    Page:
+      type: object
+      properties:
+        first:
+          type: boolean
+        last:
+          type: boolean
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        number:
+          type: integer
+      required:
+        - first
+        - last
+        - size
+        - totalElements
+        - totalPages
+        - number
+    PollListPage:
+      description: Paged Poll list
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            contents:
+              type: array
+              items:
+                $ref: '#/components/schemas/Poll'
+          required:
+            - contents

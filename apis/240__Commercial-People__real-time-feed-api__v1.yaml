@@ -1,0 +1,2426 @@
+openapi: 3.0.0
+info:
+  title: Real Time Feeds API
+  description: "The Commercial People Real-Time Feed API is designed to interact with a
+    central data provider such as CRM or agents in-house software. Estate Agents
+    can manage their properties using either cloud-based property management
+    software or locally installed software which will log changes to a central
+    data system. As the changes are implemented on the agents' central system, a
+    message is sent to the Commercial People Real-Time Feed API to update the data that will be displayed on Commercial People.
+    
+    - Listings, UK & Overseas (v1/listings): this is the Commercial People bespoke group for listings endpoints, through which it is possible to create both UK and overseas listings, as well as update, remove, get one, and fetch multiple. We recommend using these endpoints ideally, as much as it is possible and/or feasible for you to do so, as they allow for better control over your listings (i.e. you can set multiple categories for your listing, which in turn has an impact on the visibility of the listing in the search results, assign staff to listing, etc). Supports JSON format only.
+    
+    - UK Properties (v1/properties): similar to the listings endpoints, these endpoints also manage listings (or properties). You can create or update a listing using the SendPropertyDetails endpoint, remove a property using the RemoveProperty endpoint, or get a list of properties by branch through GetBranchPropertyList endpoint. The endpoints in this group have compatibility with Rightmove's API v1.3.2. These are built so that agents can use their already existing payload if they have this, to send their data through this api without the need to make changes, wished they to use these endpoints. Supports both JSON and XML format.
+    
+    - Branches (v1/branches): Commercial People bespoke group of endpoints for managing branches of a given company or  companies, as per permissions and/or consents given to other companies to manage these. Supports JSON format only.
+    
+    - People (v1/people): Commercial People bespoke group of endpoints for managing people (or 'staff') of a given company or companies, as per permissions and/or consents given to other companies to manage these. Supports JSON format only.
+    
+    - CRM Consents (v1/consents) - manage consents between a crm company and a managed company. Supports JSON format only."
+  contact: {}
+  version: "v1"
+servers:
+- url: 'sandbox.rtfapi.commercialpeople.com'
+  description: staging environment
+- url: 'rtfapi.commercialpeople.com'
+  description: production environment
+
+paths:
+##################################
+####### Listings endpoints #######
+##################################
+  /v1/listings:
+    get:
+      tags:
+      - Listings (UK & Overseas)
+      summary: List listings
+      description: 'List listings'
+      operationId: ListListings
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      - in: query
+        name: company_id
+        required: true
+        description: The company for which to view the listings. There needs to be a consent between the crm and this company
+        schema:
+          type: string
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+        description: The numbers of items to return
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+        description: The page of the results list
+        
+
+      responses:
+        200:
+          description: 200 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.listings.list_multiple_response'
+                
+    post:
+      tags:
+      - Listings (UK & Overseas)
+      summary: Create listing
+      description: 'Create a listing'
+      operationId: CreateListing
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/v1.listings.request_body'
+        required: true
+      responses:
+        201:
+          description: 201 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.listings.success_response'
+        422:
+          description: 422 Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.listings.failed_response'
+      deprecated: false
+  /v1/listings/{id}:
+    get:
+      tags:
+      - Listings (UK & Overseas)
+      summary: Get a listing
+      description: 'Get a listing'
+      operationId: GetOneListing
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      - name: id
+        in: path
+        description: Listing ID
+        required: true
+        schema:
+          type: string
+          format: uuid4
+
+      responses:
+        200:
+          description: 200 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.listings.success_response'
+        404:
+          description: 404 Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/general.not_found_response'
+                
+    put:
+      tags:
+      - Listings (UK & Overseas)
+      summary: Update listing
+      description: 'Update a listing. Warning: Will nullify all fields that are not required if you do not send them. Which means that ideally, you should always send the full payload for a listing, updating only the fields you want to be updated.'
+      operationId: UpdateListing
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      - name: id
+        in: path
+        description: Listing ID
+        required: true
+        schema:
+          type: string
+          format: uuid4
+      
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/v1.listings.request_body'
+        required: true
+      responses:
+        200:
+          description: 200 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.listings.success_response'
+        422:
+          description: 422 Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.listings.failed_response'
+      deprecated: false
+    delete:
+      tags:
+      - Listings (UK & Overseas)
+      summary: Delete a listing
+      description: 'Delete a listing'
+      operationId: DeleteListing
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      - name: id
+        in: path
+        description: Listing ID
+        required: true
+        schema:
+          type: string
+          format: uuid4
+
+      responses:
+        204:
+          description: 204 No Content (deleted)
+          headers: {}
+        404:
+          description: 404 Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/general.not_found_response'
+
+##################################
+####### Branches endpoints #######
+##################################
+  /v1/branches:
+    get:
+      tags:
+      - Branches
+      summary: List branches
+      description: 'List branches'
+      operationId: ListBranches
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      - in: query
+        name: company_id
+        required: true
+        description: The company for which to view the branches. There needs to be a consent between the crm and this company
+        schema:
+          type: string
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+        description: The numbers of items to return
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+        description: The page of the results list
+        
+
+      responses:
+        200:
+          description: 200 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.branches.list_multiple_response'
+                
+    post:
+      tags:
+      - Branches
+      summary: Create branch
+      description: 'Create a branch'
+      operationId: CreateBranch
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/v1.branches.request_body'
+        required: true
+      responses:
+        201:
+          description: 201 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.branches.success_response'
+        422:
+          description: 422 Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.branches.failed_response'
+      deprecated: false
+
+  /v1/branches/{id}:
+    get:
+      tags:
+      - Branches
+      summary: Get a branch
+      description: 'Get a branch'
+      operationId: GetOneBranch
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      - name: id
+        in: path
+        description: Branch ID
+        required: true
+        schema:
+          type: string
+          format: uuid4
+
+      responses:
+        200:
+          description: 200 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.branches.success_response'
+        404:
+          description: 404 Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/general.not_found_response'
+                
+    put:
+      tags:
+      - Branches
+      summary: Update a branch
+      description: 'Update a branch. Warning: Will nullify all fields that are not required if you do not send them. Which means that ideally, you should always send the full payload for a branch, updating only the fields you want to be updated.'
+      operationId: UpdateBranch
+      parameters:
+      - name: id
+        in: path
+        description: Branch ID
+        required: true
+        schema:
+          type: string
+          format: uuid4
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/v1.branches.request_body'
+        required: true
+      responses:
+        200:
+          description: 200 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.branches.success_response'
+        422:
+          description: 422 Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.branches.failed_response'
+      deprecated: false
+    
+    delete:
+      tags:
+      - Branches
+      summary: Delete a branch
+      description: 'Delete a branch'
+      operationId: DeleteBranch
+      parameters:
+      - name: id
+        in: path
+        description: Branch ID
+        required: true
+        schema:
+          type: string
+          format: uuid4
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+
+      responses:
+        204:
+          description: 204 No Content (deleted)
+          headers: {}
+        404:
+          description: 404 Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/general.not_found_response'
+                
+##################################
+#### People (staff) endpoints ####
+##################################
+  /v1/people:
+    get:
+      tags:
+      - People
+      summary: List people
+      description: 'List people'
+      operationId: ListPeople
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      - in: query
+        name: company_id
+        required: true
+        description: The company for which to view the people. There needs to be a consent between the crm and this company. The crm company can also request its own people / staff
+        schema:
+          type: string
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+        description: The numbers of items to return
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+        description: The page of the results list
+
+      responses:
+        200:
+          description: 200 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.people.list_multiple_response'
+                
+    post:
+      tags:
+      - People
+      summary: Create a person
+      description: 'Create a person'
+      operationId: CreatePerson
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/v1.people.request_body'
+        required: true
+      responses:
+        201:
+          description: 201 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.people.successful_response'
+        422:
+          description: 422 Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.people.failed_response'
+      deprecated: false
+
+  /v1/people/{id}:
+    get:
+      tags:
+      - People
+      summary: Get a person
+      description: 'Get a person'
+      operationId: GetOnePerson
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      - name: id
+        in: path
+        description: Person ID
+        required: true
+        schema:
+          type: string
+          format: uuid4
+      responses:
+        200:
+          description: 200 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.people.request_body'
+        404:
+          description: 404 Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/general.not_found_response'
+
+    put:
+      tags:
+      - People
+      summary: Update a person
+      description: 'Update a person. Warning: Will nullify all fields that are not required if you do not send them. Which means that ideally, you should always send the full payload for a person, updating only the fields you want to be updated.'
+      operationId: UpdatePerson
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      - name: id
+        in: path
+        description: Person ID
+        required: true
+        schema:
+          type: string
+          format: uuid4
+      
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/v1.people.request_body'
+        required: true
+      responses:
+        200:
+          description: 200 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.people.successful_response'
+        422:
+          description: 422 Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.people.failed_response'
+      deprecated: false
+    
+    delete:
+      tags:
+      - People
+      summary: Delete a person
+      description: 'Delete a person'
+      operationId: DeletePerson
+      parameters:
+      - name: id
+        in: path
+        description: Person ID
+        required: true
+        schema:
+          type: string
+          format: uuid4
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+
+      responses:
+        204:
+          description: 204 No Content (deleted)
+          headers: {}
+        404:
+          description: 404 Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/general.not_found_response'
+
+##################################
+##### CRM Consents endpoints #####
+##################################
+  /v1/consents:
+    get:
+      tags:
+      - CRM Consents
+      summary: List CRM Consents
+      description: 'List CRM Consents'
+      operationId: ListConsents
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 20
+        description: The numbers of items to return
+      - in: query
+        name: page
+        schema:
+          type: integer
+          default: 1
+        description: The page of the results list
+      - in: query
+        name: company_name
+        schema:
+          type: string
+        description: 'You can use this to filter the list of results by company name. This is a case insensitive parameter and will match partial names. Example: will return consents for a company named "Company" if what you send is "Mpan"'
+
+      responses:
+        200:
+          description: 200 Successful response
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/v1.consents.list_multiple_response'
+
+  ###################################################
+  ###### UK Properties (rightmove compatible) #######
+  ###################################################
+  /v1/property/sendpropertydetails:
+    post:
+      tags:
+      - UK Properties
+      summary: Send Property Details
+      description: 'Create or update a listing. Will use branch_id and property.agent_ref to identify if a listing exists. Otherwise, it will create one with those values.'
+      operationId: SendPropertyDetails
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendPropertyDetailsRequest'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/SendPropertyDetailsRequest'
+        required: true
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/200-Create-Update-Or-Delete-Successful-Response'
+            application/xml:  
+              schema:
+                $ref: '#/components/schemas/200-Create-Update-Or-Delete-Successful-Response'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400-Create-Update-Or-Delete-Failed-Response'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/400-Create-Update-Or-Delete-Failed-Response'
+      deprecated: false
+      
+  /v1/property/removeproperty:
+    post:
+      tags:
+      - UK Properties
+      summary: Remove Property
+      description: 'Removes a property from Commercial People based on the combined identifier of branch.branch_id and property.agent_ref'
+      operationId: RemoveProperty
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RemovePropertyRequest'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/RemovePropertyRequest'
+        required: true
+      responses:
+        200:
+          description: OK Succesful response (Same format as send property endpoint so reusing the example)
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/200-Create-Update-Or-Delete-Successful-Response'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/200-Create-Update-Or-Delete-Successful-Response'
+        400:
+          description: Bad Request (Same format as send property endpoint so reusing the example)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400-Create-Update-Or-Delete-Failed-Response'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/400-Create-Update-Or-Delete-Failed-Response'
+      deprecated: false
+
+  /v1/property/getbranchpropertylist:
+    post:
+      tags:
+      - UK Properties
+      summary: Get Branch Property List (Beta)
+      description: 'Uses branch_id to get a list of properties created for that branch. Channel can be specified to view sales or lettings'
+      operationId: GetBranchPropertyList
+      parameters:
+      - name: Content-Type
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          example: application/json
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetBranchPropertyRequest'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/GetBranchPropertyRequest'
+        required: true
+      responses:
+        200:
+          description: OK Succesful response (Same format as send property endpoint so reusing the example)
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/200-Branch-Property-List-Successful-Response'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/200-Branch-Property-List-Successful-Response'
+        400:
+          description: Bad Request (Same format as send property endpoint so reusing the example)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/400-Branch-Property-List-Failed-Response'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/400-Branch-Property-List-Failed-Response'
+      deprecated: false
+
+################################################################
+                    ## Components ##
+################################################################
+components:
+  schemas:
+    ################  SendPropertyDetails  #######################
+    SendPropertyDetailsRequest:
+      title: SendPropertyDetailsRequest
+      required:
+        - branch
+        - property
+      type: object
+      properties:
+        branch:
+          $ref: '#/components/schemas/SendPropertyDetailsRequest.Branch'
+        property:
+          $ref: '#/components/schemas/SendPropertyDetailsRequest.Property'
+      example:
+        branch:
+          branch_id: 12345
+          channel: 2
+        property:
+          agent_ref: '1W3SD6'
+          published: true
+          property_type: 8
+          status: 1
+          date_available: 01-04-2017
+          address:
+            country_code: GB
+            house_name_number: 33 Soho Square
+            address_2: more address details
+            town: London
+            postcode_1: W1D
+            postcode_2: 3QU
+            display_address: Soho Square, London
+            latitude: 51.514899
+            longitude: -0.13258700000000001
+          price_information:
+            price: 2000
+            price_qualifier: 0
+            price_per_unit_area: 560
+            rent_frequency: 365
+            deposit: 3000
+            administration_fee: Single tenant £185.00 application fee. Additional tenants £50.00 each. Guarantors (if required) £50.00 each
+            tenure_type: 2
+          details:
+            summary: Summary is here
+            description: This beautiful, spacious, 1-bedroom apartment, created entirely for test purposes, is situated in the stunning location of Soho Square. It has a light, sunny aspect with views over this incredible city.
+            features:
+              - Brand New
+              - Private Parking
+              - Panoramic views
+              - Lift Access
+              - Private Patio
+            bedrooms: 1
+            bathrooms: 1
+            reception_rooms: 1
+            year_built: 1999
+            entrance_floor: 6
+            floors: 2
+            condition: 1
+            furnished_type: 2
+            all_bills_inc: false
+            sizing:
+              minimum: 4
+              maximum: 6
+              area_unit: 3
+            comm_use_class:
+              - 1
+              - 4
+              - 10
+          media:
+            - media_type: 2
+              media_url: https://www.test-properties.co.uk/uploads/mytestflat/floorplan.jpg
+              caption: Floor plan
+            - media_type: 3
+              media_url: https://www.test-properties.co.uk/uploads/mytestflat/brochure.jpg
+              caption: Brochure
+            - media_type: 1
+              media_url: https://www.test-properties.co.uk/uploads/mytestflat/epc.jpg
+              caption: EPC
+    SendPropertyDetailsRequest.Branch:
+      title: Branch
+      required:
+        - branch_id
+        - channel
+      type: object
+      properties:
+        branch_id:
+          anyOf:
+            - type: integer
+            - type: string
+          description: internally, branch_id will be mapped to the branch agent reference registered with Commercial People
+        channel:
+          type: integer
+          enum: [1 => sale, 2 => rent]
+      example:
+        branch_id: 12345
+        channel: 2
+    SendPropertyDetailsRequest.Property:
+      title: SendPropertyDetailsRequest.Property
+      required:
+        - agent_ref
+        - property_type
+        - status
+        - address
+        - price_information
+        - details
+      type: object
+      properties:
+        agent_ref:
+          type: string
+          description: Listing agent reference. Cannot be longer than 48 characters
+        published:
+          type: boolean
+          description: Whether the listing will be displayed on the website. Default is true
+        property_type:
+          type: integer
+          enum: [1 => terraced houses, 2 => end of terrace, 3 => semi detached houses, 4 => detached houses, 5 => mews houses, 6 => cluster house, 7 => ground house, 8 => flat, 9 => studio, 10 => ground, 11 => maisonette, 12 => bungalow, 13 => terraced bungalow, 14 => semi detached bungalow, 15 => detached bungalow, 16 => mobile home, 20 => land, 241 => land duplicate id, 21 => link detached, 22 => town house, 23 => cottage houses, 24 => chalet houses, 27 => villa houses, 28 => apartment, 29 => penthouse, 30 => finca, 43 => barn conversion, 44 => serviced apartments, 45 => parking garage, 46 => sheltered housing, 47 => retirement property, 48 => house share, 49 => flat share, 50 => park home, 51 => garages, 52 => farm houses, 53 => equestrian facility, 56 => duplex, 59 => triplex, 62 => longere, 65 => gite, 68 => barn, 71 => trulli, 74 => mill, 86 => mill duplicate id, 77 => ruins, 80 => restaurant, 83 => cafe, 92 => castle, 95 => village, 101 => cave, 104 => cortijo, 107 => farm land, 110 => plot land, 113 => country house, 116 => stone house, 117 => caravan mobile, 118 => lodge, 119 => log cabin, 120 => manor house, 121 => stately home, 125 => off plan land, 128 => semi detached villa, 131 => detached villa, 134 => bar nightclub, 137 => shop, 140 => riad, 141 => house boat, 142 => hotel room, 143 => block of apartments, 144 => private halls, 178 => office, 181 => business park, 184 => serviced office, 187 => retail property high street, 190 => retail property out of town, 193 => convenience store, 196 => garage, 199 => hairdresser barber, 202 => hotel, 205 => petrol station, 208 => post office, 211 => pub, 214 => workshop, 217 => distribution warehouse, 220 => factory, 223 => heavy industrial, 226 => industrial park, 229 => light industrial, 232 => storage, 235 => showroom, 238 => warehouse, 244 => commercial development, 247 => industrial development, 250 => residential development, 253 => commercial property, 256 => data centre, 259 => farm, 262 => healthcare facility, 265 => marine property, 268 => mixed use, 271 => research and development, 274 => science park, 277 => guest house, 280 => hospitality, 283 => leisure facility, 298 => takeaway, 301 => childcare facility, 304 => smallholding land, 307 => place of worship, 310 => trade counter, 511 => coach house]
+        let_type:
+          type: integer
+          enum: [0 => not specified, 1 => long term, 2 => short term, 4 => commercial]
+          description: Applies to listings of type rent only.
+        location_private:
+          type: boolean
+          description: 'Whether location of the property is to be kept secret. By default this is false.'
+        status:
+          type: integer
+          enum: [1 => available, 2 => sstc, 3 => sstcm, 4 => under offer, 5 => reserved, 6 => let agreed]
+        date_available:
+          type: string
+        address:
+          $ref: '#/components/schemas/SendPropertyDetailsRequest.Address'
+        price_information:
+          $ref: '#/components/schemas/PriceInformation'
+        details:
+          $ref: '#/components/schemas/Details'
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/SendPropertyDetailsRequest.Medium'
+      example:
+        agent_ref: '1W3SD6'
+        published: true
+        property_type: 8
+        status: 1
+        date_available: 01-04-2017
+        address:
+          country_code: GB
+          house_name_number: 33 Soho Square
+          address_2: more address details
+          town: London
+          postcode_1: W1D
+          postcode_2: 3QU
+          display_address: Soho Square, London
+          latitude: 51.514899
+          longitude: -0.13258700000000001
+        price_information:
+          price: 2000
+          price_qualifier: 0
+          price_per_unit_area: 560
+          rent_frequency: 365
+          deposit: 3000
+          administration_fee: Single tenant £185.00 application fee. Additional tenants £50.00 each. Guarantors (if required) £50.00 each
+          tenure_type: 2
+        details:
+          summary: Summary is here
+          description: This beautiful, spacious, 1-bedroom apartment, created entirely for test purposes, is situated in the stunning location of Soho Square. It has a light, sunny aspect with views over this incredible city.
+          features:
+            - Brand New
+            - Private Parking
+            - Panoramic views
+            - Lift Access
+            - Private Patio
+          bedrooms: 1
+          bathrooms: 1
+          reception_rooms: 1
+          year_built: 1999
+          entrance_floor: 6
+          floors: 2
+          condition: 1
+          furnished_type: 2
+          all_bills_inc: false
+          sizing:
+            minimum: 4
+            maximum: 6
+            area_unit: 3
+          comm_use_class:
+            - 1
+            - 4
+            - 10
+        media:
+          - media_type: 2
+            media_url: https://www.test-properties.co.uk/uploads/mytestflat/floorplan.jpg
+            caption: Floor plan
+          - media_type: 3
+            media_url: https://www.test-properties.co.uk/uploads/mytestflat/brochure.jpg
+            caption: Brochure
+          - media_type: 1
+            media_url: https://www.test-properties.co.uk/uploads/mytestflat/epc.jpg
+            caption: EPC
+    SendPropertyDetailsRequest.Address:
+      title: Address
+      required:
+        - house_name_number
+        - town
+        - postcode_1
+        - postcode_2
+        - display_address
+      type: object
+      properties:
+        country_code:
+          type: string
+          description: 2-letter ISO-3166 country code. Currently only 'GB' is supported, this value being set by default.
+        house_name_number:
+          type: string
+          description: First line of the address (eg. number and street name)
+        address_2:
+          type: string
+        town:
+          type: string
+        postcode_1:
+          type: string
+          description: First part of the postcode. Eg 'NW1' from full postcode 'NW1 6XE'
+        postcode_2:
+          type: string
+          description: Second part of the postcode. Eg '6XE' from full postcode 'NW1 6XE'
+        display_address:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+      example:
+        country_code: GB
+        house_name_number: 33 Soho Square
+        address_2: additional address info
+        town: London
+        postcode_1: W1D
+        postcode_2: 3QU
+        display_address: Soho Square, London
+        latitude: 51.514899
+        longitude: -0.13258700000000001
+    PriceInformation:
+      title: PriceInformation
+      required:
+        - price
+      type: object
+      properties:
+        price:
+          type: integer
+        price_qualifier:
+          type: integer
+          enum: [0 => defaults, 1 => poa, 2 => guide price, 3 => fixed price, 4 => offers in excess of, 5 => oiro, 6 => sale by tender, 7 => from, 9 => shared ownership, 10 => offers over, 11 => part buy rent, 12 => shared equity, 16 => coming soon]
+        price_per_unit_area:
+          type: integer
+        rent_frequency:
+          type: integer
+          enum: [1 => yearly, 4 => quarterly, 12 => monthly, 52 => weekly, 65 => daily]
+          description: If not specified, monthly will be assumed.
+        deposit:
+          type: integer
+        administration_fee:
+          type: string
+        tenure_type:
+          type: integer
+          enum: [1 => freehold, 2 => leasehold, 3 => feudal, 4 => commonhold, 5 => share of freehold]
+      example:
+        price: 2000
+        price_qualifier: 0
+        price_per_unit_area: 560
+        rent_frequency: 365
+        deposit: 3000
+        administration_fee: Single tenant £185.00 application fee. Additional tenants £50.00 each. Guarantors (if required) £50.00 each
+        tenure_type: 2
+    Details:
+      title: Details
+      required:
+        - summary
+        - description
+        - bedrooms
+        - sizing
+        - comm_use_class
+      type: object
+      properties:
+        summary:
+          type: string
+        description:
+          type: string
+        features:
+          type: array
+          items:
+            type: string
+        bedrooms:
+          type: integer
+        bathrooms:
+          type: integer
+        reception_rooms:
+          type: integer
+        year_built:
+          type: integer
+        entrance_floor:
+          type: integer
+        floors:
+          type: integer
+        condition:
+          type: integer
+          enum: [1 => good, 2 => some work needed, 3 => work required throughout, 4 => major renovation required]
+        furnished_type:
+          type: integer
+          enum: [0 => furnished, 1 => partially furnished, 2 => unfurnished, 4 => not specified]
+        all_bills_inc:
+          type: boolean
+        sizing:
+          $ref: '#/components/schemas/Sizing'
+        comm_use_class:
+          type: array
+          description: 'Used to identify type of commercial property. Will only apply to listings of type commercial, not residential. You can find more about the codes by looking up "commercial property classes"'
+          items:
+            type: integer
+            enum: [1 => a1, 4 => a2, 7 => a3, 10 => a4, 13 => a5, 16 => b1, 19 => b2, 22 => b8, 25 => c1, 28 => c2, 31 => c2a, 34 => c3, 37 => d1, 40 => d2, 43 => sui_generis_1, 46 => sui_generis_2]
+          
+      example:
+        summary: Beautiful, spacious, 1 bedroom apartment
+        description: This beautiful, spacious, 1-bedroom apartment, created entirely for test purposes, is situated in the stunning location of Soho Square. It has a light, sunny aspect with views over this incredible city.
+        features:
+          - Brand New
+          - Private Parking
+          - Panoramic views
+          - Lift Access
+          - Private Patio
+        bedrooms: 1
+        bathrooms: 1
+        reception_rooms: 1
+        year_built: 1999
+        entrance_floor: 6
+        floors: 2
+        condition: 1
+        furnished_type: 2
+        all_bills_inc: false
+        sizing:
+          minimum: 4
+          maximum: 6
+          area_unit: 3
+        comm_use_class:
+          - 1
+          - 4
+          - 10
+    Sizing:
+      title: Sizing
+      type: object
+      properties:
+        minimum:
+          type: integer
+        maximum:
+          type: integer
+        area_unit:
+          type: integer
+          enum: [1 => square feet, 2 => square metres, 3 => acres, 4 => hectares]
+      example:
+        minimum: 4
+        maximum: 6
+        area_unit: 3
+        
+    SendPropertyDetailsRequest.Medium:
+      title: Medium
+      description: '"Medium" is the name of an object inside the media property'
+      required:
+        - media_type
+        - media_url
+      type: object
+      properties:
+        media_type:
+          type: integer
+          enum: [1 => image, 2 => floor plan, 3 => brochure, 4 => virtual tour, 5 => audio tour, 6 => epc, 7 => epc graph]
+        media_url:
+          type: string
+          description: Needs to be valid, unencoded, url
+        caption:
+          type: string
+      example:
+        media_type: 2
+        media_url: https://www.test-properties.co.uk/uploads/mytestflat/floorplan.jpg
+        caption: Floor plan
+      
+    Error:
+      title: Error
+      required:
+        - error_code
+        - error_description
+        - error_value
+      type: object
+      properties:
+        error_code:
+          type: string
+        error_description:
+          type: string
+        error_value:
+          type: string
+      example:
+        error_code: 0
+        error_description: 'Your listing could not be saved. Message: Data could not be deserialized'
+        error_value: ''
+    200-Create-Update-Or-Delete-Successful-Response:
+      title: 200-Create-Update-Or-Delete-Successful-Response
+      required:
+        - request_id
+        - message
+        - success
+        - request_timestamp
+        - response_timestamp
+        - property
+      type: object
+      properties:
+        request_id:
+          type: string
+        message:
+          type: string
+        success:
+          type: boolean
+        request_timestamp:
+          type: string
+        response_timestamp:
+          type: string
+        property:
+          $ref: '#/components/schemas/CommonResponse.Property'
+      example:
+        request_id: 62fa0f1ee8cdd2ff4729175dea68bf80
+        message: Action was completed successfully
+        success: true
+        request_timestamp: 15-05-2019 03:18:52
+        response_timestamp: 15-05-2019 03:18:59
+        property:
+          agent_ref: '1W3SD6'
+          rightmove_id: bd5e90e4-rc77-4fd3-8403-a8y5897238u4
+          rightmove_url: commercialpeople.com/gb/property/y684vs-dummy-listing/
+          change_type: update
+    400-Create-Update-Or-Delete-Failed-Response:
+      title: 400-Create-Update-Or-Delete-Failed-Response
+      required:
+        - request_id
+        - message
+        - success
+        - request_timestamp
+        - response_timestamp
+        - property
+        - errors
+      type: object
+      properties:
+        errors:
+          $ref: '#/components/schemas/Error'
+        request_id:
+          type: string
+        message:
+          type: string
+        success:
+          type: boolean
+        request_timestamp:
+          type: string
+        response_timestamp:
+          type: string
+        property:
+          $ref: '#/components/schemas/CommonResponse.Property'
+      example:
+        errors:
+          error_code: 0
+          error_description: 'Your listing could not be saved. Message: Data could not be deserialized'
+          error_value: ''
+        request_id: 0f02420803a88328d6983f5b07cee322
+        message: Something went wrong. Please check error description
+        success: false
+        request_timestamp: 15-05-2019 03:16:31
+        response_timestamp: 15-05-2019 03:16:35
+        property:
+          agent_ref: '1W3SD6'
+          rightmove_id: ''
+          rightmove_url: ''
+          change_type: 'create'
+          
+    200-Branch-Property-List-Successful-Response:
+      title: 200-Branch-Property-List-Successful-Response
+      required:
+        - request_id
+        - message
+        - success
+        - request_timestamp
+        - response_timestamp
+        - branch
+        - property
+      type: object
+      properties:
+        request_id:
+          type: string
+        message:
+          type: string
+        success:
+          type: boolean
+        request_timestamp:
+          type: string
+        response_timestamp:
+          type: string
+        branch:
+          $ref: '#/components/schemas/GetBranchPropertyList.Branch'
+        property:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetBranchPropertyResponse.Property'
+      example:
+        request_id: 62fa0f1ee8cdd2ff4729175dea68bf80
+        message: Action was completed successfully
+        success: true
+        request_timestamp: 15-05-2019 03:18:52
+        response_timestamp: 15-05-2019 03:18:59
+        branch:
+         
+        property:
+          items:
+            - rightmove_id: '2GH4SH'
+              agent_ref: '1W3SD6'
+              update_date: '15-05-2018 02:21:44'
+              channel: '1'
+            - rightmove_id: '7HG7HG'
+              agent_ref: '2GHDKO'
+              update_date: '15-05-2018 02:20:42'
+              channel: '2'
+    400-Branch-Property-List-Failed-Response:
+      title: 400-Branch-Property-List-Failed-Response
+      required:
+        - request_id
+        - message
+        - success
+        - request_timestamp
+        - response_timestamp
+        - property
+        - errors
+      type: object
+      properties:
+        errors:
+          $ref: '#/components/schemas/Error'
+        request_id:
+          type: string
+        message:
+          type: string
+        success:
+          type: boolean
+        request_timestamp:
+          type: string
+        response_timestamp:
+          type: string
+        property:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetBranchPropertyResponse.Property'  
+      example:
+        errors:
+          error_code: 0
+          error_description: 'Message: Data could not be deserialized'
+          error_value: ''
+        request_id: 0f02420803a88328d6983f5b07cee322
+        message: Something went wrong. Please check error description
+        success: false
+        request_timestamp: 15-05-2019 03:16:31
+        response_timestamp: 15-05-2019 03:16:35
+        property: []
+          
+    
+    ##############################################
+    ############### RemoveProperty ###############
+    ##############################################
+    RemovePropertyRequest:
+      title: RemovePropertyRequest
+      required:
+        - branch
+        - property
+      type: object
+      properties:
+        branch:
+          $ref: '#/components/schemas/RemovePropertyRequest.Branch'
+        property:
+          $ref: '#/components/schemas/RemovePropertyRequest.Property'
+      example:
+        branch:
+          branch_id: 12345
+        property:
+          agent_ref: '1W3SD6'
+    
+    RemovePropertyRequest.Branch:
+      title: RemovePropertyRequest.Branch
+      required:
+        - branch_id
+      properties:
+        branch_id:
+          anyOf:
+            - type: integer
+            - type: string
+          description: internally, branch_id will be mapped to the branch agent reference registered with Commercial People
+            
+    RemovePropertyRequest.Property:
+      title: RemovePropertyRequest.Property
+      required:
+        - agent_ref
+      type: object
+      properties:
+        agent_ref:
+          type: string
+          description: listing agent reference, used in combination with branch_id to identify specific listings
+      example:
+        agent_ref: '1W3SD6'
+        
+    ##############################################
+    ######### GetBranchPropertyDetails ###########
+    ##############################################
+    GetBranchPropertyRequest:
+      title: GetBranchPropertyRequest
+      required:
+        - branch
+      type: object
+      properties:
+        branch:
+          $ref: '#/components/schemas/GetBranchPropertyList.Branch'
+      example:
+        branch:
+          branch_id: 12345
+          channel: null
+    
+    GetBranchPropertyList.Branch:
+      title: GetBranchPropertyList.Branch
+      required:
+        - branch_id
+      properties:
+        branch_id:
+          anyOf:
+            - type: integer
+            - type: string
+          description: internally, branch_id will be mapped to the branch agent reference registered with Commercial People
+        channel:
+          type: integer
+          enum: [1 => sale, 2 => rent]
+          description: If provided in request, it will be used to return property list of types sale or lettings as channel id. Please check enum values
+    
+    GetBranchPropertyResponse.Property:
+      title: GetBranchPropertyResponse.Property
+      required:
+        - rightmove_id
+        - agent_ref
+        - update_date
+      type: object
+      properties:
+        agent_ref:
+          type: string
+          description: Listing agent reference
+        rightmove_id:
+          type: string
+          description: Id of the listing
+        update_date:
+          type: string
+          description: Date when property/listing was updated. It will be the same as creation date if it was never updated
+        channel:
+          type: string
+          description: Whether the listing/property is a sale (channel 1) or a letting (channel 2).
+      example:
+        agent_ref: '1W3SD6'
+        rightmove_id: '123_BCA-random'
+        update_date: 'date'
+        channel: 2
+
+    ######################################
+    ############### Common ###############
+    ######################################
+    
+    CommonResponse.Property:
+
+      title: CommonResponse.Property
+      required:
+        - agent_ref
+        - rightmove_id
+        - rightmove_url
+        - change_type
+      type: object
+      properties:
+        agent_ref:
+          type: string
+          description: Listing agent reference
+        rightmove_id:
+          type: string
+        rightmove_url:
+          type: string
+        change_type:
+          type: string
+          enum: ['create', 'update', 'remove']
+      example:
+        agent_ref: '1W3SD6'
+        rightmove_id: bd5e90e4-rc77-4fd3-8403-a8y5897238u4
+        rightmove_url: commercialpeople.com/gb/property/y684vs-dummy-listing/
+        # change type value varies depending on endpoint used and if the listing exists
+        change_type: ''
+    
+    ###################################################
+    ################  Listings  #######################
+    ###################################################
+    v1.listings.request_body:
+      title: CreateUpdateListing
+      required:
+        - listing_type
+        - transaction_type
+        - branch_reference
+        - agent_reference
+        - permit_number
+        - published
+        - status
+        - display_address
+        - summary
+        - description
+        - categories
+        - address
+        - media
+        - price
+      type: object
+      properties:
+        transaction_type: 
+          type: string
+          description: Will differentiate between rent and sale listings. Not updatable.
+          enum: ['sale', 'rent']
+        listing_type:
+          type: string
+          description: Will differentiate between residential and commercial listings. Not updatable.
+          enum: ['residential', 'commercial']
+        bedrooms: 
+          anyOf:
+            - type: integer
+            - type: number
+          description: Number of bedrooms. It is required if listing_type is 'residential'.
+        branch_reference:
+          type: string
+          description: Used to identify branch that the listing relates to. Although updatable, you need to provide a reference to a branch inside the same company as the branch that was used when creating the listing.
+        agent_reference:
+          type: string
+          description: An identifier used by the agent to refer to the listing. Cannot be longer than 48 characters
+        permit_number:
+          type: string
+          description: Required for 'AE' (Arab Emirates) listings.
+        tenure:
+          type: string
+          enum: ['freehold', 'leasehold', 'feudal', 'commonhold', 'sharehold', 'long_leasehold', 'share_of_freehold', 'freehold_or_leasehold', 'unknown']
+        published: 
+          type: boolean
+          description: If listing will be published. Default true.
+        status:
+          type: string
+          enum: ['available', 'draft', 'unavailable', 'under_offer', 'on_hold', 'stc', 'stcm', 'sold', 'let_agreed', 'reserved', 'leased']
+        condition:
+          type: string
+          enum: ['good', 'some_work_required', 'work_required_throughout', 'major_renovation_required']
+        display_address:
+          type: string
+          description: Will be used in property details page, used to generate pdf title when exporting listing to pdf, etc.
+        summary:
+          type: string
+          description: a short summary for describing the listing.
+        description: 
+          type: string
+          description: The listing main description. Can contain html for manipulating formatting.
+        tenancy_fees:
+          type: string
+          description: Describe any additional details about fees.
+        deposit:
+          type: integer
+          description: Deposit value paid upfront
+        bills_included:
+          type: boolean
+          description: Whether bills are included in the price or not.
+        available_at:
+          type: string
+          description: Can take "2024-10-31 16:31:59" but can also take "2024-10-31"
+        letting_type:
+          type: string
+          enum: ['short_term','long_term','student','commercial']
+        minimum_term:
+          type: string
+          description: Specify minimum letting term for listings with transaction_type 'rent'.
+        floors: 
+          type: integer
+          description: Specify the number of floors in the building.
+        entrance_location:
+          type: string
+          description: Describe how to access the premises, or the floor for example.
+        year_built: 
+          type: integer
+          description: When the building was built
+        features: 
+          type: array
+          items:
+            type: string
+          description: An array of strings specifying additional features of the property
+        furnishing: 
+          type: string
+          enum: ['unfurnished','part_furnished','furnished']
+        bathrooms:
+          type: integer
+          description: Number of bathrooms in the listed property
+        reception_rooms:
+          type: integer
+          description: Number of reception rooms in the listed property
+        categories: 
+          type: array
+          items: 
+            type: string
+          description: At least one required. Not all categories are valid for all countries. Please contact us for a list of valid categories for your country. 
+          enum: ['agricultural-land', 'agriculture-businesses', 'american-restaurants', 'antique-shops', 'apartments', 'apartments-flats', 'aquatic-centres', 'art-galleries', 'auto-repair-businesses', 'auto-repair-shops', 'automotive-businesses', 'automotive-property', 'bakeries', 'banquet-halls', 'barber-shops', 'bars', 'bathroom-kitchen-retailers', 'beauty-salons', 'bed-breakfasts', 'bistros', 'block-of-flats', 'boarding-kennels', 'book-shops', 'breweries', 'bridal-wear-shops', 'builder-floor-apartments', 'bungalows', 'business-center', 'business-centres', 'business-parks', 'businesses-for-sale', 'butchers', 'butchery', 'cafes', 'cake-shops', 'camping-shops', 'campsites', 'car-breakers-yard', 'car-dealerships', 'car-garages', 'car-parks', 'car-showrooms', 'car-valeting-businesses', 'car-van-hire-businesses', 'car-wash-businesses', 'caravan-parks', 'card-shops', 'care-businesses', 'care-homes', 'carpet-shops', 'catteries', 'chicken-shops', 'childcare-centre', 'chinese-restaurants', 'chinese-takeaways', 'churches', 'clothes-shops', 'cluster-houses', 'co-working-space', 'commercial', 'commercial-investment-property', 'commercial-land', 'commercial-plots', 'commercial-property', 'compound-villas', 'computer-shops', 'computer-stores', 'convenience-stores', 'cosmetic-shops', 'craft-shops', 'data-centers', 'data-centres', 'delicatessens', 'delivery-businesses', 'dentists', 'detached-bungalows', 'detached-duplex', 'detached-houses', 'development-land', 'discount-stores', 'distribution-centres', 'diy-and-hardware-stores', 'dog-grooming-businesses', 'domiciliary-care-businesses', 'domiciliary-healthcare-businesses', 'dry-cleaners', 'duplex', 'duplex-houses', 'engraving-businesses', 'equestrian-property', 'equipment-hire-businesses', 'factories', 'farm-houses', 'farm-land', 'farm-shops', 'farming-businesses', 'farms', 'farms-land', 'fast-food-restaurants', 'filing-stations', 'filling-station', 'fish-chip-shops', 'flats', 'flats-apartments', 'flooring-businesses', 'floors', 'florists', 'flower-shops', 'food-businesses', 'food-truck-businesses', 'funeral-directors', 'funeral-homes', 'furniture-shops', 'garden-centres', 'garden-cottages', 'garden-nursery', 'gas-stations', 'gift-shops', 'greek-restaurants', 'greengrocers', 'guest-houses', 'gyms', 'hair-salon', 'hairdressers', 'healthcare-businesses', 'healthcare-property', 'heavy-industrial', 'high-street-retail-property', 'high-street-retail-space', 'holiday-lettings', 'holiday-parks', 'home-based-businesses', 'hotel-apartments', 'hotels', 'houses', 'indian-restaurants', 'indian-takeaways', 'industrial-land', 'industrial-parks', 'industrial-property', 'industrial-space', 'industrial-units', 'internet-businesses', 'investment-property', 'italian-restaurants', 'kebab-shops', 'kiosk', 'land', 'launderettes', 'laundry-businesses', 'leisure-businesses', 'leisure-centres', 'leisure-property', 'light-industrial', 'liquor-stores', 'lower-portions', 'maintenance-businesses', 'manufacturing-businesses', 'marinas', 'medical-property', 'mexican-restaurants', 'misc-businesses', 'mixed-use-land', 'mixed-use-property', 'mobile-catering-businesses', 'music-venues', 'new-flats', 'new-flats-apartments', 'new-homes', 'new-homes-developments', 'new-houses', 'newsagents', 'nightclubs', 'nurseries', 'nursing-homes', 'off-licences', 'office-space', 'offices', 'old-age-homes', 'online-retail-businesses', 'opticians', 'out-of-town-retail-property', 'out-of-town-retail-space', 'parking-space', 'penthouses', 'pet-businesses', 'pet-shops', 'petrol-pump', 'petrol-stations', 'pizza-takeaways', 'play-schools', 'plots', 'plumbing-businesses', 'plumbing-heating-shops', 'portions', 'post-offices', 'property', 'pubs', 'residential', 'residential-investment-property', 'residential-land', 'residential-plot', 'resorts', 'restaurants', 'retail-businesses', 'retirement-property', 'rooms', 'row-houses', 'sandwich-shops', 'schools', 'science-parks', 'seafood-restaurants', 'self-catering-businesses', 'semi-detached-bungalows', 'semi-detached-duplex', 'semi-detached-houses', 'service-businesses', 'serviced-apartments', 'serviced-offices', 'shared-office-space', 'shopping-centre-units', 'shopping-malls', 'shops', 'showrooms', 'simplex', 'smallholdings', 'smallholdings-farms', 'social-clubs', 'spanish-restaurants', 'spas', 'staff-accommodations', 'stationery-shops', 'storage', 'storage-units', 'student-accommodation', 'studio-apartments', 'supermarkets', 'sushi-restaurants', 'sweet-shops', 'takeaways', 'tank-farms', 'tattoo-studios', 'tea-rooms', 'terraced-bungalows', 'terraced-duplex', 'terraced-houses', 'thai-restaurants', 'townhouses', 'toy-shops', 'turkish-restaurants', 'upper-portions', 'villas', 'villas-houses', 'virtual-offices', 'warehouses', 'web-design-development-businesses', 'wedding-venues', 'whole-buildings', 'workshops', 'yard']
+        staff_ids:
+          type: array
+          items: 
+            type: string
+          description: The ids of the staff that you want to be assigned or associated with the listing. This staff must be in the same branch as the branch associated to the listing.
+        address: 
+          $ref: '#/components/schemas/v1.address'
+        coordinates:
+          $ref: '#/components/schemas/v1.coordinates'
+        media:
+          $ref: '#/components/schemas/v1.medium'
+        price: 
+          $ref: '#/components/schemas/v1.price'
+        size:
+          $ref: '#/components/schemas/v1.size'
+          
+      example:
+        listing_type: residential
+        transaction_type: rent
+        branch_reference: '511'
+        agent_reference: ABC321
+        tenure: leasehold
+        status: available
+        display_address: Central Soho Square
+        summary: Beautiful 1 bedroom apartment
+        description: This beautiful, spacious, 1-bedroom apartment, created entirely for test purposes, is situated in the stunning location of Soho Square. It has a light, sunny aspect with views over this incredible city.
+        condition: good
+        tenancy_fees: No additional fees
+        deposit: 1000
+        bills_included: false
+        available_at: "2024-10-31 16:31:59"
+        minimum_term: At least 1 year
+        letting_type: long_term
+        entrance_location: 3rd floor on the right
+        floors: 4
+        year_built: 2000
+        features:
+          - Brand New
+          - Private Parking
+          - Swimming Pool
+        furnishing: part_furnished
+        bedrooms: 3.5
+        bathrooms: 2
+        reception_rooms: 1
+        categories: 
+          - flats
+          - flats-apartments
+        staff_ids: [230636de-2224-4adc-aec6-158c41774h35, 650636de-2224-4adc-aec6-158c41773i87]
+        address:
+          address_1: 225 Marsh Wall
+          address_2: Angel House
+          town: London
+          postcode: NW1 6XE
+          country_code: GB
+        coordinates:
+          longitude: "-0.157960"
+          latitude: "51.523079"
+        media:
+          - media_type: image
+            media_url: http://sifatit.com/wp-content/uploads/2012/07/dummy.jpg
+          - media_type: document
+            media_url: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+        price:
+          minimum: 200
+          maximum: 500
+          qualifier: "fixed_price"
+          price_per_unit: 200
+          rent_frequency: per_month
+        size:
+          minimum: 33.55
+          maximum: 55.33
+          area_unit: sq_ft
+        
+    v1.medium:
+      title: Medium
+      required:
+        - media_type
+        - media_url
+      type: object
+      properties:
+        media_type:
+          type: string
+          enum: [image, document]
+        media_url:
+          type: string
+          description: Needs to be valid, unencoded, url
+      example:
+        media_type: image
+        media_url: https://ih1.redbubble.net/image.332697498.5206/raf,360x360,075,t,fafafa:ca443f4786.jpg
+      
+    v1.price:
+      title: Price
+      required:
+        - minimum
+        - maximum
+      type: object
+      properties:
+        minimum:
+          type: integer
+          description: Minimum price if negotiable, or, the price representing one unit, one room, one office, etc.
+        maximum:
+          type: integer
+          description: Maximum asking price for everything included. (options / amenities / rooms, etc.)
+        qualifier:
+          type: string
+          enum: [default, poa, fixed_price, guide_price, oieo, oiro, sale_by_tender, from, shared_ownership, offers_over, part_buy_part_rent, shared_equity, equity_loan, offers_invited]
+          description: Gives context and meaning to the price values.
+        pricePerUnit:
+          type: integer
+          description: Price for one unit. Send the price for one square foot for countries using the imperial system, and the price for one square meter for countries using the metric system
+        rentFrequency:
+          type: string
+          enum: [per_day, per_week, per_month, per_quarter, per_annum]
+          description: only applicable for listings with transaction_type "rent"
+      example:
+        minimum: 700
+        maximum: 3000
+        qualifier: guide_price
+        price_per_unit: 700
+        rent_frequency: per_month
+        
+    v1.size:
+      title: Size
+      required:
+        - minimum
+        - maximum
+      type: object
+      properties:
+        minimum:
+          type: number
+        maximum:
+          type: number
+        area_unit:
+          type: string
+          enum: [sq_m, sq_ft, acre, hectares]
+          description: Default is 'sq_m'
+          
+      example:
+        media_type: image
+        media_url: https://ih1.redbubble.net/image.332697498.5206/raf,360x360,075,t,fafafa:ca443f4786.jpg
+    
+    v1.listings.success_response:
+      title: Listing
+      required:
+        - id
+        - listing_type
+        - transaction_type
+        - branch_reference
+        - agent_reference
+        - permit_number
+        - published
+        - status
+        - display_address
+        - summary
+        - description
+        - categories
+        - address
+        - price
+        - size
+        - media
+      type: object
+      properties:
+        id: 
+          type: string
+        listing_type:
+          type: string
+        transaction_type:
+          type: string
+        branch_reference:
+          type: string
+        agent_reference:
+          type: string
+        permit_number:
+          type: string
+        published:
+          type: boolean
+        status:
+          type: string
+        display_address:
+          type: string
+        summary:
+          type: string
+        description:
+          type: string
+        condition:
+          type: string
+        tenancy_fees:
+          type: string
+        deposit:
+          type: integer
+        bills_included:
+          type: boolean
+        available_at:
+          type: string
+          description: example "2024-10-31T16:31:59+00:00"
+        minimum_term:
+          type: string
+        letting_type:
+          type: string
+        entrance_location:
+          type: string
+        floors:
+          type: integer
+        year_built:
+          type: integer
+        furnishing:
+          type: string
+        bedrooms:
+          type: number
+        bathrooms:
+          type: integer
+        reception_rooms:
+          type: integer
+        features:
+          type: array
+          items:
+            type: string
+        categories:
+          type: array
+          items:
+            type: string
+        staff_ids:
+          type: array
+          items:
+            type: string
+        address:
+          $ref: '#/components/schemas/v1.address'
+        coordinates:
+          $ref: '#/components/schemas/v1.coordinates'
+        price:
+          $ref: '#/components/schemas/v1.price'
+        size:
+          $ref: '#/components/schemas/v1.size'
+        media:
+          $ref: '#/components/schemas/v1.medium'
+          
+      example:
+        id: "ff19e0a0-8423-4fbc-90ad-f7db63fd07b5"
+        branch_reference: "511"
+        listing_url: "https://commercialpeople.com/gb/property/n78gnv-somewhere-over-the-rainbow/"
+        agent_reference: "1033"
+        permit_number: null
+        listing_type: "commercial"
+        transaction_type: "rent"
+        tenure: "leasehold"
+        published: true
+        status: "available"
+        display_address: "somewhere over the rainbow"
+        summary: "Beautiful Apartment"
+        description: "Beautiful apartment with 3 and a half bedrooms situated near central Soho Square"
+        condition: "major_renovation_required"
+        tenancy_fees: "No additional tenancy fees"
+        deposit: 500
+        bills_included: false
+        available_at: "2024-10-31T16:31:59+00:00"
+        minimum_term: null
+        letting_type: "long_term"
+        entrance_location: "5th floor on the right"
+        floors: 6
+        year_built: 1988
+        features: [heating, pool, tennis court]
+        categories: [flats]
+        staff_ids: [230636de-2224-4adc-aec6-158c41774h35, 650636de-2224-4adc-aec6-158c41773i87]
+        furnishing: "part_furnished"
+        bedrooms: 3.5
+        bathrooms: 3
+        reception_rooms: 2
+        address:
+          address1: "225 Marsh Wall"
+          address2: "More details about the address"
+          town: "London"
+          postcode: "w13 3ex"
+          country_code: "GB"
+        coordinates:
+          longitude:  "-0.011993"
+          latitude: "51.499883"
+        price:
+          minimum: 200
+          maximum: 500
+          qualifier: "fixed_price"
+          price_per_unit: 200
+          rent_frequency: "per_month"
+        size:
+          minimum: 33.55
+          maximum: 55.33
+          area_unit: "sq_m"
+        media:
+          - media_type: "image"
+            media_url: "https://s3-eu-west-1.amazonaws.com/dev-listing-images/5/ZA/8780cd3b-1918-47cf-9a7b-774f00673069/05/5052cbba4a99a6e098cecab505e4ce38.jpeg"
+          - media_type: "document"
+            media_url: "https://s3-eu-west-1.amazonaws.com/dev-listing-images/2/ZA/8780cd3b-1918-47cf-9a7b-774f00673069/94/2942bfabb3d05332b66eb128e0842cff.pdf"
+    
+    v1.listings.list_multiple_response:
+      title: List Listings Response
+      required:
+        - page
+        - limit
+        - total
+        - results
+      type: object
+      properties:
+        page: 
+          type: integer
+        limit: 
+          type: integer
+        total: 
+          type: integer
+        results: 
+          type: array
+          items:
+            $ref: '#/components/schemas/v1.listings.success_response'
+      example:
+        page: 1
+        limit: 10
+        total: 1
+        results:
+          - id: "ff19e0a0-8423-4fbc-90ad-f7db63fd07b5"
+            branch_reference: "511"
+            listing_url: "https://commercialpeople.com/GB/property/n78gnv-somewhere-over-the-rainbow/"
+            agent_reference: "1033"
+            permit_number: null
+            listing_type: "commercial"
+            transaction_type: "rent"
+            tenure: "leasehold"
+            published: true
+            status: "available"
+            display_address: "somewhere over the rainbow"
+            summary: "Beautiful Apartment"
+            description: "Beautiful apartment with 3 and a half bedrooms situated near central Soho Square"
+            condition: "major_renovation_required"
+            tenancy_fees: "No additional tenancy fees"
+            deposit: 500
+            bills_included: false
+            available_at: "2024-10-31T16:31:59+00:00"
+            minimum_term: null
+            letting_type: "long_term"
+            entrance_location: "5th floor on the right"
+            floors: 6
+            year_built: 1988
+            features: [heating, pool, tennis court]
+            categories: [flats]
+            furnishing: "part_furnished"
+            bedrooms: 3.5
+            bathrooms: 3
+            reception_rooms: 2
+            address:
+              address1: "225 Marsh Wall"
+              address2: "More details about the address"
+              town: "London"
+              postcode: "w13 3ex"
+              country_code: "GB"
+            coordinates:
+              longitude:  "-0.011993"
+              latitude: "51.499883"
+            price:
+              minimum: 200
+              maximum: 500
+              qualifier: "fixed_price"
+              price_per_unit: 200
+              rent_frequency: "per_month"
+            size:
+              minimum: 33.55
+              maximum: 55.33
+              area_unit: "sq_m"
+            media:
+              - media_type: "image"
+                media_url: "https://s3-eu-west-1.amazonaws.com/dev-listing-images/5/ZA/8780cd3b-1918-47cf-9a7b-774f00673069/05/5052cbba4a99a6e098cecab505e4ce38.jpeg"
+              - media_type: "document"
+                media_url: "https://s3-eu-west-1.amazonaws.com/dev-listing-images/2/ZA/8780cd3b-1918-47cf-9a7b-774f00673069/94/2942bfabb3d05332b66eb128e0842cff.pdf"
+              
+    v1.listings.failed_response:
+      title: Error
+      required:
+        - code
+        - message
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        errors: 
+          type: object
+      example:
+        code: 0
+        message: "Error: Branch not found, please check agent id"
+          
+    ###################################################
+    ################  Branches  #######################
+    ###################################################
+    
+    v1.branches.request_body:
+      title: CreateUpdateBranch
+      required:
+        - name
+        - phone_number
+        - email
+        - address
+        - company_id
+      type: object
+      properties:
+        company_id:
+          type: string
+          description: The id of the parent company for this branch. The company_id is not updatable. You should provide the same id that was used when creating the branch.
+        name:
+          type: string
+        phone_number:
+          type: string
+        email:
+          type: string
+        branch_reference:
+          type: string
+        address: 
+          $ref: '#/components/schemas/v1.address'
+        coordinates:
+          $ref: '#/components/schemas/v1.coordinates'
+
+      example:
+        company_id: "0000-11111-22222-33333-44444"
+        name: "My Branch"
+        email: valid@branch_email.com
+        branch_reference: SP288
+        address:           
+          address1: "225 Marsh Wall"
+          address2: "More details about the address"
+          town: "London"
+          postcode: "w13 3ex"
+          country_code: "GB"
+        coordinates:
+          longitude: "-0.157960"
+          latitude: "51.523079"
+    
+    v1.branches.success_response:
+      title: Branch
+      required:
+        - id
+        - name
+        - phone_number
+        - email
+        - address
+        - company_id
+      type: object
+      properties:
+        id: 
+          type: string
+        company_id:
+          type: string
+        name:
+          type: string
+        phone_number:
+          type: string
+        email:
+          type: string
+        branch_reference:
+          type: string
+        address: 
+          $ref: '#/components/schemas/v1.address'
+        coordinates:
+          $ref: '#/components/schemas/v1.coordinates'
+      example:
+        id: "23trebdf-1234gbdfg23-fgbnbwd-234rbdf"
+        company_id: "0000-11111-22222-33333-44444"
+        name: "My Branch"
+        email: valid@branch_email.com
+        branch_reference: SP288
+        address:           
+          address1: "225 Marsh Wall"
+          address2: "More details about the address"
+          town: "London"
+          postcode: "w13 3ex"
+          country_code: "GB"
+        coordinates:
+          longitude: "-0.157960"
+          latitude: "51.523079"
+    
+    v1.branches.list_multiple_response:
+      title: List Branches Response
+      required:
+        - page
+        - limit
+        - total
+        - results
+      type: object
+      properties:
+        page: 
+          type: integer
+        limit: 
+          type: integer
+        total: 
+          type: integer
+        results: 
+          type: array
+          items:
+            $ref: '#/components/schemas/v1.branches.success_response'
+      example:
+        page: 1
+        limit: 10
+        total: 1
+        results:
+          - branch_id: "00a6404b-5656-405f-a2bf-394384a93664"
+            company_id: "0000-11111-22222-33333-44444"
+            name: "My Branch"
+            email: valid@branch_email.com
+            agent_reference: SP288
+            address:           
+              address1: "225 Marsh Wall"
+              address2: "More details about the address"
+              town: "London"
+              postcode: "w13 3ex"
+              country_code: "GB"
+            coordinates:
+              longitude: "-0.157960"
+              latitude: "51.523079"
+
+    v1.branches.failed_response:
+      title: Error
+      required:
+        - code
+        - message
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        errors: 
+          type: object
+      example:
+        code: 0
+        message: "Validation error"
+        errors: 
+          email:
+            errors:
+              - This value is not a valid email address.
+    
+    ###################################################
+    ###############  People (Staff)  ##################
+    ###################################################
+    v1.people.request_body:
+      title: Person
+      required:
+        - first_name
+        - last_name
+        - phone_number
+        - email_address
+        - company_id
+      type: object
+      properties:
+        company_id:
+          type: string
+          description: The id of the parent company for this person / staff. The company_id is not updatable. You should provide the same id that was used when creating the person.
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone_number:
+          type: string
+        email_address:
+          type: string
+        branch_ids:
+          type: array
+          description: An array of branch ids that this person/staff should be linked to. Used in conjuction with company_id, where given branches need to be part of the given company.
+          items: 
+            type: string
+        photo: 
+          type: string
+          description: Profile photo for this person / staff. Understood data format is base64 encoded string. On update, if this field is sent as an empty string, it will delete the existing profile photo. For exact format, please check example.
+          
+      example:
+        company_id: "ac312-546dfg-132dffb-32esd"
+        first_name: "Joe"
+        last_name: "Dohn"
+        phone_number: "07123987123"
+        email_address: "valid@email.com"
+        branch_ids: 
+          - rgfd2345-rwb24gd-webfs24-4g4
+          - dfgw34-ngfh34wer-b4wvwsr-fb2
+        photo: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAk1BMVEX/////5iJDNBD42x784SD/5SLvzBn63R/+5CHxzxr21x3v8vTk5eOimHzd3djpwhZlUB2ShWPitxJ4ZzzY2NF1YzbmvBTRz8WedgrVoQtfSRSnnoR7akBsUwqnihHSshbNqhSkgw+afhCScgxpVSDCpBW0jQ6wkxJvVgrbrhDAkgvNmgvZpw2bcQdsTgetfQeJZAeV0Y33AAAA5ElEQVQYlXWQ3XKDIBSEAwgIBkExqPmpsUmTotH2/Z+uBzKOaWe6F1x8M7tn2c3mX2XV4WjM8VBnK9uq01vH2Lk/qe3Cqt27IJwTKdxlVz1Zfv0gSUppmhChb9c85hV3klAEokBdU4Tc+lM+WaBS+7kGqO4kRYsIKxsF0HacYsYwQuEVbrAADeMUYSwRkhhz4UYToF7tKdgjtN3vQ9GuevFa6TGpWEmLtbwfY6Ws6LWAG5hzYO0Uy8M3b04zITBzvv0y+TLIxZfOlf4xfi+DhOnmZmjbYZrX6SC3Vna/t+p15L/6AXtaEITRPafjAAAAAElFTkSuQmCC"
+    
+    v1.people.successful_response:
+      title: Person
+      required:
+        - id
+        - first_name
+        - last_name
+        - phone_number
+        - email_address
+        - company_id
+      type: object
+      properties:
+        id: 
+          type: string
+        company_id:
+          type: string
+          description: The id of the parent company for this person / staff
+        first_name:
+          type: string
+        last_name:
+          type: string
+        phone_number:
+          type: string
+        email_address:
+          type: string
+        branch_ids: 
+          type: array
+          items:
+            type: string
+        profile_photo_url:
+          type: string
+
+      example:
+        id: "2gr231-bdfg34-b5423r-23vrsdf"
+        company_id: "ac312-546dfg-132dffb-32esd"
+        first_name: "Joe"
+        last_name: "Dohn"
+        phone_number: "07123987123"
+        email_address: "valid@email.com"
+        branch_ids:
+          - rgfd2345-rwb24gd-webfs24-4g4
+          - dfgw34-ngfh34wer-b4wvwsr-fb2
+        profile_photo_url: "https://s3-eu.amazonaws.com/dummy-bucket/path/to/photo.jpeg"
+
+    v1.people.list_multiple_response:
+      title: List Branches Response
+      required:
+        - page
+        - limit
+        - total
+        - results
+      type: object
+      properties:
+        page: 
+          type: integer
+        limit: 
+          type: integer
+        total: 
+          type: integer
+        results: 
+          type: array
+          items:
+            $ref: '#/components/schemas/v1.people.successful_response'
+      example:
+        page: 1
+        limit: 10
+        total: 1
+        results:
+          - id: "321frw-dgfhsd-ge3244-13fdfds"
+            company_id: "ac312-546dfg-132dffb-32esd"
+            first_name: "Joe"
+            last_name: "Dohn"
+            phone_number: "07123987123"
+            email_address: "valid@email.com"
+            branch_ids:
+              - rgfd2345-rwb24gd-webfs24-4g4
+              - dfgw34-ngfh34wer-b4wvwsr-fb2
+            photo: "https://s3-eu.amazonaws.com/dummy-bucket/path/to/photo.jpeg"
+
+    v1.people.failed_response:
+      title: Error
+      required:
+        - code
+        - message
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        errors: 
+          type: object
+      example:
+        code: 0
+        message: "Validation error"
+        errors: 
+          email_address:
+            errors:
+              - This value is not a valid email address.
+    
+    ############################################
+    ############# CRM Consents #################
+    ############################################
+    v1.consents.list_multiple_response:
+      title: ListConsentsResponse
+      required:
+        - page
+        - limit
+        - total
+        - results
+      type: object
+      properties:
+        page: 
+          type: integer
+        limit: 
+          type: integer
+        total: 
+          type: integer
+        results: 
+          type: array
+          items:
+            $ref: '#/components/schemas/v1.consents.successful_response'
+      example:
+        page: 1
+        limit: 10
+        total: 2
+        results:
+          - id: "ctjp50b4-b998-11e7-b2ef-080034257adt"
+            name: "Client One"
+            consent_created_at: "2019-07-18T12:46:56+00:00"
+          - id: "02afgca3-a4d9-47d2-a224-a224cc274w80"
+            name: "Client Two"
+            consent_created_at: "2019-07-20T12:22:51+00:00"
+            
+    v1.consents.successful_response:
+      title: ConsentResponse
+      required:
+        - id
+        - name
+        - consent_created_at
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        consent_created_at:
+          type: string
+
+
+    ###################################################
+    #############  v1 Common Schemas  #################
+    ###################################################
+    v1.address:
+      title: Address
+      required:
+        - country_code
+        - address_1
+        - town
+        - postcode
+      type: object
+      properties:
+        country_code:
+          type: string
+          description: "2-letter ISO-3166 country code. Ex: 'GB', 'gb', 'ZA'. Not updatable in the context of a listing" 
+        address_1:
+          type: string
+          description: First line of the address (eg. number and street name)
+        address_2:
+          type: string
+          description: Second line of the address
+        town:
+          type: string
+        postcode:
+          type: string
+          description: Required for GB, AE and ZA
+      example:
+        country_code: GB
+        address_1: 33 Soho Square
+        address_2: additional address details
+        town: London
+        postcode: W1D 3QU
+          
+    v1.coordinates:
+      title: Coordinates
+      type: object
+      properties:
+        latitude:
+          type: string
+          description: If longitude is provided, latitude must also be provided.
+        longitude:
+          type: string
+          description: If latitude is provided, longitude must also be provided.
+      example:
+        latitude: "51.523079"
+        longitude: "-0.157960"
+        
+    general.not_found_response:
+      title: Error
+      required:
+        - code
+        - message
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+      example:
+        code: 0
+        message: "Not found"
+
+tags:
+  - name: UK Properties
+  - name: Listings (UK & Overseas)
+  - name: Branches
+  - name: People

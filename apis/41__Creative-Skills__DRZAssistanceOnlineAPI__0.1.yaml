@@ -1,0 +1,630 @@
+penapi: 3.0.0
+info:
+  description: "Spot365 towing company API for Assistance Online"
+  version: "0.1"
+  title: 'Assistance Online API'
+  contact:
+    email: erik@creativeskills.nl
+tags:
+  - name: Authentication
+    description: Spot365 API authentication scheme
+  - name: Depots
+    description: Access to depots
+  - name: Orders
+    description: Access to orders
+paths:
+  /aditum/login:
+    post:
+      tags:
+        - Authentication
+      requestBody:
+        description: "User login to retreive access-token. The number of days the token is valid. NOTE: token will become invalid after 23:59:59 of the last day."
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "name@domain.com"
+                password:
+                  type: string
+                  example: "SomeDifficultToRememberString"
+      responses:
+        '201':
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/login_response'
+        '400':
+          description: 'invalid input, object invalid'
+  /aditum/ping:
+    post:
+      tags:
+        - Authentication
+      requestBody:
+        description: Verify access-token
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  example: 
+                    "HYjzGVfToO1OT2iym5OC35fSMjmgCrQ1Wk8Ef5JN"
+      responses:
+        '201':
+          description: Token verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/login_response'
+        '400':
+          description: 'invalid input, object invalid'
+  # /ao/depots:
+  #   get:
+  #     tags:
+  #       - Depots
+  #     security:
+  #       - ApiKeyAuth: []
+  #     responses:
+  #       '201':
+  #         description: List of depots
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/success_response'
+  #       '400':
+  #         description: 'invalid input, object invalid, order not found'
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/failure_response'
+  #       '401':
+  #         description: 'Unauthorized'
+  /ao/depots/nearest:
+    post:
+      description: "Tries to get the nearest depot details based on the given input (geo location or address details)"
+      tags:
+        - Depots
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/geo_location'
+                - $ref: '#/components/schemas/address_location'
+                - $ref: '#/components/schemas/depot_location'
+              example:
+                latitude: 53.0746175
+                longitude: 6.5743682
+      responses:
+        '200':
+          description: Depot details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/depot'
+        '400':
+          description: 'invalid input, object invalid, depot not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/failure_response'
+        '401':
+          description: 'Unauthorized'
+  /ao/orders/accept:
+    post:
+      tags:
+        - Orders
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                abs_case_number:
+                  type: integer
+                  example: 20203523656
+                excecution_date_time:
+                  type: string
+                  example: "2020-01-23T11:38:01.937Z"
+                  description:
+                    Date time in ISO 8601 format
+              required:
+                - abs_case_number
+                - excecution_date_time
+      responses:
+        '202':
+          description: Order accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success_response'
+        '400':
+          description: 'invalid input, object invalid, order not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/failure_response'
+        '401':
+          description: 'Unauthorized'
+  /ao/orders/reject:
+    post:
+      tags:
+        - Orders
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                abs_case_number:
+                  type: integer
+                  example: 20203523656
+                excecution_date_time:
+                  type: string
+                  example: "2020-01-23T11:38:01.937Z"
+                  description:
+                    Date time in ISO 8601 format
+              required:
+                - abs_case_number
+                - excecution_date_time
+      responses:
+        '202':
+          description: Order rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success_response'
+        '400':
+          description: 'invalid input, object invalid, order not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/failure_response'
+        '401':
+          description: 'Unauthorized'
+  /ao/orders/register:
+    post:
+      tags:
+        - Orders
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                abs_case_number:
+                  type: integer
+                  example: 20203523656
+                keys_present:
+                  type: boolean
+                  example: true
+                  description:
+                    keys present
+                milage:
+                  type: integer
+                  example: 123409
+                  description: >
+                    Milage:
+                     * `required` when keys_present is  true
+                fuel_level:
+                  type: number
+                  enum: [0,10,20,30,40,50,60,70,80,90,100]
+                  description: >
+                    Fuel level in percentage levels of 10% in a range from 0 to 100:
+                     * `required` when keys_present is  true
+                rollable:
+                  type: boolean
+                  example: true
+                  description:
+                    Vehicle rollable
+                locked:
+                  type: boolean
+                  example: true
+                  description:
+                    Vehicle locked
+                straight_wheels:
+                  type: boolean
+                  example: true
+                  description:
+                    Vehicle has straight wheels
+                pickup_location:
+                  type: object
+                  oneOf:
+                    - $ref: '#/components/schemas/geo_location'
+                    - $ref: '#/components/schemas/address_location'
+                    - $ref: '#/components/schemas/depot_location'
+                  example:
+                    latitude: 1.20203523656
+                    longitude: 5.8763692
+                pickup_date_time:
+                  type: string
+                  example: "2020-01-23T11:38:01.937Z"
+                  description:
+                    Date time in ISO 8601 format
+              required:
+                - abs_case_number
+                - pickup_location
+                - pickup_date_time    
+      responses:
+        '201':
+          description: Order registerd
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success_response'
+        '400':
+          description: 'invalid input, object invalid, order not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/failure_response'
+        '401':
+          description: 'Unauthorized'
+  /ao/orders/add_remark:
+    post:
+      tags:
+        - Orders
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                abs_case_number:
+                  type: integer
+                  example: 20203523656
+                remark:
+                  type: string
+                  example: "Boete was betaald; onverrichte zaken naar depot"
+                excecution_date_time:
+                  type: string
+                  example: "2020-01-23T11:38:01.937Z"
+                  description:
+                    Date time in ISO 8601 format
+              required:
+                - abs_case_number
+                - remark
+      responses:
+        '201':
+          description: Image added to the order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success_response'
+        '400':
+          description: 'invalid input, object invalid, order not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/failure_response'
+        '401':
+          description: 'Unauthorized'
+  /ao/orders/upload:
+    post:
+      tags:
+        - Orders
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                abs_case_number:
+                  type: integer
+                  example: 20203523656
+                type:
+                  type: string
+                  enum: [front, right, left, back, signature, damage]
+                  description: >
+                    Image types:
+                     * `front` - Image front side of the vehicle
+                     * `right` - Image driver side of the vehicle
+                     * `back` - Image back side of the vehicle
+                     * `left` - Image passenger side of the vehicle
+                     * `signature` - Signature
+                     * `damage` - Image damage of the vehicle
+                image:
+                  type: string
+                  example: "U29tZSBkYXRhIHRvIHJlcHJlc2VudCBhcyBpbWFnZQ=="
+                  description: >
+                    base64 encoded string of the image:
+                     * `Maximum image size`: 6MB
+                     * `Accepted file types`: jpg or png
+              required:
+                - abs_case_number
+                - type
+                - image
+      responses:
+        '201':
+          description: Image added to the order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success_response'
+        '400':
+          description: 'invalid input, object invalid, order not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/failure_response'
+        '401':
+          description: 'Unauthorized'
+  /ao/orders/dropoff/transfer_destination:
+    post:
+      tags:
+        - Orders
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                abs_case_number:
+                  type: integer
+                  example: 20203523656
+                dropoff_location:
+                  type: object
+                  oneOf:
+                    - $ref: '#/components/schemas/geo_location'
+                    - $ref: '#/components/schemas/address_location'
+                    - $ref: '#/components/schemas/depot_location'
+                  example:
+                    latitude: 1.20203523656
+                    longitude: 5.8763692
+                is_depot:
+                  type: boolean
+                  example: true
+                  description:
+                    If the value is true the nearest depot will be selected accoring to given dropoff location
+                remark:
+                  type: string
+                  example: "Losse objecten afgegeven bij Martin Verstaar"
+                excecution_date_time:
+                  type: string
+                  example: "2020-01-23T11:38:01.937Z"
+                  description:
+                    Date time in ISO 8601 format
+              required:
+                - abs_case_number
+                - dropoff_location
+                - excecution_date_time
+      responses:
+        '201':
+          description: Order delivered at transfer destination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success_response'
+        '400':
+          description: 'invalid input, object invalid, order not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/failure_response'
+        '401':
+          description: 'Unauthorized'
+  /ao/orders/dropoff/final_destination:
+    post:
+      tags:
+        - Orders
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                abs_case_number:
+                  type: integer
+                  example: 20203523656
+                dropoff_location:
+                  type: object
+                  oneOf:
+                    - $ref: '#/components/schemas/geo_location'
+                    - $ref: '#/components/schemas/address_location'
+                    - $ref: '#/components/schemas/depot_location'
+                  example:
+                    latitude: 1.20203523656
+                    longitude: 5.8763692
+                is_depot:
+                  type: boolean
+                  example: true
+                  description:
+                    If the value is true the nearest depot will be selected accoring to given dropoff location
+                remark:
+                  type: string
+                  example: "Losse objecten afgegeven bij Martin Verstaar"
+                excecution_date_time:
+                  type: string
+                  example: "2020-01-23T11:38:01.937Z"
+                  description:
+                    Date time in ISO 8601 format
+              required:
+                - abs_case_number
+                - dropoff_location
+                - excecution_date_time
+      responses:
+        '201':
+          description: Order delivered at final destination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/success_response'
+        '400':
+          description: 'invalid input, object invalid, order not found'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/failure_response'
+        '401':
+          description: 'Unauthorized'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: access-token
+      
+  schemas:
+    success_response:
+      type: object
+      properties:
+        success:
+          type: boolean
+    failure_response:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error_message:
+          type: string
+          example: 'missing data'
+    login_response:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user:
+          type: object
+          properties:
+            id:
+              type: number
+              example: 23
+            email:
+              type: string
+              example:
+                name@domain.com
+            username:
+              type: string
+              example:
+                username
+            first_name:
+              type: string
+              example:
+                WebService
+            last_name: 
+              type: string
+              example:
+                DRZ
+            fullname: 
+              type: string
+              example:
+                WebService DRZ
+            company_id:
+              type: number
+              example: 89
+            locale:
+              type: string
+              example:
+                nl-NL
+            token:
+              type: string
+              example: HYjzGVfToO1OT2iym5OC35fSMjmgCrQ1Wk8Ef5JN
+            permissions:
+              type: object
+            slug:
+              type: string
+              example:
+                webservice-drz
+            group:
+              type: string
+              example:
+                Bailiff
+    geo_location:
+      type: object
+      properties:
+        description:
+          type: string
+          example: "DRZ Soesterberg"
+        latitude:
+          type: number
+          example: 1.20203523656
+        longitude:
+          type: number
+          example: 5.8763692
+      required:
+        - latitude
+        - longitude
+    address_location:
+      type: object
+      properties:
+        street:
+          type: string
+          example: "Poeldijkstraat"
+        no:
+          type: string
+          example: "50 n"
+        zip:
+          type: string
+          example: "1020GN"
+        city:
+          type: string
+          example: "Amsterdam"
+    depot_location:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 167
+      required:
+        - id
+    depot:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 167
+        name:
+          type: string
+          example: "Hazenberg Vries BCN"
+        street:
+          type: string
+          example: "Oude Asserstraat"
+        no:
+          type: string
+          example: "32"
+        zip:
+          type: string
+          example: "9481 BL"
+        city:
+          type: string
+          example: "Vries"
+        distance:
+          type: number
+          example: 1
+# Added by API Auto Mocking Plugin
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Creative-Skills/DRZSalvorAPI/0.1
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Creative-Skills/DRZTowingCompanyAPI/0.1

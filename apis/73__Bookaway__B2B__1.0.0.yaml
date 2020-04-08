@@ -1,0 +1,403 @@
+penapi: 3.0.0
+info:
+  version: '1.0.0'
+  title: 'B2B API'
+  description: >-
+    # General
+    
+    The Bookaway B2B API give you access to all Bookaway inventory. You can use it to search, book and get the status of a specific booking.
+    
+    # Authentication
+    
+    To authenticate to Bookaway B2B API you need first to get credentials a `client_id` and a `client_secret`.
+    
+    Bookaway B2B API uses Oauth2 Client Credentials to perform the authentication. The Bookaway Oauth2 flow documentation is available [here](https://app.swaggerhub.com/apis-docs/Bookaway/Oauth/1.0.0).
+    
+    # Environments
+    
+    ## Sandbox
+    
+    The sandbox environment is used for test and development purposes. It works the same as the production environment but return slightly different data and requires to use sandbox credentials.
+      The base URL for each API call is:
+      
+      `https://sandbox.bookaway.com/api/b2b/v1`
+      
+    ## Production
+    
+    Once you’re finished developing your integration with Bookaway B2B API in the sandbox environment, and after reviewing your integration with Bookaway, you’ll be given production credentials.
+      The base URL for each API call in production is:
+      
+    `https://www.bookaway.com/api/b2b/v1`
+    
+    # Flow
+    
+    ## Static API
+    
+    You need first to retrieve the different destinations that Bookaway offers. The destinations are available as JSON file and are updated weekly.
+
+      They’re composed of 3 types of entities:
+
+      * Stations: Pickup/Dropoff point with specific coordinate
+      * Cities: List of available cities
+      * Routes: 
+        
+        ** A route is a way to go from a station A to a station B. Example Cusco to Machu Picchu
+      
+        ** A route is defined by a direction, Cusco to Machu Picchu is a route and Machu Picchu to Cusco is another route.
+        
+        ** On a specific route there can be different types of transfers: Train, Bus, Ferry, Private Car, etc…
+      * Transfers: A transfer is a bus/train/ferry operated on a specific route.
+      
+      Static API returns thousands of results, you should never send live requests but instead download `stations.json`, `cities.json`, `routes.json` and `transfers.json` files each week and cache them in your system.
+    
+    ## Trips API
+    
+      Let you search through all trips available in Bookaway B2B API.
+      
+      You can also look at a specific Trip.
+      
+    ## Bookings API
+    
+      Let you book a specific Trip.
+      
+      Let you see the status of a specific booking. 
+      
+      Let you cancel a specific booking.
+security:
+  - oauth2ClientCredentials: []
+paths:
+  /cities:
+    parameters:
+      - $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/parameters/bearerToken"
+    get:
+      tags: 
+        - Static API
+      description: Returns a json file containing all available cities
+      responses:
+        200:
+          description: Array of stations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/City"
+        401:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/UnauthorizedError'
+        403:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/ForbiddenError'
+  /stations:
+    parameters:
+      - $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/parameters/bearerToken"
+    get:
+      tags: 
+        - Static API
+      description: Returns a json file containing all available stations
+      responses:
+        200:
+          description: Array of stations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Station"
+        401:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/UnauthorizedError'
+        403:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/ForbiddenError'
+  /routes:
+    parameters:
+      - $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/parameters/bearerToken"
+    get:
+      tags: 
+        - Static API
+      description: Returns a json file containing all available routes
+      responses:
+        200:
+          description: Array of routes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Route"       
+        401:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/UnauthorizedError'
+        403:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/ForbiddenError'
+  /transfers:
+    parameters:
+      - $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/parameters/bearerToken"
+    get:
+      tags: 
+        - Static API
+      description: Return a json file containing all the available transfers with marketing data
+      responses:
+        200:
+          description: Array of transfers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transfer"
+        401:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/UnauthorizedError'
+        403:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/ForbiddenError'
+  /trips:
+    parameters:
+      - $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/parameters/bearerToken"
+    get:
+      tags: 
+        - Trips API
+      description: Search available trips between 2 stations and for a specific date
+      parameters:
+      - name: authorization
+        in: header
+        description: an authorization header as "Bearer xxxxxxxxxxxxxx"
+        required: true
+        schema: 
+          type: string
+      - in: query
+        name: departureStation
+        description: "list of departure station ids, seperete by comma (,)"
+        required: true
+        schema:
+          type: array
+          items:
+            type: string
+            format: uuid
+      - in: query
+        name: arrivalStation
+        description: "list of arrival station ids, seperete by comma (,)"
+        schema: 
+          type: array
+          items:
+            type: string
+            format: uuid
+        required: true
+      - in: query
+        name: departure
+        description: 'the required date in format: "YYYY-MM-DD"'
+        schema: 
+          type: string
+        required: true
+      - in: query
+        name: passengers
+        description: 'amount of passengers [1..15], if not supplied, calculated attributes will assume single passenger'
+        required: false
+        schema:
+          type: number
+          minimum: 1
+          maximum: 15
+      responses:
+        200:
+          description: Array of Trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trip"
+        401:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/UnauthorizedError'
+        403:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/ForbiddenError'
+  /trips/{id}:
+    parameters:
+      - $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/parameters/bearerToken"
+    get:
+      tags: 
+        - Trips API
+      description: Look at a specific Trip
+      parameters:
+      - name: authorization
+        in: header
+        description: an authorization header as "Bearer xxxxxxxxxxxxxx"
+        required: true
+        schema: 
+          type: string
+      - name: id
+        in: path
+        description: "id of the Trip"
+        required: true
+        schema: 
+          type: string
+          format: uuid
+          example: "5ac337d1e575a8b638046a0f"
+      - in: query
+        name: passengers
+        description: 'amount of passengers [1..15], if not supplied, calculated attributes will assume single passenger'
+        required: false
+        schema:
+          type: number
+          minimum: 1
+          maximum: 15
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: 
+                    type: string
+                    example: 404
+                  message:
+                    type: string
+                    example: The trip with id "{id}" does not exist.
+        401:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/UnauthorizedError'
+        403:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/ForbiddenError'
+  /bookings:
+    parameters:
+      - $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/parameters/bearerToken"
+    post:
+      tags: 
+        - Bookings API
+      description: Book a specific Trip
+      requestBody:
+        $ref: "#/components/requestBodies/BookingRequest"
+              
+      responses:
+        200:
+          description: Booking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        401:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/UnauthorizedError'
+        403:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/ForbiddenError'
+  /bookings/{id}:
+    get:
+      tags: 
+        - Bookings API
+      description: View a booking by id
+      parameters: 
+        - name: id
+          in: path
+          description: "id of the Booking"
+          required: true
+          schema: 
+            type: string
+            format: uuid
+            example: "5ac337d1e575a8b638046a0f"
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        401:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/UnauthorizedError'
+        403:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/ForbiddenError'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: 
+                    type: string
+                    example: 404
+                  message:
+                    type: string
+                    example: The booking with id "{id}" does not exist.
+  /bookings/{id}/cancel:
+    post:
+      tags: 
+        - Bookings API
+      description: Cancel a booking by id
+      parameters: 
+        - name: id
+          in: path
+          description: "id of the Booking"
+          required: true
+          schema: 
+            type: string
+            format: uuid
+            example: "5ac337d1e575a8b638046a0f"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cancellationReason:
+                  description: Cancellation reason free text
+                  type: string
+                  example: "Health reasons"
+
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        401:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/UnauthorizedError'
+        403:
+          $ref: 'https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/responses/ForbiddenError'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: 
+                    type: string
+                    example: 404
+                  message:
+                    type: string
+                    example: The booking with id "{id}" does not exist.
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/securitySchemes/oauth2ClientCredentials"
+  schemas:
+    Booking:
+      $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/schemas/Booking"
+    City:
+      $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/schemas/City"
+    Route:
+      $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/schemas/Route"
+    Station:
+      $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/schemas/Station"
+    Transfer:
+      $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/schemas/Transfer"
+    Trip:
+      $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/schemas/Trip"
+  requestBodies:
+    BookingRequest:
+      description: Book a specific trip
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "https://api.swaggerhub.com/domains/Bookaway/Inventory/1.0.0#/components/requestBodies/BookingRequest"
+    
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Bookaway/B2B/1.0.0
+  - description: Bookaway Sandbox
+    url: https://sandbox.bookaway.com/api/b2b/v1
+  - description: Bookaway Production
+    url: https://www.bookaway.com/api/b2b/v1

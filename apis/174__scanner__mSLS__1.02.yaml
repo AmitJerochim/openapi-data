@@ -1,0 +1,244 @@
+penapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/scannerGT/mSLS/1.0.0
+security:
+  - basicAuth: []
+info:
+  description: This is a simple API
+  version: "1.02"
+  title: mSLS API
+  contact:
+    email: grzegorz.tlolka@mentax.pl
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: developers
+    description: Operations available to regular developers
+paths:
+  /damages:
+    get:
+      tags:
+        - developers
+      summary: Pobiera listę szkód z systemu
+      responses:
+        '200':
+          description: Pobranie listy szkód przypisanych do likwidatora
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/DamageSimple'
+        '401':
+          description: Nieautoryzowany
+  /damages/{id}:
+    get:
+      tags:
+        - developers
+      summary: Pobranie danych jednej szkody
+      parameters:
+        - name: id
+          in: path
+          description: Id szkody
+          required: true
+          schema:
+            type: integer
+            format: int
+            minimum: 1
+      responses:
+        '200':
+          description: Dane jednej szkody
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DamageFull'
+                  
+        '404':
+          description: Identyfikator nieznany
+        '401':
+          description: Nieautoryzowany
+    put:
+      tags:
+        - developers
+      summary: Wysłanie danych jednej szkody bez plików
+      parameters:
+        - name: id
+          in: path
+          description: Id szkody
+          required: true
+          schema:
+            type: integer
+            format: int
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/mSLSItem'
+      responses:
+        '200':
+          description: Poprawnie przyjęto dane
+        '409':
+          description: Konflikt synchronizacji danych mSLSItem (w sytuacji, gdy dane zostały zmodyfikowane przez innego klienta, np. likwidator zmienił telefon na tablet i nie nastąpiła synchornizacja danych)
+        '404':
+          description: Identyfikator nieznany
+        '401':
+          description: Nieautoryzowany
+        '403':
+          description: Szkoda nie jest w stanie "w trakcie likwidacji"
+        '400':
+          description: Niepoprawny pakiet danych mSLSItem
+  /upload/{id}:
+    post:
+      tags:
+        - developers
+      summary: Wysłanie plików (pojedynczo, ze względu na potencjalny rozmiar)
+      parameters:
+        - name: id
+          in: path
+          description: Id szkody
+          required: true
+          schema:
+            type: integer
+            format: int
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                fileType:
+                  type: string
+                  enum: [main, closeup]
+                fileName:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Poprawnie przyjęto dane
+        '403':
+          description: Próba uploadu zdjecia dla szkody w błędym statusie
+        '404':
+          description: Identyfikator nieznany
+        '401':
+          description: Nieautoryzowany
+  /finalize/{id}:
+    put:
+      tags:
+        - developers
+      summary: Wysłanie polecenia zakończenia szkody. Może być wywołane tylko gdy wszytskie pliki są zuploadowane
+      parameters:
+        - name: id
+          in: path
+          description: Id szkody
+          required: true
+          schema:
+            type: integer
+            format: int
+      responses:
+        '200':
+          description: Poprawnie przyjęto dane
+        '404':
+          description: Identyfikator nieznany
+        '401':
+          description: Nieautoryzowany
+        '403':
+          description: Szkoda nie jest w stanie "w trakcie likwidacji"
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+  schemas:
+    damageType:
+      type: integer
+      enum:
+        - 1
+        - 2
+      description: |
+        Dostępne statusy:
+        * `1` - Majątkowa
+        * `2` - Komunikcyjna
+    mSLSStatus:
+      type: string
+      enum:
+        - new
+        - corection
+        - delayed
+        - proccessing
+        - finalized
+        - completed
+      description: |
+        Dostępne statusy:
+        * `new` - Nowa
+        * `corection` - Odesłana do korekty
+        * `delayed` - Opóźniona wzgledem SLA
+        * `proccessing` - Procesowana przez likwidatora
+        * `finalized' - szkoda odesłana do CRM, ale jeszcze wysyłamy pliki
+        * `completed` - zakończona, pliki załadowane do CRM
+    DamageSimple:
+      type: object
+      required: 
+         - id
+         - number
+         - status
+         - type
+         - inspectionDate
+         - insurer
+         - victim
+      properties:
+        id:
+          type: integer
+          example: 12345
+        number:
+          type: string
+          example: PL20202033434
+        status:
+          $ref: '#/components/schemas/mSLSStatus'
+        type:
+          $ref: '#/components/schemas/damageType'
+        inspectionDate:
+          type: string
+          format: date-time
+          example: "2018-03-20T09:12:28Z"
+        insurer:
+          type: string
+          example: Hestia
+        victim:
+          $ref: '#/components/schemas/Person'
+    Person:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Szczepan Brzęczyszczykiewicz
+        phone:
+          type: string
+          example: 48111223344
+        city:
+          type: string
+          example: Wrocław
+        street:
+          type: string
+          example: Szczecińska 25a/5
+    DamageFull:
+      type: object
+      required: 
+         - id
+         - number
+         - status
+         - msls
+      properties:
+        id:
+          type: integer
+          example: 12345
+        number:
+          type: string
+          example: PL20202033434
+        status:
+          $ref: '#/components/schemas/mSLSStatus'
+        msls:
+          $ref: '#/components/schemas/mSLSItem'
+    mSLSItem:
+      type: string
+      example: {"a":1,"b":2,"c":3,"d":4,"e":5}

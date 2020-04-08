@@ -1,0 +1,152 @@
+penapi: 3.0.0
+info:
+  description: Валидация доступа к запрашиваемому ресурсу
+  version: 0.1.19081
+  title: Policy evaluation
+servers:
+  - url: /sso/api/policyEvaluation
+paths:
+  /isAllowed:
+    post:
+      tags:
+        - policyEvaluation
+      description: "Проверка, разрешено ли данное действие над ресурсом для пользователя, идентифицируемого по access токену"
+      operationId: isAllowed
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvaluationContext"
+      responses:
+        "200":
+          description: Политика вычислена, результат в теле запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluationResponse"
+        "400":
+          description: Некорректный запрос. Например, отсутствует body запроса
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: number
+                        example: 400
+        "401":
+          description: Доступ запрещен. Токен не передан, не найден, или его время жизни истекло.
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: number
+                        example: 401
+                      message:
+                        type: string
+                        example: "Token not found or expired"
+
+  /whichAllowed:
+    post:
+      tags:
+        - policyEvaluation
+      description: "Проверка, какие действия разрешены над ресурсами для пользователя, идентифицируемого по access токену"
+      operationId: whichAllowed
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "#/components/schemas/EvaluationContext"
+      responses:
+        "200":
+          description: Политика вычислена, результат в теле запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvaluationResponse"
+        "400":
+          description: Некорректный запрос. Например, отсутствует body запроса
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: number
+                        example: 400
+        "401":
+          description: Доступ запрещен. Токен не передан, не найден, или его время жизни истекло.
+          content:
+            application/json:
+              schema:
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: number
+                        example: 401
+                      message:
+                        type: string
+                        example: "Token not found or expired"
+
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    EvaluationContext:
+      type: object
+      properties:
+        actionName:
+          type: string
+          description: действие, указанное в политиках UIDM, которое трубется совершить (например, GET, POST)
+          example: POST
+        resourceName:
+          description: "Имя ресурса, к которому осуществляется доступ. Должно совпадать с именем ресурса, указазанным в соответствующей политике SSO."
+          type: string
+        envParams:
+          description: "Произвольные параметры (в виде key-value пар), которые требуются для вычисления политики. По умолчанию, пустой набор."
+          type: object
+          additionalProperties: true
+        extraParams:
+          description: "Параметры, которые могут быть использованы при шаблонизации текста СМС или другого способа второго фактора, но при этом не участвуют в расчете политик, являясь чисто информационными"
+          type: object
+          additionalProperties: true
+        realm:
+          description: "группа пользователей WebSSO, например /customer"
+          type: string
+      required:
+        - actionName
+        - resourceName
+        - realm
+    EvaluationResponse:
+      type: object
+      properties:
+        decision:
+          description: "Решение о предоставлении доступа к ресурсу с текущим токеном. В случае запрета в поле advices будут указаны причины.
+                        Возможными причинами являются несовпадение набора envParams для подтверждения операции вторым фактором, или недостаточный уровень авторизации"
+          type: string
+          enum:
+            - Permit
+            - Deny
+        advices:
+          type: object
+          description: "перечень необходимых условий, которые требуется удовлетворить для получения доступа к защищаемому ресурсу"
+          additionalProperties: true
+          example:
+            "PerOperationTokenConditionAdvice": "PerOperationTokenRequired"

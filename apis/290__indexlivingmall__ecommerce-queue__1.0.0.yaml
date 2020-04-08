@@ -1,0 +1,231 @@
+penapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/indexlivingmall/ecommerce-queue/1.0.0
+info:
+  description: Queue API Documentation for e-commerce website
+  version: "1.0.0"
+  title: Queue
+  contact:
+    email: thanat.ma@indexlivingmall.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+    
+paths:
+  /find:
+    get:
+      tags:
+        - ecom
+      summary: find available date in next 15 day
+      description: return availibity list from today to 15 day
+      parameters:
+        - in: query
+          name: amount
+          schema:
+            type: number
+        - in: query
+          name: volume
+          schema:
+            type: number
+        - in: query
+          name: weight
+          schema:
+            type: number
+        - in: query
+          name: installationTime
+          description: installation time (minutes) 
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date:
+                      type: string
+                      format: YYYYMMDD
+                      example: '20191031'
+                    available:
+                      type: boolean
+                      example: true
+                example:
+                  - date: '20191101'
+                    available: true
+                  - date: '20191102'
+                    available: false
+                  - date: '20191104'
+                    available: false
+                  - date: '20191105'
+                    available: true
+  
+  /check:
+    get: 
+      summary: check available time of requested date
+      parameters:
+        - in: query
+          name: amount
+          schema:
+            type: number
+        - in: query
+          name: volume
+          schema:
+            type: number
+        - in: query
+          name: weight
+          schema:
+            type: number
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: YYYYMMDD
+        - in: query
+          name: installationTime
+          description: installation time (hours) 
+          schema:
+            type: number
+      tags: 
+        - ecom
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timeslot:
+                    type: array
+                    items: 
+                      type: object
+                      example:
+                        time: '10:00'
+                        available: true
+  /book:
+    post:
+      tags:
+        - ecom
+      summary: book queue
+      responses:
+        '200':
+          description: book successfully
+          content:
+            application/json:
+              schema:
+                required: 
+                  - qnumber
+                properties:
+                  qnumber:
+                    type: string
+                    example: '52000001'
+        '400':
+          description: invalid input
+        '409':
+          description: queue not available
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookQueueRequest'
+        description: reference queue number
+      
+  /confirm/{qnumber}:
+    put:
+      tags:
+        - ecom
+      summary: update so number to booked queue
+      responses:
+        '200':
+          description: confirm successfully
+        '404':
+          description: queue number not found
+        '409':
+          description: status conflict
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refDoc:
+                  type: string
+                  example: '52000001'
+      parameters:
+        - in: path
+          required: true
+          name: qnumber
+          schema:
+            type: string
+  /cancel/{qnumber}:
+    delete:
+      tags:
+        - ecom
+      summary: cancel booked queue
+      responses:
+        '200':
+          description: cancel successfully
+        '404':
+          description: queue number not found
+      parameters:
+        - in: path
+          required: true
+          name: qnumber
+          schema:
+            type: string
+  
+components:
+  schemas:
+    BookQueueRequest:
+      type: object
+      required:
+        - date
+        - startTime
+        - endTime
+        - qtype
+        - latlong
+        - bookingSite
+        - deliverySite
+      properties:
+        date:
+          type: string
+          format: YYYYMMDD
+          example: '20191031'
+        startTime:
+          type: string
+          format: HH:mm
+          example: '10:00'
+          enum: ['9:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00']
+        endTime:
+          type: string
+          format: HH:mm
+          example: '12:00'
+          enum: ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00']
+        qtype:
+          type: string
+          enum: ['FUR', 'KIT', 'LOG', 'PW1']
+        bookingSite:
+          type: string
+          enum: ['1000']
+        deliverySite:
+          type: string
+          example: '1100'
+          enum: ['1100']
+        latlong:
+          type: string
+          example: '13.7563,100.5018'
+        poNo: 
+          type: string
+        volume: 
+          type: number
+        weight:
+          type: number
+        amount:
+          type: number

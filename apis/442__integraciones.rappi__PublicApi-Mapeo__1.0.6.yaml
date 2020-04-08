@@ -1,0 +1,458 @@
+penapi: 3.0.0
+servers:
+  - url: https://microservices.dev.rappi.com/api/restaurants-integrations-public-api
+    description: Pruebas
+  - url: https://services.mxgrability.rappi.com/api/restaurants-integrations-public-api
+    description: Mexico
+  - url: https://services.rappi.com/api/restaurants-integrations-public-api
+    description: Colombia
+  - url: https://services.rappi.cl/api/restaurants-integrations-public-api
+    description: Chile
+  - url: https://services.rappi.com.br/api/restaurants-integrations-public-api
+    description: Brasil
+  - url: https://services.rappi.com.ar/api/restaurants-integrations-public-api
+    description: Argentina
+  - url: https://services.rappi.com.uy/api/restaurants-integrations-public-api
+    description: Uruguay
+  - url: https://services.rappi.com.ec/api/restaurants-integrations-public-api
+    description: Ecuador
+info:
+  description: |
+    El presente documento contiene la especificación de los métodos que hacen parte de la API de integración que es ofrecida por Rappi a sus restaurantes afiliados, el contenido de este documento le permitirá al asociado de Rappi conocer los requerimientos necesarios para hacer uso del servicio y entender la mensajería que se intercambiará entre las dos entidades
+  version: "1.0.6"
+  title: Especificación del servicio API Restaurant Integration
+
+tags:
+  - name: Autenticación
+  - name: Solicitud de ordenes
+  - name: Aceptacion de ordenes
+  - name: Rechazo de ordenes
+  - name: Menu
+
+paths:
+  /login:
+    post:
+      tags:
+        - Autenticación
+      summary: La autenticación se hace a través de un token provisto por RAPPI
+      responses:
+        '200':
+          description: Respuesta exitosa
+          headers:
+            x-auth-int:
+              schema:
+                type: string
+                example: Bearer asd87asd7a8sd8sa
+              description: |
+                    Token de acceso a las distintas operaciones de la API.
+                    
+                    *Nota: tiene validez de 30 dias, una vez expirado será necesario renovarlo usando este mismo login*
+        '401':
+          description: Token de autorizacion incorrecto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  description: Token provisto por rappi
+                  example: as78da6sd7as6d8asd
+  /orders:
+    get:
+      tags:
+        - Solicitud de ordenes
+      summary: Obtener ordenes disponibles para ser procesadas
+      parameters:
+        - in: header
+          name: x-auth-int
+          required: true
+          description: Token obtenido en el /login
+          schema: 
+            type: string
+            example: asd87asd7a8sd8sa
+      responses:
+        '200':
+          description: Lista de ordenes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '204':
+          description: No hay ordenes disponibles para ser procesadas
+        '401':
+          description: Token de autorizacion incorrecto
+
+  '/orders/take/{orderId}':
+    get:
+      tags:
+        - Aceptacion de ordenes
+      summary: Indica al servicio de integraciones de restaurantes de RAPPI que la orden ya fue procesada de manera exitosa
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          description: Id de alguna orden obtenida del end point /orders
+          schema:
+            type: integer
+            example: 1234
+        - in: header
+          name: x-auth-int
+          required: true
+          description: Token obtenido en el /login
+          schema: 
+            type: string
+            example: asd87asd7a8sd8sa
+      responses:
+        '200':
+          description: Orden tomada exitosamente por RAPPI
+        '401':
+          description: Token de autorizacion incorrecto
+        '400':
+          description: Order does not exist or was already processed
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: '#/components/schemas/OrderError'
+              examples:
+                Order does not exist:
+                   $ref: '#/components/examples/OrderNotExist'
+                Order was already processed:
+                  $ref: '#/components/examples/OrderAlreadyProcessed'
+                  
+  /orders/reject:
+    post:
+      tags:
+        - Rechazo de ordenes
+      summary: Indica al servicio de integraciones de restaurantes de RAPPI que la orden no pudo ser  procesada de manera exitosa
+      parameters:
+        - in: header
+          name: x-auth-int
+          required: true
+          description: Token obtenido en el /login
+          schema: 
+            type: string
+            example: asd87asd7a8sd8sa
+      responses:
+        '200':
+          description: Respuesta exitosa
+        '401':
+          description: Token de autorizacion incorrecto
+        '400':
+          description: Order does not exist or was already processed
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: '#/components/schemas/OrderError'
+              examples:
+                Order does not exist:
+                   $ref: '#/components/examples/OrderNotExist'
+                Order was already processed:
+                  $ref: '#/components/examples/OrderAlreadyProcessed'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+                  description: ID de la orden de rappi
+                  example: 1234
+                reason:
+                  type: string
+                  description: Describe la razon del rechazo
+                  example: Descripcion del error code 4
+                product_ids:
+                  type: array
+                  description: products with some issue (optional)
+                  items:
+                    type: string
+                    description: product id
+                    example: "P1234"
+  /stores/menu:
+    get:
+      tags:
+        - Menu
+      summary: Obtener menu de una store
+      parameters:
+        - in: header
+          name: x-auth-int
+          required: true
+          description: Token obtenido en el /login
+          schema: 
+            type: string
+            example: asd87asd7a8sd8sa
+      responses:
+        '200':
+          description: Cómo respuesta obtendrás el menú asociado a tu tienda principal que está asociada al token público
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/ProductMenu'
+        '401':
+          description: Token de autorizacion incorrecto
+
+components:
+  schemas:
+    Order:
+      type: object
+      properties:
+        order:
+          $ref: '#/components/schemas/OrderDetails'
+        client:
+          $ref: '#/components/schemas/Client'
+        store:
+          $ref: '#/components/schemas/Store'
+    OrderDetails:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "460901786"
+        totalValue:
+          type: number
+          description: total a pagar por los productos con markdown aplicado
+          example: 432
+        tip:
+          type: number
+          description: Propina dada por el usuario
+          example: 1.0
+        whims:
+          type: number
+          description: Total a pagar por antojos
+          example: 0.0
+        totalProducts:
+          type: number
+          description: Total a pagar por productos sin aplicar markdown
+          example: 540
+        totalRappiPay:
+          type: number
+          description: Total pagado con RappiPay
+          example: 0.0
+        totalOrderValue:
+          type: number
+          description: totalProducts + charges + tip + whims - totalRappiPay - totalDiscounts
+          example: 270
+        totalDiscounts:
+          type: number
+          description: valor total de los descuentos aplicados
+          example: 310
+        charges:
+          type: object
+          properties:
+            shipping:
+              type: number
+              description: costo de envio
+              example: 40
+        deliveryMethod:
+          type: string
+          description: Tipo de delivery ('delivery','marketplace', 'pickUp')
+          example: "marketplace"
+        marketplace:
+          type: boolean
+          example: true
+        paymentMethod:
+          type: string
+          description: Tipo de pago ('cash', 'credit card', 'debit')
+          example: "cash" 
+        createdAt:
+          type: string
+          example: "2018-12-04 14:28:53"
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+    Item:
+      type: object
+      properties:
+        sku:
+          type: string
+          example: "1234"
+          description: Id del producto
+        name:
+          type: string
+          example: "Docena empanadas"
+        price:
+          type: string
+          example: "432.01"
+          description: Precio del producto
+        type:
+          type: string
+          example: "product"
+          description: Tipo al que pertenece el item {'product','topping'}
+        subtype:
+          type: string
+          example: "Empanada"
+          description: Categoria a la que pertenece el producto
+        comments:
+          type: string
+          example: "test comment"
+          description: Comentario hecho por el usuario
+        units:
+          type: integer
+          example: 1
+          description: cantidad pedida
+        percentage_price_variation:
+          type: integer
+          example: 50
+          description: Porcentaje de descuento
+        price_discount:
+          type: integer
+          example: 432.01
+          description: Precio con el descuento aplicado
+        discount_percentage_by_rappi:
+          type: integer
+          example: 60
+          description: porcentaje del descuento asumido por rappi
+        toppings:
+          type: array
+          items:
+            $ref: '#/components/schemas/Topping'
+          example:
+          - sku: "2716"
+            name: "Emapanada carne"
+            price: "0.0"
+            type: "topping"
+            subtype: "Empanada"
+            comments: null
+            units: 4
+          - sku: "2712"
+            name: "Empanada pollo"
+            price: "0.0"
+            type: "topping"
+            subtype: "Empanada"
+            comments: null
+            units: 4
+          - sku: "2703"
+            name: "Empanada caprese"
+            price: "0.0"
+            type: "topping"
+            subtype: "Empanada"
+            comments: null
+            units: 4
+    Topping:
+      type: object
+      properties:
+        sku:
+          type: string
+          description: Representa el id del producto
+        name:
+          type: string
+        price:
+          type: string
+          description: Precio del producto
+        type:
+          type: string
+          description: Puede ser product o topping
+        subtype:
+          type: string
+          description: Representa la categoria a la que pertenece el producto
+        comments:
+          type: string
+          description: Comentarios adicionales hechos por el usuario
+        units:
+          type: integer
+          description: Cantidad pedida del item
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "460901786"
+        firstName:
+          type: string
+          example: "TEST"
+        lastName:
+          type: string
+          example: "TEST"
+        email:
+          type: string
+          example: "test@rappi.com"
+        phone:
+          type: string
+          example: "1233456"
+        address:
+          type: string
+          example: "Avenida alameda 345"
+        addressDetails:
+          type: object
+          items:
+            $ref: '#/components/schemas/AddressDetails'
+          example:
+          - address: "Avenida alameda 345"
+            description: "Casa 1"
+    AddressDetails:
+      type: object
+      description: Esta información es solo visible para el tipo de delivery "Marketplace" 
+      properties:
+        address:
+          type: string
+          example: "Avenida alameda 345"
+        description:
+          type: string
+          example: "Casa 1"
+    Store:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "11111"
+        name:
+          type: string
+          example: "STORE TEST"
+    ProductMenu:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "1234"
+        name:
+          type: string
+          example: "Product #1234"
+        toppings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ToppingMenu'
+    ToppingMenu:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "4321"
+        name:
+          type: string
+          example: "Topping #1234"
+        category:
+          type: object
+          properties:
+            id: 
+              type: string
+              example: "678"
+            name:
+              type: string
+              example: "Topping category #678"
+    OrderError:
+      type: object
+      properties:
+        errorCode:
+          type: integer
+        message:
+          type: string
+  examples:
+    OrderNotExist:
+      value:
+        errorCode: 1000
+        message: "The order #1234 not exists."
+    OrderAlreadyProcessed:
+      value:
+        errorCode: 2000
+        message: "The order #1234 was already processed."

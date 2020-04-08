@@ -1,0 +1,975 @@
+penapi: 3.0.0
+servers: 
+  - url : https://www.lodestarss.com/Live/Client_Name/
+    description: Client_Name should be replaced with your provided Client_Name
+info:
+  description: LodeStar API Documentation. Covers all externally accesible APIs
+  version: "1.0.4"
+  title: LodeStar API
+  contact:
+    email: support@lssoftwaresolutions.com
+  license:
+    name: Commericial License
+    url: ''
+tags:
+  - name: User Account Endpoints
+    description: Endpoints for user management
+  - name: Calculation Endpoints
+    description: Endpoints used for calcultions
+  - name: Extraneous Information Endpoints
+    description: Endpoints used for reporting, retrieving client specific parameters, and other miscellaneous information
+paths:
+  /Login/login.php:
+    post:
+      tags:
+        - User Account Endpoints
+      summary: Log User into Lodetar 
+      operationId: login
+      description: |
+        Logs user into LodeStar System
+      requestBody:
+        description: 'request body'
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/userLoginRequest'
+      responses:
+        '200':
+          description: 'Response when username and password are correct'
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/userAuth'
+        '401':
+          description: User not authenticated. 
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/userNotAuth'
+  /les_engine.php:
+    post:
+      tags:
+        - Calculation Endpoints
+      summary: Calculates Transfer Tax, Recording Fees Title Fees, And Title Premiums
+      operationId: les_engine
+      description: |
+        Calculate title agent fees, title premiums, transfer taxes and recording fees. It does support JSON requests.
+      externalDocs:
+        description: |
+         Sample les_engine calls.
+        url: https://lodestarss.com/API/Sample_Les_Engine_Calls.pdf
+      requestBody:
+        description: 'request body'
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/lesEngineRequest'
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/lesEngineResponse'
+        '401':
+          description: User not authenticated. 
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/userNotAuth'
+  /property_tax.php:
+    get:
+      tags:
+        - Calculation Endpoints
+      summary: Get Property Tax Information 
+      operationId: property_tax
+      description: |
+        Get available property tax. At times the property tax might not be on file. Also note that all returned data is an estimate. Please request that this functionality be turned on.
+      parameters:
+        - in: query 
+          name: state
+          schema:
+            type: string
+            minimum: 2
+            maximum: 2
+          example: NJ
+          description: '2 letter state abbreviation'
+          required: true
+        - in: query
+          name: county
+          schema:
+            type: string
+          example: 'Hudson'
+          required: true
+        - in: query
+          name: city
+          schema:
+            type: string
+          example: 'Hoboken'
+          required: true
+        - in: query
+          name: address
+          schema:
+            type: string
+          example: '110 Jefferson St. Apt 2'
+          required: true
+        - in: query
+          name: close_date
+          schema:
+            type: string
+            format: date
+          example: '2020-04-21'
+          required: true
+        - in: query
+          name: file_name
+          schema:
+            type: string
+          example: 'Tax File Name'
+          required: true
+        - in: query
+          name: session_id
+          schema:
+            type: string
+          example: 'ecxxxxxu2etxxxx'
+          required: true
+          description: >
+            The string returned from the `LOGIN /Login/login.php` method
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/propertTaxResponse'
+        '400':
+          description: Required input missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/notValidRequest'
+        '401':
+          description: User not authenticated. Or does not have permission. 
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/userNotAuth'
+  /endorsements.php:
+    get:
+      tags:
+        - Extraneous Information Endpoints
+      summary: Get Available Endorsements 
+      operationId: getEndorsements
+      description: |
+        Get available endorsements. The endo_id property can than be used for les_engine.php to calcualte the endorsement value. Can request endorsements for a sub title agent as well. Please request that this functionality be turned on.
+      parameters:
+        - in: query 
+          name: state
+          schema:
+            type: string
+            minimum: 2
+            maximum: 2
+          example: NJ
+          description: '2 letter state abbreviation'
+          required: true
+        - in: query
+          name: county
+          schema:
+            type: string
+          example: 'Hudson'
+          required: true
+        - in: query
+          name: purpose
+          schema:
+            type: string
+          example: '11'
+          required: true
+          description: >
+            If a purpose has a leading zero it is required. There can be more options then the ones listed below. Can retrieve additional transaction types ids from transaction_ids endpoint. Please contact us if you require a different option
+            Purpose Types:
+             * `00` - Refinance
+             * `04` - Refinance (Reissue)
+             * `11` - Purchase
+        - in: query
+          name: sub_agent_id
+          schema:
+            type: number
+          example: 41
+          required: false
+          description: >
+            This will only be used by lender's. This will allow for the selection of different related title agents.
+        - in: query
+          name: sub_agent_office_id
+          schema:
+            type: number
+          example: 1
+          required: false
+          description: >
+            This will only be used by lender's. This will allow for the selection of different related title agents offices (if any). Defaults to 1.
+        - in: query
+          name: session_id
+          schema:
+            type: string
+          example: 'ecxxxxxu2etxxxx'
+          required: true
+          description: >
+            The string returned from the `LOGIN /Login/login.php` method
+      responses:
+        '200':
+          description: endorsements available for this location and purpose
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/endorsementResponse'
+        '400':
+          description: Required input missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/notValidRequest'
+        '401':
+          description: User not authenticated. Or does not have permission. 
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/userNotAuth'
+  /sub_agents.php:
+    get:
+      tags:
+        - Extraneous Information Endpoints
+      summary: Get Available Sub Agents 
+      operationId: getSubAgents
+      description: |
+        Get available sub agents for a specific transaction type, state, and county. Please request that this functionality be turned on.
+      parameters:
+        - in: query 
+          name: state
+          schema:
+            type: string
+            minimum: 2
+            maximum: 2
+          example: NJ
+          description: '2 letter state abbreviation'
+          required: true
+        - in: query
+          name: county
+          schema:
+            type: string
+          example: 'Hudson'
+          required: true
+        - in: query
+          name: purpose
+          schema:
+            type: string
+          example: '11'
+          required: true
+          description: >
+            If a purpose has a leading zero it is required. There can be more options then the ones listed below. Can retrieve additional transaction types ids from transaction_ids endpoint. Please contact us if you require a different option
+            Purpose Types:
+             * `00` - Refinance
+             * `04` - Refinance (Reissue)
+             * `11` - Purchase
+        - in: query
+          name: session_id
+          schema:
+            type: string
+          example: 'ecxxxxxu2etxxxx'
+          required: true
+          description: >
+            The string returned from the `LOGIN /Login/login.php` method
+      responses:
+        '200':
+          description: endorsements available for this location and purpose
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/subAgentResponse'
+        '400':
+          description: Required input missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/notValidRequest'
+        '401':
+          description: User not authenticated. Or does not have permission. 
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/userNotAuth'
+  /questions.php:
+    post:
+      tags:
+        - Extraneous Information Endpoints
+      summary: Get Questions
+      operationId: questions
+      description: |
+        Retreive questions that should be asked for a specific calculation to get most acurate result 
+      requestBody:
+        description: 'request body'
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/questionRequest'
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/questionResponse'
+                  - $ref: '#/components/schemas/questionNode'
+        '401':
+          description: User not authenticated. 
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/userNotAuth'
+components:
+  schemas:
+    userLoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          format: email
+          description: 'Username to log into the system. Usually an email address'
+          example: 'example@lodestarss.com'
+        password:
+          type: string
+          description: 'Password specific to the user'
+          example: 'abcd1234!'
+    lesEngineRequest:
+      type: object
+      required:
+        - state
+        - county
+        - township
+        - purpose
+        - search_type
+        - session_id
+      properties:
+        session_id:
+          type: string
+          description: >
+            The string returned from the `LOGIN /Login/login.php` method
+        state:
+          type: string
+          minLength: 2
+          maxLength: 2
+          example: NJ
+        county:
+          type: string
+          example: Essex
+        township:
+          type: string
+          example: Hoboken
+        search_type:
+          type: string
+          enum:
+            - CFPB
+            - Title
+          description: >
+            Controls what type of response data is needed
+            Purpose Types:
+             * `CFPB` - Returns tax, recording fees, title fees and title premiums.
+             * `Title` - Title fees and title premiums only.
+        purpose:
+          type: string
+          enum: 
+            - '00'
+            - '11'
+            - '04'
+          description: >
+            If a purpose has a leading zero it is required. There can be more options then the ones listed below. Please contact us if you require a different option
+            Purpose Types:
+             * `00` - Refinance
+             * `04` - Refinance (Reissue)
+             * `11` - Purchase
+        filename:
+          type: string
+          description: Custom name for quote
+        loan_amount:
+          type: number
+          format: double
+          description: Can also be in currency format (i.e. 200,000). Defaults to 0 if not passed
+        purchase_price:
+          type: number
+          format: double
+          description: Can also be in currency format (i.e. 200,000). Defaults to 0 if not passed
+        prior_insurance:
+          type: number
+          format: double
+          description: Optional input that is used for some refinance calulcations. The Questions endpoint will define if this field is needed.
+        exdebt:
+          type: number
+          format: double
+          description: Optional input that is used for some refinance calulcations. The Questions endpoint will define if this field is needed.
+        request_endos:
+          type: array
+          items:
+            type: string
+          example: ['E123','E564']
+          description: >
+            Array of endorsements to get by ID. IDs can be retrieved from the endorsement endpoint. If endorsement endpoint is not available please contact support.
+        doc_type:
+          type: object
+          properties:
+            deed:
+              $ref: '#/components/schemas/document'
+            mort:
+              $ref: '#/components/schemas/document'
+            release:
+              $ref: '#/components/schemas/document'
+            att:
+              $ref: '#/components/schemas/document'
+            assign:
+              $ref: '#/components/schemas/document'
+            sub:
+              $ref: '#/components/schemas/document'
+            mod:
+              $ref: '#/components/schemas/document'
+          description: >
+            Contains which doucments need to be caluclated for the transaction.
+            Document Types:
+             * `deed` - Deed
+             * `mort` - Mortgage/Deed Of Trust
+             * `release` - Release of Real Estate Lien
+             * `att` - Power Of Attorney
+             * `assign` - Assignment
+             * `sub` - Subordination
+             * `mod` - Modification
+          example: 
+            deed:
+              page_count: 3
+            mort:
+              page_count: 26
+              num_count: 1
+        close_date:
+          type: string
+          format: date
+        qst:
+          type: object
+          additionalProperties: 
+            type: string
+          description: >
+            Additional questions that can be answered. They are usually in the form of Q1 => 1. However they can be more complex such as original_mort_date => '01/10/2019'
+          example: 
+            Q1: '1'
+            Q10: '11'
+        loanpol_level:
+          type: integer
+          enum:
+            - 1
+            - 2
+          description: >
+            Loan Policy Level. 
+            Document Types:
+             * `1` - Standard Policy
+             * `2` - Enhanced
+        owners_level:
+          type: integer
+          enum:
+            - 1
+            - 2
+          description: >
+            Owners Policy Level. 
+            Document Types:
+             * `1` - Standard Policy
+             * `2` - Enhanced
+    document:
+      type: object
+      required: 
+        - page_count
+        - num_count
+      properties:
+        page_count:
+          type: number
+          format: integer
+          example: 25
+          description: >
+            Number of pages needed to record the document.
+        num_count:
+          type: number
+          format: integer
+          example: 1
+          default: 1
+          description: >
+            Number of copies of documents that will need to be submitted. Only used for Release, ASsignment, and Subordination.
+        num_grantors:
+          type: number
+          format: integer
+          example: 1
+          default: 1
+          description: >
+            Number of institutions make the grant. Will mostly be used for Mortgage and Release Document.
+        num_grantees:
+          type: number
+          format: integer
+          example: 1
+          default: 1
+          description: >
+            Number of people recieving the grant.  Will mostly be used for Mortgage and Release Document.
+        num_names:
+          type: number
+          format: integer
+          example: 1
+          default: 1
+          description: >
+            Number of Names on the document. Will usually match num_grantees value.
+        num_sigs:
+          type: number
+          format: integer
+          example: 1
+          default: 1
+          description: >
+            Number of signatures on the doucment. Will usually match num_names.
+      example: 
+        page_count: 25
+        num_count: 1
+    lesEngineResponse:
+      type: object
+      properties:
+        search_id:
+          type: number
+          format: integer
+          example: 123756
+        LoanPol:
+          type: number
+          format: double
+          description: >
+            Lenders Policy calculated in CFPB format
+        ownerspol:
+          type: number
+          format: dobule
+          description: >
+            Owners policy calcualted in CFPB format. Full Owners policy - Lenders policy + sim issue
+        simissue:
+          type: number
+          format: double
+          description: >
+            Sim issue for concurrent polcies
+        line1101BreakDown:
+          type: array
+          description: >
+            Buyer paid title/settlement/escrow fees.
+          items:
+            $ref: '#/components/schemas/line1101item'
+        line1101_sellerBreakDown:
+          type: array
+          description: >
+            Seller paid title/settlement/escrow fees.
+          items:
+            $ref: '#/components/schemas/line1101item'
+        line1201BreakDown:
+          type: array
+          description: >
+            Buyer paid document recording fees.
+          items:
+            $ref: '#/components/schemas/line1201item'
+        line1203BreakDown:
+          type: object
+          description: >
+            Buyer paid document transfer taxes. Main information is in CFPB2015 property
+          items:
+            $ref: '#/components/schemas/line1203BreakDown_CFPB2015'
+        line1203_sellerBreakDown:
+          type: object
+          description: >
+            Seller paid document transfer taxes. Main information is in CFPB2015 property
+          items:
+            $ref: '#/components/schemas/line1203BreakDown_CFPB2015'
+        line1203_lenderBreakDown:
+          type: object
+          description: >
+            Lender paid document transfer taxes. Main information is in CFPB2015 property. Currently only used in NY
+          items:
+            $ref: '#/components/schemas/line1203BreakDown_CFPB2015'
+    line1101item:
+      type: object
+      properties:
+        Amount:
+          type: number
+          format: double
+        FinanceCharge:
+          type: string
+          enum:
+            - 'Y'
+            - 'N'
+          description: >
+            If Y then the fee is considered an APR charge.
+        MismoMap:
+          format: string
+          description: >
+            Fee type as mapped to Mismo Map
+          example: 'SettlementFee'
+        VariableName:
+          type: string
+          description: >
+            Fee Name.
+          example: 'Closing Fee'
+    line1201item:
+      type: object
+      required:
+        - jur
+        - type
+        - amount
+      properties:
+        amount:
+          type: number
+          format: double
+        jur:
+          type: string
+          enum:
+            - 'City'
+            - 'County'
+            - 'State'
+          description: >
+            Which jurisidiction charges the recording fee
+        type:
+          format: string
+          description: >
+            Type of recording fee charged. Usually it will just be per document but it can sometimes be a state/county specific extra fee i.e. SB2 in California
+          example: 'Deed Fee'
+    line1203BreakDown_CFPB2015:
+      type: array
+      description: >
+        Array of transfer taxes.
+      items:
+        $ref: '#/components/schemas/line1203item'
+    line1203item:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: double
+        jur:
+          type: string
+          enum:
+            - 'City'
+            - 'County'
+            - 'State'
+        type:
+          type: string
+          description: >
+            Descriptor for type of tax. Usually document name + Tax but can be different. i.e. GrantorTax in VA
+          example: 
+            - 'DeedTax'
+            - 'MortgageTax'
+            - 'MortgageRecordationTax'
+    userNotAuth:
+      type: object
+      properties:
+        error:
+          type: string
+          example: 'Not logged in or session timed out.'
+    notValidRequest:
+      type: object
+      properties:
+        error:
+          type: string
+          example: 'The following required inputs are missing: city.'
+        status:
+          type: number
+          example: 0
+    userAuth:
+      type: object
+      properties:
+        success:
+          type: string
+          example: 'You have been logged in.'
+        session_id:
+          type: string
+          description: 'This is the session token that will need to be passed to all other endpoints'
+          example: 'xxxxxxmtsuflxxxlvmcxxxxx8mit7'
+    questionRequest:
+      type: object
+      required:
+        - request_type
+        - search_type
+        - session_id
+      properties:
+        request_type: 
+          type: number
+          format: integer
+          enum:
+            - 0
+            - 1
+            - 2
+          description: >
+            If a purpose has a leading zero it is required. There can be more options then the ones listed below. Please contact us if you require a different option
+            Request Types:
+             * `0` - provides a "wizard" approach so this end point can walk users through step by step for the questions asked. Please see questionNode for structure.
+             * `1` - bulk question export. Will return the entire question "tree" in one go. Please see questionNode for structure.
+             * `2` - simplified Bulk question export. This is the most popular usage. This will return a flat array of questions. The Response will be of 
+        search_type:
+          $ref: '#/components/schemas/lesEngineRequest/properties/search_type'
+        session_id:
+          $ref: '#/components/schemas/lesEngineRequest/properties/session_id'
+    questionResponse:
+      type: array
+      description: 'Array of JSON string elements'
+      items:
+         $ref: '#/components/schemas/questionResponseResultOptionItem'
+    questionNode:
+      type: object
+      required: 
+        - id
+        - field_values
+        - children
+      properties:
+        id:
+          type: number
+          format: integer
+          description: 'id of the question node'
+        field_values:
+          $ref: '#/components/schemas/questionNodeFieldValues'
+    questionNodeFieldValues:
+      required: 
+        - tree_id
+        - rule_model
+        - rule_method
+        - compare_value
+        - result
+      description: >
+        Object containg how the question should be compared and also what results will be returned
+      properties:
+        tree_id:
+          type: number
+          format: integer
+        rule_model:
+          type: string
+          description: >
+            The name of the property that will be passed to the les_engine method
+          example:
+            - 'search_type'
+            - 'purpose'
+            - 'state'
+            - 'county'
+        rule_method:
+          type: string
+          enum:
+            - equalTo
+            - lessThan
+            - greaterThan
+            - notEqualTo
+          description: >
+            Describes how the user input and the compare_value should be evalulated for this rule_model
+            Rule_Method Types:
+             * `equalTo` - The user input should be euqal to the compare value. If compare_value = "NJ" than the result should only be returned if the user input is "NJ"
+             * `lessThan` - The user input should be less than the compare value. If compare_value = 300000 than the result should only be returned if the user input is less than 300000
+             * `greaterThan` - The user input should be greater than the compare value. If compare_value = 300000 than the result should only be returned if the user input is greater than 300000
+             * `notEqualTo` - The user input should not be euqal to the compare value. If compare_value = "NJ" than the result should only be returned if the user input is not NJ
+        compare_value:
+          type: string
+          description: >
+            Is the value that the users input should be compared to.
+          example:
+            - 'NJ'
+            - 300000
+            - '04'
+        result:
+          type: object
+          properties:
+            result_id:
+              type: number
+              format: integer
+            result_options:
+              type: object
+              description: 'JSON string containing additional questions that need to be asked.'
+              properties:
+                elements:
+                  type: object
+                  description: 'Associatve array. Keys are in the structure of  "item{index}".'
+                  additionalProperties:
+                    $ref: '#/components/schemas/questionResponseResultOptionItem'
+    questionResponseResultOptionItem:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - 'input'
+        label:
+          type: string
+          description: 'User facing label for the question'
+          example:
+            - 'State'
+        attribute:
+          type: object
+          description: 'Attributes specific to the question.'
+          properties:
+            type:
+              type: string
+              enum:
+                - 'date'
+                - 'text'
+                - 'number'
+                - 'checkbox'
+              description: 'The format the question answer is in. Checkbox can be understood as boolean with 1 being true and not set being false'
+            rule_model:
+              type: string
+              description: >
+                The name of the property that will be passed to the les_engine method
+              example:
+                - 'search_type'
+                - 'purpose'
+                - 'state'
+                - 'county'
+            value:
+              type: string
+            default:
+              type: string
+              description: 'Default value for a question. For Checkboxes it can be "checked" meaning the default value is 1.'
+            required:
+              type: boolean
+              description: 'If the question is required.'
+    propertTaxResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: number
+          description: '0 means there was an issue. 1 means property tax have been retreived.'
+          example: 1
+        message:
+          type: string
+          description: 'Only returned if there is no result found.'
+        assessments:
+          type: array
+          items:
+            type: object
+            properties:
+              tax_amount:
+                type: number
+                description: 'How much was the property tax was paid on the property'
+                example: 4247
+              tax_year:
+                type: number
+                description: 'Year that this record is for.'
+                example: 2018
+        tax_calendar:
+          type: object
+          properties:
+            next_due:
+              type: object
+              properties:
+                date:
+                  type: string
+                  description: 'Date of next due date in yyyy-mm-dd format'
+                  example: "2020-05-01"
+                diff:
+                  type: number
+                  description: 'Difference in days between passed closing_date and the next payment. Accounts for leap days.'
+                  example: 10
+            prev_due:
+              type: object
+              properties:
+                date:
+                  type: string
+                  description: 'Date of previous due date in yyyy-mm-dd format'
+                  example: "2020-02-01"
+                diff:
+                  type: number
+                  description: 'Difference in days between passed closing_date and the previous payment. Accounts for leap days.'
+                  example: 80
+            full_cal:
+              description: 'Aray of property tax due dates in mm-dd format. Dates are last payment dates and do not include early discount dates.'
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    example: '02-01'
+                    description: 'Date of property tax due date in mm-dd format'
+    endorsementResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: number
+          description: '0 means there was an issue. 1 means property tax have been retreived.'
+          example: 1
+        message:
+          type: string
+          description: 'Only returned if there is no result found.'
+        endorsements:
+          type: array
+          items:
+            type: object
+            required:
+              - endo_id
+              - name
+              - default
+              - fee_id
+            properties:
+              endo_id:
+                type: number
+                description: 'Endorsement ID. This will be passed to the les_engine request_endos array'
+                example: 3631
+              name:
+                type: string
+                description: 'Endorsement name. This is only used so the end user knows what endorsement is being selected.'
+                example: 'ALTA 9-06 Restrictions, Encroachments, Minerals'
+              default:
+                type: number
+                description: >
+                  Default does not mean that a quote ran thorugh les_engine will automatically include the endorsement. It means that by default the endorsement is requested so it should be in the requrested_endos array to les_engine
+                  0 means that it is not normally quoted by default. 1 means it should be quoted by default. 
+                example: 1
+              fee_id:
+                type: number
+                description: >
+                  LodeStar internal fee_id
+                example: 8
+    subAgentResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: number
+          description: '0 means there was an issue. 1 means property tax have been retreived.'
+          example: 1
+        message:
+          type: string
+          description: 'Only returned if there is an error found.'
+        sub_agents:
+          type: array
+          items:
+            type: object
+            required:
+              - sub_agent_id
+              - sub_agent_office_id
+              - agent_name
+              - relation_type
+            properties:
+              sub_agent_id:
+                type: number
+                description: 'Sub Agent ID (for some endpoints can also be the client_id).'
+                example: 41
+              sub_agent_office_id:
+                type: number
+                description: 'Sub Agent Office ID.  (for some endpoints can also be the agent_id). Usually 1 and will default to 1 on most endpoint calls. However this can be used if multiple offices are setup for a title agent with different pricing.'
+                example: 1
+              name:
+                type: string
+                description: 'Agent Name. This is only used so the end user knows what endorsement is being selected.'
+                example: 'ABC Title'
+              relation_type:
+                type: number
+                description: >
+                  Sub Agents can provide different services or handle different parts of the closing process 
+                  Relationship Types:
+                  * `1` - Full service title agent. Provides closing/settlement/escrow services and title insurance. No other agent is necessary for a closing.
+                  * `2` - Only provides closing/settlement/escrow service. A Title agent would be necessary.
+                  * `4` - Title only. An escrow/closing/settlement agent will also be necessary.   
+                example: 1

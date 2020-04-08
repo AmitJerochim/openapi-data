@@ -1,0 +1,1480 @@
+openapi: 3.0.0
+info:
+  description: This is E-Space App API Docs
+  version: "1.0.0"
+  title: E Space API
+  contact:
+    email: giuna@redberry.ge
+servers:
+  - description: Espace Testing Server
+    url: https://api-dev.e-space.ge/api/app/V1
+
+paths:
+  
+  # Register / Auth
+  
+  '/login':
+    post:
+      tags: 
+        - Register / Auth
+      summary: Log In
+      requestBody:
+        $ref: '#/components/requestBodies/Login'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token_type:
+                    type: string
+                    example: 'bearer'
+                  expires_in:
+                    type: integer
+                    example: 5184000
+        '401':
+          description: User Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  status:
+                    type: integer
+                example:
+                  error: 'User Not Found'
+                  status: 401
+  '/register':
+    post:
+      tags: 
+        - Register / Auth
+      summary: User Registration
+      requestBody:
+        $ref: '#/components/requestBodies/UserRegistration'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  json_status:
+                    type: integer
+                    example: 200
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+        '400':
+          description: Validation Failure
+  '/send-sms-code':
+    post:
+      tags:
+        - Register / Auth
+      summary: Send Sms Code To User
+      requestBody:
+        $ref: '#/components/requestBodies/PhoneNumber'
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  json_status:
+                    type: string
+                    example: 'Sms Sent'
+  '/verify-code':
+    post:
+      tags:
+        - Register / Auth
+      summary: Verify Code
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/PhoneNumberAndCode'
+      responses:
+        '200':
+          $ref: '#/components/responses/VerifyCode'
+        '409':
+          description: Already Registered
+        '440':
+          description: Sms Code Expired
+  '/verify-code-for-password-recovery':
+    post:
+      tags:
+        - Register / Auth
+      summary: Verify Code for Password Recovery
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/PhoneNumberAndCode'
+      responses:
+        '200':
+          $ref: '#/components/responses/VerifyCode'
+        '409':
+          description: Not Registered
+        '440':
+          description: Sms Code Expired
+  '/reset-password':
+    post:
+      tags: 
+        - Register / Auth
+      summary: Reset Password
+      requestBody:
+        $ref: '#/components/requestBodies/ResetPassword'
+      responses:
+        '200':
+          $ref: '#/components/responses/ResetPassword'          
+
+  
+  # User
+  '/me':
+    get:
+      tags: 
+        - User
+      summary: User Info
+      security: 
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  '/update-user-info':
+    post:
+      tags:
+        - User
+      summary: Edit User Info (excluding password)
+      description: >
+        Update:
+        
+        * First Name
+        
+        * Last Name
+        
+        * Phone Number
+        
+        * Email
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/EditUserInfo'
+      responses:
+        '200':
+          description: Ok
+  '/edit-password':
+    post:
+      tags: 
+        - User
+      summary: Edit Password
+      requestBody:
+        $ref: '#/components/requestBodies/EditPassword'
+      responses:
+        '200':
+          $ref: '#/components/responses/EditPassword'
+
+
+  # User Cars
+  '/get-user-cars':
+    get:
+      tags:
+        - User Cars
+      summary: Get User Cars
+      security: 
+        - apiKeyAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/UserCars'
+  '/add-user-car':
+    post:
+      tags:
+        - User Cars
+      summary: Add User Car
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                car_model_id:
+                  type: integer
+                  example: 7
+      responses:
+        '200':
+          description: User Car Added
+        '401':
+          description: User or User Car Not Found
+  '/delete-user-car':
+    post:
+      tags:
+        - User Cars
+      summary: Remove User Car
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                car_model_id:
+                  type: integer
+                  example: 7
+      responses:
+        '200':
+          description: Deleted
+        '404':
+          description: Not Deleted 
+  
+  # User Favorites
+  '/user-favorites':
+    get:
+      tags: 
+        - User Favorites
+      summary: Get User's Favorite Chargers
+      security: 
+        - apiKeyAuth: []
+      responses:
+        '200':
+          $ref: '#/components/requestBodies/FavoriteCharger'
+  '/add-favorite':
+    post:
+      tags:
+        - User Favorites
+      summary: Add Favorite
+      security: 
+        - apiKeyAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/ChargerId'
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: 
+                    type: boolean
+                    example: true
+  '/remove-favorite':
+    post:
+      tags:
+        - User Favorites
+      summary: Remove From Favorites
+      security: 
+        - apiKeyAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/ChargerId'
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: 
+                    type: boolean
+                    example: true
+                    
+  # User Chargers
+  '/user-chargers/{quantity}':
+    get:
+      tags:
+        - User Chargers
+      summary: Get User Chargers
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - in: path
+          name: quantity
+          schema:
+            type: integer
+            example: 3
+          required: true
+          description: Number of records that should be returned at most
+      responses:
+        '200':
+          $ref: '#/components/responses/UserCharger'
+  
+  # User Orders
+  '/user-orders':
+    get:
+      tags:
+        - User Orders
+      summary: Get User Orders
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/UserOrders'
+          
+  # Chargers
+  '/chargers':
+    get:
+      tags: 
+        - Chargers
+      summary: Get Chargers
+      responses:
+        '200':
+          $ref: '#/components/responses/Chargers'
+  '/charger/{id}':
+    get:
+      tags:
+        - Chargers
+      summary: Get Specific Charger
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          example: 7
+      responses:
+        '200':
+          $ref: '#/components/responses/Charger'
+          
+  # Additional Apis
+  '/get-models-and-marks':
+    get:
+      tags: 
+        - Additional Apis
+      summary: Get Models And Marks
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: 
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModelAndMark'
+  '/faq':
+    get:
+      tags:
+        - Additional Apis
+      summary: Get Faq
+      responses:
+        '200':
+          description: successfull opeartion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  faq:
+                    type: array
+                    items: 
+                      $ref: '#/components/schemas/Faq'
+  '/phone-codes':
+    get:
+      tags: 
+        - Additional Apis
+      summary: Phone Codes
+      responses:
+        '200':
+          description: Operation Successfull
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PhoneCode'
+  '/geo-ip':
+    get:
+      tags:
+        - Additional Apis
+      summary: Get Current City Location
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeoIp'
+  '/partners':
+    get:
+      tags:
+        - Additional Apis
+      summary: Get Partners
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  partners:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Partner'
+                      
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        old_id:
+          type: integer
+          nullable: true
+        role_id:
+          type: integer
+        phone_number:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        verified:
+          type: boolean
+        email_verified_at:
+          type: string
+          nullable: true
+        temp_password:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+      example:
+        id: 1154
+        old_id: null
+        role: 1
+        phone_number: '+995591935080'
+        first_name: 'Meraba'
+        last_name: 'Sephashvili'
+        email: 'hemigmirigicode@mail.ru'
+        active: 0
+        verified: 1
+        email_verified_at: null
+        temp_password: null
+        created_at: '2020-01-31 15:35:15'
+        updated_at: '2020-03-05 13:42:51'
+    PhoneCode:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 2
+        phone_code:
+          type: string
+          example: '+995'
+        country_code:
+          type: string
+          example: 'KA'
+    Faq:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 7
+        question:
+          type: object
+          properties:
+            en:
+              type: string
+            ka:
+              type: string
+            ru:
+              type: string
+          example:
+            en: "Have you seen the bear?"
+            ka: "გინახავს დათვი?"
+            ru: "Ты видел медведя?"
+        answer:
+          type: object
+          properties:
+            en:
+              type: string
+            ka:
+              type: string
+            ru:
+              type: string
+          example:
+            en: "Countless"
+            ka: "უთვალავი"
+            ru: "бесчисленный"
+        created_at:
+          type: string
+          example: "2020-02-25 14:45:31"
+        updated_at:
+          type: string
+          example: "2020-02-25 14:45:31"
+    GeoIp:
+      type: object
+      properties:
+        Latitude:
+          type: number
+          format: float
+        Longitude:
+          type: number
+          format: float
+      example:
+        Latitude: 41.6959
+        Longitude: 44.832
+    Partner:
+      type: object
+      properties:
+        id: 
+          type: integer
+        name:
+          type: string
+        image:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+      example:
+        id: 7
+        name: "Wissol"
+        image: "https://api-dev.e-space.ge/storage/lRXh8SnaB7bfXIJiEEljZm2lv2OvpAPJXbSA5GsI.png"
+        created_at: "2020-02-25 13:04:59"
+        updated_at: "2020-02-25 13:04:59"
+    ModelAndMark:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              mark_id:
+                type: integer
+              name:
+                type: string
+
+      example:
+        id: 7
+        name: "Audi"
+        models:
+          id: 7
+          mark_id: 74
+          name: "Audi e-tron"
+    PhoneNumberAndCode:
+      type: object
+      properties:
+        phone_number:
+          type: string
+        code:
+          type:
+            string
+      example:
+        phone_number: '+995591935080'
+        code: '3030'
+    EditPassword:
+      type: object
+      properties:
+        old_password:
+          type: string
+        new_password:
+          type: string
+        phone_number:
+          type: string
+      example:
+        old_password: datvidatvi
+        new_password: machvimachvi
+        phone_number: '+995591935080'
+    ResetPassword:
+      type: object
+      properties:
+        phone_number:
+          type: string
+        password:
+          type: string
+      example:
+        phone_number: '+995591935080'
+        password: 'datvidatvi'
+    FirstName:
+      type: object
+      properties:
+        first_name:
+          type: string
+          example: 'Merab'
+    LastName:
+      type: object
+      properties:
+        last_name:
+          type: string
+          example: 'Sephashvili'
+    PhoneNumber:
+      type: object
+      properties:
+        phone_number:
+          type: string
+          example: '+995591935080'
+    Email:
+      type: object
+      properties:
+        email:
+          type: string
+          example: 'hemigmirigicode@mail.ru'
+    FavoriteCharger:
+      type: object
+      properties:
+        id:
+          type: integer
+        old_id:
+          type: integer
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            ka:
+              type: string
+            ru:
+              type: string
+        charger_id:
+          type: integer
+        code:
+          type: string
+        description:
+          type: string
+          nullable: true
+        user_id:
+          type: integer
+          nullable: true
+        location:
+          type: object
+          properties:
+            en:
+              type: string
+            ka:
+              type: string
+            ru:
+              type: string
+        public: 
+          type: boolean
+        active:
+          type: boolean
+        lat:
+          type: string
+        lng:
+          type: string
+        iban: 
+          type: string
+        charger_group_id:
+          type: integer
+          nullable: true
+        last_update:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        pivot:
+          type: object
+          properties:
+            user_id:
+              type: integer
+            charger_id:
+              type: integer
+            created_at:
+              type: string
+            updated_at:
+              type: string
+      example: 
+        id: 40
+        old_id: 40
+        name:
+          en: "Charger 1342 0036"
+          ka: "Charger 1342 0036"
+          ru: "Charger 1342 0036"
+        charger_id: 1342
+        code: '0036'
+        description: null
+        user_id: null
+        location:
+          en: 'Machakhela-Samikitno Didube, Tbilisi'
+          ka: 'რესტორანი \"მაჭახელა-სამიკიტნო\", დიდუბე,თბილისი'
+          ru: 'Machakhela-Samikitno, Дидубе, Тбилиси'
+        public: 0
+        active: 1
+        lat: '41.72708522116124'
+        lng: '44.78739470243454'
+        iban: ''
+        charger_group_id: null
+        last_update: null
+        created_at: '2020-01-09 09:09:20'
+        updated_at: '2020-01-09 09:09:20'
+        pivot:
+          user_id: 1154
+          charger_id: 40
+          created_at: '2020-02-21 14:45:24'
+          updated_at: '2020-02-21 14:45:24'
+    Charger:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 7
+        old_id:
+          type: integer
+          example: 40
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            ka:
+              type: string
+            ru:
+              type: string
+          example:
+            en: 'Charger 1342 0036'
+            ka: 'Charger 1342 0036'
+            ru: 'Charger 1342 0036'
+        charger_id:
+          type: integer
+          example: 1342
+        code:
+          type: string
+          example: '0036'
+        description:
+          type: string
+          nullable: true
+          example: null
+        user_id:
+          type: integer
+          nullable: true
+          example: 7
+        location:
+          type: object
+          properties:
+            en:
+              type: string
+            ka:
+              type: string
+            ru:
+              type: string
+          example:
+            en: 'Machakhela-Samikitno Didube, Tbilisi'
+            ka: 'რესტორანი \\\"მაჭახელა-სამიკიტნო\\\", დიდუბე,თბილისი'
+            ru: 'Machakhela-Samikitno, Дидубе, Тбилиси'
+        public: 
+          type: integer
+          example: 0
+        active:
+          type: integer
+          example: 1
+        lat:
+          type: string
+          example: '41.72708522116124'
+        lng:
+          type: string
+          example: '44.78739470243454'
+        iban: 
+          type: string
+        charger_group_id:
+          type: integer
+          nullable: true
+          example: 7
+        last_update:
+          type: string
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          example: '2020-01-09 09:09:20'
+        updated_at:
+          type: string
+          example: '2020-01-09 09:09:20'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargerTag'
+        connector_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargerConnectorType'
+        charging_prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargerChargingPrice'
+        fast_charging_prices:
+          type: array
+          items: 
+            $ref: '#/components/schemas/ChargerFastChargingPrice'
+    ChargerTag:
+      type: object
+      properties:
+        id:
+          type: integer
+        old_id:
+          type: integer
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            ka: 
+              type: string
+            ru:
+              type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        pivot:
+          type: object
+          properties:
+            charger_id:
+              type: integer
+            tag_id:
+              type: integer
+      example:
+        id: 1
+        old_id: 1
+        name:
+          en: 'Charger stations'
+          ka: 'ავტოგასამართი სადგურები'
+          ru: 'АЗС'
+        created_at: '2020-01-09 09:09:18'
+        updated_at: '2020-01-09 09:09:18'
+        pivot:
+          charger_id: 85
+          tag_id: 1
+    ChargerConnectorType:
+      type: object
+      properties:
+        id:
+          type: integer
+        old_id:
+          type: integer
+          nullable: true
+        name:
+          type: string
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+        pivot:
+          type: object
+          properties:
+            charger_id:
+              type: integer
+            connector_type_id:
+              type: integer  
+            charger_type_id:
+              type: integer
+      example:
+        id: 1
+        old_id: null
+        name: 'Type 2'
+        created_at: null
+        updated_at: null
+        pivot:
+          charger_id: 85
+          connector_type_id: 1
+          charger_type_id: 1
+    ChargerChargingPrice:
+      type: object
+      properties:
+        id: 
+          type: integer
+        charger_id:
+          type: integer
+        min_kwt:
+          type: string
+        max_kwt:
+          type: string
+        start_time:
+          type: string
+        end_time:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+      example:
+        id: 309
+        charger_id: 85
+        min_kwt: '0'
+        max_kwt: '5'
+        start_time: '0'
+        end_time: '24'
+        price: '0'
+        created_at: '2020-01-09 09:09:21'
+        updated_at: '2020-01-09 09:09:21'
+    ChargerFastChargingPrice:
+      type: object
+      properties:
+        id:
+          type: integer
+        charger_id:
+          type: integer
+        start_minutes:
+          type: string
+        end_minutes:
+          type: string
+        price:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      example:
+        id: 1
+        charger_id: 2
+        start_minutes: 0
+        end_minutes: 20
+        price: 0.5
+        created_at: '2020-01-09 09:09:18'
+        updated_at: '2020-01-09 09:09:18'
+    ChargerWithChargerGroup:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 7
+        old_id:
+          type: integer
+          example: 40
+        name:
+          type: object
+          properties:
+            en:
+              type: string
+            ka:
+              type: string
+            ru:
+              type: string
+          example:
+            en: 'Charger 1342 0036'
+            ka: 'Charger 1342 0036'
+            ru: 'Charger 1342 0036'
+        charger_id:
+          type: integer
+          example: 1342
+        code:
+          type: string
+          example: '0036'
+        description:
+          type: string
+          nullable: true
+          example: null
+        user_id:
+          type: integer
+          nullable: true
+          example: 7
+        location:
+          type: object
+          properties:
+            en:
+              type: string
+            ka:
+              type: string
+            ru:
+              type: string
+          example:
+            en: 'Machakhela-Samikitno Didube, Tbilisi'
+            ka: 'რესტორანი \\\"მაჭახელა-სამიკიტნო\\\", დიდუბე,თბილისი'
+            ru: 'Machakhela-Samikitno, Дидубе, Тбилиси'
+        public: 
+          type: integer
+          example: 0
+        active:
+          type: integer
+          example: 1
+        lat:
+          type: string
+          example: '41.72708522116124'
+        lng:
+          type: string
+          example: '44.78739470243454'
+        iban: 
+          type: string
+        charger_group_id:
+          type: integer
+          nullable: true
+          example: 7
+        last_update:
+          type: string
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          example: '2020-01-09 09:09:20'
+        updated_at:
+          type: string
+          example: '2020-01-09 09:09:20'
+        charger_group:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: 'Dedas Purebi'
+            user_id:
+              type: integer
+              example: 934
+            created_at:
+              type: string
+              example: '2020-03-05 12:35:42'
+            updated_at:
+              type: string
+              example: '2020-03-05 12:35:42'
+            chargers:
+              type: array
+              items:
+                $ref: '#/components/schemas/Charger'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargerTag'
+        connector_types:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargerConnectorType'
+        charging_prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargerChargingPrice'
+        fast_charging_prices:
+          type: array
+          items: 
+            $ref: '#/components/schemas/ChargerFastChargingPrice'
+    UserCard:
+      type: object
+      properties:
+        id:
+          type: integer
+        old_id:
+          type: integer
+          nullable: true
+        user_old_id:
+          type: integer
+          nullable: true
+        masked_pan:
+          type: string
+        order_index:
+          type: integer
+        transaction_id: 
+          type: string
+        card_holder: 
+          type: string
+        default:
+          type: integer
+        active:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      example:
+        id: 2
+        old_id: 2
+        user_old_id: 5
+        user_id: 4
+        masked_pan: '548835xxxxxx9162'
+        order_index: 1
+        transaction_id: string
+        card_holder: 'Giorgi Keshelashvili'
+        default: 0
+        active: 0
+        created_at: '2020-01-09 09:09:15'
+        updated_at: '2020-01-09 09:09:15'
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        old_id:
+          type: integer
+          nullable: true
+          example: 5
+        order_id:
+          type: integer
+          example: 1
+        status:
+          type: integer
+          example: 1
+        active: 
+          type: integer
+          example: 1
+        confirmed:
+          type: integer
+          example: 1
+        confirm_date:
+          type: string
+          format: date-time
+          example: '19/12/2018 16:46:28'
+        date:
+          type: string
+          format: date-time
+          example: '19/12/2018 16:46:25'
+        price:
+          type: string
+          example: '0.15'
+        prrn:
+          type: string
+          example: '835320400278'
+        trx_id:
+          type: string
+          example: '8C9087DC65B6782F201AC4F139E2F9EC'
+        user_card_id:
+          type: integer
+          example: 2
+        created_at:
+          type: string
+          format: date-time
+          example: '2020-01-09 09:09:54'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2020-01-09 09:09:54' 
+        user_card:
+          $ref: '#/components/schemas/UserCard'
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        old_id:
+          type: integer
+          nullable: true
+          example: 5
+        charger_id:
+          type: integer
+          example: 29
+        user_id:
+          type: integer
+          example: 1154
+        connector_type_id: 
+          type: integer
+          example: 1
+        charger_type_id:
+          type: integer
+          example: 1
+        charging_type_id:
+          type: integer
+          example: 1
+        finished:
+          type: integer
+          example: 1
+        charge_fee:
+          type: number
+          nullable: true
+          example: null
+        charge_time:
+          type: number
+          nullable: true
+          example: null
+        charger_transaction_id:
+          type: integer
+          example: 33028
+        confirmed:
+          type: integer
+          example: 1
+        confirm_date:
+          type: string
+          example: '19/12/2018 17:10:34'
+        refunded:
+          type: integer
+          nullable: true
+        price:
+          type: string
+          example: '0.22'
+        target_price:
+          type: string
+          example: '0.15'
+        requested_already:
+          type: integer
+          example: 0
+        status:
+          type: string
+          example: '0'
+        comment:
+          type: string
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          example: '2020-01-09 09:09:21'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2020-03-14 21:29:37'
+        charger:
+          $ref: '#/components/schemas/FavoriteCharger'
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+    UserCar:
+      type: object
+      properties:
+        mark_id:
+          type: integer
+        mark_name:
+          type: string
+        model_id:
+          type: integer
+        model_name:
+          type: string
+      example:
+        mark_id: 7
+        mark_name: Chevrolet
+        model_id: 7
+        model_name: Bolt EV
+  requestBodies:
+    Login:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              phone_number:
+                type: string
+              password:
+                type: string
+            example: 
+              phone_number: '+995591935080'
+              password: 'datvidatvi'
+    UserRegistration:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              first_name:
+                type: string
+              last_name:
+                type: string
+              phone_number:
+                type: string
+              email:
+                type: string
+                nullable: true
+              password:
+                type: string
+            example: 
+              first_name: 'Merab'
+              last_name: 'Sephashvili'
+              phone_number: '+995591935080'
+              email: null
+              password: 'datvidatvi'
+    PhoneNumber:
+      content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone_number:
+                  type: string
+                  example: '+995591935080'
+    EditPassword:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EditPassword'
+    ResetPassword:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResetPassword'
+    EditUserInfo:
+      description: Edit User Info
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/FirstName'
+              - $ref: '#/components/schemas/LastName'
+              - $ref: '#/components/schemas/PhoneNumber'
+              - $ref: '#/components/schemas/Email'
+            example:
+              first_name: 'Merab'
+    FavoriteCharger:
+      description: Ok
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user_favorite_chargers:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FavoriteCharger'
+    ChargerId:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              charger_id:
+                type: integer
+                example: 7
+  responses:
+    VerifyCode:
+      description: Verify Code
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              json_status: 
+                type: string
+              status:
+                type: integer
+              phone_number:
+                type: string
+            example:
+              json_status: Verified
+              status: 200
+              phone_number: '+995591935080'
+    EditPassword:
+      description: Edit Password
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              json_status:
+                type: string
+              status:
+                type: string
+            example:
+              json_status: 'Password Edited'
+              status: 200
+    ResetPassword:
+      description: Edit Password
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              json_status:
+                type: string
+              status:
+                type: string
+            example:
+              json_status: 'Password Changed'
+              status: 200
+    Chargers:
+      description: Ok
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/ChargerWithChargerGroup'
+    Charger:
+      description: Ok
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data: 
+                $ref: '#/components/schemas/Charger'
+              current_hour:
+                type: string
+                example: 13
+    UserCharger:
+      description: Ok
+      content:
+        applicartion/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Charger'
+              current_hour:
+                type: string
+                example: 21
+    UserOrders:
+      description: Ok
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+    UserCars:
+      description: Ok
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user_cars:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    user_id: 
+                      type: integer
+                      example: 7
+                    user_car:
+                      $ref: '#/components/schemas/UserCar'
+              json_status:
+                type: string
+                example: Success
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization

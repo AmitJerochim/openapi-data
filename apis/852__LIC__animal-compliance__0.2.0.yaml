@@ -1,0 +1,383 @@
+penapi: 3.0.0
+info:
+  description: |-
+    Welcome to the Animal Compliance API. This API was originally created to reduce the time it takes our customers to manage NAIT movements for non-dairy animals on farm. It was also created to soften the blow of a pricing increase LIC have made as part of the turn-off strategy for MINDA Pro.
+    
+    The long term product strategy for this product is not yet known. This API individually is part of our digital platform, and so focuses on CRUD functionality for now. Should the business decide to further invest in a beef product, it is likely that this API and others will become key components of that product. As such it's important to bed in good practice and patterns here.
+    
+    Further, this API is high leverage in a number of ways. Technically, it represents the first cut of data entry into a digital API (as opposed to adding new functionality to an existing service boundary architecture). It's high leverage from a product perspective because it allows us to demonstrate what good looks like from an interaction and product development perspective. It's high leverage for the business as well, though mainly for transient, market driven reasons.
+    
+    See the following links for more information:
+
+    [Github Repository](http://swagger.io)
+    
+    [Confluence Documentation](http://swagger.io)
+    
+    [Product Strategy and Use Cases](http://swagger.io)
+  version: "0.2.0"
+  title: Animal Compliance API
+  contact:
+    email: alex.corkin@lic.co.nz
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/LIC/animal-compliance/0.2.0
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/LIC/animal-compliance/0.1.0
+  - description: Production Environment for Animal Compliance
+    url: 'https://api.lic.co.nz/animal-compliance'
+  - description: Test Environment for Animal Compliance
+    url: 'https://test.api.lic.co.nz/animal-compliance'
+  - description: Development Environment for Animal Compliance
+    url: 'https://dev.api.lic.co.nz/animal-compliance'
+tags:
+  - name: Animal Movement
+    description: Registrations, Movements on and off Farm
+  - name: Animal Tag
+    description: Querying, Loading and Assigning Tags
+paths:
+  '/movement/{animalIdentifier}':
+    get:
+      tags:
+        - Animal Movement
+      summary: Return all movement records for an animal
+      description: Returns a list of movement records
+      operationId: getAllMovementRecords
+      parameters:
+        - name: animalIdentifier
+          in: path
+          description: ID of animal to return records for. This can be a UUID, EID or Animal ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/movementRecord'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/movementRecord'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Animal not found
+    post:
+      tags:
+        - Animal Movement
+      summary: Create a new animal movement record
+      operationId: addMovementRecord
+      parameters:
+        - name: animalIdentifier
+          in: path
+          description: ID of animal to return records for. This can be an EID or Animal ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '405':
+          description: Invalid input
+      security:
+        - animal_compliance_auth:
+            - 'write:movement'
+            - 'read:movement'
+      requestBody:
+        $ref: '#/components/requestBodies/movementRecord'
+  '/movement/{animalIdentifier}/record/{animalMovementRecord}':
+    put:
+      tags:
+        - Animal Movement
+      summary: Update an animal movement record
+      operationId: updateMovementRecord
+      parameters:
+        - name: animalIdentifier
+          in: path
+          description: ID of animal to return records for. This can be an EID or Animal ID
+          required: true
+          schema:
+            type: string
+        - name: animalMovementRecord
+          in: path
+          description: UUID of the subject record
+          required: true
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Animal not found
+        '405':
+          description: Validation exception
+      security:
+        - animal_compliance_auth:
+            - 'write:movement'
+            - 'read:movement'
+      requestBody:
+        $ref: '#/components/requestBodies/movementRecord'
+    delete:
+      tags:
+        - Animal Movement
+      summary: Deletes an animal movement record
+      operationId: deletePet
+      parameters:
+        - name: animalIdentifier
+          in: path
+          description: ID of animal to return records for. This can be an EID or Animal ID
+          required: true
+          schema:
+            type: string
+        - name: animalMovementRecord
+          in: path
+          description: UUID of the subject record
+          required: true
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Animal movement not found
+      security:
+        - animal_compliance_auth:
+            - 'write:movement'
+            - 'read:movement'
+  '/tags/{participantCode}':
+    get:
+      tags:
+        - Animal Tag
+      summary: Return all known tags by participant code
+      description: Returns a list of EID and EID+BirthID combo tags
+      operationId: getAllTagsByParticipantCode
+      parameters:
+        - name: participantCode
+          in: path
+          description: Participant code to return tags for
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tag'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/tag'
+        '400':
+          description: Invalid participant code supplied
+        '404':
+          description: Participant code not found
+      security:
+        - animal_compliance_auth:
+            - 'write:tag'
+            - 'read:tag'
+    post:
+      tags:
+        - Animal Tag
+      summary: Load a new tag into the system
+      operationId: addOneTag
+      parameters:
+        - name: participantCode
+          in: path
+          description: Participant code to return tags for
+          required: true
+          schema:
+            type: string
+      responses:
+        '405':
+          description: Invalid input
+      security:
+        - animal_compliance_auth:
+            - 'write:tag'
+            - 'read:tag'
+      requestBody:
+        $ref: '#/components/requestBodies/tag'
+  '/tags/{participantCode}/tagFile':
+    post:
+      tags:
+        - Animal Tag
+      summary: Load a tags from file
+      operationId: addManyTags
+      parameters:
+        - name: participantCode
+          in: path
+          description: Participant code to return tags for
+          required: true
+          schema:
+            type: string
+      responses:
+        '405':
+          description: Invalid input
+      security:
+        - animal_compliance_auth:
+            - 'write:tag'
+            - 'read:tag'
+      requestBody:
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+  '/tags/{participantCode}/tag/{animalTag}':
+    put:
+      tags:
+        - Animal Tag
+      summary: Update an animal tag
+      operationId: updateTag
+      parameters:
+        - name: participantCode
+          in: path
+          description: Participant code to return tags for
+          required: true
+          schema:
+            type: string
+        - name: animalTag
+          in: path
+          description: EID of subject tag
+          required: true
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Animal not found
+        '405':
+          description: Validation exception
+      security:
+        - animal_compliance_auth:
+            - 'write:tag'
+            - 'read:tag'
+      requestBody:
+        $ref: '#/components/requestBodies/tag'
+    delete:
+      tags:
+        - Animal Tag
+      summary: Deletes an animal tag
+      operationId: deleteTag
+      parameters:
+        - name: participantCode
+          in: path
+          description: Participant code to return tags for
+          required: true
+          schema:
+            type: string
+        - name: animalTag
+          in: path
+          description: EID of subject tag
+          required: true
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Animal movement not found
+      security:
+        - animal_compliance_auth:
+            - 'write:tag'
+            - 'read:tag'
+components:
+  schemas:
+    birthId:
+      type: object
+      properties:
+        prefix:
+          type: string
+        year:
+          type: integer
+        sequence:
+          type: integer
+      description: The birthID of an animal
+    tag:
+      type: object
+      required:
+        - eid
+        - allocationCode
+      properties:
+        eid:
+          type: string
+        birthId:
+          $ref: '#/components/schemas/birthId'
+        allocationCode:
+          type: string
+          description: Describes whether or not the tag has been used
+          example: allocated
+          enum:
+            - allocated
+            - not allocated
+            - destroyed/lost/replaced - no credit
+            - reordered/replaced - credit given
+        supplierPartyId:
+          type: string
+        sourceFileName:
+          type: string
+        ownerParticipantCode:
+          type: string
+    movementRecord:
+      type: object
+      required:
+        - uuid
+        - animalEid
+        - eventTime
+        - eventType
+      properties:
+        uuid:
+          type: string
+          description: This UUID identifies the individual movement record.
+          example: i am a uuid
+        animalEid:
+          type: string
+          description: The EID associated with the tag placed on an animal.
+          example: 1234-5678
+        animalId:
+          type: string
+          description: Identifies the specific animal the record relates to.
+          example: 1234-5678
+        eventTime:
+          type: string
+          description: Formatted as per ISO 8601
+          example: 1990-09-03
+        eventType:
+          type: string
+          description: Describes the type of event.
+          example: Registered, Sold, Purchased
+        bpNumber:
+          type: string
+          description: The BP number for the herd this animal is associated wth.
+          example: null
+        productionType:
+          type: string
+          description: Describes what the animal produces, usually milk, sometimes beef.
+          example: null
+        tags:
+          $ref: '#/components/schemas/tag'
+  requestBodies:
+    movementRecord:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/movementRecord'
+    tag:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/tag'
+      description: Pet object that needs to be added to the store
+      required: true
+  securitySchemes:
+    animal_compliance_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: 'http://petstore.swagger.io/oauth/dialog'
+          scopes:
+            'write:movement': modify pets in your account
+            'read:movement': read your pets
+            'write:tag': modify pets in your account
+            'read:tag': read your pets

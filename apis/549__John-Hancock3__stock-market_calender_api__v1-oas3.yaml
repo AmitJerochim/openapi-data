@@ -1,0 +1,163 @@
+penapi: 3.0.0
+info:
+  description: Cursive Auto Insurance Sign In API
+  version: "1.0.0"
+  title: Cursive Auto Insurance Sign In API
+  contact:
+    email: jason@colonylabs.io
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+      description: |
+        username = client_id
+        password = client_secret
+  schemas:
+    JobId:
+      type: string
+      format: uuid
+      example: '3d04ab42-3ce6-4e75-bd6b-aa009031c1f4'
+    DeployedFlowId:
+      type: string
+      format: uuid
+      example: 'f5202338-8e4a-4f05-a5c3-3bc6d9a5c622'
+    Institution:
+      type: string
+      enum: [geico, progressive]
+      description: auto insurance provider (case-sensitive)
+    State:
+      type: string
+      example: TX
+      description: two letter code for US state (case-insensitive)
+    InputData:
+      type: object
+      required:
+        - deployed_flow_id
+        - username
+        - password
+        - institution
+        - state
+      properties:
+        deployed_flow_id:
+          $ref: '#/components/schemas/DeployedFlowId'
+        username:
+          type: string
+          example: username
+          description: username for auto insurance login
+        password:
+          type: string
+          example: password
+          description: password for auto insurance login
+        institution:
+          $ref: '#/components/schemas/Institution'
+        state:
+          $ref: '#/components/schemas/State'
+    VisibleInputData:
+      type: object
+      required:
+        - deployed_flow_id
+        - institution
+        - state
+      properties:
+        deployed_flow_id:
+          $ref: '#/components/schemas/DeployedFlowId'
+        institution:
+          $ref: '#/components/schemas/Institution'
+        state:
+          $ref: '#/components/schemas/State'
+    OutputData:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [login_success, login_failure, state_not_supported, institution_not_supported]
+          example: login_success
+        declarations_page:
+          type: string
+          format: URL
+          example: https://colony-recorder-staging.s3-accelerate.amazonaws.com/...
+          description: URL to the PDF on S3, expires 4 hours after the first API call
+    DeployedFlowJob:
+      type: object
+      required:
+        - id
+        - deployed_flow_id
+        - status
+        - input_data
+        - created
+      properties:
+        id:
+          $ref: '#/components/schemas/JobId'
+        deployed_flow_id:
+          $ref: '#/components/schemas/DeployedFlowId'
+        status:
+          type: string
+          enum: [pending, released, session_created]
+        input_data:
+          $ref: '#/components/schemas/VisibleInputData'
+        output_data:
+          $ref: '#/components/schemas/OutputData'
+        created:
+          type: string
+          format: date-time
+          example: '2020-02-20T21:00:20.760595Z'
+security:
+  - BasicAuth: []
+paths:
+  /v1/jobs/:
+    post:
+      summary: creates a new job from a flow
+      operationId: createJob
+      description: creates and enqueues a job from a deployed flow id
+      responses:
+        '201':
+          description: job created
+        '404':
+          description: deployed_flow_id not found
+        '422':
+          description: input validation failed
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InputData'
+        description: job input parameters
+    get:
+      summary: fetches all jobs
+      operationId: getJobs
+      description: fetches all jobs
+      responses:
+        '200':
+          description: matching jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeployedFlowJob'
+  /v1/jobs/{id}/:
+    get:
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            $ref: '#/components/schemas/JobId'
+      summary: fetches a job with {id}
+      operationId: fetchJob
+      description: fetches a job with {id}
+      responses:
+        '200':
+          description: job found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeployedFlowJob'
+        '404':
+          description: job not found

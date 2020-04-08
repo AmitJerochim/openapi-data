@@ -1,0 +1,1422 @@
+openapi: 3.0.0
+info:
+  description: |
+    API reference for implementing a Cowrie client.
+  version: "1.0.0"
+  title: Cowrie Client API
+  contact:
+    email: api@cowrie.io
+tags:
+  - name: Registration
+    description: A set of endpoints used to create and retrieve registrations
+  - name: Authorization
+    description: A set of endpoints used to authorize, revoke and retrieve the authorization status of secondary keys
+  - name: Contingency
+    description: A set of endpoints used to provision contingency keys. Contingency keys are keys of last resort used to regain access to an account in case its primary keys are lost.
+  - name: Transaction
+    description: A set of endpoints used to create and retrieve transactions.
+  - name: Invoice
+    description: A set of endpoints used to create and retrieve invoices.
+  - name: Deposit
+    description: A set of endpoints used to initiate and monitor the status of deposits.
+  - name: Withdrawal
+    description: A set of endpoints used to initiate and monitor the status of withdrawals.
+  - name: Account
+    description: A set of endpoints used to retrieve account information like account balance and the utxo set
+paths:
+  /registration:
+    post:
+      tags:
+        - Registration
+      summary: Create a new registration
+      operationId: createRegistration
+      parameters:
+        - name: idPubKey
+          in: header
+          description: The idPubKey for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the body data using the keys indicated by idPubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Registration'
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Registration created successfully
+    get:
+      tags:
+        - Registration
+      summary: Get registration
+      operationId: getRegistration
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Registration'
+  /authorization:
+    post:
+      tags:
+        - Authorization
+      summary: Create a new authorization
+      operationId: createAuthorization
+      parameters:
+        - name: idPubKey
+          in: header
+          description: The idPubKey for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the body data using the keys indicated by idPubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Authorization'
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Authorization created successfully
+    get:
+      tags:
+        - Authorization
+      summary: Get the list of authorizations
+      operationId: listAuthorizations
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: cursor
+          in: query
+          description: The last returned cursor value. This value may be omitted for the first call to this endpoint
+          required: false
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cursor:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Authorization'
+  '/authorization/{id}':
+    get:
+      tags:
+        - Authorization
+      summary: Get an authorization by id
+      operationId: getAuthorization
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: id
+          in: path
+          description: The id of the authorization to be fetched
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Authorization'
+  /authorization/revocation:
+    post:
+      tags:
+        - Authorization
+      summary: Create a revocation for an authorization
+      operationId: revokeAuthorization
+      parameters:
+        - name: idPubKey
+          in: header
+          description: The idPubKey for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the body data using the keys indicated by idPubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Revocation'
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Authorization revoked successfully
+  '/authorization/{id}/revocation':
+    get:
+      tags:
+        - Authorization
+      summary: Get the revocation for an authorization if one exists
+      operationId: getRevocation
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: id
+          in: path
+          description: The id of the authorization for which the revocation should be fetched
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Revocation'
+  /contingency:
+    post:
+      tags:
+        - Contingency
+      summary: Create a contingency
+      operationId: createContingency
+      parameters:
+        - name: idPubKey
+          in: header
+          description: The idPubKey for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the body data using the keys indicated by idPubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Contingency'
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Contingency created successfully
+    get:
+      tags:
+        - Contingency
+      summary: Get contingency
+      operationId: getContingency
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contingency'
+  /transaction:
+    post:
+      tags:
+        - Transaction
+      summary: Create a new transaction
+      operationId: createTransaction
+      parameters:
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the body data using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Transaction created successfully
+    get:
+      tags:
+        - Transaction
+      summary: Get the list of transactions
+      operationId: listTransactions
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: cursor
+          in: query
+          description: The last returned cursor value. This value may be omitted for the first call to this endpoint
+          required: false
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cursor:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+  '/transaction/{id}':
+    get:
+      tags:
+        - Transaction
+      summary: Get a transaction by id
+      operationId: getTransaction
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: id
+          in: path
+          description: The id of the transaction to be fetched
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+  /invoice:
+    post:
+      tags:
+        - Invoice
+      summary: Create a new invoice
+      operationId: createInvoice
+      parameters:
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the body data using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Invoice'
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Invoice created successfully
+    get:
+      tags:
+        - Invoice
+      summary: Get the list of invoices
+      operationId: listInvoices
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: cursor
+          in: query
+          description: The last returned cursor value. This value may be omitted for the first call to this endpoint
+          required: false
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cursor:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+  '/invoice/{id}':
+    get:
+      tags:
+        - Invoice
+      summary: Get an invoice by id
+      operationId: getInvoice
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: id
+          in: path
+          description: The id of the invoice to be fetched
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+  /deposit:
+    post:
+      tags:
+        - Deposit
+      summary: Initiate a new deposit
+      operationId: createDeposit
+      parameters:
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the body data using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Deposit'
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Deposit initiated successfully
+    get:
+      tags:
+        - Deposit
+      summary: Get the list of deposits
+      operationId: listDeposits
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: cursor
+          in: query
+          description: The last returned cursor value. This value may be omitted for the first call to this endpoint
+          required: false
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cursor:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Deposit'
+  '/deposit/{id}':
+    get:
+      tags:
+        - Deposit
+      summary: Get a deposit by id
+      operationId: getDeposit
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: id
+          in: path
+          description: The id of the deposit to be fetched
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deposit'
+  '/deposit/{id}/state':
+    get:
+      tags:
+        - Deposit
+      summary: Get deposit state by id
+      operationId: getDepositState
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: id
+          in: path
+          description: The id of the deposit for which the state should be fetched
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepositState'
+  /withdrawal:
+    post:
+      tags:
+        - Withdrawal
+      summary: Initiate a new withdrawal
+      operationId: createWithdrawal
+      parameters:
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the body data using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Withdrawal'
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Withdrawal initiated successfully
+    get:
+      tags:
+        - Withdrawal
+      summary: Get the list of withdrawals
+      operationId: listWithdrawals
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: cursor
+          in: query
+          description: The last returned cursor value. This value may be omitted for the first call to this endpoint
+          required: false
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cursor:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Withdrawal'
+  '/withdrawal/{id}':
+    get:
+      tags:
+        - Withdrawal
+      summary: Get a withdrawal by id
+      operationId: getWithdrawal
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: id
+          in: path
+          description: The id of the withdrawal to be fetched
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Withdrawal'
+  '/withdrawal/{id}/state':
+    get:
+      tags:
+        - Withdrawal
+      summary: Get withdrawal state by id
+      operationId: getWithdrawalState
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: id
+          in: path
+          description: The id of the withdrawal for which the state should be fetched
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithdrawalState'
+  '/account/balance':
+    get:
+      tags:
+        - Account
+      summary: Get account balance
+      operationId: getBalance
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Balance'
+  '/account/utxo':
+    get:
+      tags:
+        - Account
+      summary: List unspent transaction outputs
+      operationId: listUTXO
+      parameters:
+        - name: timestamp
+          in: header
+          description: The timestamp of the request
+          required: true
+          schema:
+            type: string
+            format: int64-string
+        - name: pubKey
+          in: header
+          description: The pubKey of an authorized set of keys for the account
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: signature
+          in: header
+          description: The signature produced by signing the timestamp using the keys indicated by pubKey
+          required: true
+          schema:
+            type: string
+            format: base64-string
+        - name: cursor
+          in: query
+          description: The last returned cursor value. This value may be omitted for the first call to this endpoint
+          required: false
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Request failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardError'
+        '500':
+          description: Server error
+        '200':
+          description: Request completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cursor:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UTXO'
+components:
+  schemas:
+    Registration:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: int64-string
+        nonce:
+          type: string
+          format: base64-string
+        address:
+          type: string
+          format: base64-string
+    Authorization:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: int64-string
+        nonce:
+          type: string
+          format: base64-string
+        pubKey:
+          type: string
+          format: base64-string
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Permission"
+    Permission:
+      type: string
+      enum:
+        - READ_INJECTION
+        - READ_EJECTION
+        - READ_TRANSFER
+        - READ_UTXO
+        - READ_BALANCE
+        - WRITE_INJECTION
+        - WRITE_EJECTION
+        - WRITE_TRANSFER
+        - READ_REGISTRATION
+        - READ_AUTHORIZATION
+        - READ_REVOCATION
+        - READ_CONTINGENCY
+        - READ_INVOICE
+        - WRITE_INVOICE
+        - READ_DEPOSIT
+        - WRITE_DEPOSIT
+        - READ_WITHDRAWAL
+        - WRITE_WITHDRAWAL
+    Revocation:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: int64-string
+        nonce:
+          type: string
+          format: base64-string
+        authID:
+          type: string
+          format: base64-string
+    Contingency:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: int64-string
+        nonce:
+          type: string
+          format: base64-string
+        keyID:
+          type: string
+          format: base64-string
+    Transaction:
+      type: object
+      properties:
+        op:
+          $ref: '#/components/schemas/TransactionOperation'
+        timestamp:
+          type: string
+          format: timestamp-string
+        nonce:
+          type: string
+          format: base64-string
+        sender:
+          type: string
+          format: base64-string
+        inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionInput'
+        outputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionOutput'
+        invoiceID:
+          type: string
+          format: base64-string
+        depositID:
+          type: string
+          format: base64-string
+        withdrawalID:
+          type: string
+          format: base64-string
+    TransactionOperation:
+      type: string
+      enum:
+        - INJECTION
+        - EJECTION
+        - TRANSFER
+    TransactionInput:
+      type: object
+      properties:
+        index:
+          type: string
+          format: int64-string
+        originTxID:
+          type: string
+          format: base64-string
+        originIndex:
+          type: string
+          format: int64-string
+        owner:
+          type: string
+          format: base64-string
+        value:
+          type: string
+          format: int64-string
+    TransactionOutput:
+      type: object
+      properties:
+        index:
+          type: string
+          format: int64-string
+        owner:
+          type: string
+          format: base64-string
+        value:
+          type: string
+          format: int64-string
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: base64-string
+        timestamp:
+          type: string
+          format: int64-string
+        nonce:
+          type: string
+          format: base64-string
+        issuer:
+          type: string
+          format: base64-string
+        amount:
+          type: string
+          format: int64-string
+        expiry:
+          type: string
+          format: int64-string
+    Deposit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: base64-string
+        timestamp:
+          type: string
+          format: int64-string
+        nonce:
+          type: string
+          format: base64-string
+        address:
+          type: string
+          format: base64-string
+        amount:
+          type: string
+          format: int64-string
+    DepositState:
+      type: string
+      enum:
+        - AWAITING_INCOMING_TRANSFER
+        - DEPOSIT_EXPIRED
+        - AWAITING_INJECTION
+        - INJECTION_CONFIRMED
+    Withdrawal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: base64-string
+        timestamp:
+          type: string
+          format: int64-string
+        nonce:
+          type: string
+          format: base64-string
+        address:
+          type: string
+          format: base64-string
+        amount:
+          type: string
+          format: int64-string
+    WithdrawalState:
+      type: string
+      enum:
+        - AWAITING_EJECTION
+        - WITHDRAWAL_EXPIRED
+        - AWAITING_OUTGOING_TRANSFER
+        - OUTGOING_TRANSFER_INITIATED
+        - OUTGOING_TRANSFER_EXCEPTION
+        - OUTGOING_TRANSFER_CONFIRMED
+    UTXO:
+      type: object
+      properties:
+        originTxID:
+          type: string
+          format: base64-string
+        originIndex:
+          type: string
+          format: int64-string
+        value:
+          type: string
+          format: int64-string
+    Balance:
+      type: string
+      format: int64-string
+    StandardError:
+      type: object
+      properties:
+        code:
+          type: string
+          format: int64-string
+        message:
+          type: string
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/umranh/cowrie/1.0.0

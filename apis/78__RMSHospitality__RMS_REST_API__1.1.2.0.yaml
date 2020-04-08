@@ -1,0 +1,3019 @@
+openapi: 3.0.0
+
+servers:
+  - description: "Southern Hemisphere - Live" 
+    url: 'https://restapi2.rmscloud.com/'
+    
+  - description: "Southern Hemisphere - Test"
+    url: 'https://testrestapi2.rmscloud.com/'
+    
+  - description: "Northern Hemisphere - Live"
+    url: 'https://restapi7.rmscloud.com/'
+    
+  - description: "Northern Hemisphere - Test"
+    url: 'https://testrestapi7.rmscloud.com/'  
+
+info:
+  version: "1.1.2.0"
+  x-logo: 
+    url: "https://www.rmscloud.com/themes/default/images/logo.png"
+  title: "RMS REST API"
+  description: |
+    # Introduction
+    
+      The RMS REST API acts as a gateway to the RMS database. It can be used to extract and update a broad subset of data for a range of uses. The information can be extracted periodically as an automated routine or on demand. This interface also allows for the updating and creation of new data as well as the posting of charges.  The interface also allows for posting data back to RMS.
+      
+      This interface also allows for the updating and creation of new data as well as the posting of charges. 
+    
+      This document describes the protocol for the exchange of information between the Property Management System (RMS) and Third Party Applications.  
+    
+      
+      For information about the costs involved, please [click here](https://www.rmscloud.com/technical-support/developers/)  
+      
+      There are many uses for the Public Service Interface which include but are not limited to:
+      
+      - E-marketing solutions
+      - Loyalty systems
+      - Data correlation for group wide reporting
+      - Statistical reporting
+      - Data Warehouse
+      - POS
+      - KIOSK
+      
+    # Getting Access to the API
+      1. Complete the [RMS REST API Developers Kit Request Form](https://forms.gle/vxkKZndpGFsA5npi9)
+      2. The API Support Team will contact you to arrange a kick off meeting
+      3. Complete your one hour kick off meeting with the API Support team
+      4. Contact [RMS Sales](sales@rms.com.au) and request the API Developers Kit ($500 excl. GST)
+      5. Once payment has been processed the API Support Team will contact you with login details so you may start developing.
+      6. Use the credentials provided along with the [POST authToken call](https://restapidocs.rmscloud.com/#section/Authentication) to create a token.
+      7. Click `Authorize` in the documentation and enter your token to test the calls.
+      8. If you have any further questions that are not covered in the spec, please contact apisupport@rms.com.au
+      
+    # Guidlines and Formatting
+      1. Any reference to number as 'no' in RMS will be referred to as 'id' in the API.
+      2. Any reference to the term 'Made' in RMS will be referred to as 'Created' in the API.
+      3. Default mandatory fields will be identified, however clients may configure their own mandatory fields.
+      4. All examples will be shown in order of Basic, Full, Lite. The Basic object will be returned by default.
+      5. All code is wrtitten in lower camelcase.
+      6. Date format YEAR-MONTH-DAY HOUR-MINUTE-SECOND E.g. "2016-08-22 19:25:00".
+      7. When performing a PUT you first need to perform a GET on the Full Object, then alter the fields then perfrom the PUT with the whole object. If you pass back blank fields the original fields will be changed to 'Null'.
+      8. When using the POST function always pass 'ID' as '0' to create the next available record.
+    
+    # Frequently Asked Questions
+      **Q: Why cant I see the name of an object in my call ?**
+      
+      *A: We will only return the 'ID' for most table refrences. To retrieve additonal data you will need to pass that 'ID' via the appropriate GET call.*
+      
+      **Q: How can I find the Room Number ?**
+      
+      *A:Any reference to Room No, Site No, Dock No will be referred to as Area.*
+      
+      **Q: How can I find the the name of the room types ?**
+      
+      *A: Any reference to Room Type, Site Type, Dock Type will be referred to as Category.*
+      
+      **Q: What time zone are the time stamps returned in ?**
+      
+      *A: All refrences to Date/ Time are returned in local propertty time.*   
+      
+      **Q: Is there a limit to how many records are retruned ?**
+      
+      *A: All GET functions will return a default limit of 100 records ordered by the Id field. This limit can be increased and/or multiple calls calls can be performed using the offset parameter.*
+      
+      **Q: Why is my guest returned with an Account Id of '0' ?**
+      
+      *A: If a guest has never charged back to their account ID before, it will not exist in RMS. Use the call '/guests/createAccountId' to create an Account ID for a guest.*      
+
+    # High Level RMS Schema    
+       ![Schema](https://restapidocs.rmscloud.com/rms-schema.png)
+       
+    # Status Error Responses:
+    
+      - 400: Bad Request
+      - 401: Unauthorized
+      - 403: Forbidden
+      - 404: Not Found
+      - 406: Not Acceptable
+    
+    # Alternate Format:
+    
+    - **[Three column format](https://restapidocs.rmscloud.com/)**
+    
+tags:
+  - name: connecting and authentication
+    description: "Authentication token and client specific URL for accessing the RMS API"
+  - name: agents
+    description: "Retrieve a list of agents"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/setup/setup-a-travel-agent' 
+  - name: areas
+    description: "Retrieve area information"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/setup/setup-an-area'
+  - name: availability
+    description: "Retrieve a propertys availability"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/rate-manager/view-rates-availability-on-the-rate-manager-chart'
+  - name: booking sources
+    description: "Retrieve a list of booking sources"
+    externalDocs:
+      description: Find out more
+      url: 'N/A'
+  - name: boomgates
+    description: "Update the access status of an access number associated with a resertvation"
+  - name: categories
+    description: "Retrieve categorie information"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/setup/setup-a-category'
+  - name: companies
+    description: "Retrieve, create and update companies"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/setup/setup-a-company'
+  - name: credit notes
+    description: "Retrieve a list of credit notes"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/accounting-setup/create-an-unassigned-credit-note'
+  - name: countries
+    description: "Retrieve a list of countries and corrosponding Id's"
+    externalDocs:
+      description: Find out more
+      url: 'N/A'
+  - name: discounts
+    description: "Retrieve a list discounts"
+    externalDocs:
+      description: Find out more
+      url: 'N/A'            
+  - name: dwelling
+    description: "Retrieve a list of the different dwelling setup options"
+    externalDocs:
+      description: Find out more
+      url: 'N/A'      
+  - name: group allotments
+    description: "Retrieve, create and update group allotments"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/group-allotments/create-group-allotments'
+  - name: guests
+    description: "Retrieve, create and update guests"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/guests'
+  - name: labels
+    description: "Retrieve the label associated with a user defined fields"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/setup/configure-system-labels'   
+  - name: properties
+    description: "Retrieve property details"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/setup/add-a-new-property'
+  - name: mandatory fields
+    description: "Retrieve the mandatory fields associated with the user profile created for your Agent account in RMS (This will be configuired by the client)"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/users-security/customise-fields-displayed-on-the-reservation-screen'  
+  - name: rates
+    description: "Retrieve rate information"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/stand-alone-rates/create-a-new-rate-type'
+  - name: reports
+    description: "Retrieve report information"
+    externalDocs:
+      description: Find out more
+      url: 'https://rms-help-centre.helpjuice.com/reports'      
+  - name: reservations
+    description: "Retrieve, create and update reservations"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/reservations'
+  - name: requirements
+    description: "Retrieve a list of requirements"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/accounting-setup/create-a-requirement' 
+  - name: reservation types
+    description: "Retrieve a list of reservation types and associated Sub reservation types"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/setup/setup-sub-reservation-types'            
+  - name: sundries
+    description: "Retrieve a list of sundries"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/sundry-charges/setup-a-sundry-charge'
+  - name: transactions
+    description: "Retrieve and create transactions"
+    externalDocs:
+      description: Find out more
+      url: 'https://helpcentre.rmscloud.com/accounting'
+  - name: webhooks
+    description: "Webhooks allow you subscribe for updates when a change is made in a customers database"
+  - name: online booking engine 
+    description: "This section of the documentation groups together all the functionality a devloper requires to create a booking engine"   
+    
+security:
+  - api_key: []
+
+components:
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: authtoken
+      in: header  
+      
+paths:
+  /clienturl/{rmsClientId}:
+    get: 
+      tags: 
+        - connecting and authentication
+      summary: "Retrieve the client specific URL for accessing the RMS API"
+      security: []
+      operationId: getClientURL
+      parameters:
+        - name: rmsClientId
+          in: path
+          description: "Id of RMS Client to retrieve the API Server URL"
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 11281
+      responses:
+        '200':
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "https://testrestapi2.rmscloud.com"
+  /authToken:
+    post:
+      tags:
+        - connecting and authentication
+      summary: "Create an authentication token"
+      security: []
+      operationId: createAuthToken
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/authTokenCredentials'
+      responses:
+        '201':
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/authToken'
+                
+  /agents/{id}/accountId:   
+    get:
+      deprecated: true
+      tags:
+        - agents
+      summary: "Retrieve a Online Agent, Travel Agent or Wholesaler Account ID at the sepcified property - ETA 06/20"
+      operationId: getAgentAccountById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/accountId'
+  /agents/{id}/contacts:
+    get:
+      deprecated: true
+      tags:
+        - agents
+      summary: "Retrieve a agent's contacts - ETA 06/20"
+      operationId: getAgentContactsById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/contact'
+  /agents/createAccountId:
+    post:
+      deprecated: true
+      tags:
+        - agents
+      summary: "If a Agent has never charged back to their account ID before at a particular property, it will not exist in RMS. This feature will allow you to create an account ID for the specified Agent ID at a specified property - ETA 06/20"
+      operationId: postAgentAccountId
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/accountIdCreation'
+      responses:
+          '200':
+            description: Elements to pass 
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/accountId'                  
+  /agents/{id}/rates:   
+    get:
+      deprecated: true    
+      tags:
+        - agents
+      summary: "Retrieve a agent's rates - ETA 06/20"
+      operationId: getAgentRatesById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/copmanyRate'
+                  
+  /areas:
+    get:
+      deprecated: false
+      tags:
+        - areas
+        - online booking engine 
+      summary: "Retrieve a list of areas"
+      operationId: getAreas
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/propertyId'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/searchModifiedSince'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/sort'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaFull'
+              example:
+                 - areaLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaLite'
+                 - areaBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaBasic'
+                 - areaFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaFull'
+  /areas/{id}:
+    get:
+      deprecated: false
+      tags:
+        - areas
+        - online booking engine 
+      summary: "Retrieve an Area by ID"
+      operationId: getAreasById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/areaName'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaFull'
+              example:
+                 - areaLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaLite'
+                 - areaBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaBasic'
+                 - areaFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaFull'
+  /areas/{id}/attributes:
+    get:
+      deprecated: false
+      tags:
+        - areas
+      summary: "Retrieve the attributes associated with a area"
+      operationId: getAreaAttributesById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/attributes'
+  /areas/grouping:    
+    get:
+      deprecated: false
+      tags:
+        - areas
+        - online booking engine 
+      summary: "Retrieve a list of grouping available to an area"
+      operationId: getAreaGrouping
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/grouping'                  
+  /areas/{id}/images:
+    get:
+      deprecated: false
+      tags:
+        - areas
+        - online booking engine 
+      summary: "Retrieve the image URL's associated with a area"
+      operationId: getAreaImagesById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/image'
+  /areas/{id}/interconnecting:
+    get:
+      deprecated: false
+      tags:
+        - areas
+        - online booking engine 
+      summary: "Retrieve the interconecting areas assoictaed with a specified area"
+      operationId: getInterconnectingAreasByAreaId
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaLite'                  
+                  
+  /availabilityRateGrid:
+    post:
+      tags:
+        - availability 
+        - online booking engine 
+      summary: "Retrieve a properties avilability and rate information to present in a grid"
+      operationId: getAvailabilityRateGrid
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/rateGridRequest'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/rateGridCategory'
+                  
+  /bookingSources:   
+    get:
+      tags:
+        - booking sources
+        - online booking engine 
+      summary: "Retrieve a list of booking sources"
+      operationId: getBookingSources
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/bookingSource'
+  /bookingSources/grouping:   
+    get:
+      deprecated: false  
+      tags:
+        - booking sources
+      summary: "Retrieve a list of grouping available to booking sources"
+      operationId: getBookingSourceGrouping
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/grouping'
+                  
+  /boomgate/status:
+    put:
+      tags:
+        - boomgates
+      summary: "Update the registration access status"
+      operationId: putBoomgatesReservationStatus
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/accessNumber'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/status'          
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/regoAccess'                     
+                  
+  /categories:
+    get:
+      deprecated: false    
+      tags:
+        - categories
+        - online booking engine 
+      summary: "Retrieve a list of categories"
+      description: "The room type holds the room description, number of guests it can accommodate, price, etc. Your property may have multiple rooms (or units) that all are of the same room type. You can add and edit room types and units in Settings -> Accommodation. A room type named “Double room”. <br> <br> Any reference to Room Type, Site Type, Dock Type will be referred to as Category. Categorys are created by the property and all fields are not neccisary configured with information. If a particular field is required for your integration and you recieve a null value you will need to ask the propetty directly to populate this."
+      operationId: getCategories
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/propertyId'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/searchModifiedSince'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/sort'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryFull'
+              example:
+                 - categoryLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryLite'
+                 - categoryBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryBasic'
+                 - categoryFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryFull'
+  /categories/grouping:    
+    get:
+      deprecated: false
+      tags:
+        - categories
+      summary: "Retrieve a list of grouping available to a category"
+      operationId: getCategoriesGrouping
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/grouping'                              
+  /categories/{id}:
+    get:
+      deprecated: false    
+      tags:
+        - categories
+        - online booking engine 
+      summary: "Retrieve a Category by ID"
+      operationId: getCategoriesById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryFull'
+              example:
+                 - categoryLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryLite'
+                 - categoryBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryBasic'
+                 - categoryFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryFull'
+  /categories/{id}/areas:
+    get:
+      deprecated: false
+      tags:
+        - categories
+        - online booking engine 
+      summary: "Retrieve the areas associated with a category"
+      operationId: getCategoriesAreas
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/areaLite'
+  /categories/{id}/discounts:
+    get:
+      deprecated: false
+      tags:
+        - categories
+        - online booking engine 
+      summary: "Retrieve the discounts associated with a category"
+      operationId: getCategoriesDiscounts
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/discountLite'
+  /categories/{id}/images:
+    get:
+      deprecated: false
+      tags:
+        - categories
+        - online booking engine 
+      summary: "Retrieve the image URL's associated with a category"
+      operationId: getCategoryImages
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/image'
+  /categories/{id}/attributes:
+    get:
+      deprecated: false
+      tags:
+        - categories
+        - online booking engine 
+      summary: "Retrieve the attributes associated with a category"
+      operationId: getCategoryAttributes
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/attributes'
+  /categories/{id}/taxes:
+    get:
+      deprecated: false
+      tags:
+        - categories
+      summary: "Retrieve the taxes associated with a category"
+      operationId: getCategoyTaxes
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/taxes'
+          # Need to pass attributes and areas as an object i.e. attributesLite / areasLite
+          
+  /companies:
+    get:
+      tags:
+        - companies
+      summary: "Retrieve a list of companies"
+      operationId: getCompanies
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/searchModifiedSince'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/sort'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyFull'
+              example:
+                 - CompanyLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyLite/example'
+                 - CompanyBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyBasic/example'
+                 - CompanyFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyFull/example'
+    post:
+      tags:
+        - companies
+      summary: "Add a new company"
+      operationId: addCompany
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/company'
+      responses:
+        '201':
+          description: basic successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyBasic'
+    put:
+      tags:
+        - companies
+      summary: "Update an existing company"
+      operationId: updateCompany
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/company'
+      responses:
+        '201':
+          description: basic successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyBasic'
+  /companies/createAccountId:
+    post:
+      deprecated: true
+      tags:
+        - companies
+      summary: "If a Company has never charged back to their account ID before at a particular property, it will not exist in RMS. This feature will allow you to create an account ID for the specified Copmapny ID at a specified property - ETA 06/20"
+      operationId: postCompanyAccountId
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/accountIdCreation'
+      responses:
+          '200':
+            description: Elements to pass 
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/accountId' 
+  /companies/grouping:   
+    get:
+      deprecated: false  
+      tags:
+        - companies
+      summary: "Retrieve a list of grouping available to companies"
+      operationId: getCompanyGroupings
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/grouping'                    
+  /companies/{id}:
+    get:
+      tags:
+        - companies
+      summary: "Retrieve a company's details"
+      operationId: getCompanyById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyFull'
+              example:
+                 - CompanyLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyLite/example'
+                 - CompanyBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyBasic/example'
+                 - CompanyFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/companyFull/example'
+  /companies/{id}/accountId:
+    get:
+      deprecated: true
+      tags:
+        - companies
+      summary: "Retrieve an AccountId associated with A Company at the sepcified property - ETA 06/20"
+      operationId: getCompanyAccountId
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/accountId'                      
+  /companies/{id}/contacts:
+    get:
+      tags:
+        - companies
+      summary: "Retrieve a company's contacts"
+      operationId: getCompanyContacts
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/contact'
+  /companies/{id}/rates:   
+    get:
+      tags:
+        - companies
+      summary: "Retrieve a company's rates"
+      operationId: getCompanyRates
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/copmanyRate'
+                  
+  /creditNotes:   
+    get:
+      tags:
+        - credit notes
+      summary: "Retrieve a list of credit notes"
+      operationId: getCreditNotes
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/propertyId'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/creditNote'
+                  
+  /countries:   
+    get:
+      tags:
+        - countries
+      summary: "Retrieve a list of countries"
+      operationId: getCountries
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/country'
+                  
+  /discounts:   
+    get:
+      tags:
+        - discounts
+        - online booking engine 
+      summary: "Retrieve a list of discounts"
+      operationId: getDiscounts
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/discountFull'                  
+                  
+  /dwellingLengths:   
+    get:
+      tags:
+        - dwelling
+        - online booking engine 
+      summary: "Retrieve a list of dwelling lengths"
+      operationId: getDwellingLengths
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/dwellingLength'  
+  /dwellingTypes:   
+    get:
+      tags:
+        - dwelling
+        - online booking engine 
+      summary: "Retrieve a list of dwelling types"
+      operationId: getDwellingTypes
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/dwellingType'  
+  /dwellingSlides:   
+    get:
+      tags:
+        - dwelling
+        - online booking engine 
+      summary: "Retrieve a list of dwelling slides"
+      operationId: getDwellingSlides
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/dwellingSlide'     
+  /towing:   
+    get:
+      tags:
+        - dwelling
+        - online booking engine 
+      summary: "Retrieve a list of towing types"
+      operationId: getTowing
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/towing'                    
+          
+  /guests:
+    post:
+      tags:
+        - guests
+        - online booking engine 
+      summary: "Add a new guest"
+      operationId: addGuest
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/ignoreMandatoryFieldWarnings'       
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/guest'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/guestBasic'
+    put:
+      tags:
+        - guests
+        - online booking engine 
+      summary: "Update an existing guest"
+      operationId: updateGuest
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/ignoreMandatoryFieldWarnings'       
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/guest'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/guestBasic'
+  /guests/createAccountId:
+    post:
+      deprecated: true
+      tags:
+        - guests
+      summary: "If a Guest has never charged back to their account ID before at a particular property, it will not exist in RMS. This feature will allow you to create an account ID for the specified Guest ID at a specified property. - ETA 06/20"
+      operationId: postGuestAccountId
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/accountIdCreation'
+      responses:
+          '200':
+            description: Elements to pass 
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/accountId'
+  /guests/search:
+    post:
+      tags:
+        - guests
+        - online booking engine 
+      summary: "Retrieve an advanced guest search"
+      operationId: postGuestSearch
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/sort'
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/guestSearch'
+      responses:
+          '200':
+            description: Elements to pass 
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/guestFull'
+  /guests/{id}:
+    get:
+      tags:
+        - guests
+        - online booking engine 
+      summary: "Retrieve a guest by ID"
+      operationId: getGuestsById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/guestLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/guestBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/guestFull'
+              example:
+                 - guestLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/guestLite/example'
+                 - guestBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/guestBasic/example'
+                 - guestFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/guestFull/example'
+  /guests/{id}/accounts:
+    get:
+      deprecated: false
+      tags:
+        - guests
+      summary: "Retrieve an AccountId associated with A Guest at the sepcified property"
+      operationId: getGuestsAccounts
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/accountId'
+  /guests/{id}/mealCard:
+    get:
+      tags:
+        - guests
+      summary: "Retrieve a guests meal card information"
+      operationId: getGuestsMealCard
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/mealCard'
+  /guests/{id}/token:
+    post:
+      tags:
+        - guests
+      summary: "Add a CC Token to be associated with a guest"
+      operationId: addGuestToken
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/guestToken'
+      responses:
+        '200':
+          description: "successful operation"
+                  
+  /onlineAgents:   
+    get:
+      deprecated: false
+      tags:
+        - agents
+      summary: "Retrieve a list of online agents"
+      operationId: getOnlineAgents
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/propertyId'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/searchModifiedSince'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/sort'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentBasic'   
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentFull'    
+                example:
+                   - agentLite:                  
+                        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentLite/example'
+                   - agentBasic:                  
+                        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentBasic/example'    
+                   - agentFull:                  
+                        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentFull/example'                        
+                      
+  /groupAllotments:
+    get:
+      tags:
+        - group allotments
+      summary: "Retrieve a list of group allotments"
+      operationId: getGroupAllotments
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/searchModifiedSince'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/searchDepartureDate'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsBasic'
+              example:
+                 - groupAllotmentsLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsLite/example'
+                 - groupAllotmentsBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsBasic/example'
+                      
+    post:
+      tags:
+        - group allotments 
+      summary: "Add a new group allotment"
+      operationId: addGroupAllotments
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/groupAllotments'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsBasic'
+    put:
+      tags:
+        - group allotments
+      summary: "Update an existing group allotment"
+      operationId: updateGroupAllotments
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/groupAllotments'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsBasic'
+                  
+  /groupAllotments/{id}:
+    get:
+      tags:
+        - group allotments
+      summary: "Retrieve a specific group allotment by Id"
+      operationId: getGroupAllotmentsById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsBasic'
+              example:
+                 - groupAllotmentsLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsLite/example'
+                 - groupAllotmentsBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsBasic/example'                      
+                                        
+  /groupAllotments/{id}/allotments:
+    get:
+      tags:
+        - group allotments
+      summary: "Retrieve a list of group allotments; allotments by Id"
+      operationId: getGroupAllotmentsIdAllotments
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsAllotments'
+                      
+  '/groupAllotments/{id}/createAllotments':                      
+    put:
+      tags:
+        - group allotments
+      summary: "Update an existing group allotment"
+      operationId: updateGroupAllotmentsAllotments
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/groupAllotmentsAllotments'
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/groupAllotmentsAllotments'    
+                  
+  /labels/area:
+    get:
+      deprecated: false 
+      tags:
+        - labels
+        - online booking engine 
+      summary: "Retrieve a list of labels applied to area user defined fields"
+      operationId: getAreaLabels
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/labelArea'
+  /labels/accounting:
+    get:
+      deprecated: false 
+      tags:
+        - labels
+      summary: "Retrieve a list of labels applied to accounts"
+      operationId: getAccountingLabels
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/labelAccounting'     
+  /labels/additional:
+    get:
+      deprecated: false 
+      tags:
+        - labels
+        - online booking engine 
+      summary: "Retrieve a list of labels applied to addiotnal tarrif charge fields"
+      operationId: getAdditionalLabels
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/labelAdditional' 
+  /labels/asset:
+    get:
+      deprecated: false 
+      tags:
+        - labels
+      summary: "Retrieve a list of labels applied to asset user defined fields"
+      operationId: getAssetLabels
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/labelAsset'     
+  /labels/category:
+    get:
+      tags:
+        - labels
+        - online booking engine 
+      summary: "Retrieve a list of labels applied to the category user defined fields"
+      operationId: getCategoryLabels
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/labelCategory'                    
+  /labels/guest:
+    get:
+      deprecated: false 
+      tags:
+        - labels
+        - online booking engine 
+      summary: "Retrieve a list of labels applied to guest user defined fields"
+      operationId: getGuestLabels
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/labelGuest'   
+  /labels/ibe:
+    get:
+      deprecated: false 
+      tags:
+        - labels
+        - online booking engine 
+      summary: "Retrieve a list of labels applied to the IBE (Internet Booking Engine) fields"
+      operationId: getIbeLabels
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/labelIbe'                      
+                  
+  /labels/property:
+    get:
+      deprecated: false 
+      tags:
+        - labels
+      summary: "Retrieve a list of labels applied to a properties user defined fields"
+      operationId: getpropertyLabels
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/labelProperty'
+  /labels/reservation:
+    get:
+      deprecated: false 
+      tags:
+        - labels
+        - online booking engine 
+      summary: "Retrieve a list of labels applied to a reservations user defined fields"
+      operationId: getReservationLabels
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/labelReservation'   
+  /labels/system:
+    get:
+      deprecated: false 
+      tags:
+        - labels
+      summary: "Retrieve a list of labels applied to system term e.g. Category = Room Type"
+      operationId: getSystemLabels
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/labelSystem'             
+                  
+  /mandatoryFields:
+    get:
+      tags:
+        - mandatory fields
+        - online booking engine 
+      summary: "Retrieve the mandatory fields associated with your user profile for a client"
+      operationId: getMandatoryFields
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/mandatoryField'
+                  
+  /properties:
+    get:
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve a list of property details"
+      operationId: getProperties
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/sort'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesFull'
+              example:
+                 - propertiesLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesLite/example'
+                 - propertiesBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesBasic/example'
+                 - guestFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesFull/example'
+  /properties/grouping:   
+    get:
+      deprecated: false  
+      tags:
+        - properties
+      summary: "Retrieve a list of grouping available to properties"
+      operationId: getPropertiesGrouping
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/grouping'                        
+  /properties/{id}:
+    get:
+      tags:
+        - properties
+      summary: "Retrieve a properties details by ID"
+      operationId: getPropertiesById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesFull'
+              example:
+                 - propertiesLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesLite/example'
+                 - propertiesBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesBasic/example'
+                 - guestFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/propertiesFull/example'
+  /properties/{id}/addons:
+    get:
+      tags:
+        - properties
+      summary: "Retrieve the addons associated with a property"
+      operationId: getPropertiesAddons
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/addOnLite'                      
+  /properties/{id}/attributes:
+    get:
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the attributes associated with a property"
+      operationId: getPropertiesAttributes
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/attributes'
+  /properties/{id}/categories:
+    get:
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the categories associated with a property"
+      operationId: getPropertiescategories
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'      
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryFull'
+              example:
+                 - categoryLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryLite'
+                 - categoryBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryBasic'
+                 - categoryFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/categoryFull'             
+  /properties/{id}/currency:
+    get:
+      deprecated: false
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the currencies accepted for a property"
+      operationId: getPropertiesCurrencies
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/currency' 
+  /properties/{id}/discounts:
+    get:
+      deprecated: false
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the discounts associated with a property"
+      operationId: getPropertiesDiscounts
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/discountLite'                  
+  /properties/{id}/images:
+    get:
+      deprecated: false
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the image URL's associated with a property"
+      operationId: getPropertiesImages
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/image'                  
+  /properties/{id}/ibe/additionals:
+    get:
+      deprecated: true
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the additionals associated with the RMS IBE (Internet Booking Engine) for a property e.g. Pets, adults, children etc - ETA: 06/20"
+      operationId: getIbeAdditionals
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/additional' 
+  /properties/{id}/ibe/addOn:
+    get:
+      deprecated: true
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the addons associated with the RMS IBE (Internet Booking Engine) for a property e.g. Roll Out Beds, Bicycles for hire etc - ETA: 06/20"
+      operationId: getIbeAddons
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/addOnLite'                     
+  /properties/{id}/ibe/bookingSources:
+    get:
+      deprecated: false
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the booking sources associated with the RMS IBE (Internet Booking Engine) for a property"
+      operationId: getIbeBookingSources
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/bookingSource'
+  /properties/{id}/ibe/creditCard:
+    get:
+      deprecated: false
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the credit cards associated with the RMS IBE (Internet Booking Engine) for a property"
+      operationId: getIbeCreditCards
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/creditCard'  
+  /properties/{id}/ibe/fees:
+    get:
+      deprecated: false
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the fee's associated with a reservation made via the RMS IBE (Internet Booking Engine) for a property"
+      operationId: getIbeFees
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/ibeReservationFees'                    
+  /properties/{id}/ibe/policies:
+    get:
+      deprecated: false
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the policies, information and Descriptions associated with a property"
+      operationId: getIbePolicies
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/policy'  
+  /properties/{id}/ibe/requirements:
+    get:
+      deprecated: false
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the requirements associated with the RMS IBE (Internet Booking Engine) for a property"
+      operationId: getIbeRequirements
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/ibeRequirement'                    
+  /properties/{id}/ibe/settings:
+    get:
+      deprecated: false
+      tags:
+        - properties
+        - online booking engine 
+      summary: "Retrieve the settings associated with the RMS IBE (Internet Booking Engine) for a property"
+      operationId: getIbeSettings
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/ibeSetting'                     
+                  
+  /rates:
+    get:
+      deprecated: false
+      tags:
+        - rates
+        - online booking engine 
+      summary: "Retireve a list of rates"
+      operationId: getRateTypes
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/sort'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/rateTypeLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/rateTypeFull'
+              example:
+                - propertiesLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/rateTypeLite'
+                - guestFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/rateTypeFull'
+  /rates/grouping:   
+    get:
+      deprecated: false  
+      tags:
+        - rates
+      summary: "Retrieve a list of grouping available to rates types"
+      operationId: getRatesGrouping
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/grouping'                  
+  /rates/rateQuote:
+    post:
+      tags:
+        - rates
+        - online booking engine 
+      summary: "Retrieve a price quote for a reservation"
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/rateQuoteRequest'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/rateQuote' 
+                  
+  /rates/rateAdjustment:
+  #this will be used by rate managers to push rate values back to RMS 
+    post:
+      tags:
+        - rates
+      summary: "Make an adjustment to a rates value and restriction in RMS"
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/rateAdjustmentRequest'
+      responses:
+        '200':
+          description: "successful operation"
+          
+  /reports/historyForecast:
+    post:
+      tags:
+        - reports
+      summary: "Build History and Forecast reporting"
+      operationId: gethistoryForecastReport
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/reportHistoryForecast'        
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reportHistoryForecast'              
+          
+  /reports/occupancy: 
+    post:
+      tags:
+        - reports
+      summary: "Build occupancy reporting"
+      operationId: getOccupancyReport
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/reportOccupancyBuild'        
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reportOccupancy'        
+                  
+  /reservations:
+    post:
+      tags:
+        - reservations 
+        - online booking engine 
+      summary: "Add a new reservation, allreaservations will drop in as 'unconfrimed' unless a deposit >0 is passed"
+      operationId: addReservation
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/ignoreMandatoryFieldWarnings' 
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/reservation'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic'
+    put:
+      tags:
+        - reservations
+        - online booking engine 
+      summary: "Update an existing reservation"
+      operationId: updateReservation
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/ignoreMandatoryFieldWarnings'       
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/reservation'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic'
+  /reservations/group:
+    post:
+      deprecated: false
+      tags:
+        - reservations 
+        - online booking engine 
+      summary: "Add a new group reservation"
+      operationId: addReservationGroup
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/reservation'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic' 
+  /reservations/quote:
+    post:
+      deprecated: false
+      tags:
+        - reservations 
+        - online booking engine 
+      summary: "Add a new quote reservation"
+      operationId: addReservationQuote
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/reservation'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic' 
+  /reservations/pencil:
+    post:
+      deprecated: false
+      tags:
+        - reservations 
+        - online booking engine 
+      summary: "Add a new pencil reservation"
+      operationId: addReservationPencil
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/reservationPencil'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationPencil' 
+  /reservations/{id}/status:
+      put:
+        tags:
+          - reservations
+        summary: "Change a reservation's status"
+        operationId: putReservationStatus
+        parameters:
+          - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+        requestBody:
+          $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/reservationStatus'
+        responses:
+          '201':
+            description: Elements to pass 
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic'
+  /reservations/{id}/addGuest:
+      put:
+        deprecated: false
+        tags:
+          - reservations
+          - online booking engine 
+        summary: "Add a guest to a reservation"
+        operationId: addGuestToAnExistingReservation
+        parameters:
+          - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+          - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/guestId'          
+        responses:
+          '200':
+            description: successful operation 
+  /reservations/{id}/removeGuest:
+      put:
+        deprecated: false
+        tags:
+          - reservations
+        summary: "Remove a guest from a reservation"
+        operationId: removeAGuestToAnExistingReservation
+        parameters:
+          - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+          - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/guestId'          
+        responses:
+          '200':
+            description: successful operation     
+  /reservations/{id}/setPrimaryGuest:
+      put:
+        deprecated: false
+        tags:
+          - reservations
+          - online booking engine 
+        summary: "Set the primary guest on a reservation"
+        operationId: setThePrimaryGuestOnAnExistingReservation
+        parameters:
+          - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+          - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/guestId'          
+        responses:
+          '200':
+            description: successful operation        
+  /reservations/{id}/requirement:
+      post:
+        deprecated: false
+        tags:
+          - reservations
+          - online booking engine 
+        summary: "Add a requirement to a reservation"
+        operationId: addRequirementToReservation
+        parameters:
+          - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+        requestBody:
+            $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/reservationRequirement'          
+        responses:
+          '200':
+            description: successful operation               
+  /reservations/search:
+    post:
+      tags:
+        - reservations
+        - online booking engine 
+      summary: "Retrieve an advanced reservations search"
+      operationId: postReservationSearch
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/sort'
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/reservationSearch'
+      responses:
+          '200':
+            description: Elements to pass 
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationFull'
+  /reservations/{id}:
+    get:
+      tags:
+        - reservations
+        - online booking engine 
+      summary: "Retrieve a reservations by ID"
+      operationId: getReservationById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationFull'
+              example:
+                 - reservationLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationLite/example'
+                 - reservationBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic/example'
+                 - reservationFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationFull/example'
+  /reservations/arriving:
+    get:
+      tags:
+        - reservations
+      summary: "Retrieve a list of the reservations that you have arriving each day, this does not include reservations that have already arrived"
+      operationId: getReservationArriving
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/areaId'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/areaName'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/catId'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/propertyId'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationFull'
+              example:
+                 - reservationLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationLite/example'
+                 - reservationBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic/example'
+                 - reservationFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationFull/example'
+  /reservations/departing:
+    get:
+      tags:
+        - reservations
+      summary: "Retrieve a list of all reservations that are leaving today, this will not include reservations that have already left"
+      operationId: getReservationDeparting
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/areaId'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/areaName'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/catId'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/propertyId'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationFull'
+              example:
+                 - reservationLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationLite/example'
+                 - reservationBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic/example'
+                 - reservationFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationFull/example'
+  /reservations/inHouse:
+    get:
+      tags:
+        - reservations
+      summary: "Retrieve a list of all reservations currently arrived"
+      operationId: getReservationInHouse
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/areaId'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/areaName'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/catId'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/propertyId'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationFull'
+              example:
+                 - reservationLite:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationLite/example'
+                 - reservationBasic:
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBasic/example'
+                 - reservationFull: 
+                      $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationFull/example'
+  /reservations/{id}/actualAccount:
+    get:
+      tags:
+        - reservations
+      summary: "Retrieve a reservations fiancial information"
+      operationId: getReservationActualAccount
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/actualAccount'
+  /reservations/{id}/addOn:
+    get:
+      tags:
+        - reservations
+      summary: "Retrieve a reservations Add On information"
+      operationId: getReservationReservationAddOn
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationAddOn'
+  /reservations/{id}/auditTrail:
+    get:
+      tags:
+        - reservations
+      summary: "Retrieve a reservations audit information"
+      operationId: getReservationReservationAuditTrail
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationAuditTrail'
+  /reservations/{id}/billTo:
+    get:
+      deprecated: false      
+      tags:
+        - reservations
+      summary: "Retrieve a reservations account mapping information"
+      operationId: getReservationBillTo
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationBillTo'                   
+  /reservations/{id}/correspondence:
+    get:
+      tags:
+        - reservations
+      summary: "Retrieve a reservations correspondence information"
+      operationId: getReservationCorrespondence
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/correspondence'
+  /reservations/{id}/guests:
+    get:
+      tags:
+        - reservations
+      summary: "Retrieve a reservations guests information"
+      operationId: getReservationGuests
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/guestBasic'
+  /reservations/{id}/housekeeping:
+    get:
+      tags:
+        - reservations
+      summary: "Retrieve a reservations housekeeping information"
+      operationId: getReservationHousekeeping
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/housekeeping'
+  /reservations/{id}/projectedAccount:
+    get:
+      deprecated: false 
+      tags:
+        - reservations
+      summary: "Retrieve a reservations projected account information"
+      operationId: getReservationProjectedAccount 
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/projectedAccount'
+  /reservations/{id}/dailyRates:
+    get:
+      deprecated: false 
+      tags:
+        - reservations
+      summary: "Retrieve a reservations daily rate information"
+      operationId: getReservationDailyRates
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/dailyRate'
+  /reservations/{id}/dailyRevenue:
+    get:
+      deprecated: false 
+      tags:
+        - reservations
+      summary: "Retrieve a reservations daily revenue information"
+      operationId: getReservationDailyRevenue 
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/dailyRevenue'                  
+  /reservations/{id}/regoAccess:
+    get:
+      tags:
+        - reservations
+      summary: "Retrieve a reservations registration access information"
+      operationId: getReservationRegoAccess
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/regoAccess'
+                  
+  /requirements:   
+     get:
+      tags:
+        - requirements
+        - online booking engine 
+      summary: "Retrieve a list of requirements"
+      operationId: getRequirements
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/requirement'
+  /requirements/grouping:   
+    get:
+      deprecated: false  
+      tags:
+        - requirements
+      summary: "Retrieve a list of grouping available to requirements"
+      operationId: getRequirementsGrouping
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/grouping' 
+  /requirements/{id}/validationDates:   
+    get:
+      deprecated: false  
+      tags:
+        - requirements
+      summary: "Retrieve a list of grouping available to requirements"
+      operationId: getRequirementValidationDates
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/requirementValidationDates'                        
+                  
+  /reservationTypes:   
+    get:
+      deprecated: true    
+      tags:
+        - reservation types
+      summary: "Retrieve a list of reservation types - ETA: 06/20"
+      operationId: getReservationTypes
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/resType'    
+  /reservationTypes/{id}:   
+    get:
+      deprecated: true    
+      tags:
+        - reservation types
+      summary: "Retrieve a reservation type by id - ETA: 06/20"
+      operationId: getReservationTypesById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/resType'  
+  /reservationTypes/{id}/subResTypes/:   
+    get:
+      deprecated: true    
+      tags:
+        - reservation types
+      summary: "Retrieve a list of sub reservation types associated to a reservation type - ETA: 06/20"
+      operationId: getSubReservationTypesById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/resTypeSub'                      
+                  
+  /sundries:   
+    get:
+      tags:
+        - sundries
+        - online booking engine 
+      summary: "Retrieve a list of sundires"
+      operationId: getSundries
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/propertyId'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/sundry'
+  /sundries/grouping:   
+    get:
+      deprecated: false  
+      tags:
+        - sundries
+      summary: "Retrieve a list of grouping available to sundries"
+      operationId: getSundriesGrouping
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/grouping'                    
+                  
+  /transactions/search:
+    post:
+      tags:
+        - transactions
+        - online booking engine 
+      summary: "Retrieve an advanced transaction search"
+      operationId: postTransactionSearch
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/sort'
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/reservationSearch'
+      responses:
+          '200':
+            description: Elements to pass 
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/transactionFull'
+                    
+  /transactions/{id}:
+    get:
+      tags:
+        - transactions
+        - online booking engine 
+      summary: "Retrieve a list transactions by ID"
+      operationId: getTransactionsById
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/id'
+      responses:
+        '200':
+          description: full successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/transactionFull'
+  /transactions/charge:
+    post:
+      tags:
+        - transactions 
+        - online booking engine 
+      summary: "Create a new charge"
+      operationId: addTransactionsCharge
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/transactionCharge'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/transactionFull'        
+  /transactions/creditNote:
+    post:
+      tags:
+        - transactions 
+      summary: "Create a new credit note"
+      operationId: addTransactionsCreditNote
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/transactionCreditNote'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/transactionFull' 
+  /transactions/receipt:
+    post:
+      tags:
+        - transactions 
+        - online booking engine 
+      summary: "Create a new receipt"
+      operationId: addTransactionsReceipt
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/transactionReceipt'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/transactionFull' 
+  /transactions/refund:
+    post:
+      tags:
+        - transactions 
+      summary: "Process a refund"
+      operationId: addTransactionsRefund
+      requestBody:
+        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/transactionRefund'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/transactionFull' 
+  /transactions/void:
+    post:
+      deprecated: false    
+      tags:
+        - transactions 
+      summary: "Mark a transaction as void"
+      operationId: addTransactionsVoid
+      requestBody:
+        $ref:  'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/transactionRefund'
+      responses:
+        '201':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/transactionFull' 
+        
+  /travelAgents:   
+    get:
+      deprecated: false
+      tags:
+        - agents
+      summary: "Retrieve a list of travel agents"
+      operationId: getTravelAgents
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/searchModifiedSince'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentBasic'   
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentFull'    
+                example:
+                   - agentLite:                  
+                        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentLite/example'
+                   - agentBasic:                  
+                        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentBasic/example'    
+                   - agentFull:                  
+                        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentFull/example'     
+                        
+  /webhooks/status: 
+    post:
+      deprecated: true    
+      tags:
+        - webhooks
+      summary: "Subsrcibe to updates for status changes on a reservation - ETA: 09/20"
+      operationId: postWebhookStatus
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/webhookSubscription'
+      responses:
+          '200':
+            description: Elements to pass 
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/webhookAudits'
+  /webhooks/reservationCreation:
+    post:
+      deprecated: true    
+      tags:
+        - webhooks
+      summary: "Subsrcibe for updates on reservation creation - ETA: 09/20"
+      operationId: postWebhookReservationCreation
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/webhookSubscription'
+      responses:
+          '200':
+            description: Elements to pass 
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationExtraLite'                  
+  /webhooks/reservationModification:
+    post:
+      deprecated: true    
+      tags:
+        - webhooks
+      summary: "Subsrcibe for updates on reservation modifications - ETA: 09/20"
+      operationId: postWebhookReservationModifications
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/webhookSubscription'
+      responses:
+          '200':
+            description: Elements to pass 
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/reservationExtraLite' 
+  /webhooks/reservationRoomMove:
+    post:
+      deprecated: true    
+      tags:
+        - webhooks
+      summary: "Subsrcibe for updates on reservation room moves - ETA: 09/20"
+      operationId: postWebhookReservationRoomMoves
+      requestBody:
+         $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/requestBodies/webhookSubscription'
+      responses:
+          '200':
+            description: Elements to pass 
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/webhookAudits'                     
+                    
+  /wholesalers:   
+    get:
+      deprecated: false
+      tags:
+        - agents
+      summary: "Retrieve a list of wholesalers"
+      operationId: getWholesalers
+      parameters:
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/limit'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/modelType'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/offset'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/propertyId'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/searchModifiedSince'
+        - $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/parameters/sort'
+      responses:
+        '200':
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentLite'
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentBasic'   
+                - type: array
+                  items:
+                    $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentFull'    
+                example:
+                   - agentLite:                  
+                        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentLite/example'
+                   - agentBasic:                  
+                        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentBasic/example'    
+                   - agentFull:                  
+                        $ref: 'https://api.swaggerhub.com/domains/RMSHospitality/schema_domain1/1.0.0.0#/components/schemas/agentFull/example'

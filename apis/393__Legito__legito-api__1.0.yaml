@@ -1,0 +1,2190 @@
+openapi: 3.0.0
+info:
+  title: Legito API
+  version: '1.0'
+  description: |
+    Legito features RESTful interface that allows to edit most of your enterprise settings via API.
+
+    # Quickstart
+    The most common use-case is to fill in data from your CRM and create a Word/PDF export of your document. To do this:
+    1. call POST `/document/data/{agreementId}/{timestamp}` to  create a new record for the document an fill in the initial data. To fill in the initial data, you will need to know the system names that are used in your agreement template.
+      ![System name image](https://www.legito.com/images/api/system_name.png)
+      example data for input element:
+      ~~~
+      {
+        [
+          "name": "first_party_name1",
+          "value": "John Doe"
+        ]
+      }
+      ~~~
+
+    2. Previous method returns metadata of created document record. Store document code from this metadata. It's a 40 character string eg.: `CaRDL6J7VOVqIrd7TazZyKd9pZWzxwiRylDtHdPc`
+    3. call GET `/document/download/{code}/{timestamp}` to download PDF/Word document
+
+    All of your calls need to be signed - please see the following section - Authentification.
+    For full description of different elements and supported values, also see our complete documentation
+
+    You can also see our [example source code on Github](https://github.com/legito/api-wrapper).
+
+    # Authentification
+
+    For successful authentification, you first need to generate an API key and a private key in `Settings -> Basic settings & design -> API`.
+
+    - All requset data must be transformed to concatenated string and signed with hash algorytm `sha256` with private key.
+
+    - In all requests must be header `X-HTTP-AUTH-TOKEN`, whitch contains `base64` encoded string in form of `{API_key}:{hash}`.
+
+    ## Hash string creation
+    All parameters from URL path, all query parameters and all request data values must be concatented to one string separated by '|' character. It depends on order of values. If some of data value is not of scaral type concatenate values of child data recursively. If some data is boolean, string value is uppercase (TRUE, FALSE).
+
+    For example this data structure
+
+    ~~~
+      {
+        "a": "value"
+        "b": "other"
+        "c": [
+          {
+            "d": "some"
+          },
+          {
+            "d": "value",
+            "e": true,
+            "g": false
+          }
+        ]
+        "f": "this"
+      }
+    ~~~
+
+    is transformed to string
+    ~~~
+    value|other|some|value|TRUE|FALSE|this
+    ~~~
+
+
+    For better understanding example of authenticator in PHP
+
+
+    ~~~php
+    class Authenticator
+    {
+        /**
+         * Signs request with sha256 hash
+         * @param array $requestData
+         * @param string $privateKey
+         * @return string
+         */
+        public static function signRequest(array $requestData, string $privateKey): string
+        {
+            return hash_hmac('sha256', self::stringify($requestData), $privateKey);
+        }
+        /**
+         * Creates authentification token in {apiKey}:{hash} format
+         * @param array $requestData
+         * @param string $privateKey
+         * @return string
+         */
+        public static function createAuthToken(string $apiKey, string $authHash): string
+        {
+            return base64_encode($apiKey . ':' . $authHash);
+        }
+        /**
+         * Stringlifies input data for hash calculation
+         * @param $data
+         * @return string
+         */
+        protected static function stringify($data): string
+        {
+            $string = '';
+            if (is_array($data)) {
+                foreach ($data as $value) {
+                    $string .= '|' . self::stringify($value);
+                }
+            } elseif(is_bool($data)) {
+                $string .= '|' . ($data ? 'TRUE' : 'FALSE');
+            } else {
+                $string .= '|' . (string) $data;
+            }
+            return ltrim($string, '|');
+        }
+    }
+    ~~~
+
+
+servers:
+  - description: Legito API v1.0
+    url: https://www.legito.com/api/v1.0
+tags:
+  - name: agreement
+    description: Operations with agreements
+  - name: agreementTemplate
+    description: Operations with agreement templates
+  - name: currency
+    description: Operations with currencies
+  - name: department
+    description: Operations with departments
+  - name: document
+    description: Operations with documents
+  - name: group
+    description: Operations with groups
+  - name: info
+    description: Operations with system info
+  - name: law
+    description: Operations with laws
+  - name: share
+    description: Operations with sharing of documents
+  - name: timezone
+    description: Operations with timezone
+  - name: user
+    description: Operations with users
+paths:
+  /agreement/{timestamp}:
+    get:
+      tags:
+        - agreement
+      summary:
+        Returns agreement list
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Agreement'
+      security:
+        - legitoAuth: []
+
+  /agreement-template/{timestamp}:
+    get:
+      tags:
+        - agreementTemplate
+      summary:
+        Returns agreement template list
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgreementTemplate'
+      security:
+        - legitoAuth: []
+
+
+  /currency/{timestamp}:
+    get:
+      tags:
+        - currency
+      summary:
+        Returns currency list
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Currency'
+      security:
+        - legitoAuth: []
+
+
+  /department/{timestamp}:
+    get:
+      tags:
+        - department
+      summary:
+        Returns department list
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Department'
+      security:
+        - legitoAuth: []
+
+    post:
+      tags:
+        - department
+      summary:
+        Inserts new department
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      requestBody:
+        description: Deparment data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Department'
+            example:
+              name: Sales department
+
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+        '403':
+          description: department already exists
+      security:
+        - legitoAuth: []
+
+  /department/{departmentId}/{timestamp}:
+    put:
+      tags:
+        - department
+      summary:
+        Updates existing department
+      parameters:
+        - name: departmentId
+          in: path
+          description: Department ID
+          required: true
+          schema:
+            type: integer
+          example: 12
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      requestBody:
+        description: Deparment data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Department'
+            example:
+              name: Sales department
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+      security:
+        - legitoAuth: []
+    delete:
+      tags:
+        - department
+      summary:
+        Removes department
+      parameters:
+        - name: departmentId
+          in: path
+          description: Department ID
+          required: true
+          schema:
+            type: integer
+          example: 12
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+  /department/user/{departmentId}/{timestamp}:
+    post:
+      tags:
+        - department
+      summary:
+        Adds user to department
+      parameters:
+        - name: departmentId
+          in: path
+          description: Department ID
+          required: true
+          schema:
+            type: integer
+          example: 12
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      requestBody:
+        description: Department users data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/DepartmentUser'
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+  /department/user/{departmentId}/{userId}|{userEmail}/{timestamp}:
+    delete:
+      tags:
+        - department
+      summary:
+        Removes user from department
+      parameters:
+        - name: departmentId
+          in: path
+          description: Department ID
+          required: true
+          schema:
+            type: integer
+          example: 12
+        - name: userId
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: integer
+          example: 35149
+        - name: userEmail
+          in: path
+          description: User email
+          required: true
+          schema:
+            type: string
+          example: test@legito.com
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+
+  /document/{timestamp}:
+    get:
+      tags:
+        - document
+      summary:
+        Returns document list
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+        - name: limit
+          in: query
+          description: Limit of given records
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 1000
+        - name: offset
+          in: query
+          description: Offset of given records
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: agreementId
+          in: query
+          description: Filter records to agreement ID
+          required: false
+          schema:
+            type: integer
+            nullable: true
+            default: null
+        - name: deleted
+          in: query
+          description: Filter deleted records
+          required: false
+          schema:
+            type: boolean
+            nullable: true
+            default: null
+          example: true
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+      security:
+        - legitoAuth: []
+
+  /document/{code}/{timestamp}:
+    put:
+      tags:
+        - document
+      summary:
+        Updates existing document metadata
+      parameters:
+        - name: code
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      requestBody:
+        description: Deparment data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+      security:
+        - legitoAuth: []
+
+    delete:
+      tags:
+        - document
+      summary:
+        Removes document
+      parameters:
+        - name: code
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+  /document/data/{code}/{timestamp}:
+    get:
+      tags:
+        - document
+      summary:
+        Returns document data elements list
+      parameters:
+        - name: code
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentElementResponse'
+                example:
+                  - id: 10
+                    name: element_system_name
+                    type: Paragraph
+                    parentId: 9
+                    visible: true
+                    text: Some very exciting text...
+                  - id: 11
+                    name: element_system_name
+                    type: Markup
+                    parentId: 10
+                    text: Some very exciting text...
+                  - id: 12
+                    type: Text
+                    parentId: 10
+                    value: some input value
+
+      security:
+        - legitoAuth: []
+    put:
+      tags:
+        - document
+      summary:
+        Puts elements data into document
+      parameters:
+        - name: code
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      requestBody:
+        description: Document elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/DocumentElementValue'
+              example:
+                - id: 17
+                  name: 'some_element'
+                  visible: true
+                - id: 18
+                  name: 'some_element'
+                  value: some_input value
+                - id: 19
+                  name: 'some_element'
+                  value:
+                    currency: 1
+                    number: '100 000 Kč'
+                    wordsEnable: 1
+                    textValue: 'one hundred thousand'
+                    textCurrency: 'czech crounds'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+      security:
+        - legitoAuth: []
+
+  /document/data/{code}/tree/{timestamp}:
+    get:
+      tags:
+        - document
+      summary:
+        Returns document data elements tree
+      parameters:
+        - name: code
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentElementResponse'
+                example:
+                  - id: 10
+                    name: element_system_name
+                    type: Paragraph
+                    parentId: 9
+                    visible: true
+                    text: Some very exciting text...
+                    children:
+                      - id: 11
+                        name: element_system_name
+                        type: Markup
+                        parentId: 10
+                        text: Some very exciting text...
+                      - id: 12
+                        type: Text
+                        parentId: 10
+                        value: some input value
+      security:
+        - legitoAuth: []
+
+  /document/data/{agreementId}/{timestamp}:
+    post:
+      tags:
+        - document
+      summary:
+        Creates agreement instance and inserts elements data into document
+      parameters:
+        - name: agreementId
+          in: path
+          description: Agreement ID
+          required: true
+          schema:
+            type: integer
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      requestBody:
+        description: Document elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/DocumentElementValue'
+              example:
+                - id: 17
+                  name: 'some_element'
+                  visible: true
+                - id: 18
+                  name: 'some_element'
+                  value: some_input value
+                - id: 19
+                  name: 'some_element'
+                  value:
+                    currency: 1
+                    number: '100 000 Kč'
+                    wordsEnable: 1
+                    textValue: 'one hundred thousand'
+                    textCurrency: 'czech crounds'
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+      security:
+        - legitoAuth: []
+
+  /document/download/{code}/{format}/{documentId}/{templateId}/{timestamp}:
+    get:
+      tags:
+        - document
+      summary:
+        Downloads document in base64 encoded file
+      parameters:
+        - name: code
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: format
+          in: path
+          description: Format of file
+          required: true
+          schema:
+            type: string
+            enum:
+              - docx
+              - pdf
+          example: docx
+        - name: documentId
+          in: path
+          description: Document ID - If document ID is not specified, all documents from specified instance will be downloaded.
+          required: true
+          schema:
+            type: string
+        - name: templateId
+          in: path
+          description: Template ID - If template ID is not specified, default template will be used.
+          required: true
+          schema:
+            type: string
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    filename:
+                      type: string
+                      description: File name with extension
+                    data:
+                      type: string
+                      description: base64 encoded content od file
+        '404':
+          description: Agreement instance was not found
+
+      security:
+        - legitoAuth: []
+
+  /group/{timestamp}:
+    get:
+      tags:
+        - group
+      summary:
+        Returns group list
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
+      security:
+        - legitoAuth: []
+
+  /info/{timestamp}:
+    get:
+      tags:
+        - info
+      summary:
+        Returns system info
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Info'
+      security:
+        - legitoAuth: []
+
+  /law/{timestamp}:
+    get:
+      tags:
+        - law
+      summary:
+        Returns law list
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Law'
+      security:
+        - legitoAuth: []
+
+
+  /share/{code}/{timestamp}:
+    get:
+      tags:
+        - share
+      summary:
+        Returns share lists for document
+      parameters:
+        - name: code
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShareUser'
+                  departments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShareDepartment'
+      security:
+        - legitoAuth: []
+
+  /share/user/{code}/{timestamp}:
+    post:
+      tags:
+        - share
+      summary:
+        Creates user share for document
+      parameters:
+        - name: code
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      requestBody:
+        description: Share user elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShareUser'
+              example:
+                - id: 11004
+                - email: 'janedee@legito.com'
+                  permission: LIST
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+  /share/user/{code}/{userId}|{userEmail}/{timestamp}:
+    delete:
+      tags:
+        - share
+      summary:
+        Removes user share for document
+      parameters:
+        - name: code
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: userId
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: integer
+          example: 35149
+        - name: userEmail
+          in: path
+          description: User email
+          required: true
+          schema:
+            type: string
+          example: test@legito.com
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+  /share/department/{code}/{timestamp}:
+    post:
+      tags:
+        - share
+      summary:
+        Creates department share for document
+      parameters:
+        - name: code
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      requestBody:
+        description: Share department elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShareDepartment'
+              example:
+                - id: 12
+                - id: 34
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+  /share/department/{code}/{departmentId}/{timestamp}:
+    delete:
+      tags:
+        - share
+      summary:
+        Removes department share for document
+      parameters:
+        - name: code
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: departmentId
+          in: path
+          description: Department ID
+          required: true
+          schema:
+            type: integer
+          example: 12
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+
+  /timezone/{timestamp}:
+    get:
+      tags:
+        - timezone
+      summary:
+        Returns timezone list
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Timezone'
+      security:
+        - legitoAuth: []
+
+
+  /user/{timestamp}:
+    get:
+      tags:
+        - user
+      summary:
+        Returns user list
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+      security:
+        - legitoAuth: []
+
+    post:
+      tags:
+        - user
+      summary:
+        Creates user with default permissions
+      parameters:
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      requestBody:
+        description: User elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+              example:
+                - email: 'johndoe@legito.com'
+                  name: John Doe
+                - email: 'janedee@legito.com'
+                  name: Jane Dee
+                  caption: CEO
+                  sessionExpiration : 86400
+                  sessionDestroy: 0
+
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+      security:
+        - legitoAuth: []
+
+
+  /user/{id}|{email}/{timestamp}:
+    put:
+      tags:
+        - user
+      summary:
+        Updates user
+      parameters:
+        - name: id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: integer
+          example: 35149
+        - name: email
+          in: path
+          description: User email
+          required: true
+          schema:
+            type: string
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      requestBody:
+        description: User elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+            example:
+              name: John Doe
+              caption: CEO
+              sessionExpiration : 86400
+              sessionDestroy: 0
+
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+    delete:
+      tags:
+        - user
+      summary:
+        Removes user
+      parameters:
+        - name: id
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: integer
+          example: 35149
+        - name: email
+          in: path
+          description: User email
+          required: true
+          schema:
+            type: string
+          example: test@legito.com
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+
+  /user/permission/{id}|{email}/{timestamp}:
+    get:
+      tags:
+        - user
+      summary:
+        Returns user permission list
+      parameters:
+        - name: id
+          in: path
+          description: User Id
+          required: true
+          schema:
+            type: integer
+        - name: email
+          in: path
+          description: User email
+          required: true
+          schema:
+            type: string
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
+        '404':
+          description: user was not found
+      security:
+        - legitoAuth: []
+    put:
+      tags:
+        - user
+      summary:
+        Puts user permission
+      parameters:
+        - name: id
+          in: path
+          description: Document code
+          required: true
+          schema:
+            type: integer
+        - name: email
+          in: path
+          description: User email
+          required: true
+          schema:
+            type: string
+        - name: timestamp
+          in: path
+          description: Unix time stamp
+          required: true
+          schema:
+            type: integer
+          example: 1519301848
+      requestBody:
+        description: Document elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Permission'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
+        '404':
+          description: user was not found
+      security:
+        - legitoAuth: []
+
+components:
+  securitySchemes:
+    legitoAuth:
+      type: apiKey
+      name: X-HTTP-AUTH-TOKEN
+      in: header
+
+  schemas:
+    Agreement:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Agreement ID
+          example: 662
+        title:
+          type: string
+          example: Purchase Agreement
+        perex:
+          type: string
+          example: Some purchase Agreement exciting perex text...
+        lawId:
+          type: integer
+          description: Law ID
+          example: 1
+        lifecycleId:
+          type: integer
+          description: Default life cycle ID
+          example: 1
+
+    AgreementTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Agreement temaplte ID
+          example: 18
+        name:
+          type: string
+          example: Some template
+        visible:
+          type: boolean
+          description: Is template visible
+          example: true
+
+    Currency:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Currency ID
+          example: 4
+        currency:
+          type: string
+          description: Currency code
+          example: EUR
+        symbol:
+          type: string
+          example: '€'
+
+    Department:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Deparment ID
+          example: 12
+        name:
+          type: string
+          description: Department name
+          example: Sales department
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/DepartmentUser'
+
+    DepartmentUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: User ID
+          example: 35149
+        email:
+          type: string
+          description: User email
+          example: test@legito.com
+        permission:
+          type: string
+          description: Document permission
+          enum:
+            - LIST
+            - READ
+            - EDIT
+            - MANAGE
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Document ID
+          example: 11000
+        code:
+          type: string
+          readOnly: true
+          description: Unique document code
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        originCode:
+          type: string
+          readOnly: true
+          description: Unique origin document code
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        parentId:
+          type: integer
+          readOnly: true
+          description: Parent document ID
+          example: 10999
+          nullable: true
+        originId:
+          type: integer
+          readOnly: true
+          description: Origin document ID
+          example: 10900
+          nullable: true
+        deleted:
+          type: boolean
+          readOnly: true
+          example: false
+        agreementId:
+          type: integer
+          readOnly: true
+          description: Agreement ID
+        name:
+          type: string
+          example: Purchase Agreement
+        created:
+          type: string
+          readOnly: true
+          description: Creation date and time in ISO 8601
+          example: '2017-06-27T07:56:02+02:00'
+        expirationDates:
+          type: array
+          items:
+            type: string
+          description: Expiration dates and time in ISO 8601
+          example:
+            - '2017-08-27T10:56:02+02:00'
+            - '2019-11-04T08:04:03+04:00'
+        dueDates:
+          type: array
+          items:
+            type: string
+          description: Due dates and time in ISO 8601
+          example:
+            - '2017-08-27T10:56:02+02:00'
+            - '2019-11-04T08:04:03+04:00'
+        deliveryDates:
+          type: array
+          items:
+            type: string
+          description: Delivery dates and time in ISO 8601
+          example:
+            - '2017-08-27T10:56:02+02:00'
+            - '2019-11-04T08:04:03+04:00'
+        signingDates:
+          type: array
+          items:
+            type: string
+          description: Signing dates and time in ISO 8601
+          example:
+            - '2017-08-27T10:56:02+02:00'
+            - '2019-11-04T08:04:03+04:00'
+        userId:
+          type: integer
+          readOnly: true
+          description: Author user ID
+        ownerId:
+          type: integer
+          description: Owner user ID
+        stateId:
+          type: integer
+          description: Current state ID
+          example: 10
+        confidential:
+          type: boolean
+          example: false
+        notification:
+          type: boolean
+          example: true
+        totalValue:
+          type: number
+          description: Total value of document rouded to two digits
+          nullable: true
+          example: 148756.56
+        totalValueCurrencyId:
+          type: integer
+          description: Total value of document currency
+          nullable: true
+          example: 2
+        localizationId:
+          type: integer
+          readOnly: true
+        notes:
+          type: string
+          nullable: true
+          example: Some document notes...
+        externalFileLink:
+          type: string
+          nullable: true
+          example: https://example.com/something/
+        detailLink:
+          type: string
+          readOnly: true
+          description: relative link to document detail in default law and language setting
+          example: /CZ/cs/corporate/management/detail?originCode=yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+
+    AbstractDocumentElement:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: DocumentElement ID
+          example: 10
+        name:
+          type: string
+          description: DocumentElement name
+          example: element_system_name
+
+    DocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/AbstractDocumentElement'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - Paragraph
+                - PlusParagraph
+                - Table
+                - TableCell
+                - Markup
+                - Text
+                - Date
+                - Selectbox
+                - Money
+                - Link
+                - Radio
+                - Counter
+                - Title
+                - Calculation
+            parentId:
+              type: integer
+              description: Parent DocumentElement ID
+              example: 9
+          discriminator:
+            propertyName: type
+            mapping:
+              Paragraph: '#/components/schemas/ParagraphDocumentElement'
+              PlusParagraph: '#/components/schemas/PlusParagraphDocumentElement'
+              Table: '#/components/schemas/TableDocumentElement'
+              TableCell: '#/components/schemas/TableCellDocumentElement'
+              Markup: '#/components/schemas/MarkupDocumentElement'
+              Text: '#/components/schemas/TextDocumentElement'
+              Date: '#/components/schemas/DateDocumentElement'
+              Selectbox: '#/components/schemas/SelectboxDocumentElement'
+              Money: '#/components/schemas/MoneyDocumentElement'
+              Link: '#/components/schemas/LinkDocumentElement'
+              Radio: '#/components/schemas/RadioDocumentElement'
+              Counter: '#/components/schemas/CounterDocumentElement'
+              Title: '#/components/schemas/TitleDocumentElement'
+              Calculation: '#/components/schemas/CalculationDocumentElement'
+
+    DocumentElementContainer:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - type: object
+          required:
+            - type
+          properties:
+            children:
+              type: array
+              items:
+                $ref: '#/components/schemas/DocumentElement'
+              example: [] #Only in tree
+
+    ParagraphDocumentElementValue:
+      allOf:
+        - $ref: '#/components/schemas/AbstractDocumentElement'
+        - type: object
+          properties:
+            visible:
+              type: boolean
+
+    ParagraphDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElementContainer'
+        - $ref: '#/components/schemas/ParagraphDocumentElementValue'
+        - type: object
+          properties:
+            text:
+              type: string
+              example: "Some very exciting text..."
+
+    PlusParagraphDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElementContainer'
+
+    TableDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElementContainer'
+
+    TableCellDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+
+    MarkupDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - type: object
+          properties:
+            text:
+              type: string
+              example: "Some very exciting text..."
+
+    TextDocumentElementValue:
+      allOf:
+        - $ref: '#/components/schemas/AbstractDocumentElement'
+        - type: object
+          properties:
+            value:
+              type: string
+              example: some input value
+
+    TextDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - $ref: '#/components/schemas/TextDocumentElementValue'
+
+    DateDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - type: object
+          properties:
+            value:
+              type: object
+              properties:
+                number:
+                  type: string
+                  description: Date in format YYYY-mm-dd
+                  example: 2018-02-09
+                monthByWord:
+                  type: boolean
+                  description: Is month shown in word format
+                  example: true
+
+    SelectboxDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - type: object
+          properties:
+            items:
+              type: object
+              properties:
+                option0:
+                  type: string
+                  example: Some option value
+                option1:
+                  type: string
+                  example: Other option value
+            value:
+              type: string
+              description: Value is property key from items
+              example: option1
+
+    MoneyDocumentElementValue:
+      allOf:
+        - $ref: '#/components/schemas/AbstractDocumentElement'
+        - type: object
+          required:
+            - number
+            - currency
+          properties:
+            value:
+              type: object
+              properties:
+                number:
+                  type: string
+                  description: Formated numeric value
+                  example: 100 000
+                currency:
+                  type: string
+                  enum:
+                    - CZK
+                    - GBP
+                    - USD
+                    - EUR
+                    - RUB
+                    - AUD
+                    - TRY
+                    - CHF
+                    - PLN
+                    - HUF
+                    - RSD
+                    - CAD
+                    - PKR
+                    - INR
+                wordsEnable:
+                  type: boolean
+                text:
+                  type: string
+                  description: Text value
+                  example: one hundred thousand
+                textCurrency:
+                  type: string
+                  description: Text value of currency
+                  example: Czech Crounds
+
+    MoneyDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - $ref: '#/components/schemas/MoneyDocumentElementValue'
+
+    LinkDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - type: object
+          properties:
+            target:
+              type: string
+              example: target_of_link
+
+    RadioDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - type: object
+          properties:
+            items:
+              type: object
+              properties:
+                option0:
+                  type: string
+                  example: Some option value
+                option1:
+                  type: string
+                  example: Other option value
+            value:
+              type: string
+              description: Value is property key from items
+              example: option1
+
+    CounterDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - type: object
+          properties:
+            value:
+              type: string
+              example: some input value
+
+    TitleDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - type: object
+          properties:
+            text:
+              type: string
+              example: "Some very exciting text..."
+
+    CalculationDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - type: object
+          properties:
+            value:
+              type: string
+              example: some input value
+
+    ImageDocumentElement:
+      allOf:
+        - $ref: '#/components/schemas/DocumentElement'
+        - type: object
+          properties:
+            value:
+              type: object
+              properties:
+                image:
+                  type: string
+                  description: image in base64 format
+                  example: data:image/jpg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8U...
+                width:
+                  type: number
+                  example: 1920
+                  description: image height in pixels
+                  readOnly: true
+                height:
+                  type: number
+                  example: 1080
+                  description: image width in pixels
+                  readOnly: true
+                areaWidth:
+                  type: number
+                  example: 512
+                  description: image area width in pixels
+                  readOnly: true
+                areaHeight:
+                  type: number
+                  example: 150
+                  description: image area height in pixels
+                  readOnly: true
+
+    Law:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Law ID
+          example: 1
+        name:
+          type: string
+          description: Law name
+          example: Czech republic
+        code:
+          type: string
+          description: Law code
+          example: CZ
+        defaultLang:
+          type: string
+          description: Default system language for law
+          example: cs
+
+    Info:
+      type: object
+      properties:
+        version:
+          type: string
+          description: System version
+          example: 4.11.1
+
+    Group:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Group ID
+          example: 6
+        name:
+          type: string
+          description: Group name
+          example: Legal group
+
+    ShareDepartment:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Deparment ID
+          example: 12
+        name:
+          type: string
+          description: Department name
+          example: Sales department
+
+    ShareUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: User ID
+          example: 11129
+        email:
+          type: string
+          example: johndoe@legito.com
+        permission:
+          type: string
+          description: Document permission
+          enum:
+            - LIST
+            - READ
+            - EDIT
+            - MANAGE
+          default: LIST
+
+    Timezone:
+      type: object
+      properties:
+        timezone:
+          type: string
+          description: PHP timezone name (http://php.net/manual/en/timezones.php)
+          example: Europe/Prague
+        code:
+          type: string
+          description: Timezone code
+          example: CZ
+        gmtOffset:
+          type: integer
+          description: Offset from Greenwich Mean Time
+          example: 1
+        dstOffset:
+          type: integer
+          description: Offset from Daylight saving time
+          example: 1
+        rawOffset:
+          type: integer
+          description: Raw offset
+          example: 1
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: User ID
+          example: 11129
+        email:
+          type: string
+          example: johndoe@legito.com
+        name:
+          type: string
+          description: Full name
+          example: John Doe
+        created:
+          type: string
+          description: Expiration date and time in ISO 8601
+          example: '2017-08-27T10:56:02+02:00'
+        caption:
+          type: string
+          description: Caption
+          example: CEO
+        timezone:
+          type: string
+          description: PHP timezone name (http://php.net/manual/en/timezones.php)
+          example: Europe/Prague
+        sessionExpiration:
+          type: integer
+          description: Session expiration time in secounds (it is refreshed when page is reloaded). 0 for unlimited.
+          default: 7200
+          example: 86400
+        sessionDestroy:
+          type: integer
+          description: Session destroy expiration time in secounds from user logged in. 0 for unlimited.
+          default: 0
+          example: 86400
+
+    Permission:
+      type: object
+      properties:
+        admin:
+          type: boolean
+        canDrawTemplates:
+          type: boolean
+        canSeeConfidential:
+          type: boolean
+        allDocuments:
+          type: string
+          enum:
+            - MANAGE
+            - EDIT
+            - READ
+            - LIST
+            - NONE
+        canDownloadDocx:
+          type: boolean
+        downloadPdf:
+          type: boolean
+        downloadHtml:
+          type: boolean
+        downloadHtm:
+          type: boolean
+        downloadRtf:
+          type: boolean
+        downloadXml:
+          type: boolean
+        downloadOdt:
+          type: boolean
+        downloadTxt:
+          type: boolean
+        agreementViewAll:
+          type: boolean
+        agreementViewList:
+          type: array
+          items:
+            type: integer
+        agreementViewGroupAll:
+          type: boolean
+        agreementViewGroupList:
+          type: array
+          items:
+            type: integer
+        agreementViewLawAll:
+          type: boolean
+        agreementViewLawList:
+          type: array
+          items:
+            type: integer
+        agreementDownload:
+          type: boolean
+        agreementChangeLang:
+          type: boolean
+        userList:
+          type: string
+          enum:
+            - corporate
+            - assigned
+            - department
+            - departmentAssigned
+        uploadFiles:
+          type: boolean
+        analyticsView:
+          type: boolean
+        settingHouseStyle:
+          type: boolean
+        shareLinkTemplate:
+          type: boolean
+        shareLinkDocument:
+          type: boolean
+        internalDocument:
+          type: boolean
+        emailDocument:
+          type: boolean
+        documentElementMarkupUnlock:
+          type: boolean
+        settingTag:
+          type: boolean
+        settingScripts:
+          type: boolean
+        settingList:
+          type: boolean
+        settingWorkflow:
+          type: boolean
+
+    DocumentElementResponse:
+      anyOf:
+        - $ref: '#/components/schemas/ParagraphDocumentElement'
+        - $ref: '#/components/schemas/PlusParagraphDocumentElement'
+        - $ref: '#/components/schemas/TableDocumentElement'
+        - $ref: '#/components/schemas/TableCellDocumentElement'
+        - $ref: '#/components/schemas/MarkupDocumentElement'
+        - $ref: '#/components/schemas/TextDocumentElement'
+        - $ref: '#/components/schemas/DateDocumentElement'
+        - $ref: '#/components/schemas/SelectboxDocumentElement'
+        - $ref: '#/components/schemas/MoneyDocumentElement'
+        - $ref: '#/components/schemas/LinkDocumentElement'
+        - $ref: '#/components/schemas/RadioDocumentElement'
+        - $ref: '#/components/schemas/CounterDocumentElement'
+        - $ref: '#/components/schemas/TitleDocumentElement'
+        - $ref: '#/components/schemas/CalculationDocumentElement'
+        - $ref: '#/components/schemas/ImageDocumentElement'
+      discriminator:
+        propertyName: type
+
+    DocumentElementValue:
+      anyOf:
+        - $ref: '#/components/schemas/ParagraphDocumentElementValue'
+        - $ref: '#/components/schemas/TextDocumentElementValue'
+        - $ref: '#/components/schemas/MoneyDocumentElementValue'
+
+      discriminator:
+        propertyName: type
+
+    SuccessResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          default: 200
+          example: 200
+        status:
+          type: string
+          default: OK
+          example: OK
+
+  examples:
+    ParagraphDocumentElementValue:
+      value:
+        id: 17
+        name: 'some_element'
+        visible: true
+    TextDocumentElementValue:
+      value:
+        id: 18
+        name: 'some_element'
+        value: some_input value
+    MoneyDocumentElementValue:
+      value:
+        id: 19
+        name: 'some_element'
+        value:
+          currency: 1
+          number: '100 000 Kč'
+          wordsEnable: 1
+          textValue: 'one hundred thousand'
+          textCurrency: 'czech crounds'

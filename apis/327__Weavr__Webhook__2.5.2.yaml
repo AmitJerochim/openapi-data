@@ -1,0 +1,209 @@
+penapi: 3.0.1
+info:
+  title: Weavr Webhook
+  description: 'For Verification, hash using HmacSHA256 the Published-Timestamp header using your secret key. The result should match the Signature header.'
+  contact:
+    name: Weavr
+    url: 'http://weavr.io'
+  version: 2.5.2
+servers:
+  - url: /
+paths:
+  /managed_accounts/deposits/watch:
+    post:
+      tags:
+        - Managed Accounts
+      description: An event which indicates that a deposit (incoming bank transfer) has been performed on a managed account.
+      operationId: managed_accounts_deposits_watch
+      parameters:
+        - $ref: '#/components/parameters/call-ref'
+        - $ref: '#/components/parameters/published-timestamp'
+        - $ref: '#/components/parameters/signature'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagedAccountsDepositEvent'
+        required: true
+      responses:
+        '204':
+          description: Success - No Content
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultError'
+  /managed_cards/authorisations/watch:
+    post:
+      tags:
+        - Managed Cards
+      description: An event which indicates that a card authorisation attempt has been performed on a managed card.  The event is triggered whether the authorisation is successful or failed - the approved field indicates whether authorisation has been approved or denied.
+      operationId: managed_cards_authorisations_watch
+      parameters:
+        - $ref: '#/components/parameters/call-ref'
+        - $ref: '#/components/parameters/published-timestamp'
+        - $ref: '#/components/parameters/signature'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManagedCardsAuthorisationEvent'
+        required: true
+      responses:
+        '204':
+          description: Success - No Content
+        default:
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefaultError'
+components:
+  schemas:
+    ManagedAccountsDepositEvent:
+      required:
+        - id
+        - transactionAmount
+        - transactionId
+        - transactionTimestamp
+      type: object
+      properties:
+        id:
+          allOf:
+            - $ref: '#/components/schemas/TypeId'
+            - description: The id of the managed account where a deposit has been performed.
+              x-fieldValidation: required
+        transactionId:
+          type: integer
+          description: 'The id of the transaction, for reference.'
+          format: int64
+          x-fieldValidation: required
+        transactionAmount:
+          allOf:
+            - $ref: '#/components/schemas/CurrencyAmount'
+            - description: The amount of the transaction.
+              x-fieldValidation: required
+        transactionTimestamp:
+          type: integer
+          description: 'The timestamp of the transaction, using epoch timestamp with millisecond precision.'
+          format: int64
+          x-fieldValidation: required
+    TypeId:
+      required:
+        - id
+        - type
+      type: object
+      properties:
+        type:
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9_-]+$'
+          type: string
+          x-fieldValidation: 'required size(_,50) regex(^[a-zA-Z0-9_-]+$)'
+        id:
+          type: integer
+          format: int64
+          x-fieldValidation: required
+    CurrencyAmount:
+      required:
+        - currency
+      type: object
+      properties:
+        currency:
+          maxLength: 3
+          minLength: 3
+          pattern: '^[A-Z]*$'
+          type: string
+          description: 'The currency ISO-4217 code, i.e. a three letter uppercase code, such as GBP, EUR, USD.'
+          x-fieldValidation: 'required size(3,3) regex([A-Z]*)'
+        amount:
+          type: integer
+          description: 'The monetary amount, scaled to the lowest denomination of the currency. For example, an amount of 1000 for a EUR currency is actually 1000 Euro cents, i.e. EUR 10.00.'
+          format: int64
+      description: A message representing a monetary amount in a particular currency.
+    DefaultError:
+      type: object
+      properties:
+        message:
+          maxLength: 255
+          type: string
+          description: When present helps to identify and fix the problem.
+          x-fieldValidation: 'size(_,255)'
+      description: 'A default error model in case of errors other than 400, 409 or 504.'
+    ManagedCardsAuthorisationEvent:
+      required:
+        - approved
+        - id
+        - merchantCategoryCode
+        - merchantName
+        - sourceAmount
+        - transactionAmount
+        - transactionId
+        - transactionTimestamp
+      type: object
+      properties:
+        id:
+          allOf:
+            - $ref: '#/components/schemas/TypeId'
+            - description: The id of the managed card on which an authorisation has been performed.
+              x-fieldValidation: required
+        transactionId:
+          type: integer
+          description: 'The id of the transaction, for reference.'
+          format: int64
+          x-fieldValidation: required
+        transactionAmount:
+          allOf:
+            - $ref: '#/components/schemas/CurrencyAmount'
+            - description: The amount in the currency of the card.
+              x-fieldValidation: required
+        transactionTimestamp:
+          type: integer
+          description: 'The timestamp of the transaction, using epoch timestamp with millisecond precision.'
+          format: int64
+          x-fieldValidation: required
+        sourceAmount:
+          allOf:
+            - $ref: '#/components/schemas/CurrencyAmount'
+            - description: The amount in the currency of the merchant.
+              x-fieldValidation: required
+        merchantName:
+          type: string
+          description: The name of the merchant where the authorisation has been made.
+          x-fieldValidation: required
+        merchantCategoryCode:
+          type: string
+          description: The merchant category code.
+          x-fieldValidation: required
+        approved:
+          type: boolean
+          description: Indicates whether the authorisation has been approved or denied.
+          x-fieldValidation: required
+  parameters:
+    call-ref:
+      name: call-ref
+      in: header
+      description: A call reference generated by the caller and unique to the caller to provide correlation between the caller and system
+      required: false
+      style: simple
+      explode: false
+      schema:
+        type: string
+    published-timestamp:
+      name: published-timestamp
+      in: header
+      description: The timestamp when this event was published
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: integer
+    signature:
+      name: signature
+      in: header
+      description: The signature to verify the authenticity of this request.  The hash (HmacSHA256) of the published timestamp using your secret key.
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string

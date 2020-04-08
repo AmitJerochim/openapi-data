@@ -1,0 +1,5523 @@
+openapi: 3.0.0
+info:
+  version: "1.1.0"
+  title: GoldSIP Partner API
+paths:
+  /partners/{partnerCode}/customers:
+    post:
+      tags:
+        - Customer
+      summary: Add new customers
+      operationId: addCustomers
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid Partner code supplied
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add customer due to internal error
+        '200':
+          description: Customer added successfully
+          content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties:
+                      type: object
+                      description: Name value pair of input customer id with status object for each customer sent in the request.
+                      properties:
+                        id:
+                          type: string
+                          description: internal id of the customer                       
+                        status:
+                          type: string
+                          enum:
+                            - success
+                            - failed                          
+                        error:
+                          type: string
+                          description: Error details                               
+                      example:
+                        {id: 2305fb48-4362-4da9-aaf0-f3554765a2eb, status: success}  
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is added
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              type: array
+              items:
+                $ref: '#/components/schemas/Customer'
+    get:
+      tags:
+        - Customer
+        - Agent
+        - Branch
+      summary: Get list of customers with various filter and sort criterias, including agent and branch
+      operationId: getCustomers
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get customers due to internal error
+        '200':
+          description: Customer list returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Customer' 
+                  description: array of customers
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner for whom customer list is returned
+          required: true
+          schema:
+            type: string    
+        - name: agentId
+          in: query
+          description: unique external id of the MFI agent whose customer list is returned
+          required: false
+          schema:
+            type: string
+        - name: branchId
+          in: query
+          description: unique external id of the MFI branch whose customer list is returned
+          required: false
+          schema:
+            type: string            
+        - name: location
+          in: query
+          description: customer location filter, returns customer for this location
+          required: false
+          schema:
+            type: string
+        - name: sipPastDueDate
+          in: query
+          description: filter to get only those customers whose SIP is past due date
+          required: false
+          schema:
+            type: boolean
+        - name: upcomingSIPPeriod
+          in: query
+          description: filter to get only those customers whose SIP due date within upcomingSIPPeriod weeks
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: limit
+          in: query
+          description: result set limit, if not provided default 25 is used
+          required: false
+          schema:
+            type: integer
+            format: int32              
+        - name: sort
+          in: query
+          description: sort column and sort order, + is ascending, - is descending. Default sort order is +name
+          required: false
+          schema:
+            type: string
+            enum:
+              - +name
+              - -name
+              - +center
+              - -center
+              - +dob
+              - -dob                                
+  /partners/{partnerCode}/customers/{custId}:
+    put:
+      tags:
+        - Customer
+      summary: Update a customer
+      operationId: updateCustomer
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to update customer due to internal error
+        '200':
+          description: Customer updated successfully
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is updated
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer being updated
+          required: true
+          schema:
+            type: string         
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/Customer'
+
+    patch:
+      tags:
+        - Customer
+      summary: Do partial updates on a Customer using valid JSON Patch requests structures
+      operationId: updateCustomerPartial
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to update customer due to internal error
+        '200':
+          description: Customer updated successfully
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is updated
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer being updated
+          required: true
+          schema:
+            type: string         
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/PatchRequest'
+    get:
+      tags:
+        - Customer
+      summary: Get a customer
+      operationId: getCustomer
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find a customer due to internal error
+        '200':
+          description: Customer data returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Customer'          
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer details are requested
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer being requested
+          required: true
+          schema:
+            type: string
+  /partners/{partnerCode}/customers/{custId}/uploaddoc:
+    post:
+      tags:
+        - Customer
+        - Upload
+      summary: 
+        Authorize secure upload of a customer's binary document such a photograpgh, or identification proof scan        
+        to the storage.  These uploads are a two step process.  In the first step an authorization is completed.
+        On successful authorization caller will receive an upload endpoint (URL).  A 'PUT' operation is expected to
+        this URL with the file binary data.  
+        
+        We highly recommend using the client library (uploadclient.js) for uploads.  If you are rolling your own upload 
+        routine using this API the following parameter is important.
+
+        UploadDocRequest.type should be 'CUSTOMER_DOC'
+
+      operationId: uploadCustomerDoc
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to upload image due to internal error
+        '200':
+          description: Image uploaded successfully
+          content:
+              application/json:
+                schema: 
+                  $ref: '#/components/schemas/UploadDocResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer requesting image upload
+          required: true
+          schema:
+            type: string         
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/UploadDocRequest'
+  /partners/{partnerCode}/customers/uploaded/${uploadId}:
+    get:
+      tags:
+        - Customer
+        - Upload
+      summary: 
+        Authorize secure download of a customer's binary document such a photograpgh, or identification proof scan        
+        to the storage.  These downloads are a two step process.  In the first step an authorization is completed.
+        On successful authorization caller will receive a download endpoint (URL).  A 'GET' operation is expected to
+        this URL to receive the file binary data.  
+        
+        We highly recommend using the client library (uploadclient.js) for downloads.  This URL is part of the response 
+        you received during a previous upload.  This URL cannot be constructed using parameters available to you.  So it is
+        important to save the URL you receive during uplaod for reading using this API.
+
+      operationId: downloadCustomerDoc
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '200':
+          description: Image uploaded successfully
+          content:
+              application/json:
+                schema: 
+                  $ref: '#/components/schemas/DownloadResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner
+          required: true
+          schema:
+            type: string    
+        - name: uploadId
+          in: path
+          description: Unique is of the uploaded file.
+          required: true
+          schema:
+            type: string         
+  /partners/{partnerCode}/customers/{custId}/passbook:
+    get:
+      tags:
+        - Customer
+        - Bullion
+        - Passbook
+      summary: Get a customer Passbook
+      operationId: getCustomerPassbook
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find a customer passbook due to internal error
+        '200':
+          description: Customer passbook returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/BullionPassbook'          
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer passbok details are requested
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer requesting passbook
+          required: true
+          schema:
+            type: string
+  /partners/{partnerCode}/agents:
+    post:
+      tags:
+        - Agent
+      summary: Add new agents
+      operationId: addAgents
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add agent due to internal error
+        '200':
+          description: Agent added successfully
+          content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties:
+                      type: object
+                      description: Name value pair of input agent id with status object for each agent sent in the request.
+                      properties:
+                        id:
+                          type: string
+                          description: internal id of the agent                       
+                        status:
+                          type: string
+                          enum:
+                            - success
+                            - failed                          
+                        error:
+                          type: string
+                          description: Error details                               
+                      example:
+                        {status: failed, error: Agent BMFIBR002AG018 exists. Skipping}                      
+      parameters:
+        - name: partnerCode
+          in: path
+          description: Unique code of the MFI Partner whose agent is added
+          required: true
+          schema:
+            type: string    
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              type: array
+              items:
+                $ref: '#/components/schemas/Agent'
+    get:
+      tags:
+        - Agent
+      summary: Get list of agents
+      operationId: getAgents
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get agents due to internal error
+        '200':
+          description: Agent list returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Agent'
+                  description: array of Agents
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner for whom agent list is returned
+          required: true
+          schema:
+            type: string    
+        - name: extBranchId
+          in: query
+          description: external branch identifier to limit agents to a specifc branch
+          required: false
+          schema:
+            type: string                
+  /partners/{partnerCode}/agents/{agentId}/uploaddoc:
+    post:
+      tags:
+        - Agent
+        - Upload
+      summary: 
+        Authorize secure upload of a agent's binary document such a photograpgh, or identification proof scan        
+        to the storage.  These uploads are a two step process.  In the first step an authorization is completed.
+        On successful authorization caller will receive an upload endpoint (URL).  A 'PUT' operation is expected to
+        this URL with the file binary data.  
+        
+        We highly recommend using the client library (uploadclient.js) for uploads.  If you are rolling your own upload 
+        routine using this API the following parameter is important.
+
+        UploadDocRequest.type should be 'AGENT_DOC'
+
+      operationId: uploadAgentDoc
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Agent not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to upload image due to internal error
+        '200':
+          description: Image uploaded successfully
+          content:
+              application/json:
+                schema: 
+                  $ref: '#/components/schemas/UploadDocResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner
+          required: true
+          schema:
+            type: string    
+        - name: agentId
+          in: path
+          description: unique external id of the agent requesting image upload
+          required: true
+          schema:
+            type: string         
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/UploadDocRequest'
+  /partners/{partnerCode}/agents/uploaded/${uploadId}:
+    get:
+      tags:
+        - Agent
+        - Download
+        - Upload
+      summary: 
+        Authorize secure download of a agent's binary document such a photograpgh, or identification proof scan        
+        to the storage.  These downloads are a two step process.  In the first step an authorization is completed.
+        On successful authorization caller will receive a download endpoint (URL).  A 'GET' operation is expected to
+        this URL to receive the file binary data.  
+        
+        We highly recommend using the client library (uploadclient.js) for downloads.  This URL is part of the response 
+        you received during a previous upload.  This URL cannot be constructed using parameters available to you.  So it is
+        important to save the URL you receive during uplaod for reading using this API.
+
+      operationId: downloadAgentDoc
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '200':
+          description: Image available for download.
+          content:
+              application/json:
+                schema: 
+                  $ref: '#/components/schemas/DownloadResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner
+          required: true
+          schema:
+            type: string    
+        - name: uploadId
+          in: path
+          description: Unique is of the uploaded file.
+          required: true
+          schema:
+            type: string         
+
+  /partners/{partnerCode}/agents/{agentId}:
+    put:
+      tags:
+        - Agent
+      summary: Update an agent
+      operationId: updateAgent
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Agent not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to update agent due to internal error
+        '200':
+          description: Agent updated successfully
+      parameters:
+        - name: partnerCode
+          in: path
+          description: Unique code of the MFI Partner whose agent is updated
+          required: true
+          schema:
+            type: string    
+        - name: agentId
+          in: path
+          description: Unique external agent id
+          required: true
+          schema:
+            type: string         
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/Agent'
+    patch:
+      tags:
+        - Agent
+      summary: Do partial updates on an Agent using valid JSON Patch requests structures
+      operationId: updateAgentPartial
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Agent not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to update agent due to internal error
+        '200':
+          description: Agent updated successfully
+      parameters:
+        - name: partnerCode
+          in: path
+          description: Unique code of the MFI Partner whose agent is updated
+          required: true
+          schema:
+            type: string    
+        - name: agentId
+          in: path
+          description: Unique external agent id
+          required: true
+          schema:
+            type: string         
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/PatchRequest'
+    get:
+      tags:
+        - Agent
+      summary: Get an agent
+      operationId: getAgent
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Agent not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get agent due to internal error
+        '200':
+          description: Agent returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Agent'           
+      parameters:
+        - name: partnerCode
+          in: path
+          description: Unique code of the MFI Partner whose agent is requested
+          required: true
+          schema:
+            type: string    
+        - name: agentId
+          in: path
+          description: Unique external agent id
+          required: true
+          schema:
+            type: string           
+  /partners/{partnerCode}/jewelers:
+    get:
+      tags:
+        - Jeweler
+      summary: Get list of Jewelers with various filter and sort criterias
+      operationId: getJewelers
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get jewelers due to internal error
+        '200':
+          description: Jewelers list returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Jeweler' 
+                  description: array of Jewelers
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner for whom customer list is returned
+          required: true
+          schema:
+            type: string    
+        - name: jewelerName
+          in: query
+          description: partial/full name of the jeweler business
+          required: false
+          schema:
+            type: string
+        - name: location
+          in: query
+          description: gps coordinate of the location
+          required: false
+          schema:
+            type: string
+        - name: searchRadius
+          in: query
+          description: within the searchRadius Km, if not provided default 10 Km redius is used
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: limit
+          in: query
+          description: search result limit, if not provided default 25 is used
+          required: false
+          schema:
+            type: integer
+            format: int32            
+        - name: sort
+          in: query
+          description: sort column and sort order, + is ascending, - is descending. Default sort order is +name
+          required: false
+          schema:
+            type: string
+            enum:
+              - +distance
+              - -distance
+              - +name
+              - -name
+              - +ownerName
+              - -ownerName      
+  /partners/{partnerCode}/jewelers/{jewelerId}:
+    get:
+      tags:
+        - Jeweler
+      summary: Get a Jeweler
+      operationId: getJeweler
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find a Jeweler due to internal error
+        '200':
+          description: Jeweler data returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Jeweler'          
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner requesting the Jeweler data
+          required: true
+          schema:
+            type: string    
+        - name: jewelerId
+          in: path
+          description: unique internal id of the jeweler being requested
+          required: true
+          schema:
+            type: string
+  /partners/{partnerCode}/branches:
+    post:
+      tags:
+        - Branch
+      summary: Add new branches
+      operationId: addBranches
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add branch due to internal error
+        '200':
+          description: Branch added successfully
+          content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties:
+                      type: object
+                      description: Name value pair of input branch id with status object for each branch sent in the request.
+                      properties:
+                        id:
+                          type: string
+                          description: internal id of the branch                       
+                        status:
+                          type: string
+                          enum:
+                            - success
+                            - failed                          
+                        error:
+                          type: string
+                          description: Error details                               
+                      example:
+                        {id: 2305fb48-4362-4da9-aaf0-f3554765a2eb, status: success}     
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose branch is added
+          required: true
+          schema:
+            type: string    
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              type: array
+              items:
+                $ref: '#/components/schemas/Branch'
+    get:
+      tags:
+        - Branch
+      summary: Get list of branches for a given partner
+      operationId: getBranches
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get branches due to internal error
+        '200':
+          description: Branch list returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Branch' 
+                  description: array of branches
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose branch is added
+          required: true
+          schema:
+            type: string                                    
+  /partners/{partnerCode}/branches/{branchId}/uploaddoc:
+    post:
+      tags:
+        - Branch
+        - Upload
+      summary: 
+        Authorize secure upload of a branch's binary document such an identification proof scan        
+        to the storage.  These uploads are a two step process.  In the first step an authorization is completed.
+        On successful authorization caller will receive an upload endpoint (URL).  A 'PUT' operation is expected to
+        this URL with the file binary data.  
+        
+        We highly recommend using the client library (uploadclient.js) for uploads.  If you are rolling your own upload 
+        routine using this API the following parameter is important.
+
+        UploadDocRequest.type should be 'BRANCH_DOC'
+
+      operationId: uploadBranchDoc
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Branch not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to upload image due to internal error
+        '200':
+          description: Image uploaded successfully
+          content:
+              application/json:
+                schema: 
+                  $ref: '#/components/schemas/UploadDocResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner
+          required: true
+          schema:
+            type: string    
+        - name: branchId
+          in: path
+          description: unique external id of the branch requesting image upload
+          required: true
+          schema:
+            type: string         
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/UploadDocRequest'
+  /partners/{partnerCode}/branches/uploaded/${uploadId}:
+    get:
+      tags:
+        - Branch
+        - Download
+        - Upload
+      summary: 
+        Authorize secure download of a branch's binary document such an identification proof scan        
+        from torage.  These downloads are a two step process.  In the first step an authorization is completed.
+        On successful authorization caller will receive a download endpoint (URL).  A 'GET' operation is expected to
+        this URL to receive the file binary data.  
+        
+        We highly recommend using the client library (uploadclient.js) for downloads.  This URL is part of the response 
+        you received during a previous upload.  This URL cannot be constructed using parameters available to you.  So it is
+        important to save the URL you receive during uplaod for reading using this API.
+
+      operationId: downloadBranchDoc
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '200':
+          description: Image available for download.
+          content:
+              application/json:
+                schema: 
+                  $ref: '#/components/schemas/DownloadResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner
+          required: true
+          schema:
+            type: string    
+        - name: uploadId
+          in: path
+          description: Unique is of the uploaded file.
+          required: true
+          schema:
+            type: string         
+
+  /partners/{partnerCode}/branches/{branchId}:
+    put:
+      tags:
+        - Branch
+      summary: Update a branch
+      operationId: updateBranch
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Branch not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to update branch due to internal error
+        '200':
+          description: Branch updated successfully
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose branch is updated
+          required: true
+          schema:
+            type: string    
+        - name: branchId
+          in: path
+          description: unique external branch id
+          required: true
+          schema:
+            type: string         
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/Branch'
+
+    patch:
+      tags:
+        - Branch
+      summary: Do partial updates on a Branch using valid JSON Patch requests structures
+      operationId: updateBranchPartial
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Branch not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to update branch due to internal error
+        '200':
+          description: Branch updated successfully
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose branch is updated
+          required: true
+          schema:
+            type: string    
+        - name: branchId
+          in: path
+          description: unique external branch id
+          required: true
+          schema:
+            type: string         
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/PatchRequest'
+    get:
+      tags:
+        - Branch
+      summary: get a branch
+      operationId: getBranch
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Branch not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get branch due to internal error
+        '200':
+          description: Branch returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Branch'                
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose branch is updated
+          required: true
+          schema:
+            type: string    
+        - name: branchId
+          in: path
+          description: unique external branch id
+          required: true
+          schema:
+            type: string
+  /partners/{partnerCode}/branches/{branchId}/bullionrates:
+    get:
+      tags:
+        - Branch
+        - Bullion
+      summary: Get available bullion rate for a branch for a given bullion, purity wise
+      operationId: getBranchBullionRates
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Branch not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find bullions due to internal error
+        '200':
+          description: Bullion rate list for branch returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/BullionRate'
+                  description: array of Bullion Rates
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose branch is requesting Bullion Rates
+          required: true
+          schema:
+            type: string    
+        - name: branchId
+          in: path
+          description: unique external id of the branch whose Bullion rates are being requested
+          required: true
+          schema:
+            type: string
+        - name: bullionName
+          in: query
+          description: Optional filter to get bullion rates for a given bullion by providing unique internal bullion name
+          required: false
+          schema:
+            type: string
+        - name: bullionId
+          in: query
+          description: Optional filter to get bullion rates for a given bullion and purity by providing unique internal bullion identifier
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: rateType
+          in: query
+          description: type of rate requested buy, sell or emergencySell
+          required: false
+          schema:
+            type: string
+            enum:
+              - buy
+              - sell
+              - emergencySell
+              - sipBuy                        
+  /partners/{partnerCode}/customers/{custId}/sips:
+    post:
+      tags:
+        - Customer
+        - SIP
+      summary: Add new Systematic Investment Plan (SIP) for a customer
+      operationId: addSIP
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add sip due to internal error
+        '200':
+          description: SIP added for Customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/Sip'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is adding SIP
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose sip is being added
+          required: true
+          schema:
+            type: string                
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/Sip'
+    get:
+      tags:
+        - Customer
+        - SIP
+      summary: Get all Systematic Investment Plans (SIPs) of a customer
+      operationId: getSIPs
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add sip due to internal error
+        '200':
+          description: Customer SIP list returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Sip'
+                  description: array of customer SIPs
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting SIPs
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose sips are requested
+          required: true
+          schema:
+            type: string                                         
+  /partners/{partnerCode}/customers/{custId}/sips/{sipId}:
+    get:
+      tags:
+        - Customer
+        - SIP
+      summary: Get SIP details of a customer
+      operationId: getSIPDetails
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer/SIP not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find SIP details of the customer due to internal error
+        '200':
+          description: Customer SIP details returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Sip'     
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer details are requested
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose SIP details are being requested
+          required: true
+          schema:
+            type: string  
+        - name: sipId
+          in: path
+          description: unique internal sip id of the customer
+          required: true
+          schema:
+            type: string
+    put:
+      tags:
+        - Customer
+        - SIP
+      summary: Update a SIP
+      operationId: updateSIP
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer/SIP not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to update SIP details of the customer due to internal error
+        '200':
+          description: Customer SIP details updated successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Sip'    
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer details are requested
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose SIP details are being requested
+          required: true
+          schema:
+            type: string  
+        - name: sipId
+          in: path
+          description: unique internal sip id of the customer
+          required: true
+          schema:
+            type: string        
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/Sip'                          
+    delete:
+      tags:
+        - Customer
+        - SIP
+      summary: Cancel SIP of a customer
+      operationId: cancelSIP
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer/SIP not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to cancel customer SIP due to internal error
+        '200':
+          description: Customer SIP cancelled successfully
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer SIP is cancelled
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose SIP is being cancelled
+          required: true
+          schema:
+            type: string
+        - name: sipId
+          in: path
+          description: unique internal sip id of the customer that is being canceled
+          required: true
+          schema:
+            type: string
+  /partners/{partnerCode}/customers/{custId}/bullions:
+    get:
+      tags:
+        - Customer
+        - Bullion
+      summary: Get all bullions available to a customer
+      operationId: getBullions
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find bullions due to internal error
+        '200':
+          description: Bullion list for customer returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Bullion'
+                  description: array of available and configured Bullion
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting Bullions
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer who is requesting Bullions
+          required: true
+          schema:
+            type: string
+  /partners/{partnerCode}/customers/{custId}/bullionrates:
+    get:
+      tags:
+        - Customer
+        - Bullion
+      summary: Get available bullion rate for a customer for a given bullion, purity wise
+      operationId: getBullionRates
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find bullions due to internal error
+        '200':
+          description: Bullion rate list for customer returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/BullionRate'
+                  description: array of Bullion Rates
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting Bullion Rates
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer who is requesting Bullion rates
+          required: true
+          schema:
+            type: string
+        - name: bullionName
+          in: query
+          description: Optional filter to get bullion rates for a given bullion by providing unique internal bullion name
+          required: false
+          schema:
+            type: string
+        - name: bullionId
+          in: query
+          description: Optional filter to get bullion rates for a given bullion and purity by providing unique internal bullion identifier
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: rateType
+          in: query
+          description: type of rate requested buy, sell or emergencySell
+          required: false
+          schema:
+            type: string
+            enum:
+              - buy
+              - sell
+              - emergencySell
+              - sipBuy
+  /partners/{partnerCode}/customers/{custId}/bullionsiprates:
+    get:
+      tags:
+        - Customer
+        - Bullion
+      summary: Get available bullion sip rate for a customer for a given bullion, purity wise
+      operationId: getBullionSipRates
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find bullions due to internal error
+        '200':
+          description: Bullion sip rate list for customer returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/BullionRate'
+                  description: array of Bullion Sip Rates
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting Bullion Sip Rates
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer who is requesting Bullion Sip rates
+          required: true
+          schema:
+            type: string
+        - name: bullionName
+          in: query
+          description: Optional filter to get bullion Sip rate for a given bullion by providing unique internal bullion name
+          required: false
+          schema:
+            type: string
+        - name: bullionId
+          in: query
+          description: Optional filter to get bullion sip rate for a given bullion and purity by providing unique internal bullion identifier
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: rateType
+          in: query
+          description: type of rate requested buy, sell or emergencySell
+          required: false
+          schema:
+            type: string
+            enum:
+              - buy
+              - sell
+              - emergencySell
+              - sipBuy              
+  /partners/{partnerCode}/customers/{custId}/taxrates:
+    get:
+      tags:
+        - Customer
+        - Tax
+      summary: Get available Tax rate for a customer for a given bullion
+      operationId: getTaxRates
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find tax rates due to internal error
+        '200':
+          description: Tax rate list for customer returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TaxRate'
+                  description: array of Tax Rates
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting Tax Rates
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer who is requesting Tax rates
+          required: true
+          schema:
+            type: string
+        - name: bullionName
+          in: query
+          description: Optional filter to get Tax rates for a given bullion by providing unique internal bullion name
+          required: false
+          schema:
+            type: string
+        - name: bullionId
+          in: query
+          description: Optional filter to get Tax rates for a given bullion and purity by providing unique internal bullion identifier
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: rateType
+          in: query
+          description: type of rate requested buy, sell or emergencySell
+          required: false
+          schema:
+            type: string
+            enum:
+              - buy
+              - sell
+              - emergencySell
+              - sipBuy                                          
+  /partners/{partnerCode}/coins:
+    get:
+      tags:
+        - Coin
+      summary: Get available bullion coins for a customer for a given bullion, purity wise
+      operationId: getBullionCoins
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find coins due to internal error
+        '200':
+          description: List of available bullion coins for a given bullion and a customer returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CoinSpecification'
+                  description: array of coins available for a given bullion and customer
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting Bullion Coins
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer who is requesting Bullion coins
+          required: true
+          schema:
+            type: string
+        - name: bullionName
+          in: query
+          description: Optional filter to get coins for a given bullion by providing unique internal bullion name
+          required: false
+          schema:
+            type: string
+        - name: bullionId
+          in: query
+          description: Optional filter to get coins for a given bullion and purity by providing unique internal bullion identifier
+          required: false
+          schema:
+            type: string
+            format: uuid    
+        - name: designType
+          in: query
+          description: Optional filter to get coins for a given type of design requested religious, plain, non-religious, when not supplied, returns all
+          required: false
+          schema:
+            type: string
+            enum:
+              - religious
+              - non-religious
+              - plain
+  /partners/{partnerCode}/coins/{coinId}:
+    get:
+      tags:
+        - Coin
+      summary: Get details of a bullion coin given the unique coin specification identifier
+      operationId: getBullionCoin
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer/Coin not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find coin due to internal error
+        '200':
+          description: List of available bullion coins for a given bullion and a customer returned successfully
+          content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/CoinSpecification'
+                  description: Coin Details for the given coin specification identifier
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting Bullion Coins
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer who is requesting Bullion coins
+          required: true
+          schema:
+            type: string
+        - name: coinId
+          in: path
+          description: Unique coin inventory identifier
+          required: true
+          schema:
+            type: string
+            format: uuid      
+  /partners/{partnerCode}/customers/{custId}/buyorders:
+    post:
+      tags:
+        - Customer
+        - Buy Order
+        - Order
+      summary: Post a new Bullion buy order.
+      operationId: addBullionBuyOrder
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add buy order due to internal error
+        '200':
+          description: Buy Order added for Customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/BuyOrder'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is adding buy order
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose buy order is being added
+          required: true
+          schema:
+            type: string                           
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/BuyOrder'
+    get:
+      tags:
+        - Customer
+        - Buy Order        
+        - Order
+      summary: Get Bullion buy orders for a customer.
+      operationId: getBullionBuyOrders
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get list of customer buy orders due to internal error
+        '200':
+          description: List of buy orders returned for Customer successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/BuyOrder'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting order
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose order is being requested
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: filter for one or more status of the orders - new, inprogress, complete, cancelled
+          required: false
+          schema:
+            type: string
+            description: comma separated status values from the following - new, inprogress, complete, cancelled
+        - name: bullionName
+          in: query
+          description: filter to get orders for a bullion by providing unique bullion name
+          required: false
+          schema:
+            type: string
+        - name: bullionInventoryId
+          in: query
+          description: filter to get orders for a specifc bullion and purity by providing unique bullion inventory identifier
+          required: false
+          schema:
+            type: string
+            format: uuid            
+  /partners/{partnerCode}/customers/{custId}/buyorders/{buyOrderId}:
+    get:
+      tags:
+        - Customer
+        - Buy Order
+        - Order
+      summary: Get details of a particular buy order for a customer
+      operationId: getBuyOrderDetails
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer/Order not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find buy order details of the customer due to internal error
+        '200':
+          description: Customer Buy Order details returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/BuyOrder'     
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer's order details are requested
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose order details are being requested
+          required: true
+          schema:
+            type: string  
+        - name: buyOrderId
+          in: path
+          description: unique internal order id of the customer
+          required: true
+          schema:
+            type: string
+  /partners/{partnerCode}/customers/{custId}/sellorders:
+    post:
+      tags:
+        - Customer
+        - Sell Order
+        - Order
+      summary: Post a new Bullion Sell order.
+      operationId: addBullionSellOrder
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add sell order due to internal error
+        '200':
+          description: Sell Order added for Customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/SellOrder'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is adding sell order
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose sell order is being added
+          required: true
+          schema:
+            type: string                           
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/SellOrder'
+    get:
+      tags:
+        - Customer
+        - Sell Order        
+        - Order
+      summary: Get Bullion sell orders for a customer.
+      operationId: getBullionSellOrders
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get list of customer sell orders due to internal error
+        '200':
+          description: List of sell orders returned for Customer successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SellOrder'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting sell order
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose order is being requested
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: filter for one or more status of the orders - new, inprogress, complete, cancelled
+          required: false
+          schema:
+            type: string
+            description: comma separated status values from the following - new, inprogress, complete, cancelled
+        - name: sellType
+          in: query
+          description: filter for type of sell - regular, emergency
+          required: false
+          schema:
+            type: string
+            description: comma separated status values from the following - regular, emergency
+        - name: bullionName
+          in: query
+          description: filter to get orders for a bullion by providing unique bullion name
+          required: false
+          schema:
+            type: string
+        - name: bullionId
+          in: query
+          description: filter to get orders for a specifc bullion and purity by providing unique bullion identifier
+          required: false
+          schema:
+            type: string
+            format: uuid            
+  /partners/{partnerCode}/customers/{custId}/sellorders/{sellOrderId}:
+    get:
+      tags:
+        - Customer
+        - Sell Order
+        - Order
+      summary: Get details of a particular sell order for a customer
+      operationId: getSellOrderDetails
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer/Order not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find sell order details of the customer due to internal error
+        '200':
+          description: Customer Sell Order details returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/SellOrder'     
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer's order details are requested
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose order details are being requested
+          required: true
+          schema:
+            type: string  
+        - name: sellOrderId
+          in: path
+          description: unique internal sell order id of the customer
+          required: true
+          schema:
+            type: string
+  /partners/{partnerCode}/customers/{custId}/siporders:
+    post:
+      tags:
+        - Customer
+        - SIP Order
+        - Order
+      summary: Post a new Bullion SIP order.
+      operationId: addBullionSipOrder
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add sip order due to internal error
+        '200':
+          description: SIP Order added for Customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/SipOrder'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is adding sip order
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose sip order is being added
+          required: true
+          schema:
+            type: string                           
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/SipOrder'
+    get:
+      tags:
+        - Customer
+        - SIP Order        
+        - Order
+      summary: Get Bullion sip orders for a customer.
+      operationId: getBullionSipOrders
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get list of customer sip orders due to internal error
+        '200':
+          description: List of sip orders returned for Customer successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SipOrder'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting sip order
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose order is being requested
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: filter for one or more status of the orders - new, inprogress, complete, cancelled
+          required: false
+          schema:
+            type: string
+            description: comma separated status values from the following - new, inprogress, complete, cancelled
+        - name: bullionName
+          in: query
+          description: filter to get orders for a bullion by providing unique bullion name
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: bullionId
+          in: query
+          description: filter to get orders for a specifc bullion and purity by providing unique bullion identifier
+          required: false
+          schema:
+            type: string
+            format: uuid            
+  /partners/{partnerCode}/customers/{custId}/siporders/{sipOrderId}:
+    get:
+      tags:
+        - Customer
+        - SIP Order
+        - Order
+      summary: Get details of a particular sip order for a customer
+      operationId: getSipOrderDetails
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer/Order not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find sip order details of the customer due to internal error
+        '200':
+          description: Customer SIP Order details returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/SipOrder'    
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer's order details are requested
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose order details are being requested
+          required: true
+          schema:
+            type: string  
+        - name: sipOrderId
+          in: path
+          description: unique internal sip order id of the customer
+          required: true
+          schema:
+            type: string
+                
+  /partners/{partnerCode}/customers/{custId}/coinorders:
+    post:
+      tags:
+        - Customer
+        - Coin Order
+        - Order
+      summary: Post a new Bullion Coin order.
+      operationId: addBullionCoinOrder
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add coin order due to internal error
+        '200':
+          description: Coin Order added for Customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/CoinOrder'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is adding coin order
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose coin order is being added
+          required: true
+          schema:
+            type: string                           
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/CoinOrder'
+    get:
+      tags:
+        - Customer
+        - Coin Order        
+        - Order
+      summary: Get Bullion coin orders for a customer.
+      operationId: getBullionCoinOrders
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get list of customer coin orders due to internal error
+        '200':
+          description: List of coin orders returned for Customer successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CoinOrder'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting coin order
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose order is being requesting
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: filter for one or more status of the orders - new, inprogress, complete, cancelled
+          required: false
+          schema:
+            type: string
+            description: comma separated status values from the following - new, inprogress, complete, cancelled
+        - name: bullionName
+          in: query
+          description: filter to get orders for a bullion by providing unique bullion name
+          required: false
+          schema:
+            type: string
+        - name: bullionId
+          in: query
+          description: filter to get orders for a specifc bullion and purity by providing unique bullion identifier
+          required: false
+          schema:
+            type: string
+            format: uuid            
+  /partners/{partnerCode}/customers/{custId}/coinorders/{coinOrderId}:
+    get:
+      tags:
+        - Customer
+        - Coin Order
+        - Order
+      summary: Get details of a particular coin order for a customer
+      operationId: getCoinOrderDetails
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer/Order not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find coin order details of the customer due to internal error
+        '200':
+          description: Customer Coin Order details returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/CoinOrder'     
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer's order details are requested
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose order details are being requested
+          required: true
+          schema:
+            type: string  
+        - name: coinOrderId
+          in: path
+          description: unique internal coin order id of the customer
+          required: true
+          schema:
+            type: string
+  /partners/{partnerCode}/customers/{custId}/jewelerorders:
+    post:
+      tags:
+        - Customer
+        - Jeweler Order
+        - Order
+      summary: Post a new Bullion Jeweler order.
+      operationId: addBullionJewelerOrder
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add jeweler order due to internal error
+        '200':
+          description: Jeweler Order added for Customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/JewelerOrder'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is adding jeweler order
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose jeweler order is being added
+          required: true
+          schema:
+            type: string                           
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/JewelerOrder'
+    get:
+      tags:
+        - Customer
+        - Jeweler Order        
+        - Order
+      summary: Get Bullion jeweler orders for a customer.
+      operationId: getBullionJewelerOrders
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get list of customer jeweler orders due to internal error
+        '200':
+          description: List of jeweler orders returned for Customer successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/JewelerOrder'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is requesting jeweler order
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose order is being requesting
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: filter for one or more status of the orders - new, inprogress, complete, cancelled
+          required: false
+          schema:
+            type: string
+            description: comma separated status values from the following - new, inprogress, complete, cancelled
+        - name: bullionName
+          in: query
+          description: filter to get orders for a bullion by providing unique bullion name
+          required: false
+          schema:
+            type: string
+        - name: bullionId
+          in: query
+          description: filter to get orders for a specifc bullion and purity by providing unique bullion identifier
+          required: false
+          schema:
+            type: string
+            format: uuid            
+  /partners/{partnerCode}/customers/{custId}/jewelerorders/{jewelerOrderId}:
+    get:
+      tags:
+        - Customer
+        - Jeweler Order
+        - Order
+      summary: Get details of a particular jeweler order for a customer
+      operationId: getJewelerOrderDetails
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer/Order not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find jeweler order details of the customer due to internal error
+        '200':
+          description: Customer jeweler Order details returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/JewelerOrder'     
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer's order details are requested
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose order details are being requested
+          required: true
+          schema:
+            type: string  
+        - name: jewelerOrderId
+          in: path
+          description: unique internal jeweler order id of the customer
+          required: true
+          schema:
+            type: string
+  /partners/{partnerCode}/customers/{custId}/cancelorder:
+    post:
+      tags:
+        - Customer
+        - Order
+      summary: Cancel an order using unique Order ID.  Cancellation may be rejected as per the buisiness rules specific to the order type.
+      operationId: cancelCustomerOrder
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add buy order due to internal error
+        '200':
+          description: Order Cancelled
+
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is adding buy order
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose buy order is being added
+          required: true
+          schema:
+            type: string                           
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/OrderCancellationRequest'
+  
+  /partners/{partnerCode}/customers/{custId}/orderinvoice/{id}:
+    get:
+      tags:
+        - Customer
+        - Order
+        - Invoice 
+      summary: 
+        Get the URL from which an appropriate INVOICE / ADVANCE RECEIPT PDF document for the order
+        Can be downloaded.
+      operationId: GetCustomerOrderInvoice
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to fetch invoice due to internal error
+        '200':
+          description: Invoice document available for download.
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/DownloadResponse'     
+
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is adding buy order
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose buy order is being added
+          required: true
+          schema:
+            type: string                           
+        - name: id
+          in: path
+          description: Unique order ID returned by the system at the time of order submission.
+          required: true
+          schema:
+            type: string
+            format: uuid            
+
+  /partners/{partnerCode}/customers/{custId}/shipments:
+    get:
+      tags:
+        - Customer
+        - Order
+        - Shipment
+      summary: Get all shipments of a customer.
+      operationId: getAllCustomerShipments
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find shipment details of the customer due to internal error
+        '200':
+          description: Customer Shipment details returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shipment'     
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer's shipment details are requested
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose shipment details are being requested
+          required: true
+          schema:
+            type: string  
+        - name: orderId
+          in: query
+          description: unique internal order id of the customer to get shipments only for a given order
+          required: false
+          schema:
+            type: string
+            format: uuid
+  /partners/{partnerCode}/customers/{custId}/shipments/{shipmentId}:
+    get:
+      tags:
+        - Customer
+        - Shipment
+      summary: Get shipping details of a unique shipment of a customer. Unique Shipment id is provided as part of the request along with customer id and partner id.
+      operationId: getShipmentDetails
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer/Shipment not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find shipment details of the customer order due to internal error
+        '200':
+          description: Customer Shipment details returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'     
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer's shipment details are requested
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose shipment details are being requested
+          required: true
+          schema:
+            type: string  
+        - name: shipmentId
+          in: path
+          description: unique internal shipment id of a customer order
+          required: true
+          schema:
+            type: string
+            format: uuid
+  /partners/{partnerCode}/customers/{custId}/instantorders/buy:
+    post:
+      tags:
+        - Customer
+        - Instant Order
+      summary: Post a new instant bullion buy order.
+      operationId: addInstantBullionBuyOrder
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add instant buy order due to internal error
+        '200':
+          description: Instant Buy Order added for Customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/InstantOrderResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is adding buy order
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose buy order is being added
+          required: true
+          schema:
+            type: string                           
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/InstantBuyOrderRequest'
+  /partners/{partnerCode}/customers/{custId}/instantorders/sell:
+    post:
+      tags:
+        - Customer
+        - Instant Order
+      summary: Post a new instant bullion sell order.
+      operationId: addInstantBullionSellOrder
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add instant sell order due to internal error
+        '200':
+          description: Instant Sell Order added for Customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/InstantOrderResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is adding sell order
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose sell order is being added
+          required: true
+          schema:
+            type: string                           
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/InstantSellOrderRequest'      
+  /partners/{partnerCode}/customers/{custId}/instantorders/{instantOrderId}:
+    get:
+      tags:
+        - Customer
+        - Instant Order
+      summary: Get details of a particular instant order for a customer
+      operationId: getInstantOrderDetails
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer/Order not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find instant order details of the customer due to internal error
+        '200':
+          description: Customer instant order details returned successfully
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/InstantOrderResponse'  
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer's order details are requested
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose order details are being requested
+          required: true
+          schema:
+            type: string  
+        - name: instantOrderId
+          in: path
+          description: unique internal instant order id of the customer
+          required: true
+          schema:
+            type: string
+  /partners/{partnerCode}/customers/{custId}/instantorders/list:
+    post:
+      tags:
+        - Customer
+        - Instant Order        
+      summary: Get instant bullion orders for a customer.
+      operationId: getInstantBullionOrders
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get list of customer instant orders due to internal error
+        '200':
+          description: List of instant orders returned for Customer successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/InstantOrderResponse'
+      parameters:
+          - name: partnerCode
+            in: path
+            description: unique code of the MFI Partner whose customer's order details are requested
+            required: true
+            schema:
+              type: string    
+          - name: custId
+            in: path
+            description: unique external id of the customer whose order details are being requested
+            required: true
+            schema:
+              type: string  
+          - name: orderType
+            in: query
+            description: Optional filter to get orders for a given order type
+            required: false
+            schema:
+              type: string
+              enum:
+                - buy
+                - sell           
+          - name: status
+            in: query
+            description: Optional filter to get orders for a given order status
+            required: false
+            schema:
+              type: string
+              enum:
+                - new
+                - inprogress
+                - complete
+                - cancelled
+          - name: bullionName
+            in: query
+            description: Optional filter to get orders for a given bullion by providing unique bullion name
+            required: false
+            schema:
+              type: string
+          - name: bullionId
+            in: query
+            description: Optional filter to get orders for a given bullion and purity by providing unique bullion identifier
+            required: false
+            schema:
+              type: string
+              format: uuid                     
+          - name: startDate
+            in: query
+            description: Optional filter to get orders where order date is on or after startDate
+            required: false
+            schema:
+              type: string
+              format: date
+          - name: endDate
+            in: query
+            description: Optional filter to get orders where order date is on or before endDate
+            required: false
+            schema:
+              type: string
+              format: date          
+          - name: limit
+            in: query
+            description: result set limit, if not provided default 25 is used
+            required: false
+            schema:
+              type: integer
+              format: int32     
+          - name: offset
+            in: query
+            description: offset for result set, if not provided default 0 is used i.e. results are returned from begining.
+            required: false
+            schema:
+              type: integer
+              format: int32                         
+          - name: sort
+            in: query
+            description: sort column and sort order, + is ascending, - is descending. Default sort order is -orderDate
+            required: false
+            schema:
+              type: string
+              enum:
+                - -orderDate
+                - +orderDate
+                - -customerName
+                - +customerName
+                - -amount
+                - +amount                                          
+                - -weight
+                - +weight       
+  /partners/{partnerCode}/customers/{custId}/instantorders/cancel:
+    post:
+      tags:
+        - Customer
+        - Instant Order
+      summary: Cancel an instant order using unique Order ID.  Cancellation may be rejected as per the buisiness rules specific to the order type.
+      operationId: cancelInstantCustomerOrder
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to cancel instant order due to internal error
+        '200':
+          description: Order Cancelled
+
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is cancelling the order
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose customer is cancelling the order
+          required: true
+          schema:
+            type: string                           
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/OrderCancellationRequest'
+  /partners/{partnerCode}/customers/{custId}/loans:
+    post:
+      tags:
+        - Loan
+        - Customer
+      summary: Adds a loan request for a customer
+      operationId: addLoanRequest
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add customer loan due to internal error
+        '200':
+          description: Loan request added for customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/LoanResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner reuqesting for the customer data.
+          required: true
+          schema:
+            type: string 
+        - name: custId
+          in: path
+          description: unique external id of the customer whose loan request is being added
+          required: true
+          schema:
+            type: string                                     
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/LoanRequest'
+  /partners/{partnerCode}/customers/{custId}/loans/{loanId}:
+    get:
+      tags:
+        - Loan
+        - Customer        
+      summary: Returns the details of a loan request for a customer
+      operationId: getLoanRequestDetails
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Loan Request not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to retrieve customer loan request due to internal error
+        '200':
+          description: Loan request details returned for customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/LoanResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner reuqesting for the customer data.
+          required: true
+          schema:
+            type: string 
+        - name: custId
+          in: path
+          description: unique external id of the customer whose loan request is being queried
+          required: true
+          schema:
+            type: string                    
+        - name: loanId
+          in: path
+          description: unique id of the loan request of a customer.
+          required: true
+          schema:
+            type: string      
+    post:
+      tags:
+        - Loan
+        - Customer        
+      summary: Updates the status of loan request for a customer
+      operationId: updateloanRequestStatus
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Loan Request not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to retrieve customer loan request due to internal error
+        '200':
+          description: Loan request status updated successfully
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner reuqesting for the customer data.
+          required: true
+          schema:
+            type: string
+        - name: custId
+          in: path
+          description: unique external id of the customer whose loan request is being updated
+          required: true
+          schema:
+            type: string                      
+        - name: loanId
+          in: path
+          description: unique id of the loan request of a customer.
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Updated status of the loan request
+          required: true
+          schema:
+            type: string
+            enum:
+              - confirmed
+              - cancelled          
+        - name: statusUpdateReason
+          in: query
+          description: Reason for updating the status
+          required: true
+          schema:
+            type: string                 
+  /partners/{partnerCode}/findcustomer:
+    post:
+      tags:
+        - Customer
+      summary: Finds a unique customer matching the customer criteria provided in the request. System looks through all the customers across partners, and returns a uniquely matching record.
+      operationId: findCustomer
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to find a customer due to internal error
+        '200':
+          description: Matched customer data returned successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/CustomerSearchResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner reuqesting for the customer data.
+          required: true
+          schema:
+            type: string                        
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/CustomerSearchRequest'
+  /partners/{partnerCode}/loans:
+    post:
+      tags:
+        - Loan
+      summary: Adds a loan request for external customer
+      operationId: addLoanRequestForExternalCustomer
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to add customer loan due to internal error
+        '200':
+          description: Loan request added for customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/LoanResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner reuqesting for the customer data.
+          required: true
+          schema:
+            type: string                        
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/LoanRequest'
+  /partners/{partnerCode}/loans/{loanId}:
+    get:
+      tags:
+        - Loan
+      summary: Returns the details of a loan request for external customer
+      operationId: getLoanRequestDetailsForExternalCustomer
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Loan Request not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to retrieve customer loan request due to internal error
+        '200':
+          description: Loan request details returned for customer successfully
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/LoanResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner reuqesting for the customer data.
+          required: true
+          schema:
+            type: string        
+        - name: loanId
+          in: path
+          description: unique id of the loan request of a customer.
+          required: true
+          schema:
+            type: string      
+    post:
+      tags:
+        - Loan
+      summary: Updates the status of loan request for external customer
+      operationId: updateloanRequestStatusForExternalCustomer
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Loan Request not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to retrieve customer loan request due to internal error
+        '200':
+          description: Loan request status updated successfully
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner reuqesting for the customer data.
+          required: true
+          schema:
+            type: string        
+        - name: loanId
+          in: path
+          description: unique id of the loan request of a customer.
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Updated status of the loan request
+          required: true
+          schema:
+            type: string
+            enum:
+              - confirmed
+              - cancelled          
+        - name: statusUpdateReason
+          in: query
+          description: Reason for updating the status
+          required: true
+          schema:
+            type: string         
+  /partners/{partnerCode}/customers/requestotp:
+    post:
+      tags:
+        - Login
+        - Customer
+      summary: Requests OTP for a customer login
+      operationId: requestOTP
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to process OTP request due to internal error          
+        '200':
+          description: Request for OTP processed
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/OtpResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner reuqesting for the customer data.
+          required: true
+          schema:
+            type: string        
+        - name: phoneNumber
+          in: query
+          description: phone number of the customer with country code
+          required: true
+          schema:
+            type: string           
+  /partners/{partnerCode}/customers/login:
+    post:
+      tags:
+        - Login
+        - Customer
+      summary: Customer login
+      operationId: loginCustomer
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to login due to internal error          
+        '200':
+          description: Request for login processed
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/LoginResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner reuqesting for the customer data.
+          required: true
+          schema:
+            type: string                 
+        - name: otp
+          in: query
+          description: otp of the customer.
+          required: true
+          schema:
+            type: integer
+            format: int32       
+        - name: sessionId
+          in: query
+          description: access token.
+          required: true
+          schema:
+            type: string 
+        - name: referralCode
+          in: query
+          description: referral code of the customer (optional)
+          required: false
+          schema:
+            type: string                                        
+  /partners/{partnerCode}/content:
+    get:
+      tags:
+        - Content
+        - Partner
+      summary: Get partner specifc content
+      operationId: getContent
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to provide content due to internal error          
+        '200':
+          description: Request for content processed
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Content'                    
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose content is being requested
+          required: true
+          schema:
+            type: string
+        - name: language
+          in: query
+          description: language code of content (optional), if not provided the english language content will be returned
+          required: false
+          schema:
+            type: string                      
+  /partners/{partnerCode}/customers/{custId}/tnc:
+    post:
+      tags:
+        - Customer
+        - Terms and Conditions
+      summary: Post customer acceptance of terms and conditions
+      operationId: acceptTnc
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to save custmer acceptance of tnc due to internal error
+        '200':
+          description: Customer acceptance of tnc saved successfully
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is accepting tnc
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer accepting tnc
+          required: true
+          schema:
+            type: string                           
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/TncAcceptance'
+    get:
+      tags:
+        - Customer
+        - Terms and Conditions
+      summary: Get all accepted terms and conditions of a customer
+      operationId: getAcceptedTnc
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get list of customer accepted terms and conditions due to internal error
+        '200':
+          description: List of customer accepted terms and conditions returned successfully
+          content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TncAcceptance'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customers accepted tnc are being requested
+          required: true
+          schema:
+            type: string    
+        - name: custId
+          in: path
+          description: unique external id of the customer whose accepted tnc are being requested
+          required: true
+          schema:
+            type: string        
+  /partners/{partnerCode}/settings:
+    get:
+      tags:
+        - Partner
+        - Settings
+      summary: Get partner specifc settings
+      operationId: getSettings
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to provide settings due to internal error          
+        '200':
+          description: Request for settings processed 
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/PartnerSettings'                                   
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose content is being requested
+          required: true
+          schema:
+            type: string                                                                                                                        
+  /partners/{partnerCode}/payments/gatewayconfig:
+    post:
+      tags:
+        - Payments
+      summary: Fetch payment gateway config
+      operationId: getPaymentGatewayConfig
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to get the payment gateway details due to internal error
+        '200':
+          description: Payment Gateway Configuration
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/PaymentGatewayConfig'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner for whom payment gateway details are requested
+          required: true
+          schema:
+            type: string    
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/PaymentDetails'      
+  /partners/{partnerCode}/customers/{customerId}/initpayment:
+    post:
+      tags:
+        - Customer
+        - Payments
+      summary: Initializes a payment Txn.
+      operationId: initializePayment
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to intialize payment due to internal error
+        '200':
+          description: Payment Initialization Contract for subsequent communications with gateway.
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/PaymentInitializeResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is initializing the payment
+          required: true
+          schema:
+            type: string    
+        - name: customerId
+          in: path
+          description: Unique external customer id denoting the payee.
+          required: true
+          schema:
+            type: string    
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/PaymentInitializeRequest'      
+  /partners/{partnerCode}/customers/{customerId}/finalizepayment:
+    post:
+      tags:
+        - Customer
+        - Payments
+      summary: Finalizes a payment Txn by updating post confirmation data.
+      operationId: finalizePayment
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to finalize payment due to internal error
+        '200':
+          description: Confirmation of payment details updated to server
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/PaymentFinalizeResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer making the payment
+          required: true
+          schema:
+            type: string    
+        - name: customerId
+          in: path
+          description: Unique external customer id denoting the payee.
+          required: true
+          schema:
+            type: string    
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/PaymentFinalizeRequest'      
+  /partners/{partnerCode}/customers/{customerId}/cancelpayment:
+    post:
+      tags:
+        - Customer
+        - Payments
+      summary: Cancels a payment initialized earlier.
+      operationId: cancelPayment
+      responses:
+        '400':
+          $ref: '#/components/responses/ErrorResponse'        
+          description: Invalid data provided
+        '401':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unauthorized access          
+        '404':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Partner/Customer not found
+        '500':
+          $ref: '#/components/responses/ErrorResponse'           
+          description: Unable to cancel the payment due to internal error
+        '200':
+          description: Payment cancellation confirmation
+          content:
+              application/json:
+                schema:
+                    $ref: '#/components/schemas/PaymentCancelResponse'
+      parameters:
+        - name: partnerCode
+          in: path
+          description: unique code of the MFI Partner whose customer is adding sell order
+          required: true
+          schema:
+            type: string    
+        - name: customerId
+          in: path
+          description: Unique external customer id denoting the payee.
+          required: true
+          schema:
+            type: string    
+      requestBody:
+        content:
+          application/json:
+            schema: 
+                $ref: '#/components/schemas/PaymentCancelRequest'      
+components:
+  responses:
+    ErrorResponse:
+      description: Error occured while processing the request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    DownloadResponse:
+      description:
+        Returns a temporary download URL that can be used to fetch a file uploade earlier.
+      additionalProperties: false
+      properties:
+        redirect_url:
+          type: string
+          description: A fully qualified short lived HTTPS url from which you can download the file.
+        status:
+          type: string
+          description: OK represents success
+          enum:
+            - OK
+            - KO
+    UploadDocResponse:
+      description: 
+        Returns pre approved upload endpoint (URL) and the fixed file fetch endpoint  (URL) for the request.  Each authorization is valid
+        only for a fixed time.  You are expected to use the upload endpoint to complete the upload request.  The expiry timign is also returned
+        through this response.
+
+        * You must also save the file fetch URL in your system if you are planning to read this uploaded file in the future.
+      additionalProperties: false
+      properties:
+        ContentType:
+          type: string
+          description:
+            The deduced Content-Type for the file upload in a standard MIME format (eg. image/jpeg ).  You are expected to use the same string as 
+            Content-Type header while uploading the file.
+        valid_for_seconds:
+          type: integer
+          description:
+            The validity in seconds for the authorized upload endpoint to receive PUT request with file binary data.
+        uploadId:
+          type: string
+          description: unique id of the upload transaction.  May be used in the future for fetching uploaded file back.
+        uploadurl:
+          type: string
+          description: A fully qualified HTTPS url that can be used in a PUT request to upload a file.
+        fetchurl: 
+          type: string
+          description: 
+            A relative url to read the uploaded file AFTER succesfully uploading the file using 'uploadurl'.  This data should be
+            saved in your system if you plan to fetch this uploaded file back.  The returnd URL will be of one of the followign formats
+            - /customer/uploaded/12345
+            - /branches/uploaded/12345
+            - /agents/uploaded/12345
+            To fetch the file back upload URL need to be prefcixed with partner identification.  
+            For example */partners/AB04*/customer/uploaded/12345 is a commplete fetch URL.
+    UploadDocRequest:
+      description: Parameters for authorizing an upload of a document/file/image to secure storage.
+      additionalProperties: false
+      required:
+        - type
+        - filename
+      properties:
+        type:
+          type: string
+          description: Identifies the upload document type.
+          enum:
+            - CUSTOMER_DOC
+            - BRANCH_DOC
+            - AGENT_DOC
+        filename: 
+          type: string
+          description: The name of the file you want to upload.  The extension of the filename will be used to guess Content-Type.
+    PatchRequest:
+      type: array
+      items:
+        $ref: "#/components/schemas/PatchDocument"
+    PatchDocument: 
+      description: A JSONPatch document as defined by RFC 6902
+      additionalProperties: false
+      required:
+        - op
+        - path
+      properties: 
+        op: 
+          type: string 
+          description: The operation to be performed 
+          enum:
+            - add
+            - remove
+            - replace
+            - move
+        path: 
+          type: string 
+          description: A JSON-Pointer 
+        value: 
+          type: object 
+          description: The value to be used within the operations.
+        from: 
+          type: string 
+          description: A string containing a JSON Pointer value.
+    Customer:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - extCustomerId
+        - name
+        - dob
+        - phone
+        - address        
+        - idProof
+        - gender
+        - fatherName
+        - centerName
+        - maritalStatus
+        - localLanguage
+        - branchId
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        userActive:
+          type: boolean
+        cognitoStatus:
+          type: boolean
+        cognitoMessage:
+          type: string
+        username:
+          type: string      
+        extCustomerId:
+          type: string             
+        branchId:
+          type: string
+          description: external id of partner branch                 
+        agentId:
+          type: string
+          description: external id of partner agent
+        remarks:
+          type: string
+          description: customer remarks                                        
+        name:
+          $ref: '#/components/schemas/Name' 
+        dob:
+          type: string
+          format: date
+        gender:
+          type: string
+          description: customer gender, supported values are Male(m), Female(f) and Others(o)
+          enum:
+            - m
+            - f
+            - o
+        address:
+            $ref: '#/components/schemas/Address'
+        email:
+          type: string
+          format: email
+        phone:
+          $ref: '#/components/schemas/Phone'
+        photo:
+            $ref: '#/components/schemas/Image'              
+        fatherName:
+          $ref: '#/components/schemas/Name'
+        maritalStatus:
+          type: string
+          description: marital status of the customer
+          enum:
+          - single
+          - married
+          - widowed
+          - divorced
+          - separated
+        spouseName:
+          description: mandatory when marital status is married
+          $ref: '#/components/schemas/Name'                  
+        idProof:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdProof'       
+        kycReference:
+          type: array
+          description: unique KYC reference number or unique extid of customer if kyc ref is not provided          
+          items:
+            $ref: '#/components/schemas/KycReference'         
+        gstNumber:
+          type: string
+          description: gst number of the customer                           
+        bankAccount:
+          $ref: '#/components/schemas/BankAccount'
+        centerName:
+          type: string
+        localLanguage:
+          type: string
+          description: two letter language code as per ISO 639-1 (https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes)
+        localName:
+          type: string
+          description: name in local language script          
+        nominee:
+          $ref: '#/components/schemas/PersonalContact' 
+        familyMembers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonalContact'        
+        giftContacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonalContact'                            
+    Branch:
+      type: object
+      additionalProperties: false
+      required:
+        - extBranchId
+        - name
+        - branchType
+        - communicationAddress
+        - gstNumber
+        - phone
+        - bankAccount
+        - branchManager
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: internal branch id
+        extBranchId:
+          type: string
+          description: external branch id
+        remarks:
+          type: string
+          description: branch remarks
+        branchType:
+          type: string
+          enum:
+            - district
+            - zonal
+            - state
+            - regional 
+          description: branch categorization                                          
+        name:
+          type: string
+          description: name of the branch
+        communicationAddress:
+            $ref: '#/components/schemas/BusinessAddress'
+        quarterlyVaultChargesInINR:
+          type: number
+          format: float
+          description: quarterly vault charges for the branch
+        gstNumber:
+          type: string
+          description: gst number of the branch in case the branch is outside of partner registsred office state
+        phone:
+          type: string
+          description: branch offic phone number, 10 digit integer, not starting with zero
+        branchManager:
+            $ref: '#/components/schemas/LightBusinessContact'
+        bankAccount:
+          $ref: '#/components/schemas/BankAccount'
+        totalCustomers:
+          type: integer
+          format: int32
+          description: total number of customers in a branch 
+        activeCustomers:
+          type: integer
+          format: int32
+          description: number of active customers in a branch 
+        numberOfAgents:
+          type: integer
+          format: int32
+          description: number of agents in a branch  
+        activationDate:
+          type: string
+          format: date-time           
+          description: date when the branch becamse active                                         
+    AgentNameId:
+      type: object
+      required:
+        - extAgentId
+        - name
+      properties:
+        extAgentId:
+          type: string
+          description: external agent id         
+        name:
+          $ref: '#/components/schemas/Name'
+    Agent:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - extAgentId
+        - extBranchId
+        - name
+        - phone
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: internal agent id
+        agentActive:
+          type: boolean
+        cognitoStatus:
+          type: boolean
+        cognitoMessage:
+          type: string    
+        username:
+          type: string        
+        extAgentId:
+          type: string
+          description: external agent id
+        extBranchId:
+          type: string     
+          description: external branch id
+        remarks:
+          type: string
+          description: agent remarks             
+        name:
+          $ref: '#/components/schemas/Name' 
+        dob:
+          type: string
+          format: date
+        gender:
+          type: string
+          description: agent gender, supported values are Male(m), Female(f) and Others(o)
+          enum:
+            - m
+            - f
+            - o
+        address:
+            $ref: '#/components/schemas/Address'
+        email:
+          type: string
+          format: email
+        phone:
+          $ref: '#/components/schemas/Phone'
+        maritalStatus:
+          type: string
+          description: marital status of the agent
+          enum:
+          - single
+          - married
+          - widowed
+          - divorced
+          - separated
+        bankAccount:
+          $ref: '#/components/schemas/BankAccount'
+        spouseDetails:
+          $ref: '#/components/schemas/LightPersonalContact'
+        type:
+          type: string
+          description: experienced, high performer, average
+          enum:
+            - average
+            - highperformer
+            - experienced            
+    Jeweler:
+      type: object
+      required:
+        - id
+        - name
+        - communicationAddress
+        - pan
+        - ownerContact
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: internal jeweler id                                      
+        name:
+          type: string
+          description: business/legal name of the jewelery business
+        communicationAddress:
+            $ref: '#/components/schemas/BusinessAddress'
+        email:
+          type: string
+          format: email
+        phone:
+          $ref: '#/components/schemas/BusinessPhone'
+        gstNumber:
+          type: string
+          description: gst number of the jeweler
+        pan:
+          type: string
+          description: pan of the jeweler
+        bankAccount:
+          $ref: '#/components/schemas/BankAccount'
+        location:
+          type: string
+          description: lat,long comma separated          
+        ownerContact:
+          $ref: '#/components/schemas/LightBusinessContact'
+          description: contact details of the business owner                                                
+    IdProof:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - documentId
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        documentId:
+          type: string
+        documentImage:
+            $ref: '#/components/schemas/Image'
+        documentType:
+          type: string
+          description: Passport, Driving License, Pan, Voter ID Card, NREGA Card
+          enum:
+            - passport
+            - drivingLicense
+            - pan
+            - voterCard
+            - nregaCard                 
+        issueDate:
+          type: string
+          format: date
+        validUntil:
+          type: string
+          format: date                                            
+    BankAccount:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - accountNumber
+        - ifsc
+        - accountName
+        - bankName
+        - branchName
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true      
+        accountNumber:
+          type: string    
+        ifsc:
+          type: string
+        accountName:
+          type: string
+        bankName:
+          type: string
+        branchName:
+          type: string
+    Contact:
+        type: object
+        required:
+          - id
+          - name
+        properties:
+          id:
+            type: string
+            format: uuid
+            readOnly: true      
+          extId:
+            type: string                
+          name:
+            $ref: '#/components/schemas/Name'
+          dob:
+            type: string
+            format: date
+          gender:
+            type: string
+            description: contact gender, supported values are Male(m), Female(f) and Others(o)
+            enum:
+              - m
+              - f
+              - o
+    PersonalContact:
+      allOf:
+        - $ref: '#/components/schemas/Contact'
+        - type: object
+          required:
+          - relation
+          - phone
+          properties:
+            relation:
+              type: string
+              description: relation with the person with whom this contact is associated - spouse, parent, child, sibling etc
+            email:
+              type: string
+              format: email
+            phone:
+              $ref: '#/components/schemas/Phone'
+            address:
+                $ref: '#/components/schemas/Address'
+    LightPersonalContact:
+      allOf:
+        - $ref: '#/components/schemas/Contact'
+        - type: object
+          properties:
+            relation:
+              type: string
+              description: relation with the person with whom this contact is associated - spouse, parent, child, sibling etc
+            email:
+              type: string
+              format: email
+            phone:
+              $ref: '#/components/schemas/Phone'
+            address:
+                $ref: '#/components/schemas/Address'                                                       
+    BusinessContact:
+      allOf:
+        - $ref: '#/components/schemas/Contact'
+        - type: object
+          required:
+          - role
+          - type
+          - isPrimary
+          - email
+          - phone
+          properties:
+            role:
+              type: string
+              description: role in the business organization
+            type:
+              type: string
+              description: decision maker, influencer, accounts, ops
+            escalationLevel:
+              type: integer
+              format: int32
+              description: escalation level, starting from 1
+            isPrimary:
+              type: boolean
+              default: false
+              description: if the contact is a primary contact
+            email:
+              type: string
+              format: email
+            phone:
+              $ref: '#/components/schemas/BusinessPhone'
+            address:
+                $ref: '#/components/schemas/BusinessAddress'   
+    LightBusinessContact:
+      allOf:
+        - $ref: '#/components/schemas/Contact'
+        - type: object
+          required:
+          - email
+          - phone
+          properties:
+            email:
+              type: string
+              format: email
+            phone:
+              $ref: '#/components/schemas/BusinessPhone'
+            address:
+                $ref: '#/components/schemas/BusinessAddress'                   
+    Name:
+      type: object
+      additionalProperties: false
+      required:
+        - first
+        - last
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true      
+        first:
+          type: string        
+        middle:
+          type: string
+        last:
+          type: string
+    BusinessPhone:
+      type: object
+      required:
+        - id
+        - mobile
+        - landline
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true      
+        mobile:
+          type: string        
+        alternateMobile:
+          type: string
+        landline:
+          type: string
+        whatsapp:
+          type: string
+        boardNumber:
+          type: string
+        extension:
+          type: string          
+    Phone:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - mobile
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true      
+        mobile:
+          type: string        
+        alternateMobile:
+          type: string
+        landline:
+          type: string
+        whatsapp:
+          type: string
+    BusinessAddress:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - unitNumber
+        - streetName
+        - district
+        - pinCode
+        - state
+        - country
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true      
+        unitNumber:
+          type: string        
+        streetName:
+          type: string
+        area:
+          type: string
+        cityOrVillage:
+          type: string        
+        postOffice:
+          type: string
+        nearByPoliceStation:
+          type: string
+        district:
+          type: string
+        pinCode:
+          type: integer
+          format: int32     
+        state:
+          type: string
+          description: Codes as per ISO 3166 for India - https://www.iso.org/obp/ui/#iso:code:3166:IN
+          enum:
+            - IN-AN
+            - IN-AP
+            - IN-AR
+            - IN-AS
+            - IN-BR
+            - IN-CH
+            - IN-CT
+            - IN-DN
+            - IN-DD
+            - IN-DL
+            - IN-GA
+            - IN-GJ
+            - IN-HR
+            - IN-HP
+            - IN-JK
+            - IN-JH
+            - IN-KA
+            - IN-KL
+            - IN-LD
+            - IN-MP
+            - IN-MH
+            - IN-MN
+            - IN-ML
+            - IN-MZ
+            - IN-NL
+            - IN-OR
+            - IN-PY
+            - IN-PB
+            - IN-RJ
+            - IN-SK
+            - IN-TN
+            - IN-TG
+            - IN-TR
+            - IN-UP
+            - IN-UT
+            - IN-WB          
+        stdCode:
+          type: integer
+          format: int32     
+        landmark:
+          type: string        
+        country:
+          type: string                 
+    Address:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - houseNumber
+        - streetName
+        - district
+        - pinCode
+        - state
+        - country
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true      
+        houseNumber:
+          type: string        
+        streetName:
+          type: string
+        area:
+          type: string
+        cityOrVillage:
+          type: string        
+        postOffice:
+          type: string
+        district:
+          type: string
+        pinCode:
+          type: integer
+          format: int32     
+        state:
+          type: string
+          description: Codes as per ISO 3166 for India - https://www.iso.org/obp/ui/#iso:code:3166:IN
+          enum:
+            - IN-AN
+            - IN-AP
+            - IN-AR
+            - IN-AS
+            - IN-BR
+            - IN-CH
+            - IN-CT
+            - IN-DN
+            - IN-DD
+            - IN-DL
+            - IN-GA
+            - IN-GJ
+            - IN-HR
+            - IN-HP
+            - IN-JK
+            - IN-JH
+            - IN-KA
+            - IN-KL
+            - IN-LD
+            - IN-MP
+            - IN-MH
+            - IN-MN
+            - IN-ML
+            - IN-MZ
+            - IN-NL
+            - IN-OR
+            - IN-PY
+            - IN-PB
+            - IN-RJ
+            - IN-SK
+            - IN-TN
+            - IN-TG
+            - IN-TR
+            - IN-UP
+            - IN-UT
+            - IN-WB          
+        stdCode:
+          type: integer
+          format: int32     
+        landmark:
+          type: string        
+        country:
+          type: string
+    Purity:
+          type: object
+          required:
+            - displayValue
+            - value           
+          properties:
+            displayValue:
+              type: string
+            value:
+              type: string                                                                                                                                                                                                 
+    Bullion:
+      type: object
+      required:
+        - id
+        - bullionName
+        - purity
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true            
+        bullionName:
+          type: string
+          enum:
+            - Gold
+            - Silver
+            - Platinum
+        bullionShortName:
+          type: string            
+        purity:
+         $ref: '#/components/schemas/Purity'
+        status:
+          type: string
+          enum:
+            - available
+            - unAvailable    
+    CoinSpecification:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - bullionDetails
+        - weightInGm
+        - makingChargesInr
+        - design
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        bullionDetails:
+          $ref:  '#/components/schemas/Bullion'
+        design:
+          type: string
+          enum:
+            - religious
+            - plain
+        name:
+          type: string
+          format: uuid  
+        weightInGm:
+          type: number
+          format: float
+        makingChargesInr:
+          type: number
+          format: float                         
+        image:
+          type: string
+          format: uri      
+    CoinInventory:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - coinExtId
+        - coinSpecification
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        coinExtId:
+          type: string
+          format: uuid
+          description: coin if provided by mint
+        coinSpecification:
+          $ref:  '#/components/schemas/CoinSpecification'             
+        status:
+          type: string
+          enum:
+            - available
+            - sold                  
+    BullionRate:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - bullion
+        - rateInrPerGm
+        - rateType
+        - taxRates
+        - validUntil
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        bullion:
+          $ref: '#/components/schemas/Bullion'
+        rateInrPerGm:
+          type: number
+          format: float
+        rateType:
+          type: string
+          enum:
+            - buy
+            - sell
+            - emergencySell
+            - sipBuy            
+        taxRates:  
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxRate'
+        validUntil:
+          type: string
+          format: date-time
+          description: validity of this rate       
+    Sip:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - sipName        
+        - bullion
+        - bullionRateId
+        - startDate
+        - frequency
+        - durationInMths
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        sipName:
+          type: string
+          description: SIP name
+        milestoneName:  
+          type: string
+          description: SIP for any important milestone
+        bullion:
+          $ref: '#/components/schemas/Bullion'   
+        status:
+          type: string
+          readOnly: true
+          enum:
+            - new
+            - inprogress
+            - complete
+            - cancelled      
+        sipInstallmentAmtInr:
+          type: number
+          format: float
+        targetQuantityInGm:
+          type: number
+          format: float        
+        startDate:
+          type: string
+          format: date
+          description: SIP start Date
+        paymentPeriodInMths:
+          type: number
+          format: int32
+          description: SIP completion date          
+        frequency:
+          type: string
+          enum:
+            - daily
+            - weekly
+            - fortnightly
+            - monthly
+        numberofInstallments:
+          type: integer
+          format: int32
+          readOnly: true                 
+        sipInstallments:
+          type: array
+          items:
+            $ref: '#/components/schemas/SipInstallment'
+    SipInstallment:
+      type: object
+      required:
+        - id
+        - scheduledDate
+        - installmentNumber
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        orderId:
+          type: string
+          format: uuid
+          readOnly: true
+          description: uniuqe id of the order which was executed to fulfil this SIP installement
+        installmentNumber:
+          type: integer
+          format: int32                
+        status:
+          type: string
+          readOnly: true
+          enum:
+            - pending
+            - scheduled
+            - complete
+            - cancelled
+        scheduledDate:
+          type: string
+          format: date
+    OrderCancellationRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        cancellationreason:
+          type: string
+      required:
+        - id
+        - cancelreason
+
+    BaseOrder:
+      type: object      
+      required:
+        - bullionRateId
+        - agent
+      properties:
+        id:
+          type: string
+          format: uuid
+        ordernumber:
+          type: string
+          readOnly: true
+          description: 
+            A unique human readable number to identify an order in communications.  
+            Not usable as parameter in any GET requests.
+        customerId:
+          type: string
+          format: uuid
+          readOnly: true          
+        agent:
+          $ref: '#/components/schemas/AgentNameId'                
+        bullion:
+          $ref: '#/components/schemas/Bullion'          
+        bullionRateId:
+          type: string
+        weightInGm:
+          type: number
+          format: float
+        rateInrPerGm:
+          type: number
+          format: float
+        taxRates:  
+          type: array
+          items:
+            $ref: '#/components/schemas/TaxRate'
+        orderTotalValueInr:
+          type: number
+          format: float
+        requestDate:
+          type: string
+          format: date-time
+          readOnly: true          
+          description: order initiated Date
+        completionDate:
+          type: string
+          format: date-time
+          readOnly: true             
+          description: order completion Date
+        status:
+          type: string
+          readOnly: true             
+          enum:
+            - new
+            - inprogress
+            - complete
+            - cancelled
+        bullionTotal:
+          type: number
+          format: float                            
+    BuyOrder:
+      allOf:
+        - $ref: '#/components/schemas/BaseOrder'
+        - type: object
+          required:
+          - buyType
+          properties:
+            buyType:
+              type: string
+              enum:
+                - FixedWeight
+                - FixedAmount
+            isExternalSIP:
+              type: boolean
+              description: Indicates if the buy order is a part of an external sip managed by the partner.                
+    SellOrder:
+      allOf:
+        - $ref: '#/components/schemas/BaseOrder'
+        - type: object
+          required:
+          - sellType
+          - payoutMode
+          properties:
+            sellType:
+              type: string
+              enum:
+                - Regular
+                - Emergency
+            payoutMode:
+              type: string
+              enum:
+                - Bank
+                - Cash                                 
+    SipOrder:
+      allOf:
+        - $ref: '#/components/schemas/BaseOrder'
+        - type: object            
+          required:
+          - sipId
+          properties:
+            sipId:
+              type: string
+              format: uuid          
+    CoinOrder:
+      allOf:
+        - $ref: '#/components/schemas/BaseOrder'
+        - type: object
+          required:
+          - coinIds
+          - shipment
+          properties:
+            coinInventoryIds:
+              type: array
+              items:
+                $ref: '#/components/schemas/CoinOrderItem'
+            shipment:
+              $ref: '#/components/schemas/Shipment'
+    CoinOrderItem:
+      type: object
+      required:
+        - coinSpecification
+        - quantity
+      properties:
+        coinSpecification:
+          $ref:  '#/components/schemas/CoinSpecification'
+        quantity:
+          type: number
+          format: int32        
+    JewelerOrder:
+      allOf:
+        - $ref: '#/components/schemas/BaseOrder'
+        - type: object
+          required:
+          - jewelerId
+          properties:
+            jewelerId:
+              type: string
+              format: uuid                                                        
+    Shipment:
+      additionalProperties: false
+      type: object
+      required:
+        - id
+        - shippingAddress
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        orderId:
+          type: string
+          format: uuid
+          readOnly: true
+        trackingId:
+          type: string
+          description: shipment tracking id provided by the shipping partner
+          readOnly: true          
+        shippingPartnerName:
+          type: string
+          readOnly: true          
+        shippingAddress:
+            $ref: '#/components/schemas/Address'
+        shippingCharges:
+          type: number
+          format: float                                
+        status:
+          type: string
+          readOnly: true          
+          enum:
+            - notShipped
+            - inTransit
+            - delivered
+            - returned
+            - cancelled    
+        shippingStartDate:
+          type: string
+          format: date
+          readOnly: true          
+          description: shipping order create date
+        deliveryDate:
+          type: string
+          format: date
+          readOnly: true          
+          description: expected or actual delivery date
+        statusUpdates:
+          type: array        
+          items:
+            $ref: '#/components/schemas/EventUpdates'
+          description: shipping event updates
+          readOnly: true
+          example:
+            2017-07-21T17:32:28Z: shipped
+            2017-07-21T19:32:28Z: on its way for delivery
+    BullionPassbook:
+      type: object
+      required:
+        - lastOrder
+        - bullionHoldings
+      properties:
+        lastOrder:
+          anyOf:
+            - $ref: '#/components/schemas/BuyOrder'
+            - $ref: '#/components/schemas/SellOrder'
+            - $ref: '#/components/schemas/CoinOrder'
+            - $ref: '#/components/schemas/JewelerOrder' 
+            - $ref: '#/components/schemas/SipOrder'
+        bullionHoldings:
+          type: array
+          items:
+            $ref: '#/components/schemas/BullionHolding'
+    BullionHolding:
+      type: object
+      required:
+        - bullion
+        - balanceInGms
+        - lastOrder
+        - orderList
+      properties:
+        bullion:
+            $ref: '#/components/schemas/Bullion'
+        balanceInGms:
+          type: number
+          format: float
+        lastOrder:
+          anyOf:
+            - $ref: '#/components/schemas/BuyOrder'
+            - $ref: '#/components/schemas/SellOrder'
+            - $ref: '#/components/schemas/CoinOrder'
+            - $ref: '#/components/schemas/JewelerOrder' 
+            - $ref: '#/components/schemas/SipOrder'                              
+        orderList:
+          type: array
+          items:
+            anyOf:
+              - $ref: '#/components/schemas/BuyOrder'
+              - $ref: '#/components/schemas/SellOrder'
+              - $ref: '#/components/schemas/CoinOrder'
+              - $ref: '#/components/schemas/JewelerOrder' 
+              - $ref: '#/components/schemas/SipOrder'
+    Image:
+      type: object
+      required:
+        - id
+        - uri    
+      properties:
+        id:
+          type: string
+        uri:
+          type: string
+    TaxRate:
+      type: object
+      required:
+        - taxName
+        - taxCode
+        - taxRatePercent       
+      properties:
+        taxName:
+          type: string
+          example: gst, cess etc  
+        taxCode:
+          type: string
+          example: igst, sgst, cgst, utst etc
+        taxRatePercent:
+          type: number
+          format: float
+        taxAmount:
+          readOnly: true
+          type: number
+          format: float                                 
+    EventUpdates:
+      type: object
+      required:
+        - eventTimestamp
+        - eventDetails           
+      properties:
+        eventTimestamp:
+          type: string
+          format: date-time
+        eventDetails:
+          type: string                      
+    Error:
+      type: object
+      required:
+        - code
+        - message           
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+    InstantBuyOrderRequest:
+      additionalProperties: false
+      type: object      
+      required:
+        - bullion
+        - orderTotalValueInr
+      properties:         
+        agent:
+          $ref: '#/components/schemas/AgentNameId'                
+        bullion:
+          $ref: '#/components/schemas/Bullion'          
+        orderTotalValueInr:
+          type: number
+          format: float
+        isExternalSIP:
+          type: boolean
+          description: Indicates if the buy order is a part of an external sip managed by the partner.
+    InstantSellOrderRequest:
+      type: object      
+      required:
+        - bullion
+        - sellType
+        - payoutMode
+      properties:              
+        agent:
+          $ref: '#/components/schemas/AgentNameId'                
+        bullion:
+          $ref: '#/components/schemas/Bullion' 
+        sellType:
+          type: string
+          enum:
+            - FixedWeight
+            - FixedAmount
+          description: Mandatory and indicates if the bullion to be sold is by fixed weight or for fixed value.
+        weightInGm:
+          type: number
+          format: float
+          description: Mandatory when the sellType is FixedWeight
+        orderTotalValueInr:
+          type: number
+          format: float   
+          description: Mandatory when the sellType is FixedAmount       
+        payoutMode:
+          type: string
+          enum:
+            - Bank
+            - Cash                                    
+    InstantOrderResponse:
+      type: object      
+      required:
+        - id
+        - ordernumber
+      properties:
+        id:
+          type: string
+          format: uuid  
+        ordernumber:
+          type: string
+          description: 
+            A unique human readable number to identify an instant order in communications.  
+            Not usable as parameter in any GET requests.
+        orderType:
+          type: string            
+          enum:
+            - buy
+            - sell     
+        sellType:
+          type: string
+          enum:
+            - FixedWeight
+            - FixedAmount
+          description: Available for sell orders only                
+        customerId:
+          type: string
+          format: uuid         
+        agent:
+          $ref: '#/components/schemas/AgentNameId'                
+        bullion:
+          $ref: '#/components/schemas/Bullion'
+        weightInGm:
+          type: number
+          format: float
+          description: For sell orders available when the sellType if FixedWeight, or after the order is executed. For buy orders available when the order is executed          
+        rateInrPerGm:
+          type: number
+          format: float
+          description: Available when the order is executed          
+        taxRates:  
+          type: array        
+          items:
+            $ref: '#/components/schemas/TaxRate'
+          description: Available when the order is executed            
+        orderTotalValueInr:
+          type: number
+          format: float
+          description: For buy orders always available, for sell orders available when the order is executed or when the sellType is FixedAmount                   
+        requestDate:
+          type: string
+          format: date-time         
+          description: order initiated Date
+        completionDate:
+          type: string
+          format: date-time
+          description: Order completion Date, available when the order is executed
+        status:
+          type: string            
+          enum:
+            - new
+            - complete
+            - cancelled
+        payoutMode:
+          type: string
+          enum:
+            - Bank
+            - Cash
+          description: Available for sell orders            
+        isExternalSIP:
+          type: boolean
+          description: Optional attribute for buy orders.
+    CustomerSearchRequest:
+      type: object      
+      required:
+        - name
+        - dob
+        - gender
+        - idProof
+      properties:              
+        name:
+          $ref: '#/components/schemas/Name'  
+          description: Name of the customer 
+        dob:
+          type: string
+          format: date   
+          description: Date of birth of the customer   
+        gender:
+          type: string
+          enum:
+            - m
+            - f
+            - o        
+          description: customer gender, supported values are Male(m), Female(f) and Others(o)                                                 
+        idProof:
+          $ref: '#/components/schemas/IdProof' 
+    CustomerSearchResponse:
+      type: object      
+      required:
+        - id      
+        - name
+        - dob
+        - gender
+        - idProof
+      properties:
+        id:
+          type: string
+          format: uuid  
+          description: Unique ID of the customer                             
+        name:
+          $ref: '#/components/schemas/Name'  
+          description: Name of the customer 
+        dob:
+          type: string
+          format: date   
+          description: Date of birth of the customer   
+        gender:
+          type: string
+          enum:
+            - m
+            - f
+            - o        
+          description: customer gender, supported values are Male(m), Female(f) and Others(o)                                                 
+        idProof:
+          $ref: '#/components/schemas/IdProof'
+    LoanRequest:
+      type: object      
+      required:
+        - customerId
+        - bullion
+        - lienType
+        - customerConsentDoc
+      properties:
+        customerId:
+          type: string
+          format: uuid  
+          description: Unique ID of the customer   
+        bullion:
+          $ref: '#/components/schemas/Bullion' 
+        lienType:
+          type: string
+          enum:
+            - FixedWeight
+            - FixedAmount
+          description: Mandatory and indicates if the lien is on a fixed bullion weight or fixed amount
+        lienWeightInGm:
+          type: number
+          format: float
+          description: Mandatory when the lienType is FixedWeight
+        lienAmountInr:
+          type: number
+          format: float   
+          description: Mandatory when the lienType is FixedAmount
+        customerConsentDoc:
+          $ref: '#/components/schemas/UploadedDocument'
+    LoanResponse:
+      type: object      
+      required:
+        - loanId
+        - customerId
+        - bullion
+        - lienType
+      properties:
+        loanId:
+          type: string
+          format: uuid  
+          description: Unique ID of the customer         
+        customerId:
+          type: string
+          format: uuid  
+          description: Unique ID of the customer   
+        bullion:
+          $ref: '#/components/schemas/Bullion' 
+        lienType:
+          type: string
+          enum:
+            - FixedWeight
+            - FixedAmount
+          description: Mandatory and indicates if the lien is on a fixed bullion weight or fixed amount
+        lienWeightInGm:
+          type: number
+          format: float
+          description: Mandatory when the lienType is FixedWeight
+        lienAmountInr:
+          type: number
+          format: float   
+          description: Mandatory when the lienType is FixedAmount
+        customerConsentDoc:
+          $ref: '#/components/schemas/UploadedDocument'
+        requestDate:
+          type: string
+          format: date-time         
+          description: Loan request date
+        confirmationDate:
+          type: string
+          format: date-time
+          description: Loan confirmed date, available when the loan is confirmed
+        status:
+          type: string            
+          enum:
+            - requested
+            - confirmed
+            - cancelled
+    UploadedDocument:
+      type: object      
+      required:
+        - uploadId
+        - fetchurl
+      properties:
+        uploadId:
+          type: string
+          description: Unique id of the uploaded document returned by uploaddocument api.
+        fetchurl: 
+          type: string
+          description: 
+            A relative url to read the uploaded file after upload. 
+    KycReference:
+      type: object      
+      required:
+        - refType
+        - refId
+      properties:
+        refType:
+          type: string 
+          description: 
+            Reference type whether kyc or aadhaar                       
+          enum:
+            - aadhaar
+            - kyc
+        refId: 
+          type: string
+          description: 
+            Reference ID in the source system
+    OtpResponse:
+      type: object      
+      required:
+        - existingCustomer
+        - otpSent
+        - sessionId        
+      properties:
+        existingCustomer:
+          type: boolean
+          description: If the user is an existing customer 
+        otpSent:
+          type: boolean
+          description: True if the otp was sent successfully       
+        sessionId: 
+          type: string
+          description: 
+            Session Id for the login call               
+    LoginResponse:
+      type: object      
+      required:
+        - authenticated
+        - customerId
+      properties:
+        authenticated:
+          type: boolean
+          description: True if the login was successful        
+        customerId:
+          type: string
+          description: Customr ID           
+        validReferralCode:
+          type: boolean
+          description: Optional parameter, provided only when the referral code was sent in the login request. True if valid referral code.  
+    Content:
+      type: object      
+      required:
+        - id
+        - fetchurl
+        - version
+        - type
+        - effectiveDate
+        - language
+      properties:
+        id:
+          type: string
+          format: uuid  
+          description: Unique ID of the content        
+        fetchurl:
+          type: string
+          description: url to load the content         
+        version:
+          type: string
+          description: version number of the content           
+        type:
+          type: string          
+          enum:
+            - tnc
+            - privacypolicy
+            - contactus
+            - faq
+        effectiveDate:
+          type: string
+          format: date-time         
+          description: Effective date of this version
+        language:
+          type: string
+          description: two letter language code as per ISO 639-1 (https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes)                 
+    TncAcceptance:
+      type: object      
+      required:
+        - tncId
+      properties:
+        tncId:
+          type: string
+          format: uuid  
+          description: Unique ID of the tnc (content id)   
+        acceptanceDate:
+          type: string
+          format: date-time         
+          description: Acceptance date time of terms and conditions   
+          readOnly: true                                                              
+        fetchurl:
+          type: string
+          description: url to load the terms and conditions  
+          readOnly: true                 
+        version:
+          type: string
+          description: version number of the terms and conditions   
+          readOnly: true 
+        language:
+          type: string
+          description: two letter language code as per ISO 639-1 (https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes)
+          readOnly: true          
+        effectiveDate:
+          type: string
+          format: date-time         
+          description: Effective date of the accepted terms and conditions
+          readOnly: true    
+    PartnerSettings:
+      type: object      
+      required:
+        - bullionSettings
+      properties:
+        bullionSettings:
+          type: array
+          items:
+            $ref: '#/components/schemas/BullionSettings'    
+          description: Array of bullion settings              
+        minOrderValueInr:
+          type: number
+          format: float     
+          description: Minimum customer order value in INR             
+    BullionSettings:
+      type: object
+      required:
+        - bullion
+      properties:
+        bullion:
+            $ref: '#/components/schemas/Bullion'     
+            description: Bullion details             
+        maxOrderQuantityInGm:
+          type: number
+          format: float          
+          description: Maximum bullion weight in gm that can be bought by a customer            
+    PaymentDetails:
+      type: object
+      properties:
+        txnType: 
+          type: string
+        extCustomerId:
+          type: string
+        orderId:
+          type: string 
+    PaymentGatewayConfig:
+      type: object
+      properties:
+        type:
+          enum:
+            - razorpay
+        config:
+          type: array
+          items:
+            $ref: '#/components/schemas/NameValuePair'
+    NameValuePair:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+    PaymentInitializeRequest:
+      type: object
+      properties:
+        gateway:          
+          $ref: '#/components/schemas/PaymentGatewayConfig'
+        type:
+          enum:
+            - buy
+        orderid:
+          type: string
+        total:
+          type: number
+    PaymentInitializeResponse:
+      type: object
+      properties:
+        gateway:          
+          $ref: '#/components/schemas/PaymentGatewayConfig'
+        type:
+          enum:
+            - buy
+        customerId:
+          type: string
+        orderid:
+          type: string
+        total:
+          type: number
+        txnreference:
+          type: string
+    PaymentFinalizeRequest:
+      type: object
+      properties:
+        gateway:          
+          $ref: '#/components/schemas/PaymentGatewayConfig'
+        type:
+          enum:
+            - buy
+        txnreference:
+          type: string
+        orderid:
+          type: string
+        total:
+          type: number
+        gateway_response:
+          type: array
+          items:
+            $ref: '#/components/schemas/Name'
+    PaymentFinalizeResponse:
+      type: object
+      properties:
+        type:
+          enum:
+            - buy
+        customerId:
+          type: string
+        orderid:
+          type: string
+        total:
+          type: number
+                              
+    PaymentCancelRequest:
+      type: object
+      properties:
+        gateway:          
+          $ref: '#/components/schemas/PaymentGatewayConfig'
+        type:
+          enum:
+            - buy
+        txnreference:
+          type: string
+        orderid:
+          type: string
+        total:
+          type: number
+        gateway_response:
+          type: array
+          items:
+            $ref: '#/components/schemas/NameValuePair'
+    PaymentCancelResponse:
+      type: object
+      properties:
+        type:
+          enum:
+            - buy
+        customerId:
+          type: string
+        orderid:
+          type: string
+        total:
+          type: number

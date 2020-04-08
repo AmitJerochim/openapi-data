@@ -1,0 +1,397 @@
+penapi: 3.0.0
+servers: 
+  - url: "https://pipplet-preprod.herokuapp.com/"
+
+info:
+  version: "1.6"
+  title: Pipplet Test API for Partners
+  description: >-
+    This API allows you to order a language test on the Pipplet platform. 
+components:
+  securitySchemes:
+    oAuth2:
+      type: oauth2
+      description: Contact the Pipplet team to receive your client_id/client_secret pair.
+      flows: 
+        password:
+          tokenUrl: https://pipplet-preprod.herokuapp.com/api/v1/sessions
+          scopes: {} # Pipplet does not use scopes
+  schemas:
+    LanguageTestRequest:
+      type: object
+      required:
+        - user
+        - test_instance
+        - requestor
+      properties:
+        user:
+          $ref: '#/components/schemas/UserRequest'
+        test_instance:
+          $ref: '#/components/schemas/TestInstanceRequest'
+        requestor:
+          $ref: '#/components/schemas/RequestorRequest'
+        order:
+          $ref: '#/components/schemas/OrderRequest'
+    UserRequest:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - email
+      properties:
+        first_name:
+          type: string
+          example: Adrien
+        last_name:
+          type: string
+          example: Test
+        email:
+          type: string
+          example: adrien+swaggertest@pipplet.com
+        locale:
+          type: string
+          example: fr
+          default: en
+          description: 'User interface language. One of {en, fr, es, de}'
+        phone_number:
+          type: string
+          example: 0123456789
+    TestInstanceRequest:
+      type: object
+      required:
+        - test_language
+      properties:
+        test_language:
+          type: string
+          example: en
+          description: 'One of {en, fr, de, es, it, nl, ru, ar}'
+        test_mode:
+          type: boolean
+          default: true
+        redirection_url:
+          type: string
+          example: "https://my_site.my_domain.com/my_page"
+          default: null
+        notification_url:
+          type: string
+          example: "https://my_callback/here"
+          default: null
+        skip_email:
+          type: boolean
+          default: false
+    RequestorRequest:
+      type: object
+      required:
+        - company_name
+      properties:
+        company_name:
+          type: string
+          example: Pipplet
+        first_name:
+          type: string
+          example: John
+        last_name:
+          type: string
+          example: Doe
+        email:
+          type: string
+          example: john.doe@test.com
+        locale:
+          type: string
+          example: fr
+          default: en
+          description: 'One of {en, fr, es, de}'
+    OrderRequest:
+      type: object
+      properties:
+        reference:
+          type: string
+          example: TEST123
+          description: Unique reference for this test
+    LanguageTestResponse:
+      type: object
+      properties:
+        language_test:
+          $ref: '#/components/schemas/TestInstanceResponse'
+    TestInstanceResponse:
+      type: object
+      required:
+        - uuid
+        - status
+        - test_language
+        - test_mode
+        - user
+      properties:
+        uuid:
+          type: string
+          example: 0937803a-fcf3-449b-8286-288edd8f0850
+        status:
+          type: string
+          example: initialized
+          description: 'One of {initialized, ongoing, completed, graded, inactive, unknown}'
+        test_language:
+          type: string
+          example: en
+        test_mode:
+          type: boolean
+          example: true
+        completion:
+          type: number
+          default: 0
+          example: 65
+          description: Integer between 0 and 100
+        completion_date:
+          type: string
+          default: null
+          example: '2017-06-26T07:12:43.123+02:00'
+        score:
+          $ref: '#/components/schemas/ScoreResponse'
+        pdf_report_download_url:
+          type: string
+          default: null
+          example: 'https://xxx.cloudfront.net/test_instances/original/abcdef.pdf'
+          description: Use to download PDF report
+        certificate_url:
+          type: string
+          default: null
+          example: >-
+            http://audition.pipplet.com/certificate/12345678-60f8-4779-aa27-021c593b0db8
+          description: Use to redirect (or show in iframe) the user results
+        redirection_url:
+          type: string
+          example: "https://my_site.my_domain.com/my_page"
+          default: null
+        skip_email:
+          type: boolean
+          example: true
+        user:
+          $ref: '#/components/schemas/UserResponse'
+    UserResponse:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - email
+        - account_url
+      properties:
+        user_uuid:
+          type: string
+          example: f123d770-3378-429f-82cc-68521421d075
+        first_name:
+          type: string
+          example: Adrien
+        last_name:
+          type: string
+          example: Test
+        email:
+          type: string
+          example: adrien+swaggertest@pipplet.com
+        phone_number:
+          type: string
+          default: null
+          example: 0123456789
+        account_url:
+          type: string
+          example: >-
+            http://audition.pipplet.com/users/confirmation?confirmation_token=123456789
+          description: The URL to send to the user to take the test
+    ScoreResponse:
+      type: object
+      properties:
+        overall_score_rating:
+          type: number
+          example: 88
+          default: 0
+          description: Integer between 0 and 100
+        overall_score_cecrl:
+          type: string
+          default: null
+          example: C1
+          description: 'CECRL score: A2, B1, B2, etc.'
+        overall_score_date:
+          type: string
+          default: null
+          example: '2017-06-26T17:34:14.586+02:00'
+          description: Date at which the test was graded
+        score_details:
+          type: array
+          items:
+            type: object
+          description: Array of objects contening a criteria and a score
+          default: []
+          example: [{
+            "label": "Spoken",
+            "score": 55
+          }, {
+            "label": "Written",
+            "score": 75
+          }]
+security:
+  - oAuth2: []
+paths:
+  /api/v1/language_test:
+    post:
+      summary: Create a new LanguageTest
+      responses:
+        '201':
+          description: Test successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageTestResponse'
+        '400':
+          description: >-
+            Bad request. Ensure that you provide user, test_instance and
+            requestor data in request body.
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    status: '400'
+                    error: Bad request
+        '401':
+          description: Bad credentials. Ensure that you are authenticated!
+        '422':
+          description: Bad request. Missing mandatory attributes in request body.
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    user:
+                      errors:
+                        email:
+                          - can't be blank
+                        first_name:
+                          - can't be blank
+                        last_name:
+                          - can't be blank
+                    test_instance:
+                      errors:
+                        test_language:
+                          - 'must belongs to en, fr, de, es, it, nl'
+                    requestor:
+                      errors:
+                        company_name:
+                          - can't be blank
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LanguageTestRequest'
+  
+  '/api/v1/language_test/{uuid}/grade':
+    patch:
+      summary: Grade a given LanguageTest for test purpose
+      parameters:
+        - in: path
+          name: uuid
+          description: UUID of a previously created test
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: grade
+          description: Integer between 0 and 100
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Test was successfully graded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageTestResponse'
+        '403':
+          description: Test is not on test mode.
+        '401':
+          description: Bad credentials. Ensure that you are authenticated!
+        '404':
+          description: No LanguageTest found with this UUID.
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    status: '404'
+                    error: Not found
+
+  '/api/v1/language_test/{uuid}':
+    get:
+      summary: Show details of a given LanguageTest
+      parameters:
+        - in: path
+          name: uuid
+          description: UUID of a previously created test
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Show LanguageTest object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LanguageTestResponse'
+        '401':
+          description: Bad credentials. Ensure that you are authenticated!
+        '404':
+          description: No LanguageTest found with this UUID.
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    status: '404'
+                    error: Not found
+  
+    delete:
+      summary: Delete a given LanguageTest
+      parameters:
+        - in: path
+          name: uuid
+          description: UUID of a previously created test
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Test was successfully deleted
+        '401':
+          description: Bad credentials. Ensure that you are authenticated!
+        '409':
+          description: Test already started and cannot be deleted.
+        '404':
+          description: No LanguageTest found with this UUID.
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    status: '404'
+                    error: Not found
+  
+  '/api/v1/language_test/{uuid}/forget':
+    delete:
+      summary: Delete a given LanguageTest
+      parameters:
+        - in: path
+          name: uuid
+          description: UUID of a previously created test
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Test was successfully deleted
+        '404':
+          description: No LanguageTest found with this UUID.
+          content:
+            application/json:
+              examples:
+                response:
+                  value:
+                    status: '404'
+                    error: Not found

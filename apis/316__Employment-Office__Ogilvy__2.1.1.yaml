@@ -1,0 +1,516 @@
+penapi: 3.0.2
+servers:
+  - description: Production
+    url: https://applynow.net.au/api/ogilvy
+  - description: Staging
+    url: https://scouterecruitstaging.com/api/ogilvy
+info:
+  description: Job and Application API with Scout
+  version: "2.1.1"
+  title: Ogilvy - Scout Api
+  contact:
+    email: scout.support@netengine.com.au
+
+paths:
+  /jobs:
+    get:
+      summary: Searches Jobs
+      operationId: listInventories
+      description: |
+        Search for available jobs within Scout
+      parameters:
+        - in: header
+          name: X-api-authenticate
+          description: Token created in Scout Admin
+          required: true
+          example: f26d60305dae929ef8640a75e70dd78ab809cfe9
+          schema:
+            type: string
+        - in: query
+          name: recursive
+          description: Set to `true` to include jobs inside sub-entities
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - in: query
+          name: current
+          description: Set to `true` to retrieve only current jobs, a current job is a job with state `published`
+          required: false
+          schema:
+            type: boolean
+            default: false
+
+        - in: query
+          name: postcodes
+          description: Use a comma to separate postcodes "4006,4007"
+          required: false
+          example: "4005,4000,4010,4101"
+          schema:
+            type: string
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Job'
+        '400':
+          description: bad input parameter
+
+  /jobs/{jobId}:
+    get:
+      summary: Search individual job
+      operationId: searchJob
+      description: |
+        With the job id, you can retreive information for a specific job
+      parameters:
+        - in: header
+          name: X-api-authenticate
+          description: Token created in Scout Admin
+          required: true
+          example: f26d60305dae929ef8640a75e70dd78ab809cfe9
+          schema:
+            type: string
+        - in: path
+          name: jobId
+          example: 1
+          required: true
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          description: bad input parameter
+
+  /applications:
+    post:
+      summary: Add a new application for a job
+      operationId: addApplication
+      description: Adds a new application, for attachments we can process only a url with the file. If you need to upload a file, check the documentation of "/uploads", you can use it to upload a temporary file to be used as an attachment.
+      parameters:
+        - in: header
+          name: X-api-authenticate
+          description: Token created in Scout Admin
+          required: true
+          example: f26d60305dae929ef8640a75e70dd78ab809cfe9
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationAttributes'
+      responses:
+        '201':
+          description: item created
+        '422':
+          description: 'invalid input, object invalid'
+
+  /countries:
+    get:
+      summary: list countries
+      operationId: listCountries
+      description: |
+         It will list every country available in the system
+      parameters:
+        - in: header
+          name: X-api-authenticate
+          description: Token created in Scout Admin
+          required: true
+          example: f26d60305dae929ef8640a75e70dd78ab809cfe9
+          schema:
+            type: string
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Country'
+        '401':
+          description: bad input parameter
+  /countries/{countryId}/states:
+    get:
+      summary: list states
+      operationId: listState
+      description: |
+        It will list every state for a specific country
+      parameters:
+        - in: header
+          name: X-api-authenticate
+          description: Token created in Scout Admin
+          required: true
+          example: f26d60305dae929ef8640a75e70dd78ab809cfe9
+          schema:
+            type: string
+        - in: path
+          name: countryId
+          required: true
+          example: 1
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/State'
+        '401':
+          description: bad input parameter
+  /uploads:
+    post:
+      summary: It will return links to upload and retrieve a file
+      operationId: prepareUploading
+      description: |
+        Returns two links, a `get_link` and a `put_link`. Please submit the `get_link` to the Application API after submiting the file itself to the `put_link`. Please submit the file the `put_link` in the following format. For more information how to upload a file using the `put_link` please visit <a href="https://stackoverflow.com/a/40311906" target="_blank">this link</ag>
+      parameters:
+        - in: header
+          name: X-api-authenticate
+          description: Token created in Scout Admin
+          required: true
+          example: f26d60305dae929ef8640a75e70dd78ab809cfe9
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadingLinks'
+
+      responses:
+        '200':
+          description: hello
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  put_link:
+                    type: string
+                    format: url
+                  get_link:
+                    type: string
+                    format: url
+        '422':
+          description: bad input parameter
+components:
+  schemas:
+    Job:
+      required:
+        - expires_at
+        - title
+        - location
+        - reference
+        - hits
+        - slug
+
+      properties:
+        id:
+          type: integer
+        state:
+          type: string
+          description: ""
+          enum:
+            - draft
+            - saved
+            - published
+            - closed
+            - unpublished
+        brand:
+          type: string
+          example: 'A company name'
+        location:
+          type: string
+          example: "Brisbane"
+        expires_at:
+          type: string
+          format: date-time
+          example: '2022-07-21T17:32:28Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2022-07-21T17:32:28Z'
+        salary_info:
+          type: string
+        public_url:
+          type: string
+          format: url
+          example: "http://applynow.net.au/jobs/sof-eng-2019"
+        description:
+          type: string
+          example: "<body>Some Content</body>"
+        created_at:
+          type: string
+          format: date-time
+          example: '2022-07-21T17:32:28Z'
+        address_state:
+          type: string
+        employment_status:
+          type: string
+          description: ""
+          enum:
+            - draft
+            - saved
+            - published
+            - closed
+            - unpublished
+        reference:
+          type: string
+          example: "sof-eng-2019"
+        title:
+          type: string
+          example: "Software Engineer"
+        entity:
+          type: string
+        slug:
+          type: string
+          example: 'soft-eng-brisbane-company'
+        summary:
+          type: string
+          example: 'soft-eng-brisbane-company'
+        external:
+          type: boolean
+        internal:
+          type: boolean
+        postcode:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Question'
+        classifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Classification'
+    Question:
+      properties:
+        id:
+          type: integer
+        required:
+          type: boolean
+        position:
+          type: integer
+        title:
+          type: string
+          example: "This position requires someone who is proficient in the following areas. Please indicate which areas you are proficient in:"
+        type:
+          type: string
+          enum:
+            - AvailabilityField
+            - CheckBoxField
+            - CsvDataLookupField
+            - DateField
+            - RadioButtonField
+            - RankField
+            - SelectField
+            - TextAreaField
+            - TextField
+        field_choices:
+          description: Field choices are fields which allow to get every posible answer for a question.
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldChoice'
+    FieldChoice:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        position:
+          type: integer
+    Classification:
+      required:
+        - name
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    ApplicationAttributes:
+      required:
+        - job_id
+        - candidate_title
+        - candidate_firstname
+        - candidate_lastname
+        - candidate_phone1
+        - candidate_email
+
+      properties:
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnswerAttributes'
+        attachments:
+          type: array
+          items:
+            type: string
+            format: url
+            example: "https://via.placeholder.com/150/0000FF/808080"
+        skip_email_notification:
+          type: string
+          description: "when is present it will not send confirmation to the user about reception"
+          example: "skip"
+
+        job_id:
+          type: integer
+          example: 1
+
+        candidate_first_name:
+          type: string
+          maxLength: 255
+
+        candidate_last_name:
+          type: string
+          maxLength: 255
+
+        candidate_email:
+          type: string
+        candidate_title:
+          type: string
+          maxLength: 10
+          enum:
+            - Mr
+            - Mrs
+            - Ms
+            - Miss
+            - Dr
+            - Other
+        candidate_phone1:
+          type: string
+          maxLength: 16
+          example: "0412456789"
+        candidate_phone2:
+          type: string
+          maxLength: 16
+        candidate_gender:
+          type: string
+          maxLength: 1
+          example: 'f'
+          description: "Recommended value is 1 character and downcase"
+        candidate_street_number:
+          type: string
+          example: "265"
+        candidate_street:
+          type: string
+          example: "Coronation"
+        candidate_street_type:
+          type: string
+          example: 'Drive'
+          enum:
+            - Alley
+            - Arcade
+            - Avenue
+            - Boulevard
+            - Bypass
+            - Circuit
+            - Close
+            - Corner
+            - Court
+            - Crescent
+            - Cul-de-sac
+            - Drive
+            - Esplanade
+            - Green
+            - Grove
+            - Highway
+            - Junction
+            - Lane
+            - Link
+            - Mews
+            - Parade
+            - Place
+            - Ridge
+            - Road
+            - Square
+            - Street
+            - Terrace
+
+        candidate_suburb:
+          type: string
+          example: 'Milton'
+        candidate_postcode:
+          type: string
+          example: "4000"
+        candidate_state_id:
+          type: integer
+          example: "23"
+        candidate_alternate_address:
+          type: string
+          example: "265 coronation drive milton qld 4064"
+          description: "Only for entity that enables Whole Address Submission"
+
+    AnswerAttributes:
+      required:
+        - data
+        - question_id
+      properties:
+        data:
+          type: string
+        question_id:
+          type: integer
+        field_choice_ids:
+          type: array
+          items:
+            type: integer
+    State:
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Queensland"
+        abbreviation:
+          type: string
+          example: "QLD"
+    Country:
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: "Australia"
+        iso3:
+          type: string
+          example: "AUS"
+        iso:
+          type: string
+          example: "AU"
+        phone_prefix:
+          type: string
+          example: "+61"
+    UploadingLinks:
+      required:
+        - content_length
+        - content_type
+        - file_name
+      properties:
+        content_length:
+          type: integer
+          example: 120304
+          format: bytes
+          description: Size in bytes
+        content_type:
+          type: string
+          example: 'image/png'
+          format: bytes
+          description: Size in bytes
+        file_name:
+          type: string
+          example: 'photo.png'

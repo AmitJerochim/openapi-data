@@ -1,0 +1,3479 @@
+openapi: 3.0.0
+info:
+  version: 3.0.0
+  title: Bidgely Platform Services REST API 3.0 - Public
+  termsOfService: 'https://www.bidgely.com/legal-2/'
+  description: "<strong>The Bidgely Platform Services REST API 3.0 enable Bidgely clients and partners to leverage our energy analytics and services to enrich their customer facing solution and internal application services.</strong> <BR/><BR/>  Please note that our API Testing feature is currently under maintenance and will be available again soon"
+  contact:
+    name: Contact us
+    url: https://go.bidgely.com/contact-us
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+
+
+tags:
+  - name: Customers 
+    description: Retrieve Customer Information
+  - name: Home - Account Information
+    description: Relevant information on the Home's Energy Accounts
+  - name: Home - Energy Profile
+    description: The Customer home's energy profile information
+  - name: Home - Energy Profile - Itemization
+    description: Itemization (Energy Breakdown) of the home's Electric/Gas consumption 
+  - name: Home - Energy Profile - Survey
+    description: "Bidgely Surveys are a powerful mechanism to collect very valuable information directly from customers, regarding their home, appliances, lifestyle, and other relevant data"
+  - name: Insights
+    description: Personalized customer insights of different varieties, evaluated and ranked by Bidgely's AI Engine.
+  - name: Interactions
+    description: "Interactions represent hyper-personalized user suggested actions, generated Bidgely's AI engine. The suggested action (or CTA) is always derived from a personalized insight, which the Engine evaluated as the 'next best action' to be presented to the customer."
+  - name: Publish
+    description: Content-ready email messages, push notifications, paper reports, based on interactions and insights.
+  - name: Management - Interactions Configs - Insights
+    description: "Configuration Management features for Interactions - Insights Configurations"
+  - name: Management - Interactions Configs - Actions
+    description: "Configuration Management features for Interactions - Actions Configurations"
+
+paths:
+
+  ################################################## USERS API
+
+  '/users':
+    get:
+      operationId: getUsers
+      tags:
+        - Customers
+      summary: Get list of Ids for enrolled customers.
+      description: 'This endpoint returns the complete list of customers currently enrolled in the platform. For each customer, the set of unique Ids is returned'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/RequestId'                  
+                  - $ref: '#/components/schemas/UsersResponse'                  
+                  - $ref: '#/components/schemas/ErrorCode'  
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+################################################## Customer - Energy Profile API
+
+  '/users/{user-id}':
+   get:
+      operationId: getUserById
+      tags:
+        - Customers
+      summary: Get a customer's information from the related Energy Profile.
+      description: This endpoint returns a customer's information from its Energy Profile
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+                schema:
+                  allOf:
+                  - $ref: '#/components/schemas/RequestId'
+                  - $ref: '#/components/schemas/UserResponse'
+                  - $ref: '#/components/schemas/ErrorCode'  
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+
+  
+  ################################################## Home - Energy Profile API
+  '/users/{user-id}/homes/{home-id}/profile':
+   get:
+      operationId: getUserHomeProfile
+      tags:
+        - Home - Energy Profile
+      summary: Get home profile information.
+      description: This endpoint returns a home's profile information from the Energy Profile. This information consists of location information and details about the home and its inhabitants.
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+        - in: path
+          name: home-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to '1'" 
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/RequestId'
+                  - $ref: '#/components/schemas/HomeProfileResponse'
+                  - $ref: '#/components/schemas/ErrorCode'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.  
+  
+
+  '/users/{user-id}/homes/{home-id}/{fuelType}/profiles/comparisons':
+     get:
+      operationId: getUserHomeFuelProfilesComparison
+      tags:
+        - Home - Energy Profile
+      summary: Get Similar Home Comparison detailed information for the customer. 
+      description: "This endpoint returns the detailed output information for each run of the Similar Home Comparison algorithm on the specific customer, which is included in the start-end interval specified in the request. The return information includes the customer's performance vs. the performance of the customer's 'neighborhood' cluster, together with the list of percentile values calculated by the algorithm"
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+        - in: path
+          name: home-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to '1'" 
+        - in: path
+          name: fuelType
+          required: true
+          description: "The fuel type for the specific profile information" 
+          schema:
+            type: string
+            enum: [ELECTRIC, GAS]
+
+        - in: query
+          name: start
+          required: true
+          description: "The start date for the query period."       
+          schema:
+            type: string
+            format: date
+
+        - in: query
+          name: end
+          required: true
+          description: "The end date for the query period."
+          schema:
+            type: string
+            format: date
+          
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/RequestId'
+                  - $ref: '#/components/schemas/ComparisonProfileResponse'
+                  - $ref: '#/components/schemas/ErrorCode'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.  
+
+  '/users/{user-id}/homes/{home-id}/{fuelType}/profiles/bill-projections':
+     get:
+      operationId: getUserHomeFuelProfilesBillProjections
+      tags:
+        - Home - Energy Profile
+      summary: Get Bill Projection results for the customer/home. 
+      description: "This endpoint returns the results of the Bill Projection calculation for a customer's home. The calculation always refers to an open (or ongoing) billing cycle, identified by its [start-end] period. <BR/>Note: the endpoint always returns at most one Bill Projection record, with the most recent projection calculation available."
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+        - in: path
+          name: home-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to '1'" 
+        - in: path
+          name: fuelType
+          required: true
+          schema:
+            type: string
+            enum: [ELECTRIC, GAS]
+          description: "The fuel type for the specific profile information" 
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/RequestId'
+                  - $ref: '#/components/schemas/BillProjectionProfileResponse'
+                  - $ref: '#/components/schemas/ErrorCode'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.  
+
+
+  '/users/{user-id}/homes/{home-id}/{fuelType}/profiles/rate-comparisons':
+     get:
+      operationId: getUserHomeFuelProfilesRateComparison
+      tags:
+        - Home - Energy Profile
+      summary: Get Rate Comparison information for the customer/home. 
+      description: "This endpoint returns the results of  the rate comparison algorithm for the customer oven a given period. The comparison is calculated between the customer's current rate and a set of compared rates. The comparison is calculated over a pre-configured period of time, in which the user's consumption is applied to the different rates, and results are obtained over different time bands / periods (peak, off peak, weekday, weekend, etc.). Based on the input (start-end) period, the endpoint will return the number of comparisons whose creationDate falls in the period itself."
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+        - in: path
+          name: home-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to '1'" 
+        - in: path
+          name: fuelType
+          required: true
+          schema:
+            type: string
+            enum: [ELECTRIC, GAS]
+          description: "The fuel type for the specific profile information" 
+        - in: query
+          name: start
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: The start date for the comparison date execution period.
+        - in: query
+          name: end
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: The end date for the comparison date execution period.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/RequestId'
+                  - $ref: '#/components/schemas/RateComparisonProfileResponse'
+                  - $ref: '#/components/schemas/ErrorCode'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.  
+
+################################################## Home - Accounts
+
+  '/users/{user-id}/homes/{home-id}/account/programs':
+   get:
+      operationId: getUserHomeAccountPrograms
+      tags:
+        - Home - Account Information 
+      summary: Get information on utility programs the user has been enrolled into.
+      description: "This endpoint returns the list of utility-driven programs that the customer has been enrolled into.<br/> Bidgely uses this information to provide actionable insights and calls-to-action to drive the user to subscribe or adhere to these programs, leveraging Bidgely's AI. "
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+        - in: path
+          name: home-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to '1'" 
+        - in: query
+          name: isParticipating
+          description: the participation status of the user
+          required: false
+          schema:
+            type: boolean
+        - in: query
+          name: programId
+          description: the id of the program to be fetched
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+                schema:
+                    allOf:
+                      - $ref: '#/components/schemas/RequestId'
+                      - $ref: '#/components/schemas/ProgramsResponse'
+                      - $ref: '#/components/schemas/ErrorCode'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.           
+
+  '/users/{user-id}/homes/{home-id}/{fuelType}/account/bills':
+   get:
+      operationId: getUserHomeFuelAccountsBills
+      tags:
+        - Home - Account Information
+      summary: Get information on the energy bill details available for the customer.
+      description: "This endpoint returns a set of bill / invoice records as provided by the utility to Bidgely via the file-based Data Integration process. The API returns the set of records which are included in the start-end period provided in the request"
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+        - in: path
+          name: home-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to '1'" 
+        - in: path
+          name: fuelType
+          required: true
+          schema:
+            type: string
+            enum: [ELECTRIC, GAS]
+          description: "The fuel type for the specific profile information" 
+        - in: query
+          name: start
+          required: true
+          schema:
+            type: string
+            format: date
+            description: The start date for the query period.
+        - in: query
+          name: end
+          required: true
+          schema:
+            type: string
+            format: date
+            description: The end date for the query period.
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+                schema:
+                  allOf:
+                    - $ref: '#/components/schemas/RequestId'
+                    - $ref: '#/components/schemas/BillingDataResponse'
+                    - $ref: '#/components/schemas/ErrorCode'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.      
+
+#Survey
+  '/users/{user-id}/homes/{home-id}/survey':
+    get:
+      operationId: getUserHomeSurvey
+      tags:
+        - Home - Energy Profile - Survey
+      summary: Get updated list of customer answers to the Bidgely Home Survey
+      description: This endpoint returns the list of survey questions and the related response by the customer.
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+        - in: path
+          name: home-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to "1" 
+        - in: query
+          name: templateType
+          required: true
+          schema:
+            type: string
+            default: user_survey
+          description: the type of survey to be returned
+        - in: query
+          name: user_role
+          required: true
+          schema:
+            type: string
+            default: ROLE_USER
+          description: "The role of the user filling in the survey: the customer himself is filling in the survey via a Web Portal or Mobile App (ROLE_USER), or the survey is being filled by a Utility Auditor or CSR (ROLE_AUDITOR)"
+        - in: query
+          name: channel
+          required: true
+          schema:
+            type: string
+            default: INSIGHTS
+          description: The channel through which the survey is served.        
+        - in: query
+          name: locale
+          required: true
+          schema:
+            type: string
+          description: The language locale in which the survey content will be returned
+
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+                schema:
+                  allOf:
+                    - $ref: '#/components/schemas/RequestId'
+                    - $ref: '#/components/schemas/SurveyResponse'
+                    - $ref: '#/components/schemas/ErrorCode'
+                examples:
+                  survey-example:
+                    $ref: '#/components/examples/survey-example'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    put:
+      operationId: putUserHomeSurvey
+      tags:
+        - Home - Energy Profile - Survey
+      summary: Adds or updates one or more answers to a survey's questions
+      description: This endpoint allows to send answers to survey questions provided (directly or indirectly) by a customer. The specific survey is identified by the combination of the query parameters used in the endpoint.
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+        - in: path
+          name: home-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to "1" 
+        - in: query
+          name: templateType
+          required: true
+          schema:
+            type: string
+            default: user_survey
+          description: the type of survey to be returned
+        - in: query
+          name: user_role
+          required: true
+          schema:
+            type: string
+            default: ROLE_USER
+          description: "The role of the user filling in the survey: the customer himself is filling in the survey via a Web Portal or Mobile App (ROLE_USER), or the survey is being filled by a Utility Auditor or CSR (ROLE_AUDITOR)"
+        - in: query
+          name: channel
+          required: true
+          schema:
+            type: string
+            default: INSIGHTS
+          description: The channel through which the survey is served.        
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object 
+              additionalProperties:
+                type: string
+            example:
+              Q10: [Computer, VCR, Game Console]
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+################################################## Home - Energy Profile - Itemization API
+ 
+ #Itemization Full Cycle#
+  '/users/{user-id}/homes/{home-id}/{fuelType}/itemization/fullcycle':
+   get:
+      operationId: getUserHomeFuelItemizationFullcycle
+      tags:
+        - Home - Energy Profile - Itemization
+      summary: Get itemized energy consumption for a customer/home over a full billing cycle.
+      description: "This endpoint returns a customer/home's complete energy breakdown (100% itemization) for a given fuel type (Electricity or Gas) and for a full billing cycle. Based on the start and end dates provided, the system will return one full-cycle itemization record for every billing cycle comprised in such time range.<br/><br/><table><tr><td></td><td>AMI</td><td>NSM</td></tr><tr><td>Available</td><td>Yes</td><td>Yes</td></tr></table><br/>"
+      parameters:
+        - in: path
+          name: user-id
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+          required: true
+          schema:
+            type: string
+            minimum: 1
+        - in: path
+          name: home-id
+          description: The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to "1"
+          required: true
+          schema:
+            type: string
+            minimum: 1
+        - in: path
+          name: fuelType
+          required: true
+          schema:
+            type: string
+            enum: [ELECTRIC, GAS]
+          description: "The fuel type for the specific profile information" 
+        - in: query
+          name: start
+          description: the start date of the billing cycle
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end
+          description: the end date of the billing cycle
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+                schema:
+                  allOf:
+                    - $ref: '#/components/schemas/RequestId'
+                    - $ref: '#/components/schemas/ItemizationFullcycleResponse'
+                    - $ref: '#/components/schemas/ErrorCode'
+                examples:
+                  itemization-fullcycle-example:
+                    $ref: '#/components/examples/itemization-fullcycle-example'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+        
+
+#Itemization MTD#
+  '/users/{user-id}/homes/{home-id}/{fuelType}/itemization/mtd':
+   get:
+      operationId: getUserHomeFuelItemizationMTD
+      tags:
+        - Home - Energy Profile - Itemization
+      summary: Get itemized energy consumption for a customer/home over a set of consecutive days from the start of a billing cycle.
+      description: "This endpoint returns a customer/home's full energy breakdown (100% itemization) for a given fuel type (Electricity or Gas) and for a set of consecutive days from the start of a billing cycle ('MTD' originally stands for 'Month-Till-Date' to outline this concept). <br/> This type of Itemization information is useful in scenarios where the energy breakdown is refreshed  on a more frequent basis than just the full-cycle frequency.<br/> The system will fetch the most recent available itemization results for the <b>current</b> or <b>previous</b> Billing Cycle. <br/><br/><table><tr><td></td><td>AMI</td><td>NSM</td></tr><tr><td>Available</td><td>Yes</td><td>No</td></tr></table><br/>"
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+        - in: path
+          name: home-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to "1" 
+        - in: path
+          name: fuelType
+          required: true
+          schema:
+            type: string
+            enum: [ELECTRIC, GAS]
+          description: "The fuel type for the specific itemization" 
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+                schema:
+                  allOf:
+                    - $ref: '#/components/schemas/RequestId'
+                    - $ref: '#/components/schemas/ItemizationMTDResponse'
+                    - $ref: '#/components/schemas/ErrorCode'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+
+    #Itemization Custom Period#
+
+
+    #Itemization TOU#
+
+########################################################## INSIGHTS RUNTIME APIs  
+  '/users/{user-id}/homes/{home-id}/insights':
+   get:
+      operationId: getUserHomeInsights
+      tags:
+        - Insights
+      summary: Get the complete details for the specific insight. 
+      description: "This endpoint returns a set of insights generated for the specific user/home."
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+          schema:
+            type: string
+            minimum: 1
+        - in: path
+          name: home-id
+          required: true
+          description: "The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to '1'"
+          schema:
+            type: string
+            minimum: 1
+        - in: query
+          name: top
+          required: false
+          description: "flag to request the top n ranked insights"
+          schema:
+            type: number
+            format: integer
+        - in: query
+          name: score-above
+          required: false
+          description: "filter only the insights with score higher than n"
+          schema:
+            type: number
+            format: double
+        - in: query
+          name: appliance
+          required: false
+          description: "filters only the insights related to a specific appliance"
+          schema:
+            type: string
+            enum: [Total, AlwaysOn, Refrigeration, SpaceHeating, Cooling, WaterHeating, Lighting, PoolPump, EV, Cooking, Laundry, Entertainment, Solar]
+        - in: query
+          name: language
+          required: false
+          description: "returns the insight content in the specified language"
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Returns a set of Insights computed for the user"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/RequestId'
+                  - $ref: '#/components/schemas/InsightsDataResponse'
+                  - $ref: '#/components/schemas/ErrorCode'                  
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+  '/users/{user-id}/homes/{home-id}/insights/assets':
+   get:
+      operationId: getUserHomeInsightAssets
+      tags:
+        - Insights
+      summary: Get the list of assets for the selected insights. 
+      description: "This endpoint returns the list of assets for a selected set of user/home insights."
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+          schema:
+            type: string
+            minimum: 1
+        - in: path
+          name: home-id
+          required: true
+          description: "The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to '1'"
+          schema:
+            type: string
+            minimum: 1
+        - in: query
+          name: top
+          required: false
+          description: "flag to request the top n ranked insights"
+          schema:
+            type: number
+            format: integer
+        - in: query
+          name: score-above
+          required: false
+          description: "filter only the insights with score higher than n"
+          schema:
+            type: number
+            format: double
+        - in: query
+          name: appliance
+          required: false
+          description: "filters only the insights related to a specific appliance"
+          schema:
+            type: string
+            enum: [Total, AlwaysOn, Refrigeration, SpaceHeating, Cooling, WaterHeating, Lighting, PoolPump, EV, Cooking, Laundry, Entertainment, Solar]
+        - in: query
+          name: language
+          required: false
+          description: "returns the insight assets in the specified language"
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Returns the assets available for the selected insights"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/RequestId'
+                  - $ref: '#/components/schemas/InsightsAssetsResponse'
+                  - $ref: '#/components/schemas/ErrorCode'  
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+  '/users/{user-id}/homes/{home-id}/insights/{insight-id}':
+   get:
+      operationId: getUserHomeInsightById
+      tags:
+        - Insights
+      summary: Get the complete details for the specific insight. 
+      description: "This endpoint returns a set of insights generated for the specific user/home."
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+          schema:
+            type: string
+            minimum: 1
+        - in: path
+          name: home-id
+          required: true
+          description: "The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to '1'"
+          schema:
+            type: string
+            minimum: 1
+        - in: path
+          name: insight-id
+          required: true
+          description: "The insight'ss Id as defined in the Insights Catalogue."
+          schema:
+            type: string
+            minimum: 1
+        - in: query
+          name: score-above
+          required: false
+          description: "filter only the insights with score higher than n"
+          schema:
+            type: number
+            format: double
+        - in: query
+          name: language
+          required: false
+          description: "returns the insight content in the specified language"
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: "Returns a single Insight computed for the user"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/RequestId'
+                  - $ref: '#/components/schemas/InsightsDataResponse'
+                  - $ref: '#/components/schemas/ErrorCode'  
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+
+  '/users/{user-id}/homes/{home-id}/insights/{insight-id}/assets':
+   get:
+      operationId: getUserHomeInsightAssetsByInishgtId
+      tags:
+        - Insights
+      summary: Get the list of assets for the specified insight. 
+      description: "This endpoint returns the set of assets available for the selected insight"
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+          schema:
+            type: string
+            minimum: 1
+        - in: path
+          name: home-id
+          required: true
+          description: "The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to '1'"
+          schema:
+            type: string
+            minimum: 1
+        - in: path
+          name: insight-id
+          required: true
+          description: "The insight'ss Id as defined in the Insights Catalogue."
+          schema:
+            type: string
+            minimum: 1
+
+      responses:
+        '200':
+          description: "Returns the assets available for the selected insights"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/RequestId'
+                  - $ref: '#/components/schemas/InsightsAssetsResponse'
+                  - $ref: '#/components/schemas/ErrorCode'  
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+
+  ################################################## INTERACIONS API
+  '/users/{user-id}/homes/{home-id}/interactions':
+   get:
+      operationId: getUserHomeInteractions
+      tags:
+        - Interactions
+      summary: Get list of available interactions for a user/home.
+      description: This endpoint returns the list of interactions currently availablefor a user/home. Each interaction is structured as the combination of one (or more) insight(s) and one (or more) action(s). Interactions can be filtered leveraging one of the query parameters, to obtain the most relevant (high ranked) interactions.
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+        - in: path
+          name: home-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to "1" 
+        - in: query
+          name: top
+          required: false
+          description: "filters only the top n ranked interactions"
+          schema:
+            type: number
+            format: integer
+        - in: query
+          name: score-above
+          required: false
+          description: "filters only the interactions with score higher than n"
+          schema:
+            type: number
+            format: double
+        - in: query
+          name: action-type
+          required: false
+          description: "filters only the interactions with a specific action type (for example: TIPS, PROGRAMS, PRODUCTS, etc."
+          schema:
+            type: string
+        - in: query
+          name: appliance
+          required: false
+          description: "filters only the interactions related to a specific appliance"
+          schema:
+            type: string
+            enum: [Total, AlwaysOn, Refrigeration, SpaceHeating, Cooling, WaterHeating, Lighting, PoolPump, EV, Cooking, Laundry, Entertainment, Solar]
+      responses:
+        '200':
+          description: Returns a list of interactions 
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/RequestId'
+                - $ref: '#/components/schemas/InteractionsResponse'
+                - $ref: '#/components/schemas/ErrorCode'  
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+               
+  '/users/{user-id}/homes/{home-id}/interactions/assets':
+   get:
+      operationId: getUserHomeInteractionsAssets
+      tags:
+        - Interactions
+      summary: Get set of visual assets for each interaction available for a user/home.
+      description: "This endpoint returns the set of visual assets for each interactions currently available for a user/home. The assets available will refer to the Insights and Actions present in the Interaction. <BR/>Interactions can be filtered leveraging one of the query parameters, to obtain the most relevant (high ranked) interactions."
+      parameters:
+        - in: path
+          name: user-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: "The customer's Id. Can be a proper user-id or an AccountId"
+        - in: path
+          name: home-id
+          required: true
+          schema:
+            type: string
+            minimum: 1
+          description: The home's Id. In the cases where the home Id is not availble, the caller should set the parameter to "1" 
+        - in: query
+          name: top
+          required: false
+          description: "filters only the top n ranked interactions"
+          schema:
+            type: number
+            format: integer
+        - in: query
+          name: score-above
+          required: false
+          description: "filters only the insights with score higher than n"
+          schema:
+            type: number
+            format: double
+      responses:
+        '200':
+          description: Returns the available set of visual assets for each retrieved interaction
+          content:
+            application/json:
+              schema:
+                allOf:
+                - $ref: '#/components/schemas/RequestId'
+                - $ref: '#/components/schemas/InteractionAssetsResponse'
+                - $ref: '#/components/schemas/ErrorCode' 
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+
+  ################################################## MANAGEMENT - INTERACTIONS CRUD API
+  
+  ###################### INSIGHTS FAMILY Definition object
+  '/insights/family/{insights-family-id}':
+    get:
+      operationId: getInsightFamilyDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Get a specific Insights Family definition record from Bidgely's Insights Catalogue."
+      description: "This endpoint returns the record for an Insights Family definition object."
+      parameters:
+        - in: path
+          name: insights-family-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insights Family"
+      responses:
+        '200':
+          description: "Returns the record for an Insights Family Definition object"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/insights-family-def'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    post:
+      operationId: postInsightFamilyDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Updates a specific Insights Family definition object in Bidgely's Insights Catalogue."
+      description: "This endpoint updates the attributes for an Insights Family definition object."
+      parameters:
+        - in: path
+          name: insights-family-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insights Family"
+      requestBody:
+        description: "An insights family object"
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/insights-family-def'
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    delete:
+      operationId: deleteInsightFamilyDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Deletes a specific Insights Family definition object from Bidgely's Insights Catalogue."
+      description: "This endpoint deletes the attributes for an Insights Family definition object."
+      parameters:
+        - in: path
+          name: insights-family-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insights Family"
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+      
+  '/insights/family':
+    put:
+      operationId: putInsightFamilyDef
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Adds a new Insights Family definition object in Bidgely's Insights Catalogue."
+      description: "This endpoint adds a new Insights Family definition object. The id for the object must be unique"
+      requestBody:
+        description: "An insights family object"
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/insights-family-def'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: string
+                description: the unique ID for the Insights Family object
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+    
+   ###################### INSIGHT FAMILY RESOURCES Definition object
+  '/insights/family/{insights-family-id}/resources':
+    get:
+      operationId: getInsightFamilyResourcesDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Get the set of visual resources for a specific Insights Family definition record from Bidgely's Insights Catalogue."
+      description: "This endpoint returns the set of configured resources for an Insights Family definition object."
+      parameters:
+        - in: path
+          name: insights-family-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insights Family"
+      responses:
+        '200':
+          description: "Returns the set of resources for an Insights Family Definition object"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/insights-family-resources-def'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    post:
+      operationId: postInsightFamilyResourcesDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Updates the set of resources for a specific Insights Family definition object in Bidgely's Insights Catalogue."
+      description: "This endpoint updates the set of resources for an Insights Family definition object."
+      parameters:
+        - in: path
+          name: insights-family-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insights Family"
+      requestBody:
+        description: "The list of resources for an insights family object"
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/insights-family-resources-def'
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    delete:
+      operationId: deleteInsightFamilyResourcesDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Deletes the set of resources for a specific Insights Family definition object from Bidgely's Insights Catalogue."
+      description: "This endpoint deletes the set of resources for an Insights Family definition object."
+      parameters:
+        - in: path
+          name: insights-family-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insights Family"
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+      
+    put:
+      operationId: putInsightFamilyResourcesDef
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Adds a new set of resources to an Insights Family definition object in Bidgely's Insights Catalogue."
+      description: "This endpoint adds a new set of resources to an Insights Family definition object. The id for the object must be unique"
+      parameters:
+        - in: path
+          name: insights-family-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insights Family"
+      requestBody:
+        description: "A list of resources for an insights family object"
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/insights-family-resources-def'
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+    
+###################### INSIGHT FAMILY - INSIGHT Associations
+    
+  '/insights/family/{insights-family-id}/insights':
+    get:
+      operationId: getInsightsForInsightsFamilyDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Get the list of Insights associated to an Insights Family object. from Bidgely's Insights Catalogue."
+      description: "This endpoint returns the list of Insights associated to an Insights Family definition object."
+      parameters:
+        - in: path
+          name: insights-family-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insights Family"
+      responses:
+        '200':
+          description: "Returns the list of insights associated to an Insights Family Definition object"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  insights-family-id:
+                    type: string
+                    description: the id for the Insights Family object
+                    example: IF_021
+                  insight-ids:
+                    type: array
+                    items:
+                      type: string
+                    example: [I_00017, I_00018, I_00019]
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+  '/insights/family/{insights-family-id}/insights/add':
+    put:
+      operationId: addInsightsToInsightsFamilyDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Add one or more Insights to an Insights Family object, in Bidgely's Insights Catalogue."
+      description: "This endpoint adds one or more Insights to an Insights Family definition object."
+      parameters:
+        - in: path
+          name: insights-family-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insights Family"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                insights-family-id:
+                  type: string
+                  description: the id for the Insights Family object
+                  example: IF_021
+                insight-ids:
+                  type: array
+                  items:
+                    type: string
+                  example: [I_00020]
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+  '/insights/family/{insights-family-id}/insights/remove':
+    delete:
+      operationId: removeInsightsInInsightsFamilyDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Remove one or more Insights from an Insights Family object, in Bidgely's Insights Catalogue."
+      description: "This endpoint removes one or more Insights from an Insights Family definition object."
+      parameters:
+        - in: path
+          name: insights-family-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insights Family"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  insights-family-id:
+                    type: string
+                    description: the id for the Insights Family object
+                    example: IF_021
+                  insight-ids:
+                    type: array
+                    items:
+                      type: string
+                    example: [I_00018]
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+ 
+ ###################### INSIGHT Definition object
+  '/insights/{insight-id}':
+    get:
+      operationId: getInsightDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Get an Insight definition from Bidgely's Insights Catalogue."
+      description: "This endpoint returns a specific Insight definition object."
+      parameters:
+        - in: path
+          name: insight-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insight"
+      responses:
+        '200':
+          description: "Returns the insight definition object "
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/insight-def'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    put:
+      operationId: putInsightDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Add an Insight definition to Bidgely's Insights Catalogue."
+      description: "This endpoint adds a specific Insight definition object."
+      parameters:
+        - in: path
+          name: insight-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insight"
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/insight-def'      
+      responses:
+        '200':
+          description: Success.
+
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    post:
+      operationId: postInsightDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Update an Insight definition in Bidgely's Insights Catalogue."
+      description: "This endpoint updates a specific Insight definition object."
+      parameters:
+        - in: path
+          name: insight-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insight"
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/insight-def'      
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    delete:
+      operationId: deleteInsightDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Delete an Insight definition from Bidgely's Insights Catalogue."
+      description: "This endpoint deletes a specific Insight definition object."
+      parameters:
+        - in: path
+          name: insight-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insight"
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+ ###################### INSIGHT RESOURCES Definition object
+  '/insights/{insight-id}/resources':
+    get:
+      operationId: getInsightResourcesDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Get the resources for an Insight definition from Bidgely's Insights Catalogue."
+      description: "This endpoint returns the resources for a specific Insight definition object."
+      parameters:
+        - in: path
+          name: insight-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insight"
+      responses:
+        '200':
+          description: "Returns the list of resources for an insight definition object "
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/insight-resources-def'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    put:
+      operationId: putInsightResourcesDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Add resources for an Insight definition to Bidgely's Insights Catalogue."
+      description: "This endpoint adds resources a specific Insight definition object."
+      parameters:
+        - in: path
+          name: insight-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insight"
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/insight-resources-def'      
+      responses:
+        '200':
+          description: Success.
+
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    post:
+      operationId: postInsightResourcesDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Update resources for an Insight definition in Bidgely's Insights Catalogue."
+      description: "This endpoint updates resources for a specific Insight definition object."
+      parameters:
+        - in: path
+          name: insight-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insight"
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/insight-resources-def'      
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    delete:
+      operationId: deleteInsightResourcesDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Delete the resources for an Insight definition from Bidgely's Insights Catalogue."
+      description: "This endpoint deletes the resources for a specific Insight definition object."
+      parameters:
+        - in: path
+          name: insight-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insight"
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+          
+ ###################### INSIGHT META-DATA Definition object
+  '/insights/{insight-id}/meta-data':
+    get:
+      operationId: getInsightMetaDataDefById
+      tags:
+        - Management - Interactions Configs - Insights
+      summary: "Get the meta-data for an Insight definition from Bidgely's Insights Catalogue."
+      description: "This endpoint returns the meta-data for a specific Insight definition object."
+      parameters:
+        - in: path
+          name: insight-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Insight"
+      responses:
+        '200':
+          description: "Returns the meta-data for an insight definition object "
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/insight-metadata-def'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+          
+
+###################### TARGET Definition object
+  '/targets/{target-id}':
+    get:
+      operationId: getTargetDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Get an Target definition from Bidgely's Interactions Catalogue."
+      description: "This endpoint returns a specific Target definition object."
+      parameters:
+        - in: path
+          name: target-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Target"
+      responses:
+        '200':
+          description: "Returns the target definition object "
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/target-def'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    put:
+      operationId: putTargetDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Add a Target definition to Bidgely's Interactions Catalogue."
+      description: "This endpoint adds a specific Target definition object."
+      parameters:
+        - in: path
+          name: target-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Target"
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/target-def'      
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    post:
+      operationId: postTargetDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Update a Target definition in Bidgely's Interactions Catalogue."
+      description: "This endpoint updates a specific Target definition object."
+      parameters:
+        - in: path
+          name: target-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Target"
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/target-def'      
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    delete:
+      operationId: deleteTargetDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Delete a Target definition from Bidgely's Interactions Catalogue."
+      description: "This endpoint deletes a specific Target definition object."
+      parameters:
+        - in: path
+          name: target-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Target"
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+###################### ACTION Definition object
+ 
+  '/actions/{action-id}':
+    get:
+      operationId: getActionDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Get an Action definition object as included in the Interactions Catalogue."
+      description: "This endpoint returns the details of an Action definition object, as defined in the Interactions Catalogue"
+      parameters:
+        - in: path
+          name: action-id
+          required: true
+          schema:
+            type: string
+          description: "The Action's Id as defined in Bidgely's Interactions Catalogue"
+      responses:
+        '200':
+          description: "Returns the details of an Action definition object, as defined in the Interactions Catalogue"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/action-def'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    put:
+      operationId: putActionDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Add an Action definition to Bidgely's Interactions Catalogue."
+      description: "This endpoint adds a specific Action definition object."
+      parameters:
+        - in: path
+          name: action-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Action"
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/action-def'      
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+  
+    post:
+      operationId: postActionDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Update an Action definition in Bidgely's Interactions Catalogue."
+      description: "This endpoint updates a specific Action definition object."
+      parameters:
+        - in: path
+          name: action-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Action"
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/action-def'      
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+  
+    delete:
+      operationId: deleteActionDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Delete an Action definition from Bidgely's Interactions Catalogue."
+      description: "This endpoint deletes a specific Action definition object."
+      parameters:
+        - in: path
+          name: action-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Action"
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+###################### ACTION RESOURCES Definition object
+ 
+  '/actions/{action-id}/resources':
+    get:
+      operationId: getActionResourcesDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Get the resources for an Action definition object as included in the Interactions Catalogue."
+      description: "This endpoint returns the resources of an Action definition object, as defined in the Interactions Catalogue"
+      parameters:
+        - in: path
+          name: action-id
+          required: true
+          schema:
+            type: string
+          description: "The Action's Id as defined in Bidgely's Insights Catalogue"
+      responses:
+        '200':
+          description: "Returns the resources of an Action definition object, as defined in the Actions Catalogue"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/action-resources-def'
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+    put:
+      operationId: putActionResourcesDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Add resources to an Action definition in Bidgely's Interactions Catalogue."
+      description: "This endpoint adds a list of resources to an Action definition object."
+      parameters:
+        - in: path
+          name: action-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Action"
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/action-resources-def'      
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+  
+    post:
+      operationId: postActionResourcesDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Update the resources of an Action definition in Bidgely's Interactions Catalogue."
+      description: "This endpoint updates the resources of a specific Action definition object."
+      parameters:
+        - in: path
+          name: action-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Action"
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/action-resources-def'      
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+  
+    delete:
+      operationId: deleteActionResourcesDefById
+      tags:
+        - Management - Interactions Configs - Actions
+      summary: "Delete the resources of an Action definition from Bidgely's Interactions Catalogue."
+      description: "This endpoint deletes the resources of a specific Action definition object."
+      parameters:
+        - in: path
+          name: action-id
+          required: true
+          schema:
+            type: string
+          description: "The unique identifier for the Action"
+      responses:
+        '200':
+          description: Success.
+        '400':
+          description: Bad request. 
+        '5XX':
+          description: Unexpected error.   
+
+
+
+
+
+
+
+  ################################################## PUBLISH API
+
+
+############################################################ COMPONENTS
+components:
+  schemas:
+  ### Request Id ###
+    RequestId:
+      type: object
+      properties:
+        requestId:
+          type: string
+          description: the Id of the request
+
+  ### Request Id ###
+    ErrorCode:
+      type: object
+      properties:
+        error:
+          type: string
+          description: the Id of the request
+  
+  
+  
+  ### User Ids ###
+    UserIds:
+      type: object
+      properties:
+        externalUserId:
+          type: string
+          description: the customer's unique Id, as provided by the utility
+
+
+    UsersResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            users:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserIds'
+
+          
+  ### Address ###
+    Address:
+      type: object
+      properties:
+        addressLine:
+          type: string
+          description: Street Address
+        city:
+          type: string
+          description: City
+        provinceState:
+          type: string
+          description: Province or State
+        postalCode:
+          type: string
+          description: Postal Code
+        regionCode:
+          type: string
+          description: Region Code
+        
+
+
+  ### User Profile Metadata ###
+  ### We should consider including here all the fields currently part of the User Enrollment API ###
+    UserResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility
+            user-profile:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                  description: the customer's first name
+                lastName:
+                  type: string
+                  description: the customer's flast name
+                primaryEmail:
+                  type: string
+                  description: the user's primary email address
+                secondaryEmail:
+                  type: string
+                  description: the user's secondary email address
+                utilityName:
+                  type: string
+                  description: the utility's name
+                mailingAddress:
+                  allOf:
+                    - $ref: '#/components/schemas/Address'             
+                phoneNumber:
+                  type: string
+                  description: the user's phone number
+                phoneType:
+                  type: string
+                  description: the type of user phone
+                userLanguagePreference:
+                  type: string
+                  description: the language to be used in all customer communications
+
+    
+    ProgramsResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            program-data:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    programId:
+                      type: string
+                      description: the Id for the utility program
+                    programName:
+                      type: string
+                      description: the name of the utility program
+                    userParticipationStartDate:
+                      type: string
+                      format: date-time
+                      description: the date at which the user's participation period to the utility program starts
+                    userParticipationEndDate:
+                      type: string
+                      format: date-time
+                      description: the date at which the user's participation period to the utility program ends
+                    isEligible:
+                      type: boolean
+                      description: the user's eligibility status for the program
+                    isParticipating:
+                      type: boolean
+                      description: the user's participation status for the program
+                    task:
+                      type: string
+                      description: the (optional) task accomplished by the user within the program
+                    programAttributes:
+                      type: string
+                      description: a set of key/value pairs, representing attributes of the program
+                      
+                      
+
+    BillingDataResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            billing-data:
+              type: array
+              items:
+                $ref: "#/components/schemas/BillingDataRecord"
+  
+    BillingDataRecord:
+      type: object
+      properties:
+        billStartDate:
+          type: string
+          format: date-time
+          description: the start date for the billing period
+        billEndDate:
+          type: string
+          format: date-time
+          description: the end date for the billing period
+        billingPeriodDuration:
+          type: number
+          format: integer
+          description: the duration of the billing period in days
+        lastUpdateDate:
+          type: string
+          format: date-time
+          description: the date in which the billing data was last updated or modified in the Bidgely system
+        fuelType:
+          type: string
+          enum: [ELECTRIC, GAS]        
+          description: the fuel type for the invoice
+        transitionBillCycle:
+          type: boolean
+          description: flag to indicate if the invoice is for a transition bill cycle (e.g. a cycle in which the customer transitions from a previous to a new billing cycle plan)
+        invoiceLineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceLineItem'
+  
+    InvoiceLineItem:
+      type: object
+      properties:
+        cost:
+          type: number
+          description: the cost for the charge
+        consumption:
+          type: number
+          description: the consumption associated to the charge
+        chargeType:
+          type: string
+          description: the type of charge represented in this line item
+          enum: [CONSUMPTION_BASED, FIXED, DEMAND]
+        chargeName:
+          type: string
+          description: the name of the charge, as provided by the utility
+          
+      
+        
+
+    HomeProfileResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            home-profile:
+              type: object
+              properties:
+                address:
+                  $ref: '#/components/schemas/Address'
+                unitType:
+                  type: string
+                  description: the type of unit
+                dwellingType:
+                  type: string
+                  description: the type of dwelling
+                numberOfBedrooms:
+                  type: number
+                  description: the number of bedrooms in the home
+                numberOfBathrooms:
+                  type: number
+                  description: the number of bathrooms in the home
+                numberOfRooms:
+                  type: number
+                  description: the total number of rooms in the home
+                numberofOccupants:
+                  type: number
+                  description: the total number of occupants in the home
+                yearBuilt:
+                  type: number
+                  description: the year of the home's construction
+                livingArea:
+                  type: object
+                  properties:
+                    value:
+                      type: number
+                      description: the value of the living area
+                    unitOfMeasure:
+                      type: string
+                      description: the unit of measure for the living area
+                ownershipType:
+                  type: string
+                  description: the type of ownership for the home
+                insulationType:
+                  type: string
+                  description: the insulation type of the home
+                windowType:
+                  type: string
+                  description: the type of windows in the home
+     
+      
+  ### Comparison Profile (SHC) ###
+    ComparisonProfileResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            comparison-profile:
+              type: object
+              properties:
+                shc:
+                  type: object
+                  properties:
+                    clusterId:
+                      type: string
+                      description: the Id of the Similar Home Cluster the customer belongs to
+                    fuelType:
+                      type: string
+                      enum: [ELECTRIC, GAS]
+                      description: the type of fuel (electricity or gas) for which the comparison is executed
+                    noOfHomes:
+                      type: number
+                      description: the number of homes in the Cluster
+                    radius:
+                      type: object
+                      description: the number of homes in the Cluster                
+                      properties:
+                        value: 
+                          type: number
+                        unit:
+                          type: string
+                          enum: [mls,km]
+                    billCycles:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          billStartDate:
+                            type: string
+                            format: date-time
+                            description: the start date for the comparison period
+                          billEndDate:
+                            type: string
+                            format: date-time
+                            description: the end date for the comparison period
+                          appliances:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ApplianceComparisonDetails' 
+                
+                    
+    ApplianceComparisonDetails:
+      type: object
+      properties:
+        applianceName:
+          type: string
+          description: the name of the appliance for the comparison run
+        efficientThreshold:
+          type: number
+          description: "the threshold value for customers considered 'efficient'"
+        benchmarkConsumption:
+          type: number
+          description: ...
+        currentBCSelfCost:
+          type: number
+          description: ...
+        userConsumption:
+          type: number
+          description: ...
+        consumption0percentile:
+          type: number
+          description: the value for the 0 percentile
+        consumption10percentile:
+          type: number
+          description: the value for the 10 percentile
+        consumption20percentile:
+          type: number
+          description: the value for the 20 percentile
+        consumption30percentile:
+          type: number
+          description: the value for the 30 percentile
+        consumption40percentile:
+          type: number
+          description: the value for the 40 percentile
+        consumption50percentile:
+          type: number
+          description: the value for the 50 percentile
+        consumption60percentile:
+          type: number
+          description: the value for the 60 percentile
+        consumption70percentile:
+          type: number
+          description: the value for the 70 percentile
+        consumption80percentile:
+          type: number
+          description: the value for the 80 percentile
+        consumption90percentile:
+          type: number
+          description: the value for the 90 percentile
+        consumption100percentile:
+          type: number
+          description: the value for the 100 percentile                          
+
+
+
+
+ ### BILL PROJECTION Profile ###
+
+    BillProjectionProfileResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility      
+            bill-projection:
+              type: object
+              properties:
+                billCycleStartDate:
+                  type: string
+                  format: date-time
+                  description: the start date for the Billing Cycle
+                billCycleEndDate:
+                  type: string
+                  format: date-time
+                  description: the end date for the Billing Cycle
+                billProjectionDate:
+                  type: string
+                  format: date-time
+                  description: the date for Bill Projection execution. This date falls between the start and end dates of the billing cycle.
+                fuelType:
+                  type: string
+                  enum: [ELECTRIC, GAS]
+                  description: the fuel type for the projection
+                projectionSpending:
+                  type: object
+                  properties:
+                    cost:
+                      type: number
+                      format: double
+                      description: the cost projected at the end of the billing cycle. The unit for the Cost is defined as the project-level currency unit.
+                    consumption:
+                      type: number
+                      format: double
+                      description: the consumption projected at the end of the billing cycle. The unit for the consumption is defined as the project-level energy unit for the corresponding Fuel Type.
+                currentSpending:
+                  type: object
+                  properties:
+                    cost:
+                      type: number
+                      format: double
+                      description: the amount calculated at the Bill Projection date. The unit for the Cost is defined as the project-level currency unit.
+                    consumption:
+                      type: number
+                      format: double
+                      description: the consumption calculated at the Bill Projection date. The unit for the consumption is defined as the project-level energy unit for the corresponding Fuel Type.
+                averageBillingPrice:
+                  type: number
+                  format: double
+                  description: the average price calculated for the current billing cycle so far. This is provided only if the Projection calculation is being returned in currency.
+                remainingDays:
+                  type: number
+                  format: integer
+                  description: the days remaining in the billing cycle after the projection date.
+
+    
+ 
+  
+     ### RATE COMPARISON Profile ###  
+     
+    RateComparisonProfileResponse:
+      type: object
+      description: "this object returns the details of a rate comparison analysis, between the customer's current rate plan, and one or more alternative rate plans. Bidgely executes the rate comparison calculation as part of its analytics. " 
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            rate-comparisons:
+              type: object
+              properties:
+                creationDate:
+                  type: number
+                  format: date-time
+                  description: the date in which the comparison is calculated
+                comparisonStart:
+                  type: number
+                  format: date-time
+                  description: the start date for the comparison period
+                comparisonEnd:
+                  type: number
+                  format: date-time
+                  description: the end date for the comparison period
+                fuelType:
+                  type: string
+                  enum: [ELECTRIC, GAS]
+                  description: the fuel type for the rates
+                totalUsageInPeriod:
+                  type: number
+                  format: double
+                  description: the customer's total usage across the whole query period
+                comparedRates:
+                  type: array
+                  description: the list of rates calculated in the comparison
+                  items: 
+                    $ref: '#/components/schemas/rateResult'
+            
+    rateResult:
+      type: object
+      properties:
+        isCurrent:
+          type: boolean
+          description: flag to indicate whether the rate is currently applied to the customer's contract
+        rateId:
+          type: string
+          description: the internal Id for the rate
+        rateName:
+          type: string
+          description: the rate's name
+        totalCost:
+          type: number
+          format: double
+          description: the total cost calculated for the rate
+        matchPercentage:
+          type: number
+          format: double
+          description: the matching percentage of the rate to the customer's profile
+        additionalSavings:
+          type: number
+          format: double
+          description: the amount of yearly savings that would be generated by this rate  
+  
+ ################################################# RANKING OBJECTS
+    Ranking:
+      type: object
+      properties:
+        rank:
+          type: number
+          format: integer
+        score:
+          type: number
+          format: double
+
+
+ ################################################# INSIGHTS
+
+### INSIGHT object ###
+    Insight:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "the Insight's Id as defined in Bidgely's Insights Catalogue"
+        language:
+          type: string
+          description: the language locale for the insight's textual content
+        text:
+          type: string
+          description: the Insight's title text
+        description:
+          type: string
+          description: the description of the Insight
+        message:
+          type: string
+          description: the message template for the insight
+        values:
+          type: object
+          description: the list of personalized parameter values for the customer generated by Bidgely's engine
+          additionalProperties:
+              type: string
+          example:
+              value: 20
+              UoM: "%"
+              appliance: "Cooling"
+              cohort: "SHC"
+              cycle: "Monthly"
+
+    InsightsDataResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            insightsData:
+              type: array
+              items:
+                type: object
+                allOf:
+                  - $ref: '#/components/schemas/Ranking'
+                  - $ref: '#/components/schemas/Insight'
+
+    InsightsAssets:
+        type: object
+        properties:
+          insightId:
+            type: string
+            description: the insight's unique id
+        additionalProperties:
+          type: string
+        example: 
+          insightId: i_00156        
+          image-small: "/users/{user-id}/homes/{home-id}/interactions/insights/assets/image/small/i05.bmp"            
+          image-medium: "/users/{user-id}/homes/{home-id}/interactions/insights/assets/image/medium/i05.bmp"        
+          image-large: "/users/{user-id}/homes/{home-id}/interactions/insights/assets/image/large/i05.bmp"        
+          html: "/users/{user-id}/homes/{home-id}/interactions/insights/assets/html/i05.html" 
+
+    InsightsAssetsResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            insightAssets:
+              $ref: '#/components/schemas/InsightsAssets'
+  
+### INSIGHT def objects ###
+    insights-family-def:
+      type: object
+      properties:
+        id:
+          type: string
+          description: the insights family unique identifier within Bidgely's Insights Catalogue
+        text-id:
+          type: string
+          format: uri
+          description: the title of the insights family
+        message-id:
+          type: string
+          format: uri
+          description: the dynamic text for the insights family. This text includes one or more variable parameters, identified by the '{$<name>}' string, where <name> is the parameter's name
+        parameters:
+          type: array
+          description: the list of parameter names for the message
+          items:
+            type: string
+            
+    insights-family-resources-def:
+      type: object
+      properties:
+        id:
+          type: string
+          description: the insights family unique identifier within Bidgely's Insights Catalogue
+        text:
+          type: string
+          format: uri
+          description: the uri for the insights family title text
+        description:
+          type: string
+          format: uri
+          description: the uri for the insights family description
+        message:
+          type: string
+          format: uri
+          description: the uri for the insights family message
+      additionalProperties:
+        type: string
+      example:
+        APPLIANCE_IMAGE: https://bidgely.com/resources/images/insights/family/IF21/{APPLIANCE_IMAGE}.jpg
+        COHORT_IMAGE: https://bidgely.com/resources/images/insightsfamily//IF21/{COHORT_IMAGE}.jpg
+        insight_logo:  https://bidgely.com/resources/images/insights/family/IF21/insight_logo.jpg
+        upward_arrow_red: https://bidgely.com/resources/images/insights/family/IF21/upward_arrow_red.jpg
+        downward_arrow_green:  https://bidgely.com/resources/images/insights/family/IF21/upward_arrow_green.jpg
+        unhappy_emoji: https://bidgely.com/resources/emojis/insights/family/IF21/unhappy_emoji.jpg
+
+      
+    insight-def:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "The unique Id for the Insight within Bidgely's Insights Catalogue"
+        parameter-values:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+            example:
+              value: "{$value}"
+              comparison: less efficient
+              UoM: "%"
+              appliance: Cooling
+              cohort: Similar homes 
+              cycle: last month
+
+
+
+
+### INSIGHT Resources ###
+    insight-resources-def:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "The unique Id for the Insight within Bidgely's Insights Catalogue"
+        language:
+          type: string
+          description: "The language locale for the insights textual content"
+          example: en-US
+        text:
+          type: string
+          format: URI
+          description: "The URI for the insight's text. This eventually overrides the same configuration at insight family level"
+        description:
+          type: string
+          format: URI
+          description: "The URI for the insight's description. This eventually overrides the same configuration at insight family level"
+        message:
+          type: string
+          format: URI
+          description: "The URI for the insight's message. This eventually overrides the same configuration at insight family level"
+      additionalProperties:
+        type: string
+      example:
+        APPLIANCE_IMAGE: https://bidgely.com/resources/images/insights/I_0021/{APPLIANCE_IMAGE}.jpg
+        COHORT_IMAGE: https://bidgely.com/resources/images/insights/I_0021/{COHORT_IMAGE}.jpg
+        insight_logo:  https://bidgely.com/resources/images/insights/I_0021/insight_logo.jpg
+        upward_arrow_red:  https://bidgely.com/resources/images/insights/I_0021/upward_arrow_red.jpg
+        downward_arrow_green:  https://bidgely.com/resources/images/insights/I_0021/upward_arrow_green.jpg
+        unhappy_emoji: https://bidgely.com/resources/emojis/insights/I_0021/unhappy_emoji
+
+
+    insight-metadata-def:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "The unique Id for the Insight within Bidgely's Insights Catalogue"
+        parameter-values:
+          type: array
+          items:
+            type: object
+            additionalProperties:
+              type: string
+            example:
+              value: uri:text-pool-id
+              comparison: uri:text-pool-id
+              UoM: "%"
+              appliance: uri:text-pool-id
+              cohort: uri:text-pool-id
+              cycle: uri:text-pool-id
+       
+############################################ ACTIONS  
+
+
+    Action:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The Unique Id for the action as defined in Bidgely's Actions Catalog
+        language:
+          type: string
+          description: The language locale for the Action's textual content
+          example: en-us
+        text:    
+          type: string
+          format: URI
+          description: the URI containing the action's title text
+        description:
+          type: string
+          format: URI
+          description: the URI containing the action's description
+        message:
+          type: string
+          format: URI
+          description: the URI containing the action's message for the user
+        values: 
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            discount_value : 20
+            UoM: "%"
+            Optional_target_text: "from the utility market place"
+            Optional_target: "Nevada Energy Shop"
+
+            
+    ActionsAssets:
+        type: object
+        properties:
+          actionID:
+            type: string
+            description: the Action's unique id
+        additionalProperties:
+          type: string
+        example: 
+          actionId: "a_0025"
+          image-small: "/users/{user-id}/homes/{home-id}/interactions/actions/assets/image/small/a025.bmp"            
+          image-medium: "/users/{user-id}/homes/{home-id}/interactions/actions/assets/image/medium/a025.bmp"        
+          image-large: "/users/{user-id}/homes/{home-id}/interactions/actions/assets/image/large/a025.bmp"        
+          html: "/users/{user-id}/homes/{home-id}/interactions/actions/assets/html/a025.html" 
+
+### TARGET definition object ###
+    target-def:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique Id for the Target within Bidgely's Interactions Catalogue
+          example: T_0032
+        mime-type:
+          type: string
+          example: html
+        target:
+          type: string
+          format: URI
+          example: https://www.amazon.com/Hyperikon-Dimmable-Equivalent-Qualified-UL-Listed/dp/B0779C6F3Z....
+          
+          
+### ACTION definition object ###
+    action-def:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique Id for the Action within Bidgely's Interactions Catalogue
+          example: A_0078
+        type:
+          type: string
+          description: The type of action
+          enum: [TIPS, PROGRAMS, SERVICES, PRODUCTS]
+        language:
+          type: string
+          description: The locale for the action's content
+          example: en-US
+        text:
+          type: string
+          format: URI
+          description: The URI for the action's title text
+        description: 
+          type: string
+          format: URI
+          description: The URI for the action's title text
+        message:
+          type: string
+          format: URI
+          description: The URI for the action's localized dynamic content. Any variable text is represented by a {$<name>} tag
+        parameters:
+          type: array
+          description: the list of parameter names for the message
+          items:
+            type: string
+        source:
+          type: string
+          format: URI
+          description: the URI for the source of the action
+        item:
+          type: string
+          format: URI
+          description: the URI for the product item referred to by the action
+        targets:
+          type: array
+          description: the list of targets associated to an action
+          items:
+            type: string
+            format: URI
+          example: [T_021, T_022]
+        
+  
+### ACTION Resources definition ###
+    action-resources-def:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique Id for the Action within Bidgely's Interactions Catalogue
+          example: A_0078
+        contents:
+          type: array
+          items:
+            type: object
+            properties:
+              content-type:
+                type: string
+              target:
+                type: string
+                format: URI
+      additionalProperties:
+        type: string
+      example:
+        action_image: https://bidgely.com/resources/images/actions/A_0078.jpg
+        action_logo: https://bidgely.com/resources/images/action/logo/A_oo78.jpg
+            
+################################################## INTERACTIONS 
+
+    Interaction:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/Ranking' 
+        - type: object
+          properties:
+            insight:
+              type: object
+              allOf:
+                - $ref: '#/components/schemas/Insight'
+        - type: object
+          properties:
+            action:
+              type: object
+              allOf:
+                - $ref: '#/components/schemas/Action' 
+
+  
+    InteractionsResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            interactions:
+              type: array
+              items:
+                allOf:
+                 - $ref: '#/components/schemas/Interaction'    
+
+    InteractionAssetsResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            interactionAssets:
+              type: object
+              properties:
+                insightAssets:
+                  $ref: '#/components/schemas/InsightsAssets'
+                actionAssets:
+                  $ref: '#/components/schemas/ActionsAssets'
+                 
+            
+      
+
+################################################################################## ITEMIZATION ###    
+
+    ItemizationAppliance:
+      type: object
+      description: single itemization record
+      properties:
+        category:
+          type: string
+          description: the appliance category name
+          enum: [alwaysOn, refrigeration, spaceHeating, cooling, waterHeating, lighting, poolPump, EV, cooking, laundry, entertainment, other, solar,total]
+        consumption:
+          type: number
+          description: the energy consumption for the appliance category. The energy unit of measure for this value is the one configured for the project.
+        cost:
+          type: number
+          description: the currency amount for the appliance category. The currency unit for this value is the one configured for the project. 
+    
+    ItemizationFullcycleResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            itemization:
+              type: object
+              properties:
+                billCycles:
+                  type: array
+                  description: List of Itemization Full Cycle records
+                  items:
+                    type: object
+                    description: Appliance breakdown over one complete billing cycle
+                    properties:
+                      billStartDate:
+                        type: string
+                        format: date-time
+                        description: the start date of the itemization period
+                      billEndDate:
+                        type: string
+                        format: date-time
+                        description: the end date of the itemization period
+                      itemizationType:
+                        type: string
+                        description: the itemization type
+                        enum: [FULL_CYCLE]
+                      fuelType:
+                        type: string
+                        description: the fuel type
+                        enum: [ELECTRIC, GAS]
+                      appliances:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ItemizationAppliance'
+
+    ItemizationMTDResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            itemization:
+              type: object
+              properties:
+                billCycles:
+                  type: array
+                  description: List of Itemization MTD records
+                  items:
+                    type: object
+                    description: Appliance breakdown over month-till-date period
+                    properties:
+                      billStartDate:
+                        type: string
+                        format: date-time
+                        description: the start date of the Itemization period
+                      itemizationEndDate:
+                        type: string
+                        format: date-time
+                        description: the end date of the Itemization period
+                      itemizationType:
+                        type: string
+                        description: the type of itemization
+                        enum: [MTD]
+                      fuelType:
+                        type: string
+                        description: the fuel type
+                        enum: [ELECTRIC, GAS]
+                      remainingDays:
+                        type: number
+                        format: integer
+                        description: the number of days remaining in the billing cycle, which are not included in the Itemization computation
+                      appliances:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ItemizationAppliance'
+      
+        
+    SurveyResponse:
+      type: object
+      properties:
+        payload:
+          type: object
+          properties:
+            externalUserId:
+              type: string
+              description: the customer's unique Id, as provided by the utility        
+            externalHomeId:
+              type: string
+              description: the home's unique Id as provided by the utility
+            surveyId:
+              type: string
+              description: the survey's identifier
+            questions:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: the question's identifier
+                  order:
+                    type: number
+                    format: integer
+                    description: the question's order number
+                  state:
+                    type: string
+                    description: the state of the question (ANSWERED or UNANSWERED)
+                  info:
+                    type: string
+                    description: information text on the question
+                  parent:
+                    type: string
+                    description: the id of the parent question
+                  answerType:
+                    type: string
+                    description: the expected data type for the question's answer
+                  choices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                          description: the text for the answer option
+                        value:
+                          type: string
+                          description: the value of the answer option
+                        order:
+                          type: number
+                          format: integer
+                          description: the order number for the answer option
+                        write:
+                          type: object
+                          description: internal Bidgely object to decode the specific answer option
+                          properties:
+                            selected:
+                              type: string
+                            unselected:
+                              type: string
+                        read:
+                          type: object
+                          description: internal Bidgely object to decode the specific answer option
+                          properties:
+                            selected:
+                              type: string
+                            unselected:
+                              type: string
+                  answers:
+                    type: array
+                    description: list of answers provided by customer
+                    items:
+                      type: string
+                  stateMapper:
+                    type: string
+                    description: .
+                  mandatory:
+                    type: boolean
+                    description: indicates whether the question requires a mandatory answer or not
+                  feMultiplierForNumberTypeQuestion:
+                    type: string
+                    description: .
+                  type:
+                    type: string
+                  group:
+                    type: string
+                  text:
+                    type: string
+                    description: the question's text
+                  category:
+                    type: string
+                  profileCode:
+                    type: string
+                    
+  examples:
+    itemization-fullcycle-example:
+      value:
+        requestId: a0dd12df-fa47-48f0-b60c-c9460351d5bb
+        payload:
+          externalUserId: JnyYMTBjs50obU2
+          externalHomeId: '1'
+          itemization:
+            billCycles:
+              - billStartDate: '2019-02-28T05:00:00Z'
+                billEndDate: '2019-03-27T05:00:00Z'
+                itemizationType: FULL_CYCLE
+                fuelType: ELECTRIC
+                appliances:
+                  - category: waterHeating
+                    consumption: 111.27831525349158
+                    cost: 23.30167920303392
+                  - category: laundry
+                    consumption: 85.23077567158316
+                    cost: 17.847324417168178
+                  - category: cooking
+                    consumption: 76.02004916812923
+                    cost: 15.918598288259327
+                  - category: entertainment
+                    consumption: 65.60295340156263
+                    cost: 13.737258435774441
+                  - category: spaceHeating
+                    consumption: 40.959156088884974
+                    cost: 8.57684728094627
+                  - category: refrigeration
+                    consumption: 27.3189472383253
+                    cost: 5.720587548993214
+                  - category: alwaysOn
+                    consumption: 13.204997455850169
+                    cost: 2.7651264659440917
+                  - category: lighting
+                    consumption: 9.727730162728259
+                    cost: 2.0369866951095714
+                  - category: other
+                    consumption: 8.816075559385286
+                    cost: 1.8460862212600577
+                  - category: total
+                    consumption: 438.159
+                    cost: 91.75049455650151
+              - billStartDate: '2019-11-29T05:00:00Z'
+                billEndDate: '2019-12-28T05:00:00Z'
+                itemizationType: FULL_CYCLE
+                fuelType: ELECTRIC
+                appliances:
+                  - category: waterHeating
+                    consumption: 126.18737088031807
+                    cost: 26.42363551586459
+                  - category: laundry
+                    consumption: 97.32613047860697
+                    cost: 20.380091763503962
+                  - category: cooking
+                    consumption: 83.36492093537879
+                    cost: 17.456614479229938
+                  - category: entertainment
+                    consumption: 71.78132754804064
+                    cost: 15.031010019007812
+                  - category: spaceHeating
+                    consumption: 41.29055860039191
+                    cost: 8.646242988436638
+                  - category: refrigeration
+                    consumption: 28.393050246051
+                    cost: 5.945504733566804
+                  - category: alwaysOn
+                    consumption: 14.38599697323869
+                    cost: 3.012427772298414
+                  - category: lighting
+                    consumption: 8.419627195863955
+                    cost: 1.7630699383853377
+                  - category: other
+                    consumption: 9.619017142043539
+                    cost: 2.0142221936240983
+                  - category: total
+                    consumption: 480.768
+                    cost: 100.6728194039315
+        error: null
+   
+    survey-example:
+      value:
+        requestId: 318a6b65-901f-43b6-9167-611dc8782633
+        payload:
+          surveyId: defaultSurvey
+          externalUserId: JnyYMTBjs50obU2
+          externalHomeId: '1'
+          questions:
+            - id: Q1
+              order: 1
+              state: ANSWERED
+              options: null
+              info: null
+              parent: null
+              answerType: BOOLEAN
+              choices:
+                - text: 'Yes'
+                  value: 'true'
+                  order: 1
+                  write:
+                    selected: 'HP:ownershipType:Owned'
+                    unselected: null
+                  read:
+                    selected: 'HP:ownershipType:D:owned'
+                    unselected: null
+                - text: 'No'
+                  value: 'false'
+                  order: 2
+                  write:
+                    selected: 'HP:ownershipType:Rented'
+                    unselected: null
+                  read:
+                    selected: 'HP:ownershipType:D:rented'
+                    unselected: null
+              answers:
+                - 'false'
+              stateMapper: HP-ownershipType
+              mandatory: false
+              feMultiplierForNumberTypeQuestion: null
+              type: SINGLE
+              group: ESSENTIALS
+              text: Do you own your home?
+              category: null
+              profileCode: HP
+            - id: Q2
+              order: 2
+              state: ANSWERED
+              options: null
+              info: null
+              parent: null
+              answerType: NON_BOOLEAN
+              choices:
+                - text: Single Family
+                  value: singleFamily
+                  order: 1
+                  write:
+                    selected: 'HP:dwelling:1'
+                    unselected: null
+                  read:
+                    selected: 'HP:dwelling:D:1'
+                    unselected: null
+                - text: Apartment / Condo
+                  value: Apartment
+                  order: 2
+                  write:
+                    selected: 'HP:dwelling:2'
+                    unselected: null
+                  read:
+                    selected: 'HP:dwelling:D:2'
+                    unselected: null
+                - text: Townhome
+                  value: townhome
+                  order: 3
+                  write:
+                    selected: 'HP:dwelling:6'
+                    unselected: null
+                  read:
+                    selected: 'HP:dwelling:D:6'
+                    unselected: null
+                - text: Manufactured Home
+                  value: manufacturedHome
+                  order: 4
+                  write:
+                    selected: 'HP:dwelling:8'
+                    unselected: null
+                  read:
+                    selected: 'HP:dwelling:D:8'
+                    unselected: null
+              answers:
+                - townhome
+              stateMapper: HP-dwelling
+              mandatory: false
+              feMultiplierForNumberTypeQuestion: null
+              type: SINGLE
+              group: ESSENTIALS
+              text: What best describes your home?
+              category: null
+              profileCode: HP
+            - id: Q2a
+              order: 3
+              state: ANSWERED
+              options: null
+              info: null
+              parent:
+                id: Q2
+                value:
+                  - singleFamily
+                  - townhome
+                  - manufacturedHome
+              answerType: NON_BOOLEAN
+              choices:
+                - text: 'Yes'
+                  value: 'true'
+                  order: 1
+                  write:
+                    selected: 'AP:2:C:1, AP:2:T:ELECTRIC'
+                    unselected: null
+                  read:
+                    selected: 'AP:2:C:1-'
+                    unselected: null
+                - text: 'No'
+                  value: 'false'
+                  order: 2
+                  write:
+                    selected: 'AP:2:C:0'
+                    unselected: null
+                  read:
+                    selected: 'AP:2:C:0-1'
+                    unselected: null
+              answers:
+                - 'true'
+              stateMapper: 'AP:2-C'
+              mandatory: false
+              feMultiplierForNumberTypeQuestion: null
+              type: SINGLE
+              group: ESSENTIALS
+              text: Do you have a pool?
+              category: null
+              profileCode: AP
+            - id: Q2aa
+              order: 4
+              state: ANSWERED
+              options: null
+              info: null
+              parent:
+                id: Q2a
+                value:
+                  - 'true'
+              answerType: BOOLEAN
+              choices:
+                - text: 'Yes'
+                  value: 'true'
+                  order: 1
+                  write:
+                    selected: 'AP:56:C:1'
+                    unselected: null
+                  read:
+                    selected: 'AP:56:C:1-'
+                    unselected: null
+                - text: 'No'
+                  value: 'false'
+                  order: 2
+                  write:
+                    selected: 'AP:56:C:0'
+                    unselected: null
+                  read:
+                    selected: 'AP:56:C:0-1'
+                    unselected: null
+              answers:
+                - 'false'
+              stateMapper: 'AP:56-C'
+              mandatory: false
+              feMultiplierForNumberTypeQuestion: null
+              type: SINGLE
+              group: ESSENTIALS
+              text: Do you have an electric pool heater?
+              category: null
+              profileCode: AP
+            - id: Q2ab
+              order: 5
+              state: ANSWERED
+              options: null
+              info: null
+              parent:
+                id: Q2a
+                value:
+                  - 'true'
+              answerType: NON_BOOLEAN
+              choices:
+                - text: Single Speed
+                  value: singleSpeed
+                  order: 1
+                  write:
+                    selected: 'AP:2:C:1,AP:2:A:TYPE-singleSpeed, AP:2:T:ELECTRIC'
+                    unselected: null
+                  read:
+                    selected: 'AP:2:A:TYPE-singleSpeed'
+                    unselected: null
+                - text: Variable Speed
+                  value: variableSpeed
+                  order: 2
+                  write:
+                    selected: 'AP:2:C:1,AP:2:A:TYPE-variableSpeed, AP:2:T:ELECTRIC'
+                    unselected: null
+                  read:
+                    selected: 'AP:2:A:TYPE-variableSpeed'
+                    unselected: null
+                - text: Other
+                  value: other
+                  order: 3
+                  write:
+                    selected: 'AP:2:C:1,AP:2:A:TYPE-other, AP:2:T:ELECTRIC'
+                    unselected: null
+                  read:
+                    selected: 'AP:2:A:TYPE-other'
+                    unselected: null
+              answers:
+                - variableSpeed
+              stateMapper: 'AP:2-A'
+              mandatory: false
+              feMultiplierForNumberTypeQuestion: null
+              type: SINGLE
+              group: EXPERT
+              text: What type of pool pump do you have?
+              category: null
+              profileCode: AP
+            - id: Q2b
+              order: 6
+              state: ANSWERED
+              options: null
+              info: null
+              parent:
+                id: Q2
+                value:
+                  - singleFamily
+                  - townhome
+                  - manufacturedHome
+              answerType: BOOLEAN
+              choices:
+                - text: 'Yes'
+                  value: 'true'
+                  order: 1
+                  write:
+                    selected: 'AP:18:C:1'
+                    unselected: null
+                  read:
+                    selected: 'AP:18:C:1-'
+                    unselected: null
+                - text: 'No'
+                  value: 'false'
+                  order: 2
+                  write:
+                    selected: 'AP:18:C:0'
+                    unselected: null
+                  read:
+                    selected: 'AP:18:C:0-1'
+                    unselected: null
+              answers:
+                - 'true'
+              stateMapper: 'AP:18-C'
+              mandatory: false
+              feMultiplierForNumberTypeQuestion: null
+              type: SINGLE
+              group: ESSENTIALS
+              text: Do you have an Electric Vehicle (EV)?
+              category: null
+              profileCode: AP
+            - id: Q2ba
+              order: 7
+              state: ANSWERED
+              options: null
+              info: null
+              parent:
+                id: Q2b
+                value:
+                  - 'true'
+              answerType: NON_BOOLEAN
+              choices:
+                - text: Always
+                  value: '3'
+                  order: 1
+                  write:
+                    selected: 'AP:18:S:3'
+                    unselected: null
+                  read:
+                    selected: 'AP:18:S:3'
+                    unselected: null
+                - text: Sometimes
+                  value: '1'
+                  order: 2
+                  write:
+                    selected: 'AP:18:S:1'
+                    unselected: null
+                  read:
+                    selected: 'AP:18:S:1'
+                    unselected: null
+                - text: Never
+                  value: '0'
+                  order: 3
+                  write:
+                    selected: 'AP:18:S:0'
+                    unselected: null
+                  read:
+                    selected: 'AP:18:S:0'
+                    unselected: null
+              answers:
+                - '1'
+              stateMapper: 'AP:18-S'
+              mandatory: false
+              feMultiplierForNumberTypeQuestion: null
+              type: SINGLE
+              group: ESSENTIALS
+              text: Do you charge your Electric Vehicle (EV) at home?
+              category: null
+              profileCode: AP
+            - id: Q2baa
+              order: 8
+              state: ANSWERED
+              options: null
+              info: null
+              parent:
+                id: Q2ba
+                value:
+                  - '3'
+                  - '1'
+              answerType: NON_BOOLEAN
+              choices:
+                - text: 0-10
+                  value: '10'
+                  order: 1
+                  write:
+                    selected: 'AP:18:A:MILES-10'
+                    unselected: null
+                  read:
+                    selected: 'AP:18:A:MILES-10'
+                    unselected: null
+                - text: 11-20
+                  value: '20'
+                  order: 2
+                  write:
+                    selected: 'AP:18:A:MILES-20'
+                    unselected: null
+                  read:
+                    selected: 'AP:18:A:MILES-20'
+                    unselected: null
+                - text: 20+
+                  value: '30'
+                  order: 3
+                  write:
+                    selected: 'AP:18:A:MILES-30'
+                    unselected: null
+                  read:
+                    selected: 'AP:18:A:MILES-30'
+                    unselected: null
+              answers:
+                - '10'
+              stateMapper: 'AP:18-A'
+              mandatory: false
+              feMultiplierForNumberTypeQuestion: null
+              type: SINGLE
+              group: ESSENTIALS
+              text: How many miles per day do you drive on average?
+              category: null
+              profileCode: AP
+
+      
+  
+#  securitySchemes:
+#   OAuth2:
+#      type: oauth2
+#      description: "This API uses OAuth 2 with the Authorization Code grant flow. Click on the Authorization URL below and enter your clientId and clientSecret in the 'Authentication Dialogue Box'. If the credentials are correct you will get a successful json response. Copy paste the value of 'access_token' field from that json into the dialog window which appears after clicking the Authentication button above."
+#      flows: 
+#        authorizationCode:
+#          authorizationUrl: https://<bidgely server>/oauth/authorize
+#          tokenUrl: https://<bidgely server>/oauth/token?grant_type=client_credentials&scope=all
+#          scopes:
+#           partner: Bidgely Partner Scope

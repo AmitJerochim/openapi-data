@@ -1,0 +1,788 @@
+penapi: 3.0.0
+info:
+  title: 'Professional Odoo REST API'
+  version: '1'
+  description: >-
+    <h3><b style='color:#3b4151'>By default, all Odoo models have a flat and non-predefined response schema.
+    <h3><b style='color:#3b4151'>There are two possible ways to set up predefined schemas for any Odoo model - [in UI mode](https://apps.odoo.com/apps/modules/13.0/rest_api/#setup_in_ui_mode) or by [generating a special file](https://apps.odoo.com/apps/modules/13.0/rest_api/#setup_generating_file).
+    <h3><b style='color:#3b4151'>The following models have a predefined and tree-like response schema 'out of the box':<br> - res.partner, sale.order, sale.order.line, product.template, account.invoice, account.invoice.line.
+    <h3><b style='color:#3b4151'>In all endpoints, you can send all query parameters through the request body (in json format), in this case you should set the header \"Content-Type: text/html\".
+    <h3><b style='color:red'>By default, all tests below are uses a demo access token with infinite lifetime.
+  license:
+    name: 'API website'
+    url: 'https://www.odoo.com/apps/modules/12.0/rest_api'
+externalDocs:
+  description: 'Demo server'
+  url: 'https://rest-api-demo.dsdatacloud.de/web/login'
+
+servers:
+  - url: https://rest-api-demo.dsdatacloud.de
+    description: Odoo v12
+
+tags:
+  - name: Authentication
+  - name: Models
+  - name: Reports
+
+components:
+  schemas:
+    err:
+      type: object
+      properties:
+        error:
+          description: Error by one-word
+          type: string
+        error_descrip:
+          description: Error description
+          type: string
+
+paths:
+  #-------------------------------------------------------------------------------
+  /api/auth/get_tokens:
+    post:
+      tags:
+        - Authentication
+      summary: LOGIN IN ODOO AND GET ACCESS TOKEN AND REFRESH TOKEN
+      description: Return access token (besides other data), its should be set in the header of all other API calls.
+      parameters:
+        - name: db
+          description: Odoo db name
+          in: query
+          required: true
+          example: rest_api_demo
+          schema:
+            type: string
+        - name: username
+          description: Odoo user name
+          in: query
+          required: true
+          example: demo
+          schema:
+            type: string
+        - name: password
+          description: Odoo user password
+          in: query
+          required: true
+          example: demo
+          schema:
+            type: string
+        - name: access_lifetime
+          description: Access token lifetime (seconds). By default, the value is taken from the Odoo System Parameter "rest_api.access_token_expires_in"
+          in: query
+          schema:
+            type: integer
+        - name: refresh_lifetime
+          description: Refresh token lifetime (seconds). By default, the value is taken from the Odoo System Parameter "rest_api.refresh_token_expires_in"
+          in: query
+          schema:
+            type: integer
+      #--------------------------
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  expires_in:
+                    description: Access token lifetime (seconds)
+                    type: integer
+                  refresh_token:
+                    type: string
+                  refresh_expires_in:
+                    description: Refresh token lifetime (seconds)
+                    type: integer
+                  uid:
+                    description: Odoo user ID
+                    type: integer
+                  company_id:
+                    description: Odoo user's company ID
+                    type: integer
+                  user_context:
+                    description: Odoo user's context
+                    type: object
+                example:
+                  access_token: 38a247103d440d9978357ac674df9ef3d89ec8db
+                  expires_in: 600
+                  refresh_token: d0b099be9245ef8d547fccdf03b47c0260cd1f0d
+                  refresh_expires_in: 7200
+                  uid: 6
+                  company_id: 1
+                  user_context: {"tz": "Europe/Brussels", "lang": "en_US", "uid": 6}
+        '400 ':
+          description: "ERROR: Wrong db name!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: wrong_dbname
+                error_descrip: "Wrong 'dbname'!"
+        '400  ':
+          description: "ERROR: Empty value of 'db' or 'username' or 'password'!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: empty_db_or_username_or_password
+                error_descrip: "Empty value of 'db' or 'username' or 'password'!"
+        '401':
+          description: "ERROR: Odoo User authentication failed!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: odoo_user_authentication_failed
+                error_descrip: "Odoo User authentication failed!"
+  #-------------------------------------------------------------------------------
+  /api/auth/refresh_token:
+    post:
+      tags:
+        - Authentication
+      summary: REFRESH ACCESS TOKEN
+      description: Delete access token, then create and return a new one.
+      parameters:
+        - name: refresh_token
+          description: Refresh token
+          in: query
+          required: true
+          example: d0b099be9245ef8d547fccdf03b47c0260cd1f0d
+          schema:
+            type: string
+        - name: access_lifetime
+          description: Access token lifetime (seconds). By default, the value is taken from the Odoo System Parameter "rest_api.access_token_expires_in"
+          in: query
+          schema:
+            type: integer      
+      #--------------------------
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  expires_in:
+                    description: Access token lifetime (seconds)
+                    type: integer
+                example:
+                  access_token: 38a247103d440d9978357ac674df9ef3d89ec8db
+                  expires_in: 600
+        '400':
+          description: "ERROR: No refresh token was provided in request!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: no_refresh_token
+                error_descrip: "No refresh token was provided in request!"
+        '401':
+          description: "ERROR: Token is expired or invalid!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_token
+                error_descrip: "Token is expired or invalid!"
+  #-------------------------------------------------------------------------------
+  /api/auth/delete_tokens:
+    post:
+      tags:
+        - Authentication
+      summary: DELETE TOKENS
+      description: Delete access token and delete refresh token.
+      parameters:
+        - name: refresh_token
+          description: Refresh token
+          in: query
+          required: true
+          example: d0b099be9245ef8d547fccdf03b47c0260cd1f0d
+          schema:
+            type: string
+      #--------------------------
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  {}
+        '400':
+          description: "ERROR: No refresh token was provided in request!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: no_refresh_token
+                error_descrip: "No refresh token was provided in request!"
+  #-------------------------------------------------------------------------------
+  /api/{model}:
+    #----------------------------------------------
+    get:
+      tags:
+        - Models
+      summary: READ ALL RECORDS
+      description: Read all records of model (with optional parameters).<br> The schema of response fields may be predefined, tree-like and statically customizable; schema [example](https://apps.odoo.com/apps/modules/12.0/rest_api/#example3).<br> Also you can dynamically exclude or include fetching fields.
+      parameters:
+        - name: Access-Token
+          description: Access token
+          in: header
+          required: true
+          example: 4ffd0e156d4f8042d1ec0dabb1ed7c5946514131
+          schema:
+            type: string
+        - name: model
+          description: Model name
+          in: path
+          required: true
+          example: res.partner
+          schema:
+            type: string
+        - name: filters
+          description: Odoo search domain
+          in: query
+          example: "[('name', 'not ilike', 'company'), ('id', '<=', 35)]"
+          schema:
+            type: string
+        - name: offset
+          description: Offset
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          description: Limit
+          in: query
+          example: 50
+          schema:
+            type: integer
+        - name: order
+          description: Order
+          in: query
+          example: id desc, name
+          schema:
+            type: string
+        - name: exclude_fields
+          description: Exclude this fields from response. Values '*' or '\_\_all_fields\_\_' - excludes all fields.
+          in: query
+          example: "['name', 'id']"
+          schema:
+            type: string
+        - name: include_fields
+          description: Include this fields in response
+          in: query
+          example: "['name', 'id']"
+          schema:
+            type: string
+      #--------------------------
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    description: Number of returned records
+                    type: integer
+                  results:
+                    description: List of records data
+                    type: array
+                    items:
+                      type: object
+                example:
+                  count: 0
+                  results: []
+        '401':
+          description: "ERROR: Token is expired or invalid!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_token
+                error_descrip: "Token is expired or invalid!"
+        '400':
+          description: "ERROR: No access token was provided in request header!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: no_access_token
+                error_descrip: "No access token was provided in request header!"
+    #----------------------------------------------
+    post:
+      tags:
+        - Models
+      summary: CREATE ONE
+      description: Create one record of model.<br> The schema of response fields may be predefined, tree-like and statically customizable; schema [example](https://apps.odoo.com/apps/modules/12.0/rest_api/#example3).<br> Also you can statically define the default values of fields.
+      parameters:
+        - name: Access-Token
+          description: Access token
+          in: header
+          required: true
+          example: 4ffd0e156d4f8042d1ec0dabb1ed7c5946514131
+          schema:
+            type: string
+        - name: model
+          description: Model name
+          in: path
+          required: true
+          example: res.partner
+          schema:
+            type: string
+        - name: values
+          description: Values of fields (only data, without parameter name). See [example](https://apps.odoo.com/apps/modules/12.0/rest_api/#example5).
+          in: query
+          required: true
+          example: '{"name": "TEST Name", "country_id": 231, "street": "TEST Street", "city": "TEST City", "image": "iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4wcaCiUZUI9VlgAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAjUlEQVRo3u3ZMQqAMAyF4RcRHAWdXLSH8P5Xq4t7pbWFhP9Bp4DwNZWItSxlBcikIAECBAiQ+lhh3XQECBAgQIAAAQIEyJePSheQrVDfvUBSYx3I37ka63SEjlTs+CLpiAA5Pc2R9V2jjlXXyZ4GvuiSZFwrAHEE4ZcpECBAgADxlrnHQzMdAQIECJBCHs8gCDb1C3I1AAAAAElFTkSuQmCC"}'
+          schema:
+            type: object
+      #--------------------------
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {"id": 57, "name": "CREATED partner", "country_id": {"code": "US"}}
+        '401':
+          description: "ERROR: Token is expired or invalid!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_token
+                error_descrip: "Token is expired or invalid!"
+        '400':
+          description: "ERROR: No access token was provided in request header!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: no_access_token
+                error_descrip: "No access token was provided in request header!"
+        '409':
+          description: "ERROR: Not created object in Odoo! <odoo_error>"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: not_created_object_in_odoo
+                error_descrip: "Not created object in Odoo! ERROR: <odoo_error>"
+  #-------------------------------------------------------------------------------
+  /api/{model}/{id}:
+    get:
+      tags:
+        - Models
+      summary: READ ONE
+      description: Read one record of model.<br> The schema of response fields may be predefined, tree-like and statically customizable; schema [example](https://apps.odoo.com/apps/modules/12.0/rest_api/#example3).<br> Also you can dynamically exclude or include fetching fields.
+      parameters:
+        - name: Access-Token
+          description: Access token
+          in: header
+          required: true
+          example: 4ffd0e156d4f8042d1ec0dabb1ed7c5946514131
+          schema:
+            type: string
+        - name: model
+          description: Model name
+          in: path
+          required: true
+          example: sale.order
+          schema:
+            type: string
+        - name: id
+          description: Record ID
+          in: path
+          required: true
+          example: 21
+          schema:
+            type: integer
+        - name: search_field
+          description: Some field name. For searching object not by 'id' field.
+          in: query
+          schema:
+            type: string
+        - name: exclude_fields
+          description: Exclude this fields from response. Values '*' or '\_\_all_fields\_\_' - excludes all fields.
+          in: query
+          example: "['name', 'id']"
+          schema:
+            type: string
+        - name: include_fields
+          description: Include this fields in response
+          in: query
+          example: "['name', 'id']"
+          schema:
+            type: string
+      #--------------------------
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: "ERROR: Token is expired or invalid!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_token
+                error_descrip: "Token is expired or invalid!"
+        '400 ':
+          description: "ERROR: No access token was provided in request header!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: no_access_token
+                error_descrip: "No access token was provided in request header!"
+        '400  ':
+          description: "ERROR: Invalid object 'id'!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_object_id
+                error_descrip: "Invalid object 'id'!"
+        '404':
+          description: "ERROR: Not found object(s) in Odoo!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: not_found_object_in_odoo
+                error_descrip: "Not found object(s) in Odoo!"
+  #-------------------------------------------------------------------------------
+  /api/{model}/{ids}:
+    #----------------------------------------------
+    put:
+      tags:
+        - Models
+      summary: UPDATE ONE/MULTI
+      description: Update one/multi records of model.
+      parameters:
+        - name: Access-Token
+          description: Access token
+          in: header
+          required: true
+          example: 4ffd0e156d4f8042d1ec0dabb1ed7c5946514131
+          schema:
+            type: string
+        - name: model
+          description: Model name
+          in: path
+          required: true
+          example: res.partner
+          schema:
+            type: string
+        - name: ids
+          description: (One) record ID or (multi) records IDS (comma separated)
+          in: path
+          required: true
+          example: '147, 149, 154'
+          schema:
+            type: string
+        - name: values
+          description: Values of fields (only data, without parameter name). See [example](https://apps.odoo.com/apps/modules/12.0/rest_api/#example2).
+          in: query
+          required: true
+          example: '{"name": "TEST Name~~", "street": "TEST Street~~", "city": "TEST City~~"}'
+          schema:
+            type: object
+      #--------------------------
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  {}
+        '401':
+          description: "ERROR: Token is expired or invalid!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_token
+                error_descrip: "Token is expired or invalid!"
+        '400 ':
+          description: "ERROR: No access token was provided in request header!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: no_access_token
+                error_descrip: "No access token was provided in request header!"
+        '400  ':
+          description: "ERROR: Invalid object 'id'!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_object_id
+                error_descrip: "Invalid object 'id'!"
+        '409':
+          description: "ERROR: Not updated object in Odoo! <odoo_error>"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: not_updated_object_in_odoo
+                error_descrip: "Not updated object in Odoo! ERROR: <odoo_error>"
+    #----------------------------------------------
+    delete:
+      tags:
+        - Models
+      summary: DELETE ONE/MULTI
+      description: Delete one/multi records of model.<br> The existence of records doesn't check before deletion (default Odoo method behavior).
+      parameters:
+        - name: Access-Token
+          description: Access token
+          in: header
+          required: true
+          example: 4ffd0e156d4f8042d1ec0dabb1ed7c5946514131
+          schema:
+            type: string
+        - name: model
+          description: Model name
+          in: path
+          required: true
+          example: res.partner
+          schema:
+            type: string
+        - name: ids
+          description: (One) record ID or (multi) records IDS (comma separated)
+          in: path
+          required: true
+          example: '147, 149, 154'
+          schema:
+            type: string
+      #--------------------------
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  {}
+        '401':
+          description: "ERROR: Token is expired or invalid!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_token
+                error_descrip: "Token is expired or invalid!"
+        '400 ':
+          description: "ERROR: No access token was provided in request header!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: no_access_token
+                error_descrip: "No access token was provided in request header!"
+        '400  ':
+          description: "ERROR: Invalid object 'id'!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_object_id
+                error_descrip: "Invalid object 'id'!"
+        '409':
+          description: "ERROR: Not deleted object in Odoo! <odoo_error>"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: not_deleted_object_in_odoo
+                error_descrip: "Not deleted object in Odoo! ERROR: <odoo_error>"
+  #-------------------------------------------------------------------------------
+  /api/{model}/{ids}/{method}:
+    put:
+      tags:
+        - Models
+      summary: CALL METHOD
+      description: Call method of model's one/multi records.
+      parameters:
+        - name: Access-Token
+          description: Access token
+          in: header
+          required: true
+          example: 4ffd0e156d4f8042d1ec0dabb1ed7c5946514131
+          schema:
+            type: string
+        - name: model
+          description: Model name
+          in: path
+          required: true
+          example: res.partner
+          schema:
+            type: string
+        - name: ids
+          description: (One) record ID or (multi) records IDS (comma separated)
+          in: path
+          required: true
+          example: '7, 9, 5'
+          schema:
+            type: string
+
+        - name: method
+          description: Method name
+          in: path
+          required: true
+          example: _email_send
+          schema:
+            type: string
+        - name: parameters
+          description: Method parameters
+          in: query
+          example: '{"email_from": "test@test.com", "subject": "TEST Subject", "body": "TEST Body"}'
+          schema:
+            type: object
+      #--------------------------
+      responses:
+        '200':
+          description: OK - Raw returned method data
+        '401':
+          description: "ERROR: Token is expired or invalid!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_token
+                error_descrip: "Token is expired or invalid!"
+        '400 ':
+          description: "ERROR: No access token was provided in request header!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: no_access_token
+                error_descrip: "No access token was provided in request header!"
+        '400  ':
+          description: "ERROR: Invalid object 'id'!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_object_id
+                error_descrip: "Invalid object 'id'!"
+        '501':
+          description: "Method not exist in Odoo!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: method_not_exist_in_odoo
+                error_descrip: "Method not exist in Odoo!"
+        '409':
+          description: "ERROR: Not called method in Odoo! <odoo_error>"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: not_called_method_in_odoo
+                error_descrip: "Not called method in Odoo! ERROR: <odoo_error>"
+  #-------------------------------------------------------------------------------
+  /api/report/get_pdf:
+    put:
+      tags:
+        - Reports
+      summary: GET PDF REPORT
+      parameters:
+        - name: Access-Token
+          description: Access token
+          in: header
+          required: true
+          example: 4ffd0e156d4f8042d1ec0dabb1ed7c5946514131
+          schema:
+            type: string
+        - name: report_name
+          description: Report name
+          in: query
+          required: true
+          example: account.report_invoice
+          schema:
+            type: string
+        - name: ids
+          description: "Objects IDS. For Odoo v10 this parameter's name should be 'docids'."
+          in: query
+          required: true
+          example: '[3, 5]'
+          schema:
+            type: string
+      #--------------------------
+      responses:
+        '200':
+          description: OK - PDF report data in 'Base64' encoding
+        '401':
+          description: "ERROR: Token is expired or invalid!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: invalid_token
+                error_descrip: "Token is expired or invalid!"
+        '400':
+          description: "ERROR: No access token was provided in request header!"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: no_access_token
+                error_descrip: "No access token was provided in request header!"
+        '409':
+          description: "ERROR: Not called method in Odoo! <odoo_error>"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/err'
+              example:
+                error: not_called_method_in_odoo
+                error_descrip: "Not called method in Odoo! ERROR: <odoo_error>"

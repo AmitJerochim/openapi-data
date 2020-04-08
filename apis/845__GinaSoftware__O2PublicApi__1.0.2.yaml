@@ -1,0 +1,151 @@
+penapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/GinaSoftware/O2PublicApi/1.0.0
+  - description: Gina Software dev environment
+    url: https://dev.ginasystem.com/o2api/v1
+info:
+  version: "1.0.2"
+  title: Public API for O2.sk integration.
+  description: >-
+    Public API for O2.sk integration.
+    
+security:
+  - password:
+      - read
+      - write
+
+tags:
+- name: auth
+- name: orders
+      
+paths:
+  /auth:
+    post:
+      tags: 
+      - auth
+      summary: Logging into the system
+      description: >-
+        After succesful logging into the Gina system the access key is provided.
+      security: []
+      requestBody:
+        description: User credentials to obtain session key
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestBody'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionKey'
+        401:
+          description: Invalid credentials
+          
+  /orders:
+    post:
+      tags:
+      - orders
+      summary: Creating a new order operation
+      description: >-
+        This operation creates a new order record in the system.
+      security: 
+      - SessionKeyAuth: []
+      requestBody:
+        description: Order data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequestBody'
+      responses:
+        '200':
+          description: OK
+          
+components:
+  schemas:
+    CreateOrderRequestBody:
+      type: object
+      required:
+      - externalId
+      - orderType
+      - address
+      - company
+      properties:
+        externalId:
+          type: string
+          format: '1-[0-9]{11}'
+          example: '1-0154601214'
+        orderType:
+          type: string
+          enum:
+          - Maintenance
+          - NewService
+          - Dismantling
+          - EetMaintenance
+          - EetBasic
+          - EetAdvanced
+          - EetFull
+          example: 'EetBasic'
+        address:
+          type: string
+          format: string
+          example: 'Einsteinova 24, 851 01 Bratislava, Slovensko'
+        location:
+          type: object
+          properties:
+            latitude:
+              type: number
+              format: double
+              example: 48.1335011
+            longitude:
+              type: number
+              format: double
+              example: 17.1058072
+        customerContact:
+          type: object
+          properties:
+            name:
+              type: string
+              format: string
+              example: 'Miroslav Hruška'
+            phoneNumber:
+              type: string
+              format: string
+              example: '+421 123 456 789'
+        company:
+          type: string
+          format: string
+          example: 'FRxxx.xxxx.xxxx'
+        description:
+          type: string
+          format: string
+          example: 'platba kartou, posledné patro'
+    LoginRequestBody:
+      type: object
+      required:
+      - login
+      - password
+      properties:
+        login:
+          type: string
+          format: string
+          example: 'o2user123'
+        password:
+          type: string
+          format: base64
+          example: 'cGFzc3dvcmQ='
+    SessionKey:
+      type: string
+      format: string
+      example: '18ad144a'
+
+  securitySchemes:
+    SessionKeyAuth:
+      type: apiKey
+      in: header
+      name: SessionKey

@@ -1,0 +1,923 @@
+penapi: 3.0.3
+info:
+  title: Suretyship  Application Document
+  version: "1.0.3"
+  description: Generates a Suretyship Application PDF Document
+paths:
+  /applicationdocument:
+    post:
+      summary: Retuns a Suretyship application document in PDF format base64 encoded.
+      description: Retuns a Suretyship application document in PDF format base64 encoded.
+      parameters:
+        - in: header
+          name: X-CARDIF-CONSUMER
+          required: false
+          schema:
+            $ref: "#/components/headers/X-CARDIF-CONSUMER"
+        - in: header
+          name: X-CARDIF-EXT-REQ-ID
+          required: false
+          schema:
+            $ref: "#/components/headers/X-CARDIF-EXT-REQ-ID"
+      requestBody:
+        $ref: '#/components/requestBodies/SuretyshipRequest'
+      responses:
+        202:
+          $ref: '#/components/responses/SuccessGenericResponse'
+        400:
+          $ref: "#/components/responses/ErrorResponse"
+        401:
+          $ref: "#/components/responses/ErrorResponse"
+        404:
+          $ref: "#/components/responses/ErrorResponse"
+        500:
+          $ref: "#/components/responses/ErrorResponse"
+        501:
+          $ref: "#/components/responses/ErrorResponse"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+servers:
+  - url: 'https://netherlands.is.bnpparibascardif.com/suretyshipapi/v1'
+
+components:
+  requestBodies:
+    SuretyshipRequest:
+      description: Correspondence content and metadata
+      content: 
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SuretyshipRequest'
+  responses:
+    # Error responses
+    ErrorResponse:
+      description: Generic Error Response
+      headers:
+       X-CARDIF-CONSUMER:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-CONSUMER'
+       X-CARDIF-REQUEST-ID:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-REQUEST-ID'
+       X-CARDIF-EXT-REQ-ID:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-EXT-REQ-ID'
+       X-CARDIF-REQ-START:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-REQ-START'
+       X-CARDIF-REQ-END:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-REQ-END'
+       X-CARDIF-CTX-PATH:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-CTX-PATH'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    # Success responses
+    SuccessGenericResponse:
+      description: Generic Success Response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SuretyshipResponse'
+      headers:
+       X-CARDIF-CONSUMER:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-CONSUMER'
+       X-CARDIF-REQUEST-ID:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-REQUEST-ID'
+       X-CARDIF-EXT-REQ-ID:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-EXT-REQ-ID'
+       X-CARDIF-REQ-START:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-REQ-START'
+       X-CARDIF-REQ-END:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-REQ-END'
+       X-CARDIF-CTX-PATH:
+         schema:
+           $ref: '#/components/headers/X-CARDIF-CTX-PATH'
+
+  schemas:
+    SuretyshipRequest:
+      title: suretyship
+      description: Suretyship JSON Schema
+      type: object
+      properties:
+        Header:
+          $ref: '#/components/schemas/Header'
+        Persons:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/Person'
+        Insurance:
+          $ref: '#/components/schemas/Insurance'
+        InsuredObject:
+          $ref: '#/components/schemas/InsuredObject'
+        PurchaseAgreement:
+          $ref: '#/components/schemas/PurchaseAgreement'
+        Notary:
+          $ref: '#/components/schemas/Notary'
+      required:
+        - Header
+        - Insurance
+        - PurchaseAgreement
+    Address:
+      title: Address
+      description: Address JSON Schema
+      type: object
+      discriminator: 
+        propertyName: CountryCode
+        mapping:
+          NL: '#/components/schemas/AddressNL'
+      properties:
+        Street:
+          description: Street
+          type: string
+          maxLength: 100
+          example: Stationstreet
+        City:
+          type: string
+          maxLength: 90
+          example: Amsterdam
+        CountryCode:
+          $ref: '#/components/schemas/Countries'
+      required:
+        - Street
+        - City
+        - CountryCode
+    AddressNL:
+      title: AddressNL
+      description: NL address
+      allOf: # Combines the main `Address` schema with `NL`-specific properties 
+        - $ref: '#/components/schemas/Address'
+        - type: object
+          # all other properties specific to a `NL Address`
+          properties:
+            HouseNumber:
+              description: HouseNumber
+              type: integer
+              example: 22
+            HouseNumAddition:
+              description: Housenumber addition
+              type: string
+              maxLength: 15
+              example: B
+            Zipcode:
+              description: Zipcode
+              type: string
+              maxLength: 10
+              example: 1234AB
+          required:
+            - HouseNumAddition
+            - HouseNumber
+            - Zipcode
+    CompanyType:
+      title: CompanyType
+      description: |
+        Company types:
+        
+          AE: Agrarisch eigen Bedrijf
+          
+          AL: Agrarisch loonbedrijf
+          
+          BD: Bedrijf (onbekende rechtsvorm)
+          
+          BV: Besloten Vennootschap
+          
+          COOP: Coöperatie
+          
+          CV: Commanditair Vennootschap
+          
+          EEN: Eenmanszaak
+          
+          FA: Firma
+          
+          GEBR: Gebroeders
+          
+          MAAT: Maatschap
+          
+          NV: Naamloze Vennootschap
+          
+          OW: Onderlinge Waarborgmaatschappij
+          
+          ST: Stichting
+          
+          VER: Vereniging
+          
+          VOF: Vennootschap Onder Firma
+      type: string
+      enum: [AE, AL, BD, BV, COOP, CV, EEN, FA, GEBR, MAAT, NV, OW, ST, VER, VOF]
+    Countries:
+      title: Countries
+      description: Countries JSON Schema
+      type: string
+      maxLength: 3
+      enum:
+        - AE
+        - AF
+        - AG
+        - AI
+        - AL
+        - AM
+        - AO
+        - AQ
+        - AR
+        - AS
+        - AT
+        - AU
+        - AW
+        - AX
+        - AZ
+        - BA
+        - BB
+        - BD
+        - BE
+        - BF
+        - BG
+        - BH
+        - BI
+        - BJ
+        - BL
+        - BM
+        - BN
+        - BO
+        - BQ
+        - BR
+        - BS
+        - BT
+        - BV
+        - BW
+        - BY
+        - BZ
+        - CA
+        - CC
+        - CD
+        - CF
+        - CG
+        - CH
+        - CI
+        - CK
+        - CL
+        - CM
+        - CN
+        - CO
+        - CR
+        - CU
+        - CV
+        - CW
+        - CX
+        - CY
+        - CZ
+        - DE
+        - DJ
+        - DK
+        - DM
+        - DO
+        - DZ
+        - EC
+        - EE
+        - EG
+        - EH
+        - ER
+        - ES
+        - ET
+        - FI
+        - FJ
+        - FK
+        - FM
+        - FO
+        - FR
+        - GA
+        - GB
+        - GD
+        - GE
+        - GF
+        - GG
+        - GH
+        - GI
+        - GL
+        - GM
+        - GN
+        - GP
+        - GQ
+        - GR
+        - GS
+        - GT
+        - GU
+        - GY
+        - GZ
+        - HK
+        - HM
+        - HN
+        - HR
+        - HT
+        - HU
+        - ID
+        - IE
+        - IL
+        - IM
+        - IN
+        - IO
+        - IQ
+        - IR
+        - IS
+        - IT
+        - JE
+        - JM
+        - JO
+        - JP
+        - KE
+        - KG
+        - KH
+        - KI
+        - KM
+        - KN
+        - KP
+        - KR
+        - KW
+        - KY
+        - KZ
+        - LA
+        - LB
+        - LC
+        - LI
+        - LK
+        - LR
+        - LS
+        - LT
+        - LU
+        - LV
+        - LY
+        - MA
+        - MC
+        - MD
+        - ME
+        - MF
+        - MG
+        - MH
+        - MK
+        - ML
+        - MM
+        - MN
+        - MO
+        - MP
+        - MQ
+        - MR
+        - MS
+        - MT
+        - MU
+        - MV
+        - MW
+        - MX
+        - MY
+        - MZ
+        - NA
+        - NC
+        - NE
+        - NF
+        - NG
+        - NI
+        - NL
+        - 'NO'
+        - NP
+        - NR
+        - NU
+        - NZ
+        - OM
+        - PA
+        - PE
+        - PF
+        - PG
+        - PH
+        - PK
+        - PL
+        - PM
+        - PN
+        - PR
+        - PS
+        - PT
+        - PW
+        - PY
+        - QA
+        - RE
+        - RO
+        - RS
+        - RU
+        - RW
+        - SA
+        - SB
+        - SC
+        - SD
+        - SE
+        - SG
+        - SH
+        - SI
+        - SJ
+        - SK
+        - SL
+        - SM
+        - SN
+        - SO
+        - SR
+        - SS
+        - ST
+        - SV
+        - SX
+        - SY
+        - SZ
+        - TC
+        - TD
+        - TF
+        - TG
+        - TH
+        - TJ
+        - TK
+        - TL
+        - TM
+        - TN
+        - TO
+        - TR
+        - TT
+        - TV
+        - TW
+        - TZ
+        - UA
+        - UG
+        - UM
+        - US
+        - UY
+        - UZ
+        - VA
+        - VC
+        - VE
+        - VG
+        - VI
+        - VN
+        - VU
+        - WF
+        - WS
+        - YE
+        - YT
+        - ZA
+        - ZM
+        - ZW
+    CoverageType:
+      title: CoverageType
+      description: Coverage type JSON Schema
+      type: string
+      maxLength: 2
+      enum:
+        - SS
+        - PT
+    GeneralConditionsCode:
+      title: GeneralConditionsCode
+      description: General conditions code JSON Schema
+      type: string
+      maxLength: 20
+      enum:
+        - GS1218
+        - GSCGD0816
+        - GS00619
+    Header:
+      title: Header
+      description: Header JSON Schema
+      type: object
+      properties:
+        SenderName:
+          description: FinancialAdvisorName
+          type: string
+          maxLength: 100
+          example: FinAdvice
+        SenderReference:
+          description: Reference ID from Sender
+          type: string
+          maxLength: 100
+          example: 5345346346
+        ReceiverNamer:
+          description: Name of the insurer
+          type: string
+          maxLength: 50
+          example: nl-cardif
+        MessageType:
+          description: Type of message
+          type: string
+          maxLength: 50
+          example: pdf
+        MessageVersion:
+          description: Version of the message
+          type: string
+          maxLength: 10
+          example: 1.0
+        Senddate:
+          description: Date the request was sent
+          type: string
+          format: date
+          example: 01-01-2020
+        SendTime:
+          description: Time the request was sent
+          type: string
+          format: time
+          example: 10:24:00
+        SenderSoftware:
+          description: Name of the software package
+          type: string
+          maxLength: 100
+          example: Adviesbox
+        SenderSoftwareVersion:
+          description: Version of the software package
+          type: string
+          maxLength: 10
+          example: 10.0.1
+      required:
+        - SenderName
+        - SenderReference
+        - ReceiverNamer
+        - MessageType
+        - MessageVersion
+        - Senddate
+        - SendTime
+        - SenderSoftware
+        - SenderSoftwareVersion
+    Insurance:
+      title: Insurance
+      description: Insurance JSON Schema
+      type: object
+      properties:
+        ProductName:
+          type: string
+          maxLength: 20
+          default: Garantiestelling
+        CoverageType:
+          $ref: '#/components/schemas/CoverageType'
+        GeneralConditionsCode:
+          $ref: '#/components/schemas/GeneralConditionsCode'
+        CheckboxAgreed:
+          type: boolean
+          example: true
+        AffectDate:
+          type: string
+          maxLength: 10
+          format: date
+          example: 01-03-2020
+        EndDate:
+          type: string
+          maxLength: 10
+          format: date
+          example: 01-04-2020
+        InsuredAmount:
+          type: number
+          example: 210000
+        PremiumAmount:
+          type: number
+          example: 210
+        AdditionalInfo:
+          type: string
+          maxLength: 500
+          example: No infomation yet
+      required:
+        - ProductName
+        - CoverageType
+        - CheckboxAgreed
+        - AffectDate
+        - EndDate
+        - InsuredAmount
+        - PremiumAmount
+    InsuredObject:
+      title: InsuredObject
+      description: Insured object JSON Schema
+      type: object
+      properties:
+        InsuredObjectType:
+          type: string
+          maxLength: 20
+          default: Purchase Agreement
+        PurchaseDate:
+          type: string
+          maxLength: 10
+          format: date
+          example: 01-03-2020
+        PurchasePrice:
+          type: number
+          example: 210000
+      required:
+        - InsuredObjectType
+        - PurchaseDate
+        - PurchasePrice
+    Notary:
+      title: Notary
+      description: Notary JSON Schema
+      type: object
+      properties:
+        NotaryName:
+          type: string
+          maxLength: 200
+          example: Notarion
+        Street:
+          description: Street
+          type: string
+          maxLength: 100
+          example: Notarystreet
+        HouseNumber:
+          description: HouseNumber
+          type: integer
+          example: 1
+        Zipcode:
+          description: Zipcode
+          type: string
+          maxLength: 7
+          example: 1234BA
+        City:
+          type: string
+          maxLength: 30
+          example: Amsterdam
+        Phone:
+          type: string
+          maxLength: 15
+          example: 0612345678
+        FaxNumber:
+          type: string
+          maxLength: 15
+          example: 01012345
+        EmailAddress:
+          type: string
+          maxLength: 50
+          format: email
+          example: info@notarion.nl
+      required:
+        - NotaryName
+        - City
+    Person:
+      title: Person
+      description: Person JSON Schema
+      type: object
+      properties:
+        PersonNumber:
+          type: integer
+          example: 1
+        Roles:
+          $ref: '#/components/schemas/Roles'
+        TypeOfPerson:
+          oneOf:
+            - $ref: '#/components/schemas/TypeOfPerson'
+            - $ref: '#/components/schemas/TypeOfPersonSeller'
+          discriminator:
+            propertyName: Roles
+            mapping:
+              Buyer: '#/components/schemas/TypeOfPerson'
+              Seller: '#/components/schemas/TypeOfPersonSeller'
+        FirstName:
+          type: string
+          maxLength: 50
+          example: Jaap
+        LastName:
+          type: string
+          maxLength: 50
+          example: Jansen
+        Prefix:
+          type: string
+          maxLength: 10
+          example: Sir
+        Initials:
+          type: string
+          maxLength: 50
+          example: J.M.C
+        CompanyName:
+          type: string
+          maxLength: 50
+        CompanyContactPerson:
+          type: string
+          maxLength: 200
+        CompanyType:
+          $ref: '#/components/schemas/CompanyType'
+        Address:
+          oneOf:
+            - $ref: '#/components/schemas/Address'
+            - $ref: '#/components/schemas/AddressNL'
+        PlaceOfBirth:
+          type: string
+          maxLength: 50
+          example: Amsterdam
+        DateOfBirth:
+          type: string
+          maxLength: 10
+          format: date
+          example: 01-01-1980
+        Gender:
+          type: string
+          maxLength: 6
+          example: Male
+        MobilePhone:
+          type: string
+          maxLength: 15
+          example: 0623456789
+        Nationality:
+          type: string
+          maxLength: 50
+          example: Dutch
+        EmailAddress:
+          type: string
+          maxLength: 50
+          format: email
+          example: jaap.jansen@gmail.com
+      required:
+        - PersonNumber
+        - Roles
+        - TypeOfPerson
+        - CompanyType
+        - EmailAddress
+    PurchaseAgreement:
+      title: PurachaeAgreement
+      description: Purchase agreement JSON Schema
+      type: object
+      properties:
+        ConstructionType:
+          type: string
+          maxLength: 25
+          example: NONE
+        ProjectName:
+          type: string
+          maxLength: 60
+          example: MyProject
+        ConstructionNumber:
+          type: integer
+          example: 12345
+        Street:
+          description: Street
+          type: string
+          maxLength: 100
+          example: Sationstraat
+        HouseNumber:
+          description: HouseNumber
+          type: integer
+          example: 1
+        HouseNumAddition:
+          description: Housenumber addition
+          type: string
+          maxLength: 15
+        Zipcode:
+          description: Zipcode
+          type: string
+          maxLength: 7
+          example: 1234AB
+        City:
+          type: string
+          maxLength: 30
+          example: Amsterdam
+        CountryCode:
+          $ref: '#/components/schemas/Countries'
+        Description:
+          type: string
+          maxLength: 200
+      required:
+        - ConstructionType
+        - Street
+        - HouseNumber
+        - CountryCode
+        - ZipCode
+    Roles:
+      title: Roles
+      description: Roles JSON Schema
+      type: string
+      maxLength: 50
+      enum:
+        - Seller
+        - Buyer
+    TypeOfPerson:
+      title: TypeOfPerson
+      description: Type of Person JSON Schema
+      type: string
+      maxLength: 20
+      enum:
+        - Natural
+    TypeOfPersonSeller:
+      title: TypeOfPersonSeller
+      description: Type of Person JSON Schema
+      type: string
+      maxLength: 20
+      enum:
+        - Natural
+        - Legal
+    SuretyshipResponse:
+      title: suretyshipApplicationResponse
+      description: Suretyship application response
+      type: object
+      properties:
+        senderReference:
+          type: integer
+          example: 5345346346
+        document:
+          type: string
+          example: base64 encoded PDF
+    Error:
+      properties:
+        status:
+          type: boolean
+          description: |
+            
+            Global status of the response:
+            
+            - true: means success, missing status
+            
+            - false: means failure.
+          example: false
+        errorCause:
+          $ref: '#/components/schemas/ErrorCause'
+        
+      required:
+      - status
+      - errorCause
+    ErrorCause:
+      type: object
+      properties:
+        errorType:
+          type: string
+          description: |
+            
+            Type of error raised:
+            
+            - FE: Functional error
+            
+            - TE: Technical error
+            
+            - SE:   Security error
+          example: error was generated
+        code:
+          type: string
+          description: Application error code.
+          example: PEARL-TEC-9999
+        message:
+          type: string
+          description: Application error message description.
+          example: An non expected error occurred
+        errorDate:
+          type: string
+          format: date
+          description: Timestamp when the error occurred.
+          example: "2019-02-19T18:54:46.957"
+        stack:
+          $ref: '#/components/schemas/ErrorStack'
+    ErrorStack:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Error code.
+          example: backend-error-code
+        message:
+          type: string
+          description: Error detail message.
+          example: back end error description
+        detail:
+          type: array
+          description: Error detail message.
+          items:
+            type: string
+  headers:
+    X-CARDIF-CONSUMER:
+      description: Application that is performing the request
+      required: true
+      schema:
+        type: string
+      example: client-app
+    X-CARDIF-REQUEST-ID:
+      description: Service request Identifier.
+      required: true
+      schema:
+        type: string
+      example: "07879d61-df75-43a3-9385-8d3d98c4dde0"
+    X-CARDIF-EXT-REQ-ID:
+      description: Client request Identifier.
+      required: false
+      schema:
+        type: string
+      example: "aa1ac43b-f4c7-4768-ac36-b514db37c956"
+    X-CARDIF-REQ-START:
+      description: Request start time.
+      required: false
+      schema:
+        type: string
+      example: "2020-03-19T18:54:46.957"
+    X-CARDIF-REQ-END:
+      description: Request end time.
+      required: false
+      schema:
+        type: string
+      example: "2020-03-19T18:54:46.957"
+    X-CARDIF-CTX-PATH:
+      description: Request context path.
+      required: false
+      schema:
+        type: string
+      example: "test_client/suretyship/metadata_source/metadata_destination"
+    X-CARDIF-REQUEST-TIMEOUT:
+      description: Request timeout in seconds.
+      required: true
+      schema:
+        type: integer
+      example: "120"

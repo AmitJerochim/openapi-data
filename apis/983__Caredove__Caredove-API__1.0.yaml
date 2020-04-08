@@ -1,0 +1,735 @@
+penapi: 3.0.1
+info:
+  description: |
+    [Caredove](https://www.caredove.com) is an online referral platform for home care and community service providers.
+
+    Users can create, receive, and manage referrals in the Caredove platform directly through a browser interface. This functionality can be extended and integrated to other systems with the Caredove's API. The API enables the following activities:
+    1. Submit new referrals to Caredove,
+    2. Relay received referrals on to other destinations
+    3. Provide updates about the progress and status of a referral
+    4. Retrieve information about services listed in the Caredove platform. (Coming Soon)
+    
+    
+    **Note**: This document describes Caredove's *native* API. Caredove also has an alternate HL7 FHIR based eReferral API. To learn more about this the HL7 FHIR API, please contact [Caredove](https://www.caredove.com).
+
+    # Getting Started
+    Begin by contacting [Caredove](https://www.caredove.com) to set up an API account.
+
+    There are two types of API account types available, depending on the type of integration you wish to enable:
+    1. **API User Account:** This API account is connected to a registered user in Caredove. Any actions done with the API (such as submitting a referral) are recorded as transactions performed by the registered user (via the API). The main example of this is when sending new referrals via the API, the "Requester" is automatically recorded as the registered user associated with the API User Account.
+    2. **API System Account:** This API account can be used for integrating to systems where the integrating system is responsible for the user identity instead of tied to a pre-registered Caredove account. For example, the system "EMR-X" can use send a new referral to Caredove and the "Requester" is specified in the body of the transmitted API payload built by EMR-X.
+
+    The benefit of the **API user account** is that a user can continue to track all of their activity done via the API when logged in to Caredove. The drawback is that it may require a more work to implement an integration since a) each user account must be separately created in Caredove and b) the userIDs (email addresses) must be synchronized between Caredove and the integrating system.
+
+    The benefit of the **API System Account** is that it is easier to implement since all user management is handled with the integrating system with no involvement of Caredove. The drawback is that users cannot  (yet) log in to Caredove to view their activity.
+
+    # Testing
+    Caredove provides a sandbox environment to test the API. Sandbox endpoints are provided in this documentation. Caredove will provide you with the necessary production endpoints when your integration is ready to go live. Sample payloads are provided with all documented API operations.
+    
+    # Error Handling
+    We currently use 200, 400, 401, 403, and 500 error codes for responding to queries:
+    
+    **200** - OK
+    <br/>
+    **400** - Bad Request
+    <br/>
+    **401** - No Authorization Provided
+    <br/>
+    **403** - **A)** Permissions denied for this resource, or **B)** Resource does not exist
+    <br/>
+    **500** - Internal Server Error
+    <br/>
+    
+    # Authorization
+    Authorization is handled via the Basic Authorization mechanism. Caredove will provide you with your API username and password when you set up your API User/System Account.
+    
+    # How to try the API in Swagger
+    
+    Using the authorization button below, enter the username and password provided by Caredove.
+
+  version: "1.0"
+  title: Caredove Native API
+  contact:
+    email: apisupport@caredove.com
+servers:
+  - url: 'https://sandbox.caredove.com/api/native_v1'
+    description: Development server
+security:
+  - BasicAuth: []
+tags:
+  - name: Get Service Request
+    description: |
+  - name: Post Service Request
+    description: |
+paths:
+  /ServiceRequest/:
+    post:
+      tags:
+        - Post Service Request
+      summary: Post to ServiceRequest endpoint
+      description: |
+        This method is used to send new service request (a.k.a., referral) to Caredove via the API. There are two ways to interact with this API, the **cds-service-request** and **add-service-request** methods.
+
+        # Method 1: cds-service-request:
+        A CDS (**C**linicial **D**ecision **S**upport) service request is the preferred method to interact with the API, as it offers the richest set of referral options. From the integrating system, users can launch a browser widget, inline frame, or tab containing a Caredove search page or a referral web form to a specific service, with registrant data pre-filled in the into matching referral form fields. Any additional form fields can be completed manually by the user, then the referral is considered submitted.
+
+        The process flows as follows:
+        1. The sending system pre-selects a **targetService.id** to refer to. Often this is Caredove search site, but can also be a specific service.
+        2. The sending system builds the ServiceRequest payload.
+            * For an integration using an **API User Account**, the **request** object must be left empty, as the requester information is matched to the connected API User Account.
+            * For an integration using an **API System Account**, the **request** must be provided.
+        3. POST the ServiceRequest, this loads the ServiceRequest into a temporary cache in Caredove.
+        4. Caredove returns a response which includes **launchString**, a temporary link for the integrating system to launch a Caredove app in a browser widget/iFrame/tab containing Caredove. Depending on the value of targetService.id, the user may be presented with a Caredove search page OR a referral form for a specific service
+        5. The user can complete the referral process in the launched widget/iFrame/tab. Any form fields that match data in the ServiceRequest payload will be pre-populated. The user can manually fill any additional fields presented.
+        6. The referral is considered submitted once the user has completed the referral in the Caredove widget. If the launchString is never used, or the process is canceled, then the referral (and its associated ID) is discarded.
+        7. The Control is returned to the launching system.
+
+        **Note**: If the user cancels out of the referral at any step before final form submission, the referral will be discarded from Caredove.
+
+        # Method 2: add-service-request
+        The add-service-request is the direct method to send referrals, without any user-interface or business logic presented by Caredove. Once the POST is made, the referral is considered submitted. This method is limited in the types of data that can be codified in a referral and limited in business logic options, thus add-service-request is not the preferred integration method. However, for extremely tight and well-defined referral processes, the add-service-request may be the appropriate approach.
+
+        The process flows as follows:
+        1. The sending system pre-selects a **targetService.id** to refer to. This must be a to a specific service, not a Caredove search site.
+        2. The sending system builds the ServiceRequest payload (as per the same rules listed in Method 1: cds-service-request)
+        3. POST the ServiceRequest.
+        5. On 200 response, the referral is considered submitted.
+
+ 
+        # Additional Notes:
+        * **Date/Time Format**: Date fieldnames finish with the word "At" (e.g., "submittedAt") and take the format 2018-12-31T15:58:00-04:00
+        * standard - Returns two fields; "id" and "launchString"
+        * full - Returns full ServiceRequest response
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceRequest'
+      parameters:
+        - name: responseType
+          in: query
+          required: false
+          example: standard
+          description: Payload response type to be returned (Either "standard" or "full", with "standard" being default)
+          schema:
+            type: string
+            enum:
+              - "standard"
+              - "full"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "1234567890"
+                  launchString:
+                    type: string
+                    example: "https://sandbox.caredove.com/user/login?fhirServiceUrl=https://sandbox.caredove.com/api/native&patientId=f90fk97o2vmsk5un1os0m109p5-9900260135-caredove2988"
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  http_code:
+                    type: integer
+                    example: 400
+                  severity:
+                    type: string
+                    example: "error"
+                  code:
+                    type: string
+                    example: "invalid request"
+                  diagnostics:
+                    type: string
+                    example: "Your request could not be processed. Please verify your request and try again."
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  http_code:
+                    type: integer
+                    example: 401
+                  severity:
+                    type: string
+                    example: "error"
+                  code:
+                    type: string
+                    example: "unauthorized"
+                  diagnostics:
+                    type: string
+                    example: "No username or password credentials were provided."
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  http_code:
+                    type: integer
+                    example: 404
+                  severity:
+                    type: string
+                    example: "error"
+                  code:
+                    type: string
+                    example: "Informational"
+                  diagnostics:
+                    type: string
+                    example: "The requested resource either do not exist, or you do not have proper permissions to access this resource."
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  http_code:
+                    type: integer
+                    example: 500
+                  severity:
+                    type: string
+                    example: "error"
+                  code:
+                    type: string
+                    example: "Informational"
+                  diagnostics:
+                    type: string
+                    example: "An internal server error has occurred. Please contact Caredove to resolve this issue."
+  /ServiceRequest/{ServiceRequestID}:
+    get:
+      tags:
+        - Get Service Request
+      summary: Returns a service request by ID
+      description: |
+        This method is used to receive a service request (a.k.a., referral) from Caredove via the API.
+      parameters:
+        - name: ServiceRequestID
+          in: path
+          required: true
+          example: "1234567890"
+          description: The ID of the service request to return
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf: 
+                  - type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "1234567890"
+                  - $ref: '#/components/schemas/ServiceRequest'
+                  
+                
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  http_code:
+                    type: integer
+                    example: 400
+                  severity:
+                    type: string
+                    example: "error"
+                  code:
+                    type: string
+                    example: "invalid request"
+                  diagnostics:
+                    type: string
+                    example: "Your request could not be processed. Please verify your request and try again."
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  http_code:
+                    type: integer
+                    example: 401
+                  severity:
+                    type: string
+                    example: "error"
+                  code:
+                    type: string
+                    example: "unauthorized"
+                  diagnostics:
+                    type: string
+                    example: "No username or password credentials were provided."
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  http_code:
+                    type: integer
+                    example: 404
+                  severity:
+                    type: string
+                    example: "error"
+                  code:
+                    type: string
+                    example: "Informational"
+                  diagnostics:
+                    type: string
+                    example: "The requested resource either do not exist, or you do not have proper permissions to access this resource."
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  http_code:
+                    type: integer
+                    example: 500
+                  severity:
+                    type: string
+                    example: "error"
+                  code:
+                    type: string
+                    example: "Informational"
+                  diagnostics:
+                    type: string
+                    example: "An internal server error has occurred. Please contact Caredove to resolve this issue."
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+  schemas:
+    ServiceRequest:
+      description: "Schema represents the core ServiceRequest POST request body. ServiceRequests existing in Caredove will return with an id field above this schema."
+      type: object
+      properties:
+        resourceType:
+          type: string
+          example: "ServiceRequest"
+        requestType:
+          type: string
+          example: "cds-service-request"
+        messageHeader:
+          type: object
+          properties:
+            event:
+              type: object
+              properties:
+                code:
+                  type: string
+                  example: "add-service-request"
+            source:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Requester Incorporated"
+                software:
+                  type: string
+                  example: "Requestersoft"
+                version:
+                  type: string
+                  example: "1.0"
+                endpoint:
+                  type: string
+                  example: "https://www.requestersoft.test/api"
+            focus:
+              type: object
+              properties:
+                identifier:
+                  type: object
+                  properties:
+                    system:
+                      type: string
+                      example: "Client Number"
+                    value:
+                      type: string
+                      example: "12345678"
+        registrant:
+          type: object
+          properties:
+              givenName:
+                  type: string
+                  example: "Patty"
+              familyName:
+                  type: string
+                  example: "McLastName"
+              primaryPhone:
+                type: string
+                example: "1 384 394 0483"
+              secondaryPhone:
+                type: string
+                example: "1 384 394 3850"
+              gender:
+                type: string
+                example: "male"
+                enum:
+                  - male
+                  - female
+                  - other
+                  - ambiguous genitalia
+              dateOfBirth:
+                  type: string
+                  example: "1928-06-29"
+              languages:
+                  type: string
+                  example: "english"
+                  enum:
+                    - english
+                    - french
+              maritalStatus:
+                type: string
+                enum:
+                  - single
+                  - married
+                  - common-law
+                  - separated
+                  - divorced
+                  - widowed
+                example: "single"
+              coverage:
+                type: object
+                description: "Used exclusively for Ontario Health Card numbers"
+                properties:
+                  issuer:
+                    type: string
+                    example: "OHIP"
+                  identifier:
+                    type: string
+                    example: "2233 232 121"
+                  identifierVersionCode:
+                    type: string
+                    example: "NB"
+              address:
+                type: object
+                properties:
+                  unit:
+                    type: string
+                    example: "123"
+                  street:
+                    type: string
+                    example: "Albert St."
+                  city:
+                    type: string
+                    example: "Waterloo"
+                  stateProvince:
+                    type: string
+                    example: "ON"
+                  zipPostalCode:
+                    type: string
+                    example: "K8N 1N1"
+                  country:
+                    type: string
+                    example: "Can"
+              contact:
+                type: object
+                properties:
+                  type:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+                          enum:
+                            - caregiver-formal
+                            - caregiver-informal
+                            - child-protective-services
+                            - primary-contact
+                            - emergency-contact
+                            - landlord
+                            - social-assistance-program
+                            - parole-officer
+                            - superintendent
+                            - teacher
+                            - primary-contact
+                            - translator
+                            - poa-finances
+                            - poa-health-care
+                            - legal-guardian
+                            - employer
+                            - secondary-contact
+                            - Other Contact
+                          description: "code values used by FHIR for ContactRoles."
+                  relationship:
+                    type: object
+                    description: "Uses FHIR ValueSet: https://www.hl7.org/fhir/valueset-relatedperson-relationshiptype.html"
+                    properties:
+                      code:
+                        type: string
+                        enum:
+                          - AUNT
+                          - BRO
+                          - BROINLAW
+                          - CHILD
+                          - COUSN
+                          - DAUC
+                          - DAUINLAW
+                          - FTH
+                          - FTHINLAW
+                          - PRNFOST
+                          - FRND
+                          - GRNDCHILD
+                          - GRPRN
+                          - MTH
+                          - MTHINLAW
+                          - NBOR
+                          - NIENEPH
+                          - O
+                          - O
+                          - PRN
+                          - SIB
+                          - SIS
+                          - SISINLAW
+                          - SONC
+                          - SONINLAW
+                          - SPS
+                          - STPDAU
+                          - STPPRN
+                          - STPSON
+                          - UNCLE
+                        example: "AUNT"
+                      display:
+                        type: string
+                        example: "aunt"
+                        enum:
+                          - Aunt
+                          - Brother
+                          - Brother in Law
+                          - Child
+                          - Cousin
+                          - Daughter
+                          - Daughter in Law
+                          - Father
+                          - Father in Law
+                          - Foster Parent
+                          - Friend
+                          - Grandchild
+                          - Grandparent
+                          - Mother
+                          - Mother in Law
+                          - Neighbour
+                          - Niece/Nephew
+                          - Other
+                          - Other Relative
+                          - Parent
+                          - Sibling
+                          - Sister
+                          - Sister in Law
+                          - Son
+                          - Son in Law
+                          - Spouse/Life Partner
+                          - Step Daughter
+                          - Step Parent
+                          - Step Son
+                          - Uncle
+                  givenName:
+                    type: string
+                    example: "Dorthy"
+                  familyName:
+                    type: string
+                    example: "Johnson"
+                  primaryPhone:
+                    type: string
+                    example: "1-485-385-3859"
+                  secondaryPhone:
+                    type: string
+                    example: "1-485-385-3484"
+                  language:
+                    type: string
+                    example: "french"
+                    enum:
+                      - english
+                      - french
+                  address:
+                    type: object
+                    properties:
+                      unit:
+                        type: string
+                        example: "3957"
+                      street:
+                        type: string
+                        example: "Laurence St."
+                      city:
+                        type: string
+                        example: "Toronto"
+                      stateProvince:
+                        type: string
+                        example: "ON"
+                      zipPostalCode:
+                        type: string
+                        example: "K8L 2N1"
+                      country:
+                        type: string
+                        example: "Can"
+              generalPractitioner:
+                type: object
+                properties:
+                  givenName:
+                    type: string
+                    example: "Jack"
+                  familyName:
+                    type: string
+                    example: "Johnansson"
+                  primaryPhone:
+                    type: string
+                    example: "1 493 394 2948"
+                  fax:
+                    type: string
+                    example: "1 493 394 3573"
+        requester:
+          type: object
+          properties:
+            givenName:
+              type: string
+              example: "Dr. Provider"
+            familyName:
+              type: string
+              example: "Jagger"
+            jobTitle:
+              type: string
+              example: "Clinician"
+            primaryPhone: 
+              type: string
+              example: "1 385 394 3949"
+            fax: 
+              type: string
+              example: "1 385 394 3492"
+            externalIdentifiersType:
+              type: string
+              example: "USER-ID"
+            externalIdentifiersValue:
+              type: string
+              example: "2840482"
+            employer:
+              type: string
+              example: "Test Inc."
+            employerAddressUnit:
+              type: string
+              example: "284"
+            employerAddressStreet:
+              type: string
+              example: "38 Frank Street"
+            employerAddressCity:
+              type: string
+              example: "Toronto"
+            employerAddressStateProvince:
+              type: string
+              example: "ON"
+            employerAddressZipPostalCode:
+              type: string
+              example: "M5E 2E5"
+            employerAddressCountry:
+              type: string
+              example: "Canada"
+        questionnaireResponse:
+          type: object
+          properties:
+            format:
+              type: string
+              enum: 
+                - "fhir4-json"
+            payload:
+              type: object
+              properties:
+                resource:
+                  type: object
+                  properties:
+                    resourceType:
+                      type: string
+                      example: "QuestionnaireResponse"
+                    id:
+                      type: string
+                      example: "096827bb-fdee-4226-a3ca-08360781be8b"
+                    identifier:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          system:
+                            type: string
+                            example: "http://example.org/fhir/NamingSystem/questionnaire-ids"
+                          value:
+                            type: string
+                            example: "414828"
+                    basedOn:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          reference:
+                            type: string
+                            example: "ServiceRequest/356264"
+                    status:
+                      type: string
+                      example: "completed"
+                    subject:
+                      type: object
+                      properties:
+                        reference:
+                          type: string
+                          example: "Patient/316815"
+                        type:
+                          type: string
+                          example: "Patient"
+                    authored:
+                      type: string
+                      example: "2019-10-11T16:04:00Z"
+                    item:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          linkId:
+                            type: integer
+                            example: 1
+                          text:
+                            type: string
+                            example: "Client Name"
+                          answer:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                valueString:
+                                  type: string
+                                  example: "TEST1"
+        targetService:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "default"
+        request:
+          type: object
+          properties:
+            reasonForReferral:
+              type: string
+              example: "Reason for referral narrative goes here"
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              contentString:
+                type: string
+                example: "Displaying the following fall risk symptoms"

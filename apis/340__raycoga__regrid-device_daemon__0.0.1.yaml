@@ -1,0 +1,186 @@
+penapi: 3.0.0
+info:
+  title: Regrid device daemon
+  version: 0.0.1
+paths:
+  /:
+    get:
+      description: Return some basic information about this device
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: device info
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              description:
+                type: string
+              feedKey:
+                type: string
+              subscriptions:
+                type: array
+  '/feed/{feedKey}':
+    get:
+      description: Get information about a particular feed
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: feedKey
+          schema:
+            type: string
+            default: self
+          required: true
+          description: >-
+            Either 'self' to query this devices feed or the hex encoded public
+            key of a feed this device follows
+      responses:
+        '200':
+          description: feed info
+          schema:
+            type: object
+            properties:
+              length:
+                type: integer
+  '/feed/{feedKey}/get_batch':
+    get:
+      description: Return data from a particular feed
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: feedKey
+          schema:
+            type: string
+            default: self
+          required: true
+          description: >-
+            Either 'self' to query this devices feed or the hex encoded public
+            key of a feed this device follows
+        - in: query
+          name: start
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          required: false
+          description: Return blocks starting at this sequence number (inclusive)
+        - in: query
+          name: end
+          schema:
+            type: integer
+            minimum: 0
+          required: false
+          description: Return blocks ending at this sequence number (non-inclusive)
+      responses:
+        '200':
+          description: Array of blocks in the given feed
+          schema:
+            type: array
+  '/subscribe/{feedKey}':
+    post:
+      description: Subscribe to the feed with the key given
+      produces:
+        - text/plain
+      parameters:
+        - in: path
+          name: feedKey
+          schema:
+            type: string
+          required: true
+          description: Hex encoded public key of the feed this device should subscribe to
+      requestBody:
+        description: >-
+          Stringified javascript function body to execute everytime this feed
+          receives a new signal. This has access to two paramters - 'data' which
+          contains the new feed signal, 'device' which is the device object
+          itself (can be used to trigger new feed entries etc)
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+            example: 'console.log(''new data: '', data)'
+      responses:
+        '200':
+          description: Returned if the feed was subscribed to successfully
+  /custom/balance:
+    get:
+      description: Get the balance of this manager
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns the balance of this device
+          schema:
+            type: object
+            properties:
+              balance:
+                type: integer
+  /custom/mode:
+    get:
+      description: Get the current mode
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Returns the mode this manager is advertising
+          schema:
+            type: object
+            properties:
+              mode:
+                type: string
+                enum:
+                  - 'off'
+                  - eco
+                  - planetsaver
+                  - null
+    post:
+      description: Set the current mode for the manager
+      produces:
+        - text/plain
+      parameters:
+        - in: query
+          name: mode
+          schema:
+            type: string
+            enum:
+              - 'off'
+              - eco
+              - planetsaver
+            example: eco
+          required: true
+          description: The mode to set
+      responses:
+        '200':
+          description: Returns if mode set correctly
+  /custom/devices:
+    get:
+      description: Return a list of the devices that this device manages
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: The list of devices and info
+          schema:
+            type: array
+  '/custom/register_device/{feedKey}':
+    post:
+      description: Register an existing device to be managed by this device
+      produces:
+        - text/plain
+      parameters:
+        - in: path
+          name: feedKey
+          schema:
+            type: string
+          required: true
+          description: The feed key of the device to register
+      responses:
+        '200':
+          description: Returns if device registration added correctly
+components: {}
+tags: []

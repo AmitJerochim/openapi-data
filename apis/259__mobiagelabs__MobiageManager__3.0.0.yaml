@@ -1,0 +1,872 @@
+penapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/mobiagelabs/MobiageManager/1.0.0
+  - description: Ambiente SandBox API
+    url: https://api-hom2.mobiage.io/mobiage-api/api/v3/
+  - description: Ambiente de Produção API
+    url: http://api.kigisistemas.com.br/mobiage-api/api/v3/
+info:
+  description: Documentação para integração via API com o Mobiage Manager
+  version: "3.0.0"
+  title: Mobiage Manager API
+  contact:
+    name: development team
+    email: mobiagelabs@gmail.com
+tags:
+  - name: Product
+    description: Cadastro de produto, consulta de árvore de produto, cadastro de grupo de produto, consulta de grupo tributário de produto.
+  - name: Movement
+    description: Cadastro de entrada de estoque de produto
+  - name: Person
+    description: Cadastro de Pessoa Física e Jurídica sendo elas clientes ou fornecedores.
+paths:
+  /product:  
+    post:
+      tags:
+        - Product
+      summary: 'Cadastro de novo produto'
+      operationId: producfAdd
+      description: |
+        Esta rota cadastra um novo produto, também é permitido fazer uma carga de estoque inicial direto pelo DTO de produto, atente-se que há vários atributos que são referenciados pelo ID, para isso utilize as outras API's para obter esses IDs.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '201':
+          description: Produto criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: '384761DEC4AAE10AE7BD2A15E5DD90BB'
+                  idThird:
+                    type: string
+                    example: '19892'
+        '400':
+          description: 'Conteúdo enviado contém atributos inválidos'
+        '409':
+          description: 'Produto enviado já contém na base de dados conforme a busca pelo thirdId'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: '384761DEC4AAE10AE7BD2A15E5DD90BB'
+                  idThird:
+                    type: string
+                    example: '19892'
+                  dateCreated:
+                    type: string
+                    format: date
+        '403':
+          description: Token expirado ou inválido
+  /product/tree:
+    get:
+      tags:
+        - Product
+      summary: 'Lista a árvore de produtos de forma ordenada'
+      operationId: productTreeList
+      description: |
+        Esta rota lista a árvore de produto de forma ordenada, use-a para definir a árvore de produto no cadastro do seu produto, pois é com base na árvore que várias decisões são tomadas (buscas, repasses, experiências UI&UX)
+      parameters:
+        - in: header
+          name: gumgaToken
+          description: Informe o token de acesso ao sistema
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de árvore de produtos com seus respectivos filhos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductTree'
+        '403':
+          description: Token expirado ou inválido
+  
+  /product/taxation:
+    get:
+      tags:
+        - Product
+      summary: 'Lista os grupos tibutários pré-configurados no Mobiage Manager'
+      operationId: productTaxationGoupList
+      description: |
+        Esta rota lista os grupos tributários para produtos, eles são necessários no cadastro de produto para que haja o calculo do imposto corretamente na emissão da Nota Fiscal Eletrônica.
+      parameters:
+        - in: header
+          name: gumgaToken
+          description: 'Informe o token de acesso ao sistema'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Lista de grupos tributários pré cadastrados no Mobiage Mmanager'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductGroupTaxation'
+        '403':
+          description: Token expirado ou inválido
+          
+  /movement/entry:
+    post:
+      tags:
+        - Movement
+      summary: 'Cadastro de uma movimentação de entrada'
+      operationId: movementEntryAdd
+      description: |
+        Esta rota você envia uma nova movimentação dde entrada de estoque, informe os códigos de barras referente à cada produto e sua quantidade. Quando sucesso, retornará o ID da movimentação criada
+      parameters:
+        - in: header
+          name: gumgaToken
+          description: 'Informe o token de acesso ao sistema'
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Entry'
+      responses:
+        '201':
+          description: Movimentação de entrada realizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: '198292'
+        '400':
+          description: 'Conteúdo enviado contém atributos inválidos'
+        '409':
+          description: 'Não existe produto com código de barras informado'
+          
+  /person/individual-person:
+    post:
+      tags:
+        - Person
+      summary: 'Cadastro de uma pessoa física com seus papéis como Cliente e/ou Fornecedor'
+      operationId: personIndividualAdd
+      description: |
+        Esta rota você envia uma nova pessoa para ser cadastrada, os atributos de pessoa física contemplam dados como informações de SPC, Referências comerciais, pessoais e bancárias além de outros atributos referentes à clientes.
+      parameters:
+        - in: header
+          name: gumgaToken
+          description: 'Informe o token de acesso ao sistema'
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NaturalPerson'
+      responses:
+        '201':
+          description: Pessoa cadastrada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: '198292'
+                  thirdId:
+                    type: string
+                    example: '990'
+        '400':
+          description: 'Conteúdo enviado contém atributos inválidos'
+  /person/juristic-person:
+    post:
+      tags:
+        - Person
+      summary: 'Cadastro de uma pessoa Jurídica com seus papéis como Cliente/Fornecedor/Transportadora'
+      operationId: personJuristicAdd
+      description: |
+        Esta rota você envia uma nova pessoa para ser cadastrada, os atributos de pessoa jurídica.
+      parameters:
+        - in: header
+          name: gumgaToken
+          description: 'Informe o token de acesso ao sistema'
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JuristicPerson'
+      responses:
+        '201':
+          description: Pessoa cadastrada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: '198292'
+                  thirdId:
+                    type: string
+                    example: '990'
+        '400':
+          description: 'Conteúdo enviado contém atributos inválidos'
+          
+components:
+  schemas:
+    ProductTree:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: '382FF17ECDB13246CD1A52C34M0B14G3'
+        name:
+          type: string
+          example: Tênis
+        description:
+          type: string
+          example: 'Moda/Calçados/Tênis'
+        isGrid:
+          type: boolean
+          example: true
+        isNutritional:
+          type: boolean
+          example: false
+        integrationId:
+          type: string
+          example: null
+        active:
+          type: boolean
+          example: true
+        productTreeGroup:
+          type: string
+          example: 'MODA_CALCADOS'
+        allowExchange:
+          type: boolean
+          example: true
+        productTreeSupplierId:
+          type: string
+          example: null
+        codeBarType:
+          type: string
+          example: 'EAN-8'
+        treeType:
+          type: string
+          example: null
+        tree:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductTree'
+            
+    Product:
+      type: object
+      properties:
+        thirdID:
+          type: string
+          format: numeric
+          example: 18982
+          description: ID do produto na base do software integrador
+        treeID:
+          type: string
+          example: '384761DEC4AAE10AE7BD2A15E5DD90BB'
+          description: ID da árvore de produto, chamar a rota GET ('/product/tree') para listar nossa árvore de produtos e obter o ID do árvore que representa seu produto.
+        name:
+          type: string
+          example: 'Tênis Jordan Aerospace 720 Masculino'
+        shortName:
+          type: string
+          example: 'Tênis Jordan Aerospace 720'
+        model:
+          type: string
+          example: 'Aerospace 720'
+        brand:
+          type: string
+          example: 'Nike'
+        reference:
+          type: string
+          example: 'BV5502-002'
+        line:
+          type: string
+          example: 'Aerospace'
+        collection:
+          type: string
+          example: 'Jordan'
+        gender:
+          type: string
+          enum: [MASC, FEM, MEO, MEA, BEO, BEA, UNS]
+          example: 'MASC'
+        productGroupID:
+          type: string
+          format: uuid
+          example: '384760DEBE9061017B872A15E5DD90BB'
+          description: Você pode cadastrar um grupo e sub-grupo de produto, caso nossa árvore de produtos não satisfaça sua necessidade, é possível definir uma árvore de produto genérica e cadastrar seus Grupos e respectivos SubGrupos, para isso utilize a rota de POST ('/product-group')
+        tax:
+          $ref: '#/components/schemas/ProductTaxation'
+        shared:
+          type: string
+          enum: [MYSELF, MYGROUP, MYBASE]
+          example: null
+          description: Caso use multi-filiais, defina como este registro será compartilhado.
+        ean:
+          type: string
+          example: '7894321722016'
+        eanType:
+          type: string
+          enum: [EAN8, EAN12, EAN13, EAN14, GTIN, OWN, OTHERS]
+          example: 'EAN8'
+        discountLimit:
+          type: number
+          format: double
+          example: 0.90
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductItem'
+        providerIDs:
+          type: array
+          items: 
+            type: string
+          description: |
+            Se este produto contem fornecedores padrões, você pode cadastrar primeiramente no cadastro de pessoa/fornecedor (ver tópico Person) e então vincular seus ids nessa lista
+      required: 
+        - treeID
+        - name
+        - shortName
+        - model
+        - brand
+        - reference
+        - tax
+        - items
+    
+    ProductItem:
+      type: object
+      properties:
+        name:
+          type: string
+        barcodes:
+          type: array
+          items:
+            type: string
+          example: ['7894321723914']
+        price:
+          type: number
+          format: double
+          example: 699.90
+        cost:
+          type: number
+          format: double
+          example: 199.90
+        stock:
+          type: number
+          format: double
+          example: 10
+          description: |
+            Pode inserir uma quantidade de estoque inicial, ao cadastrar o produto esta quantidade informada será inserida no estoque.
+        measureUnit:
+          type: string
+          enum: [AMPOLA, BALDE, BANDEJ, BARRA, BISNAG, BLOCO, BOBINA, BOMB, CAPS, CART, CENTO, CJ, CM, CM2, CX, DISP, DUZIA, EMBAL, FARDO, FOLHA, FRASCO, GALAO, GF, GRAMAS, JOGO, KG, KIT, LATA, LITRO, M, M2, M3, MILHEI, ML, MWH, PACOTE, PALETE, PARES, PC, POTE, K, RESMA, ROLO, SACO, SACOLA, TAMBOR, TANQUE, TON, TUBO, UNID]
+          example: 'UNID'
+        variations:
+          type: array
+          description: |
+            As variações do produto, ou seu detalhes, são definidos por seus atributos que os definem como únicos
+          items:
+            $ref: '#/components/schemas/ProductDetails'
+          example:
+            - type: 'COR'
+              value: 'BRANCO'
+            - type: 'TAMANHO'
+              value: '40'
+            - type: 'TAMANHO'
+              value: '41'
+            - type: 'TAMANHO'
+              value: '42'
+        urlPhoto:
+          type: string
+        active:
+          type: boolean
+          example: true
+        prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceSheet'
+      required:
+        - name
+        - barcodes
+        - price
+        - cost
+        - measureUnit
+        - active
+        - prices
+    
+    ProductDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [COR, TAMANHO, GENERO, VOLTAGEM, VOLUME, EMBALAGEM, OUTRO]
+        value:
+          type: string
+      required:
+        - type
+        - value
+    
+    ProductGroup:
+      type: object
+      description: |
+        Utilizado para cadastrar uma segmentação/grupo de produtos não contempladas pela Árvore de Produtos da Mobiage, ou para fazer uma segmentação personalizável. A utilização deste atributo não substitui a árvore de produtos da Mobiage.
+      properties:
+        name:
+          type: string
+        thirdId:
+          type: string
+        subGroup:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductGroup'
+      required:
+        - name
+    
+    ProductTaxation:
+      type: object
+      properties:
+        origin:
+          type: string
+          enum: [NACIONAL, ESTRANGEIRA_IMPORTACAO, ESTRANGEIRA_ADQUIRIDA, NACIONAL_40_70, NACIONAL_AJUSTE, NACIONAL_40, ESTRANGEIRA_IMPORTACAO_NAO_NACIONAL, ESTRANGEIRA_ADQUIRIDA_NAO_NACIONAL]
+          example: 'NACIONAL'
+        productGroupId:
+          type: integer
+          description: |
+            Use a rota (/product/taxation) para listas as tributações cadastradas e selecione o ID da tributação que se encaixe em seu produto.
+        ncm:
+          type: string
+          example: '18069000'
+        cest:
+          type: string
+          example: '1700400'
+        pis:
+          type: number
+          format: double
+          example: 0.00
+        cofins:
+          type: number
+          format: double
+          example: 0.00
+        ipi:
+          type: number
+          format: double
+          example: 0.00
+      required: 
+        - origin
+        - productGroupId
+        - ncm
+        - cest
+          
+    ProductGroupTaxation:
+      type: object
+      readOnly: true
+      description: |
+        Modelo de retorno ao consultar as tributações cadastras no Mobiage Manager
+      properties:
+        id:
+          type: number
+          example: 180039
+        name:
+          type: string
+          example: 'CSOSN 101 - Com Permissão de Crédito'
+        description:
+          type: string
+          example: 'Tributada pelo Simples Nacional com permissão de Crédito'
+        active:
+          type: boolean
+          example: true
+        commodityOrigin:
+          type: string
+          enum: [NACIONAL, ESTRANGEIRA_IMPORTACAO, ESTRANGEIRA_ADQUIRIDA, NACIONAL_40_70, NACIONAL_AJUSTE, NACIONAL_40, ESTRANGEIRA_IMPORTACAO_NAO_NACIONAL, ESTRANGEIRA_ADQUIRIDA_NAO_NACIONAL]
+          example: 'NACIONAL'
+        vlIpi:
+          type: number
+          format: double
+          example: 0.00
+        vlPis:
+          type: number
+          format: double
+          example: 0.00
+        vlCofins:
+          type: number
+          format: double
+          example: 0.00
+        ncm:
+          type: object
+          properties:
+            id:
+              type: integer
+            descricao:
+              type: string
+            codigo:
+              type: string
+            tipo:
+              type: string
+              enum: [Ncm, Cest]
+    
+    PriceSheet:
+      type: object
+      properties:
+        name:
+          type: string
+          example: 'Tabela de preço padrão'
+        price:
+          type: number
+          format: double
+          example: 699.90
+      required:
+        - name
+        - price
+    
+    Entry:
+      type: object
+      properties:
+        providerId:
+          type: integer
+          description: 'ID de Person pré cadastrada no Mobiage Manager'
+          example: 198930
+        date:
+          type: string
+          format: date
+          description: 'Data em que ocorre a moviementação'
+          example: '2020/03/19'
+        movements:
+          type: array
+          items:
+            type: object
+            properties:
+              productBarCode:
+                type: string
+                description: 'Código de barras do produto anteriormente cadastrado no Mobiage Manager'
+                example: '888410392614'
+              count:
+                type: integer
+                format: double
+                example: 20
+              costValue:
+                type: integer
+                format: double
+                example: 199.90
+            required:
+              - productBarCode
+              - count
+              - costValue
+      required:
+        - providerId
+        - date
+        - movements
+              
+    NaturalPerson:
+      type: object
+      properties:
+        thirdId:
+          type: string
+          example: '1900'
+        registerName:
+          type: string
+          example: 'Sebastião Transversal da Silva'
+        socialName:
+            type: string
+            description: 'Pode ser cadastro o nome social da pessoa física caso seja necessário'
+        federalDocument:
+            type: string
+            description: 'O mesmo que CPF'
+            example: '99230229008'
+        stateDocument:
+            type: string
+            description: 'O mesmo que RG'
+            example: '160576428'
+        emissionOrg:
+            type: string
+            example: 'SSP'
+        emissionState:
+            type: string
+            example: 'PR'
+        telephones:
+            type: array
+            items:
+              type: string
+            example: ['44981238129','44991823741']
+        emails:
+            type: array
+            items:
+              type: string
+            example: ['sebastiao@transversal.com']
+        adresses:
+            type: array
+            items:
+              $ref: '#/components/schemas/Address'
+        gender:
+            type: string
+            enum: [MASC, FEM, NINF]
+            example: 'MASC'
+        active:
+            type: boolean
+            example: true
+        urlPhoto:
+            type: string
+        roles:
+            type: string
+            enum: [CLIENT, TRANSPORTER, PROVIDER]
+            example: 'CLIENT'
+        personFamily:
+            type: object
+            properties:
+              motherName: 
+                type: string
+                example: 'Esmerilda da Silva'
+              fatherName:
+                type: string
+                example: 'Darthvader da Silva'
+        personReferences:
+            type: array
+            description: |
+              Referências pessoais, comercias ou bancárias
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: 'Loja da Esquina'
+                telephone:
+                  type: string
+                  example: '4430302100'
+                referenceType:
+                  type: string
+                  enum: [BANK, COMMERCIAL, PERSONAL]
+                  example: 'COMMERCIAL'
+        workInformation:
+            type: object
+            description: |
+              Sobre o local de trabalho do cliente cadastrado
+            properties:
+              place:
+                type: string
+                example: 'Banco Money S/A'
+              occupation:
+                type: string
+                example: 'Caixa'
+              telephone:
+                type: string
+                example: '4430101030'
+              salary:
+                type: number
+                format: double
+                example: 3000.00
+            required:
+              - place
+              - occupation
+        spouser:
+            type: object
+            description: |
+              Referente à informações do cônjuge
+            properties:
+              name:
+                type: string
+                example: 'Marianilda da Silva'
+              workInformation:
+                type: object
+                description: |
+                  Sobre as informações de trabalho do cõnjuge
+                properties:
+                  place:
+                    type: string
+                    example: 'Indústria Ltda'
+                  occupation:
+                    type: string
+                    example: 'Engenheira'
+                  telephone:
+                    type: string
+                    example: '4421000021'
+                  salary:
+                    type: number
+                    format: double
+                    example: 2990.00
+                required:
+                  - place
+                  - occupation
+        shared:
+          type: string
+          enum: [MYSELF, MYGROUP, MYBASE]
+        naturalness:
+            type: string
+            example: 'BRASILEIRO'
+        spcInformation:
+            type: object
+            description: |
+              Dados referentes à última consulta de status de crédito´
+            properties:
+              active:
+                type: boolean
+                example: true
+              lastConsultation:
+                type: string
+                format: date
+                example: '2020/02/10'
+              note:
+                type: string
+                example: 'Nada consta de irregular/dívidas em seu registro. Score 700'
+        tags:
+            type: array
+            items:
+              type: string
+        creditLimit:
+            type: number
+            format: double
+            description: |
+              Limite de crédito concedido ao cliente
+        registrationDate:
+            type: string
+            format: date
+            example: '2020/01/12'
+      required:
+        - registerName
+        - roles
+    
+    JuristicPerson:
+      type: object
+      properties:
+        thirdId:
+          type: string
+        registerName:
+          type: string
+          description: 'Razão Social da Empresa conforme contrato social / Cartão CNPJ'
+          example: 'Loop Infinito Ltda ME'
+        socialName:
+          type: string
+          description: 'Nome Fantasia da Emmpresa'
+        federalDocument:
+            type: string
+            description: 'O mesmo que CNPJ'
+            example: '37956722000124'
+        stateDocument:
+            type: string
+            description: 'O mesmo que Inscrição Estadual'
+        stateIndicator:
+            type: string
+            enum: [CONTRIBUINTE, ISENTO, NAO_CONTRIBUINTE]
+            example: 'ISENTO'
+        telephones:
+            type: array
+            items:
+              type: string
+            example: ['4421018988','4498771221']
+        emails:
+            type: array
+            items:
+              type: string
+            example: ['comercial@loopinfinito.com', 'vendas@loopinfinito.com', 'contato@loopinfinito.com']
+        adresses:
+            type: array
+            items:
+              $ref: '#/components/schemas/Address'
+        active:
+            type: boolean
+            example: true
+        roles:
+            type: string
+            enum: [CLIENT, TRANSPORTER, PROVIDER]
+            example: 'PROVIDER'
+        shared:
+          type: string
+          enum: [MYSELF, MYGROUP, MYBASE]
+        spcInformation:
+            type: object
+            properties:
+              active:
+                type: boolean
+              lastConsultation:
+                type: string
+                format: date
+              note:
+                type: string
+        tags:
+            type: array
+            items:
+              type: string
+        creditLimit:
+            type: number
+            format: double
+        registrationDate:
+            type: string
+            format: date
+      required:
+        - registerName
+        - federalDocument
+        - roles
+    
+    Address:
+      type: object
+      description: |
+        Endereço da pessoa a ser inserida
+      properties:
+        zipCode:
+          type: string
+          example: '87020-010'
+        premisseType:
+          type: string
+          enum: ['ALAMEDA', 'APARTAMENTO', 'AVENIDA', 'BECO', 'BLOCO', 'CAMINHO', 'ESCADINHA', 'ESTAÇÃO', 'ESTRADA', 'FAZENDA', 'FORTALEZA', 'GALERIA', 'LADEIRA', 'LARGO', 'PRAÇA', 'PARQUE', 'PRAIA', 'QUADRA', 'QUILÔMETRO', 'QUINTA', 'RODOVIA', 'RUA', 'SUPERQUADRA', 'TRAVESSA', 'VIADUTO', 'VILA']
+          example: 'AVENIDA'
+        premisse:
+          type: string
+          example: 'Prudente de Morais'
+        number:
+          type: string
+          example: '301'
+        information:
+          type: string
+          example: 'Apto 1201'
+        neighbourhood:
+          type: string
+          example: 'Zona 7'
+        localization:
+          type: string
+          example: 'Maringá'
+        state:
+          type: string
+          example: 'Paraná'
+        country:
+          type: string
+          example: "Brasil"
+        latitude:
+          type: number
+        longitude:
+          type: number
+        formalCode:
+          type: string
+        stateCode:
+          type: string
+        isPrimary:
+          type: boolean

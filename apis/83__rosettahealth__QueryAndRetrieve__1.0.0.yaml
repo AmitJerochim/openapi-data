@@ -1,0 +1,221 @@
+penapi: 3.0.0
+info:
+  description: REST API for querying a clinical data repository
+  version: "1.0.0"
+  title: QueryAndRetrieve API
+  contact:
+    email: support@rosettahealth.com
+servers:
+  - description: Test
+    url: https://healthbustest.rosettahealth.net/qnrservice
+  
+  - description: Prod
+    url: https://healthbus.rosettahealth.net/qnrservice  
+    
+tags:
+  - name: queryForDocuments
+    description: query for documents for a specific patient ID
+  - name: retrieveSingleDocument
+    description: retrieve 1 or more documents
+paths:
+  /queryForDocuments:
+    post:
+      tags:
+        - queryForDocuments
+      description: Query for documents for a specific patient. Required information;
+        
+        * XDSDocumentEntryPatientId
+        
+        
+        Slots information is optional if specific Slots need to be included in the IHE AdHocQueryRequest. 
+        
+        
+        
+        SAML information is optional if SAML information captued in the rules repository needs to be overridden. 
+        
+        
+        AdditionalInfo is optional key-value pair data that can be required by specific use cases. 
+      
+      responses:
+        '200':
+          description: array of documentInfo objects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/foundDocuments' 
+        '400':
+          description: 'invalid input, object invalid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/queryForDocuments'
+
+  /retrieveSingleDocument:
+    post:
+      tags:
+        - retrieveSingleDocument
+      description: retrieve document based on previous query results. Required information;
+         
+         - documentId
+
+         - repositoryId
+          
+         - homeCommunityId
+        
+        
+        Note SAML information is optional if SAML information captued in the rules repository needs to be overridden. 
+        
+        
+        AdditionalInfo is optional key-value pair data that can be required by specific use cases. 
+      responses:
+        '200':
+          description: retrieve submission successful.
+          content:
+            text/plain:
+              schema:
+                format: binary
+              example:
+                binary data
+        '400':
+          description: 'invalid input, object invalid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/retrieveDocuments' 
+            
+
+components:
+  schemas:
+    queryForDocuments:
+      type: object
+      required:
+        - XDSDocumentEntryPatientId
+      properties:
+        XDSDocumentEntryPatientId:
+          type: string
+          example: ST-1000^^^&1.3.6.1.4.1.21367.2003.3.9&ISO
+        slots:
+          $ref: '#/components/schemas/slots'
+        saml:
+          $ref: '#/components/schemas/saml'
+        additionalInfo:
+          $ref: '#/components/schemas/additionalInfo'
+
+# single document to retrieve          
+    retrieveDocuments:
+      type: object
+      required:
+        - documentInfo
+      properties:
+        document:
+          $ref: '#/components/schemas/documentInfo'
+        saml:
+          $ref: '#/components/schemas/saml'
+        additionalInfo:
+          $ref: '#/components/schemas/additionalInfo'
+
+# additionalInfo required to process the request
+    additionalInfo:
+      type: object
+      additionalProperties:
+        type: object
+        properties:
+          key:
+            type: string
+          value:
+            type: string
+      example:
+        key1: info1
+        key2: info2
+          
+          
+# rim:Slot values          
+    slots:
+      type: object
+      additionalProperties:
+        type: object
+        properties: 
+          slotName:
+            type: string
+          value:
+            type: string
+      example:
+        $XDSDocumentEntryStatus: ('urn:oasis:names:tc:ebxml-regrep:ResponseStatusType:Approved')
+        $XDSDocumentEntryHealthcareFacilityTypeCode: (‘Emergency Department’)
+        
+# information for saml assertion    
+    saml:
+      type: object
+      additionalProperties:
+        type: object
+        properties:
+          key:
+            type: string
+          value:
+            type: string
+      example:
+        SubjectId: CN=*.rosettahealth.net, OU=Domain Control Validated
+        SubjectOrganization: Happy Valley Clinic
+        SubjectOrganizationID: 2.16.840.1.113883.4.1
+        HomeCommunityID: 2.16.840.1.113883.4.1
+        SubjectLocalityDNS: happyvalleyclinic.org
+        RoleCode: 224608005
+        RoleDisplayName: Administrative healthcare staff
+        PurposeOfUseCode: TREATMENT
+        PurposeOfUseDisplayName: Treatment
+    
+# object container for document found for patient
+    foundDocuments:
+      type: array
+      items:
+          $ref: '#/components/schemas/documentInfo'
+
+
+# metadata on a given document
+    documentInfo:
+      type: object
+      properties:
+        documentId:
+          type: string
+        repositoryId:
+          type: string
+        authorInstitution:
+          type: string
+        homeCommunityId:
+          type: string
+        sourcePatientId:
+          type: string
+        documentName:
+          type: string
+        creationTime:
+          type: string  
+      required:
+        - documentId
+        - repositoryId
+      example:
+        documentId: 1.2.aa.bb.12345
+        repositoryId: wwqq3344
+        homeCommunityId: 1.2.3.4.5.6
+        sourcePatientId: st3498702^^^&amp;1.3.6.1.4.1.21367.2005.3.7&amp;ISO
+        documentName: Sample Document
+        creationTime: 200412261119
+        
+# metadata on a given document
+    registryErrors:
+      type: object
+      properties:
+        codeContext:
+          type: string
+        errorCode:
+          type: string
+        location:
+          type: string
+        severity:
+          type: string
+      example:
+        codeContext: ITI38 Error
+        errorCode: XDSRegistryError
+        location: urn:oid:2.16.17.710.812.1000.990.1
+        severity: urn:oasis:names:tc:ebxml-regrep:ErrorSeverityType:Error

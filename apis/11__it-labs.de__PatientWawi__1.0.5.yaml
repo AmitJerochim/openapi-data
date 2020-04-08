@@ -1,0 +1,1236 @@
+openapi: 3.0.0
+info:
+  version: "1.0.5"
+  title: 'Patient - Warenwirtschaft (Basis)'
+  description: 'Synchronisation der Patienten mit der Warenwirtschaft'
+paths:
+  /patient:
+    get:
+      tags:
+        - patient
+      parameters:
+        - name: alberta-api-key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: tenant
+          in: header
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: status
+          required: true
+          schema:
+            type: string
+          description: created, updated oder archived - 
+        - in: query
+          name: updatedAfter
+          required: true
+          schema:
+            type: string
+          description: '2018-02-21T09:30:00.000Z (im UTC-Format)'    
+      summary: Patienten je nach Status abrufen
+      description: Szenario - das WaWi fragt in einem bestimmten Intervall bei Alberta nach, ob es neu angelegte, geänderte oder archivierte Patienten gibt
+        ----- Aufruf => patient/?status=[status]&updatedAfter=[updatedAfter]
+      operationId: getCreatedPatients
+      responses:
+        '200':
+          description: Neu angelegte Patienten vorhanden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArrayOfPatients'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ArrayOfPatients'
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+    post:
+      tags:
+        - patient
+      parameters:
+        - name: alberta-api-key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: tenant
+          in: header
+          required: true
+          schema:
+            type: string
+      summary: Patient hinzufügen
+      description: Szenario - ein Patient wurde im WaWi angelegt und soll in Alberta übertragen werden
+      operationId: addPatient
+      responses:
+        '201':
+          description: Created - Patient wurde angelegt. Eine Liste von CustomerMappings wird zurückgegeben. Mindestens PatientenId aus Alberta mit Id aus WaWi. Zusätzlich für jeden Patientenkontakt die Id aus Alberta und die aus dem WaWi.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerMapping'
+            application/xml:
+              schema:
+                 $ref: '#/components/schemas/CustomerMapping'
+                 
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '405':
+          description: Validierung fehlgeschlagen -> Dublettenprüfung, fehlende Pflichtfelder
+      requestBody:
+        $ref: '#/components/requestBodies/Patient'
+    put:
+      tags:
+        - patient
+      parameters:
+        - name: alberta-api-key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: tenant
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: die Id des zu ändernden Patienten 
+      summary: Patient ändern
+      description: Szenario - ein Patient wurde im WaWi geändert und diese Änderungen sollen in Alberta übertragen werden ----- Aufruf => patient/[patientenId]
+      operationId: updatePatient
+      responses:
+        '200':
+          description: OK - Patient wurde geändert. Eine Liste von CustomerMappings wird zurückgegeben. Mindestens PatientenId aus Alberta mit Id aus WaWi. Zusätzlich für jeden Patientenkontakt die Id aus Alberta und die aus dem WaWi.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerMapping'
+            application/xml:
+              schema:
+                 $ref: '#/components/schemas/CustomerMapping'
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '405':
+          description: Validierung fehlgeschlagen -> Dublettenprüfung, fehlende Pflichtfelder
+      requestBody:
+        $ref: '#/components/requestBodies/Patient'
+  /patient/customerMapping:
+    get:
+      tags:
+        - customerMapping
+      parameters:
+        - name: alberta-api-key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: tenant
+          in: header
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: customerId
+          required: true
+          schema:
+            type: string
+          description: die Id des Kunden aus dem WaWi
+      summary: Zuordnung Kunde (WaWi) zu Patient (Alberta) abrufen
+      description: Szenario - das WaWi fragt bei Alberta nach, welche Alberta-Id dem jeweiligen Kunden zugeordnet ist
+      operationId: getCustomerMapping
+      responses:
+        '200':
+          description: Mapping vorhanden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerMapping'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/CustomerMapping'
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+  /doctor/{_id}:
+    get:
+      tags:
+        - doctor
+      parameters:
+        - name: alberta-api-key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: tenant
+          in: header
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: _id
+          required: true
+          schema:
+            type: string
+          description: eindeutige id des Arztes (Object-Id)
+      summary: Daten eines einzelnen Arztes abrufen
+      description: Szenario - das WaWi fragt bei Alberta nach, wie die Daten des Arztes mit der angegebenen Id sind
+      operationId: getDoctor
+      responses:
+        '200':
+          description: Arzt vorhanden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Doctor'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Doctor'
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+  /nursingHome/{_id}:
+    get:
+      tags:
+        - nursingHome
+      parameters:
+        - name: Alberta-Api-Key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Tenant
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: _id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: eindeutige id des Pflegeheimes
+      summary: Daten eines einzelnen Pflegeheimes abrufen
+      description: Szenario - das WaWi fragt bei Alberta nach, wie die Daten des Pflegeheimes mit der angegebenen Id sind
+      operationId: geNursingHome
+      responses:
+        '200':
+          description: Pflegeheim vorhanden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NursingHome'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/NursingHome'
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+  /nursingService/{_id}:
+    get:
+      tags:
+        - nursingService
+      parameters:
+        - name: Alberta-Api-Key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Tenant
+          in: header
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: _id
+          required: true
+          schema:
+            type: string
+          description: eindeutige id des Pflegedienstes
+      summary: Daten eines einzelnen Pflegedienstes abrufen
+      description: Szenario - das WaWi fragt bei Alberta nach, wie die Daten des Pflegedienstes mit der angegebenen Id sind
+      operationId: getNursingService
+      responses:
+        '200':
+          description: Pflegedienst vorhanden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NursingService'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/NursingService'
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+  /hospital/{_id}:
+    get:
+      tags:
+        - hospital
+      parameters:
+        - name: Alberta-Api-Key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Tenant
+          in: header
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: _id
+          required: true
+          schema:
+            type: string
+          description: eindeutige Id der Klinik
+      summary: Daten einer einzelnen Klinik abrufen
+      description: Szenario - das WaWi fragt bei Alberta nach, wie die Daten der Klinik mit der angegebenen Id sind
+      operationId: getHospital
+      responses:
+        '200':
+          description: Klinik vorhanden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hospital'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Hospital'
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+  /payer/{_id}:
+    get:
+      tags:
+        - payer
+      parameters:
+        - name: Alberta-Api-Key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Tenant
+          in: header
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: _id
+          required: true
+          schema:
+            type: string
+          description: eindeutige id des Kostenträgers - bei Selbstzahlern, die des Patienten
+      summary: Daten eines einzelnen Kostenträgers abrufen
+      description: Szenario - das WaWi fragt bei Alberta nach, wie die Daten des Kostenträgers mit der angegebenen Id sind
+      operationId: getPayer
+      responses:
+        '200':
+          description: Kostenträger vorhanden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payer'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Payer'
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+  /pharmacy/{_id}:
+    get:
+      tags:
+        - pharmacy
+      parameters:
+        - name: Alberta-Api-Key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Tenant
+          in: header
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: _id
+          required: true
+          schema:
+            type: string
+          description: eindeutige Id der Apotheke
+      summary: Daten einer einzelnen Apotheke abrufen
+      description: Szenario - das WaWi fragt bei Alberta nach, wie die Daten der Apotheke mit der angegebenen Id sind
+      operationId: getPharmacy
+      responses:
+        '200':
+          description: Apotheke vorhanden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pharmacy'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Pharmacy'
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+  /region/{_id}:
+    get:
+      tags:
+        - region
+      parameters:
+        - name: Alberta-Api-Key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Tenant
+          in: header
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: _id
+          required: true
+          schema:
+            type: string
+          description: eindeutige id der Region
+      summary: Daten einer einzelnen Region abrufen
+      description: Szenario - das WaWi fragt bei Alberta nach, wie die Daten der Region mit der angegebenen Id sind
+      operationId: getRegion
+      responses:
+        '200':
+          description: Region vorhanden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Region'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Region'
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+  /users/{_id}:
+    get:
+      tags:
+        - user
+      parameters:
+        - name: Alberta-Api-Key
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: Tenant
+          in: header
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: _id
+          required: true
+          schema:
+            type: string
+          description: eindeutige id des Benutzers
+      summary: Daten eines einzelnen Benutzers abrufen
+      description: Szenario - das WaWi fragt bei Alberta nach, wie die Daten eines Benutzers mit der angegebenen Id sind
+      operationId: getUser
+      responses:
+        '200':
+          description: Benutzer vorhanden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Users'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Users'
+        '400':
+          description: Bad Request -> Syntaxfehler im Request
+        '401':
+          description: Unauthorized -> keine Berechtigung für Operation
+components:
+  schemas:
+    Patient:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - birthday
+        - regionId
+      properties:
+        _id:
+          type: string
+          format: uuid
+          example: a4adecb6-126a-4fa6-8fac-e80165ac4264 -> muss bei POST leer bleiben
+        customerId:
+          type: string
+          example: D32399
+        customerContactId:
+          type: string
+          example: KK123456
+        gender:
+          type: number
+          example: 1
+          description: 0 = Unbekannt, 1 = Weiblich, 2 = Männlich, 3 = Divers
+          minimum: 0
+          maximum: 3
+        title:
+          type: number
+          example: 1
+          description: 0 = Unbekannt, 1 = Dr., 2 = Prof. Dr., 3 = Dipl. Ing., 4 = Dipl. Med., 5 = Dipl. Psych., 6 = Dr. Dr., 7 = Dr. med., 8 = Prof. Dr. Dr., 9 = Prof., 10 = Prof. Dr. med., 11 = Rechtsanwalt, 12 = Rechtsanwältin, 13 = Schwester (Orden)
+          minimum: 0
+          maximum: 13
+        firstName:
+          type: string
+          example: Anna
+        lastName:
+          type: string
+          example: Mustermann
+        birthday:
+          type: string
+          format: date
+          example: '1942-01-21'
+          pattern: '^\d{4-.\d{2}-\d{2}$'
+        address:
+          type: string
+          example: Martin-Richter-Str. 22
+        additionalAddress:
+          type: string
+          example: Pflegeheim Meier
+        additionalAddress2:
+          type: string
+          example: Zi. 88a
+        postalCode:
+          type: string
+          example: 90489
+        city:
+          type: string
+          example: Nürnberg
+        phone:
+          type: string
+          example: 0911 3324 323
+          description: Ohne Ländervorwahl
+        fax:
+          type: string
+          example: 0911 3324 323
+          description: Ohne Ländervorwahl
+        mobilePhone:
+          type: string
+          example: 0178 3524 323
+          description: Ohne Ländervorwahl
+        email:
+          type: string
+          format: email
+          example: max.mustermann@email.de
+        primaryDoctorId:
+          type: string
+          example: 5ab23c369d69c74b68cff5f7
+          description: Voraussetzung, Alberta-Id ist bereits durch initialen Abgleich in WaWi vorhanden
+        nursingHomeId:
+          type: string
+          example: 5ab237059d69c74b68cecbdb
+          description: Id des Pflegeheimes (Voraussetzung, Alberta-Id ist bereits durch initialen Abgleich in WaWi vorhanden)
+        nursingServiceId:
+          type: string
+          example: 5ab2379c9d69c74b68cee819
+          description: Id des Pflegedienstes (Voraussetzung, Alberta-Id ist bereits durch initialen Abgleich in WaWi vorhanden)
+        hospital:
+          type: object
+          properties:
+            hospitalId:
+              type: string
+              example: 5ab2379c9d69c74b68cee819
+              description: Id der entlassenden Klinik (Voraussetzung, Alberta-Id ist bereits durch initialen Abgleich in WaWi vorhanden)
+            dischargeDate:
+              type: string
+              format: date
+              example: '2019-11-21'
+              pattern: '^\d{4-.\d{2}-\d{2}$'
+              description: letztes Entlassdatum aus der Klinik
+        payer:
+          type: object
+          properties:
+            payerId:
+              type: string
+              example: 4cb88b2e-0051-40e1-a1c9-d711d3249859
+              description: Id des Kostenträgers (Voraussetzung, Alberta-Id ist bereits durch initialen Abgleich in WaWi vorhanden)
+            payerType:
+              type: string
+              example: 2
+              minimum: 0
+              maximum: 5
+              description: Typ des Kostenträgers (0 = Unbekannt, 1 = gesetzlich, 2 = privat, 3 = Berufsgenossenschaft, 4 = Selbstzahler, 5 = Andere)
+            numberOfInsured:
+              type: string
+              example: A123456789
+              description: Versichertennummer des Patienten (Krankenkasse)
+            copaymentFromDate:
+              type: string
+              format: date
+              example: '2018-01-01'
+              pattern: '^\d{4-.\d{2}-\d{2}$'
+              description: Zuzahlungsbefreit ab Datum - Feld bleibt leer, wenn keine Zuzahlungsbefreiung
+            copaymentToDate:
+              type: string
+              format: date
+              example: '2018-01-31'
+              pattern: '^\d{4-.\d{2}-\d{2}$'
+              description: Zuzahlungsbefreit bis Datum - Feld bleibt leer, wenn keine Zuzahlungsbefreiung
+        changeInSupplier:
+          type: boolean
+          example: false
+          description: Kennzeichen ob Umversorgungspatient oder nicht
+        ivTherapy:
+          type: boolean
+          example: false
+          description: Kennzeichen ob IV-Therapie oder nicht
+        comment:
+          type: string
+          example: true
+          description: Bemerkung zum Patienten
+        billingAddress:
+          type: object
+          description: generell ABWEICHENDE Rechnungsadresse
+          properties:
+            gender:
+              type: number
+              example: 1
+              description: 0 = Unbekannt, 1 = Weiblich, 2 = Männlich, 3 = Divers
+              minimum: 0
+              maximum: 3
+            title:
+              type: number
+              example: 1
+              description: 0 = Unbekannt, 1 = Dr., 2 = Prof. Dr., 3 = Dipl. Ing., 4 = Dipl. Med., 5 = Dipl. Psych., 6 = Dr. Dr., 7 = Dr. med., 8 = Prof. Dr. Dr., 9 = Prof., 10 = Prof. Dr. med., 11 = Rechtsanwalt, 12 = Rechtsanwältin, 13 = Schwester (Orden)
+              minimum: 0
+              maximum: 13
+            name:
+              type: string
+              example: Susanne Mustermann
+            address:
+              type: string
+              example: Lange Gasse 33
+            postalCode:
+              type: string
+              example: 90491
+            city:
+              type: string
+              example: Nürnberg
+        deliveryAddress:
+          type: object
+          description: generell ABWEICHENDE Lieferadresse
+          properties:
+            gender:
+              type: number
+              example: 1
+              description: 0 = Unbekannt, 1 = Weiblich, 2 = Männlich, 3 = Divers
+              minimum: 0
+              maximum: 3
+            title:
+              type: number
+              example: 1
+              description: 0 = Unbekannt, 1 = Dr., 2 = Prof. Dr., 3 = Dipl. Ing., 4 = Dipl. Med., 5 = Dipl. Psych., 6 = Dr. Dr., 7 = Dr. med., 8 = Prof. Dr. Dr., 9 = Prof., 10 = Prof. Dr. med., 11 = Rechtsanwalt, 12 = Rechtsanwältin, 13 = Schwester (Orden)
+              minimum: 0
+              maximum: 13
+            name:
+              type: string
+              example: Susanne Mustermann
+            address:
+              type: string
+              example: Lange Gasse 33
+            postalCode:
+              type: string
+              example: 90491
+            city:
+              type: string
+              example: Nürnberg
+        regionId:
+          type: string
+          example: 5ab247b49d69c74b68d1debf
+          description: Id der Region, der der Patient zugeordnet ist (Voraussetzung, Alberta-Id ist bereits durch initialen Abgleich in WaWi vorhanden)
+        fieldNurseId:
+          type: string
+          example: 5a6ca8b6456c14307cb9ae35
+          description: Id des zuständingen Außendienstmitarbeiters (Voraussetzung, Alberta-Id ist bereits durch initialen Abgleich in WaWi vorhanden)
+        deactivationReason: 
+          type: string
+          example: changeOfSupplier
+          description: 0 = Unbekannt 1 = Patient verstorben, 2 = Therapieende (alle Therapien), 3 = Leistungserbringerwechsel, 4 = Sonstiges 
+        deactivationDate:
+          type: string
+          format: date
+          example: '2018-01-01'
+          pattern: '^\d{4-.\d{2}-\d{2}$'
+          description: Datum der Deaktivierung (ggf. Sterbedatum)
+        deactivationComment: 
+          type: string
+          example: "Patient wechselt zu Homecare Plus GmbH"
+        patientContacts:
+          type: array
+          items: 
+            $ref: '#/components/schemas/PatientContact'
+        archived:
+          type: boolean
+          example: false
+          description: Kennzeichen ob Patient archiviert ist oder nicht
+        createdAt:
+          type: string
+          format: date
+          example: "2019-11-28T12:24:41.324Z"
+          description: Der Zeitstempel der Anlage
+        createdBy:
+          type: string
+          format: date
+          example: b40bae71-b219-45ce-bac6-2d81c2803f39
+          description: Id des anlegenden Benutzers
+        updatedAt:
+          type: string
+          format: date
+          example: "2019-11-28T12:24:41.324Z"
+          description: Der Zeitstempel der letzten Änderung
+        updatedBy:
+          type: string
+          format: date
+          example: b40bae71-b219-45ce-bac6-2d81c2803f39
+          description: Id des ändernden Benutzers
+        timestamp:
+          type: string
+          format: date
+          example: "2019-11-28T12:24:41.324Z"
+          description: Der letzte Zeitstempel in Alberta
+      xml:
+        name: Patient
+    PatientContact:
+      type: object
+      required:
+        - firstName
+        - lastName
+      properties:
+        _id:
+          type: string
+          format: uuid
+          example: a4adecb6-126a-4fa6-8fac-e80165ac4264 -> muss bei POST leer bleiben
+        customerId:
+          type: string
+          example: D545452
+        type:
+          type: number
+          example: 2
+          description: gibt des Art des Patientenkontaktes an -
+            Unknown = 0,
+            Ehemann = 1,
+            Ehefrau = 2,
+            Lebensgefährte/in = 3,
+            Sohn = 4,
+            Tochter = 5,
+            Enkel = 6,
+            Enkelin = 7,
+            Urenkel = 8,
+            Urenkelin = 9,
+            Mutter = 10,
+            Vater = 11,
+            Onkel = 12,
+            Tante = 13,
+            Nichte = 14,
+            Neffe = 15,
+            Großonkel = 16,
+            Großtante = 17,
+            Großnichte = 18,
+            Großneffe = 19,
+            Schwester = 20,
+            Bruder = 21,
+            Cousin = 22,
+            Cousine = 23,
+            Schwager = 24,
+            Schwägerin = 25,
+            Schwagersbruder = 26,
+            Schwagersschwester = 27,
+            Schwiegermutter = 28,
+            Schwiegervater = 29,
+            Schwiegeronkel = 30,
+            Schwiegertante = 31,
+            Schwiegerkind = 32,
+            Schwiegersohn = 33,
+            Schwiegertochter = 34,
+            Schwiegerenkel = 35,
+            Schwiegerenkelin = 36,
+            Stiefmutter = 37,
+            Stiefvater = 38,
+            Stiefschwester = 39,
+            Stiefbruder = 40,
+            Stieftochter = 41,
+            Stiefsohn = 42,
+            Stiefenkel = 43,
+            Stiefurenkel = 44,
+            Pflegesohn = 45,
+            Pflegetochter = 46,
+            Pflegemutter = 47,
+            Pflegevater = 48,
+            Halbschwester = 49,
+            Halbbruder = 50,
+            Halbonkel = 51,
+            Halbtante = 52,
+            Halbcousin = 53,
+            Halbcousine = 54,
+            Nachbarin = 55,
+            Nachbar = 56,
+            Betreuungsbüro = 57,
+            Freund(in) = 58
+          minimum: 0
+          maximum: 58
+        isLegalCarer:
+          type: boolean
+          example: true
+          description: Kennzeichen, ob es sich beim Kontakt um einen gesetzlichen Betreuer handelt
+        gender:
+          type: string
+          example: 2
+          description: 0 = Unbekannt, 1 = Weiblich, 2 = Männlich, 3 = Divers
+          minimum: 0
+          maximum: 3
+        title:
+          type: number
+          example: 1
+          description:  0 = Unbekannt, 1 = Dr., 2 = Prof. Dr., 3 = Dipl. Ing., 4 = Dipl. Med., 5 = Dipl. Psych., 6 = Dr. Dr., 7 = Dr. med., 8 = Prof. Dr. Dr., 9 = Prof., 10 = Prof. Dr. med., 11 = Rechtsanwalt, 12 = Rechtsanwältin, 13 = Schwester (Orden)
+          minimum: 0
+          maximum: 13
+        firstName:
+          type: string
+          example: Anna
+        lastName:
+          type: string
+          example: Mustermann
+        address:
+          type: string
+          example: Martin-Richter-Str. 22
+        postalCode:
+          type: string
+          example: 90489
+        city:
+          type: string
+          example: Nürnberg
+        phone:
+          type: string
+          example: 0911 3324 323
+          description: Ohne Ländervorwahl
+        mobilePhone:
+          type: string
+          example: 0178 3524 323
+          description: Ohne Ländervorwahl
+        fax:
+          type: string
+          example: 0911 3324 3234
+          description: Ohne Ländervorwahl
+        email:
+          type: string
+          format: email
+          example: anna.mustermann@email.de
+        archived:
+          type: boolean
+          example: true
+          description: Kennzeichen ob Patientenkontakt archiviert ist oder nicht
+        timestamp:
+          type: string
+          format: date
+          example: "2019-11-28T08:37:39.637Z"
+          description: Der Zeitstempel der letzten Änderung
+      xml:
+        name: PatientContact      
+    ArrayOfPatients:
+      type: array
+      items:
+        $ref: '#/components/schemas/Patient'
+      example: [ {_id: a4adecb6-126a-4fa6-8fac-e80165ac4264,
+                gender: 1,
+                title: 2,
+                firstName: Anna,
+                lastName: Mustermann,
+                birthday: 1948-02-02,
+                archived: false,
+                timestamp: '2019-11-28T08:37:39.637Z'},
+                {
+                  _id: a4adecb6-126a-4fa6-8fac-e80165ac4342,
+                gender: 1,
+                title: 0,
+                firstName: Susi,
+                lastName: Sorglos,
+                birthday: 1959-02-02,
+                archived: false,
+                timestamp: '2019-11-28T08:37:39.637Z'}
+                ]
+      description: Eine Auflistung von Patienten
+    CustomerMapping:
+        type: object
+        required:
+          - type
+          - customerId
+          - _id
+        properties:
+          _id:
+            type: string
+            format: uuid
+            example: a4adecb6-126a-4fa6-8fac-e80165ac4264
+            description: Alberta-Id
+          customerId:
+            type: string
+            example: D32399 
+            description: Id aus WaWi
+          timestamp:
+            type: string
+            format: date
+            example: "2019-11-28T08:37:39.637Z"
+            description: Der Zeitstempel der letzten Änderung
+        xml:
+          name: CustomerMapping
+    Doctor:
+        type: object
+        required:
+          - _id
+        properties:
+          _id:
+            type: string
+            example: 5ab23c379d69c74b68cff631
+            description: Id
+          gender:
+            type: number
+            example: 1
+            description:  0 = Unbekannt, 1 = Weiblich, 2 = Männlich, 3 = Divers
+            minimum: 0
+            maximum: 3
+          titleShort:
+            type: string
+            example: Dr.
+          title:
+            type: string
+            example: Dr. med.
+          firstName:
+            type: string
+            example: Klara
+          lastName:
+            type: string
+            example: Kilber-Brüssow
+          address:
+            type: string
+            example: Großer Hirschgraben 28
+          postalCode:
+            type: string
+            example: 60311
+          city:
+            type: string
+            example: Frankfurt am Main
+          phone:
+            type: string
+            example: 0695963782
+          fax:
+            type: string
+            example: 06959796115
+          timestamp:
+            type: string
+            format: date
+            example: "2018-03-22T15:34:29.132+0000"
+            description: Der Zeitstempel der letzten Änderung
+        xml:
+          name: Doctor
+    NursingHome:
+        type: object
+        required:
+          - _id
+        properties:
+          _id:
+            type: string
+            example: 5ab237089d69c74b68cecc45
+            description: Id
+          name:
+            type: string
+            example: Seniorenheim Müggelschlößchenweg
+          address:
+            type: string
+            example: Müggelschlößchenweg 46
+          postalCode:
+            type: string
+            example: 12559
+          city:
+            type: string
+            example: Berlin
+          phone:
+            type: string
+            example: 03065484512
+          fax:
+            type: string
+            example: 03065484513
+          email:
+            type: string
+            format: email
+            example: wagemann@berliner-stadtmission.de
+          timestamp:
+            type: string
+            format: date
+            example: "2018-03-22T15:34:29.132+0000"
+            description: Der Zeitstempel der letzten Änderung
+        xml:
+          name: NursingHome
+    NursingService:
+        type: object
+        required:
+          - _id
+        properties:
+          _id:
+            type: string
+            example: 5ab2379e9d69c74b68cee874
+            description: Id
+          name:
+            type: string
+            example: Engelshand Pflegedienst UG
+          address:
+            type: string
+            example: Rubensstr. 93
+          postalCode:
+            type: string
+            example: 12157
+          city:
+            type: string
+            example: Berlin
+          phone:
+            type: string
+            example: 03081479048
+          fax:
+            type: string
+            example: 03062201781
+          email:
+            type: string
+            format: email
+            example: engelshand@yahoo.de
+          website:
+            type: string
+            example: http://www.engelshand.de
+          timestamp:
+            type: string
+            format: date
+            example: "2018-03-22T15:34:29.132+0000"
+            description: Der Zeitstempel der letzten Änderung
+        xml:
+          name: NursingService
+    Hospital:
+        type: object
+        required:
+          - _id
+        properties:
+          _id:
+            type: string
+            example: 5ab233be9d69c74b68cec28e
+            description: Id
+          company:
+            type: string
+            example: Heilig-Geist-bingen
+          name:
+            type: string
+            example: Heilig-Geist-Hospital Bingen    
+          companyName:
+            type: string
+            example: Heilig-Geist-Hospital Bingen   
+          additionalCompanyName:
+            type: string
+            example: Stiftung des bürgerlichen Rechts
+          address:
+            type: string
+            example: Kapuzinerstr. 15-17
+          postalCode:
+            type: string
+            example: 55411
+          city:
+            type: string
+            example: Bingen
+          phone:
+            type: string
+            example: 06721-907-0
+          fax:
+            type: string
+            example: 06721-907-133
+          email:
+            type: string
+            format: email
+            example: info@heilig-geist-hospital.de
+          website:
+            type: string
+            example: http://www.heilig-geist-hospital.de/
+          timestamp:
+            type: string
+            format: date
+            example: "2018-03-22T15:34:29.132+0000"
+            description: Der Zeitstempel der letzten Änderung
+        xml:
+          name: Hospital
+    Payer:
+        type: object
+        required:
+          - _id
+        properties:
+          _id:
+            type: string
+            example: 5ada01a2c3918e1bdcb54612
+            description: Id
+          name:
+            type: string
+            example: AOK Bremen / Bremerhaven
+          type:
+            type: number
+            example: 1
+            description: 0 = Unbekannt, 1 = gesetzlich, 2 = privat, 3 = Berufsgenossenschaft, 4 = Selbstzahler, 5 = Andere
+            minimum: 0
+            maximum: 5
+          ikNumber:
+            type: string
+            example: 108534160
+          timestamp:
+            type: string
+            format: date
+            example: "2018-03-22T15:34:29.132+0000"
+            description: Der Zeitstempel der letzten Änderung
+        xml:
+          name: Payer
+    Pharmacy:
+        type: object
+        required:
+          - _id
+        properties:
+          _id:
+            type: string
+            example: 5ab2379e9d69c74b68cee874
+            description: Id
+          name:
+            type: string
+            example: Vital-Apotheke
+          address:
+            type: string
+            example: Leipziger Str. 40
+          postalCode:
+            type: string
+            example: 01127
+          city:
+            type: string
+            example: Dresden
+          phone:
+            type: string
+            example: 03517954798
+          fax:
+            type: string
+            example: 03517954790
+          email:
+            type: string
+            format: email
+            example: vitalapo@yahoo.de
+          website:
+            type: string
+            example: http://www.vitalapotheke.de
+          timestamp:
+            type: string
+            format: date
+            example: "2018-03-22T15:34:29.132+0000"
+            description: Der Zeitstempel der letzten Änderung
+        xml:
+          name: Pharmacy  
+    Region:
+        type: object
+        required:
+          - _id
+        properties:
+          _id:
+            type: string
+            example: 5ada01a2c3918e1bdcb54612
+            description: Id
+          label:
+            type: string
+            example: Nordost
+          parent:
+            type: string
+            example: 5afc1d30b37364c26e9ca501
+            description: Id der übergeordneten Region
+          timestamp:
+            type: string
+            format: date
+            example: "2018-03-22T15:34:29.132+0000"
+            description: Der Zeitstempel der letzten Änderung
+        xml:
+          name: Region
+    Users:
+        type: object
+        required:
+          - _id
+        properties:
+          _id:
+            type: string
+            example: 5ada01a2c3918e1bdcb54612
+            description: Id
+          firstName:
+            type: string
+            example: Max
+          lastName:
+            type: string
+            example: Müller
+          email:
+            type: string
+            format: email
+            example: m.mueller@it-labs.de
+          timestamp:
+            type: string
+            format: date
+            example: "2018-03-22T15:34:29.132+0000"
+            description: Der Zeitstempel der letzten Änderung
+        xml:
+          name: Region 
+  requestBodies:
+    Patient:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Patient'
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/Patient'
+      description: Der Patient
+      required: true
+    PatientContact:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PatientContact'
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/PatientContact'
+      description: Patientenkontakt - Betreuer, Angehörige etc.
+      required: true
+
+    CustomerMapping:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CustomerMapping'
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/CustomerMapping'
+      description: Das Mapping von Debitor im WaWi zu Patient in Alberta
+      required: true  
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/it-labs.de/PatientWawi/1.0.1

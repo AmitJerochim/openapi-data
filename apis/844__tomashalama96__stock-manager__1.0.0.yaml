@@ -1,0 +1,327 @@
+penapi: 3.0.0
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/tomashalama96/stock-manager/1.0.0
+info:
+  version: "1.0.0"
+  title: Stock manager
+  description: >-
+    REST API specification for Stock manager app.
+
+paths:
+  /signup:
+      post:
+        tags:
+          - signup
+        summary: Signup user
+        operationId: signup
+        requestBody:
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                      format: email
+                    name:
+                      type: string
+                    password:
+                      type: string
+                      format: password
+            description: Email, name and password of user.
+            required: true
+        responses:
+          '200':
+            description: Success
+          '400':
+            $ref: '#/components/responses/BadRequestError'
+  /auth:
+    post:
+      tags:
+        - auth
+      summary: Getting token with user id.
+      operationId: auth
+      requestBody:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email:
+                    type: string
+                    format: email
+                  password:
+                    type: string
+                    format: password
+          description: Email and password of user.
+          required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                properties:
+                  token:  
+                    type: string
+                    format: uuid
+                  user_id:
+                    type: integer
+                    
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          description: Incorrect credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /users/{user_id}/data-collection:
+    post:
+      tags:
+        - user
+      summary: Create all data from provided degiro content.
+      operationId: createData
+      parameters:
+        - name: user_id
+          in: path
+          description: ID of user
+          schema:
+            type: integer
+          required: true
+      requestBody:
+        description: CSV content, serialized to json
+        required: true
+        content:
+          text/csv:
+            schema:
+                properties:
+                  csv_data:  
+                    type: string
+      responses:
+        '200':
+          description: Success
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError' 
+  /users/{user_id}/portfolio:
+    get:
+      tags:
+        - user
+      summary: Get portfolio by user
+      operationId: getPortfolio
+      parameters:
+        - name: user_id
+          in: path
+          description: ID of user
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Portfolio'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError' 
+  /users/{user_id}/buys:
+    get:
+      tags:
+        - user
+      summary: Get buys by user
+      operationId: getBuys
+      parameters:
+        - name: user_id
+          in: path
+          description: ID of user
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Buy'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+  /users/{user_id}/sells:
+    get:
+      tags:
+        - user
+      summary: Get sells by user
+      operationId: getSells
+      parameters:
+        - name: user_id
+          in: path
+          description: ID of user
+          schema:
+            type: integer
+          required: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sell'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'  
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: uuid 
+  responses:
+    Created:
+      description: Created
+      headers: 
+        Location:
+          description: Location of new created entity
+          schema:
+            type: string
+    NoContent:
+      description: Success (No content returned)
+    BadRequestError:
+      description: Incorrect syntax in request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnauthorizedError:
+      description: Access token is missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFoundError:
+      description: The specified resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Portfolio:
+      type: object
+      properties:
+        ID:
+          type: integer
+          readOnly: true
+        amount:
+          type: integer
+        stock_name:
+          type: string
+        ticker:
+          type: string
+        stock_exchange:
+          type: string
+        average_stock_price:
+          type: number
+          format: float
+        stock_price_currency:
+          type: string
+    Buy:
+      type: object
+      properties:
+        ID:
+          type: integer
+          readOnly: true
+        date:
+          type: string
+        stock_name:
+          type: string
+        isin:
+          type: string
+        stock_exchange:
+          type: string
+        amount:
+          type: integer
+        stock_price:
+          type: number
+          format: float
+        stock_price_currency:
+          type: string 
+        total_stock_price:
+          type: number
+          format: float
+        total_stock_price_currency:
+          type: string
+        fee:
+          type: number
+          format: float
+        fee_currency:
+          type: string   
+        total_price:
+          type: number
+          format: float
+        total_price_currency:
+          type: string
+    Sell:
+      type: object
+      properties:
+        ID:
+          type: integer
+          readOnly: true
+        date:
+          type: string
+        stock_name:
+          type: string
+        isin:
+          type: string
+        stock_exchange:
+          type: string
+        amount:
+          type: integer
+        stock_price:
+          type: number
+          format: float
+        stock_price_currency:
+          type: string 
+        total_stock_price:
+          type: number
+          format: float
+        total_stock_price_currency:
+          type: string
+        fee:
+          type: number
+          format: float
+        fee_currency:
+          type: string   
+        total_price:
+          type: number
+          format: float
+        total_price_currency:
+          type: string
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - code
+        - message
+security:
+  - bearerAuth: []
+  - application:
+      - read
+      - write

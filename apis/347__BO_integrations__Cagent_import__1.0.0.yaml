@@ -1,0 +1,558 @@
+penapi: 3.0.0
+info:
+  description: |
+    Пример поиска и экспорта контрагентов из системы КИС в КСАСК "ProfITsoft".
+  version: "1.0.0"
+  title: 'Контрагенты: поиск и экспорт'
+  termsOfService: 'http://swagger.io/terms/'
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: cagent-search-service
+    description: 'Сервис поиска контрагентов'
+  
+  - name: cagent-export-service
+    description: 'Сервис экспорта контрагентов'
+paths:
+  /api/cagent/_search:
+    post:
+      tags:
+        - cagent-search-service
+      summary: Поиск контрагентов
+      operationId: filterCagents
+      
+      parameters:
+        - in: header
+          name: UserLogin
+          description: 'Логин пользователя в КСАСК "ProfITsoft", от имени которого выполняется операция'
+          schema:
+            type: string
+          required: true
+        - in: header
+          name: UserEmail
+          description: 'Электронная почта пользователя в КСАСК "ProfITsoft", от имени которого выполняется операция'
+          schema:
+            type: string
+            format: email
+          required: true
+        - in: header
+          name: UserName
+          description: 'Логин КСАСК "ProfITsoft", от имени которой выполняется операция'
+          schema:
+            type: string
+          required: true
+        - in: header
+          name: Token
+          description: 'Токен, сформированный на основании тела запроса и пароля КСАСК "ProfITsoft"'
+          schema:
+            type: string
+          required: true
+      
+      requestBody:
+        description: 'Фильтр с критериями поиска, по которому формируется и передается список контрагентов'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CagentFilterRequestDto'
+              
+      responses:
+        200:
+          description: Успешное или неуспешное выполнение поиска
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CagentFilterResponseDto'
+        400:
+          description: 'Некорректные параметры запроса'
+        401:
+          description: 'Неавторизирован'
+        403:
+          description: 'Доступ запрещён'
+        404:
+          description: 'Ресурс не найден'
+        500:
+          description: 'Внутрення ошибка сервера'
+          
+      security:
+        - bearerAuth: []
+        
+  /api/cagent/_export:
+    post:
+      tags:
+        - cagent-export-service
+      summary: Экспорт контрагентов
+      operationId: exportCagents
+      
+      parameters:
+        - in: header
+          name: UserLogin
+          description: 'Логин пользователя в КСАСК "ProfITsoft", от имени которого выполняется операция'
+          schema:
+            type: string
+          required: true
+        - in: header
+          name: UserEmail
+          description: 'Электронная почта пользователя в КСАСК "ProfITsoft", от имени которого выполняется операция'
+          schema:
+            type: string
+            format: email
+          required: true
+        - in: header
+          name: UserName
+          description: 'Логин КСАСК "ProfITsoft", от имени которой выполняется операция'
+          schema:
+            type: string
+          required: true
+        - in: header
+          name: Token
+          description: 'Токен, сформированный на основании тела запроса и пароля КСАСК "ProfITsoft"'
+          schema:
+            type: string
+          required: true
+          
+      requestBody:
+        description: 'Параметры поиска контрагента'
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CagentExportRequestDto'
+              
+      responses:
+        200:
+          description: Успешное или неуспешное выполнение экспорта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CagentResponseDto'
+        400:
+          description: 'Некорректные параметры запроса'
+        401:
+          description: 'Неавторизирован'
+        403:
+          description: 'Доступ запрещён'
+        404:
+          description: 'Ресурс не найден'
+        500:
+          description: 'Внутрення ошибка сервера'
+          
+      security:
+        - bearerAuth: []
+
+externalDocs:
+  description: Find out more about Swagger
+  url: 'http://swagger.io'
+components:
+  schemas:
+  
+    CagentFilterRequestDto:
+      type: object
+      properties:
+        personTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonType'
+        divisionCodes:
+          type: array
+          items:
+            type: string
+          description: 'Ситсемные коды подразделений'
+        name:
+          type: string
+          description: 'ФИО/Название организации'
+        innOrEgrpou:
+          type: string
+          description: 'ИНН/ЕГРПОУ'
+        person:
+          $ref: '#/components/schemas/PersonFilterRequestDto'
+        address:
+          $ref: '#/components/schemas/AddressFilterRequestDto'
+        phone:
+          type: string
+          description: 'Телефон'
+        email:
+          type: string
+          description: 'Электронная почта'
+        cagentCode:
+          type: string
+          description: 'Системный код контрагента'
+        page:
+          type: integer
+          format: int32
+          minimum: 1
+          default: 1
+          description: 'Текущая страница списка найденных договоров'
+        pageSize:
+          type: integer
+          format: int32
+          minimum: 1
+          default: 20
+          description: 'Количество записей на странице из списка найденных договоров'
+      required:
+        - page
+        - pageSize
+          
+    PersonFilterRequestDto:
+      description: 'Личные данные (если контрагентом является физическое лицо)'
+      type: object
+      properties:
+        birthDate:
+          type: string
+          format: date
+          description: 'Дата рождения (допустимые форматы: ''dd/MM/yyyy'', ''dd.MM.yyyy'')'
+          
+    AddressFilterRequestDto:
+      description: 'Данные адреса'
+      type: object
+      properties:
+        country:
+          type: string
+          default: 'UA'
+          description: 'Страна (ISO-коды страны в двухбуквенной системе). По умолчанию UA'
+        region:
+          type: string
+          description: 'Область. Название области из справочника "Области" КСАСК "ProfITsoft"'
+        town:
+          type: string
+          description: 'Населенный пункт. Название населенного пункта из справочника "Населенные пункты" КСАСК "ProfITsoft"'
+        street:
+          type: string
+          description: 'Улица'
+        zip:
+          type: string
+          description: 'Почтовый индекс'
+          
+    CagentFilterResponseDto:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ResponseStatus'
+        responseMessage:
+          type: string
+          description: 'Текстовое сообщение о результате операции'
+        cagents:
+          type: array
+          description: 'Массив с информацией о контрагентах'
+          items:
+            $ref: '#/components/schemas/CagentInfoResponseDto'
+        totalCount:
+          type: integer
+          format: int32
+          description: 'Общее количество найденных контрагентов'
+        page:
+          type: integer
+          format: int32
+          minimum: 1
+          default: 1
+          description: 'Текущая страница списка найденных контрагентов'
+      required:
+        - status
+        - totalCount
+        - page
+        
+    ResponseStatus:
+      type: string
+      enum: [SUCCESS, ERROR]
+      description: >
+              Статус ответа:
+               * `SUCCESS` - успешное выполнение
+               * `ERROR` - ошибка выполнения
+               
+    CagentInfoResponseDto:
+      description: 'Краткая информация о контрагенте'
+      type: object
+      properties:
+        id:
+          type: number
+          format: int64
+          description: 'Идентификатор контрагента в системе КИС'
+        name:
+          type: string
+          description: 'Полное ФИО (физическое лицо) или название организации (юридическое лицо)'
+        birthDate:
+          type: string
+          format: date
+          description: 'Дата рождения. Допустимые форматы: "dd/MM/yyyy", "dd.MM.yyyy" (украинский часовой пояс)'
+        inn:
+          type: string
+          description: 'ИНН (для физического лица)'
+        egrpou:
+          type: string
+          description: 'ЕГРПОУ (для юридического лица)'
+        address:
+          type: string
+          description: 'Полный адрес'
+        phoneMobile:
+          type: string
+          description: 'Мобильный телефон'
+      required:
+        - id
+        - name
+        
+    CagentExportRequestDto:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 'Идентификатор контрагента в системе КИС'
+      required:
+        - id
+        
+    CagentResponseDto:
+      type: object
+      properties:
+        personType:
+          $ref: '#/components/schemas/PersonType'
+        person:
+          $ref: '#/components/schemas/PersonResponseDto'
+        firm:
+          $ref: '#/components/schemas/FirmResponseDto'
+        authorizedPerson:
+          $ref: '#/components/schemas/AuthorizedPersonResponseDto'
+        bankDetails:
+          $ref: '#/components/schemas/BankDetailsResponseDto'
+        inn:
+          type: string
+          description: 'ИНН'
+        innRefused:
+          type: boolean
+          description: "Отказался от ИНН"
+          default: false
+        contact:
+          $ref: '#/components/schemas/ContactResponseDto'
+        identificationCard:
+          $ref: '#/components/schemas/IdentificationCardResponseDto'
+        additionalDocuments:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdentificationCardResponseDto'
+          description: 'Список документов, удостоверяющих личность'
+        address:
+          $ref: '#/components/schemas/AddressResponseDto'
+        resident:
+          type: boolean
+          default: true
+          description: 'Признак резидента. По умолчанию: true'
+      required:
+        - personType
+        
+    PersonType:
+      type: string
+      enum: [NATURAL, PRIVATE, LEGAL]
+      default: NATURAL
+      description: >
+              Тип контрагента:
+               * `NATURAL` - физическое лицо
+               * `PRIVATE` - СПД-ФЛ
+               * `LEGAL` - юридическое лицо
+               
+              По умолчанию: `NATURAL`
+              
+    PersonResponseDto:
+      description: 'Личные данные (обязательны, если контрагентом является физическое лицо)'
+      type: object
+      properties:
+        surname:
+          type: string
+          description: 'Фамилия'
+        name:
+          type: string
+          description: 'Имя'
+        patronymic:
+          type: string
+          description: 'Отчество'
+        fullNameLatin:
+          type: string
+          description: 'ФИО (латиницей)'
+        birthDate:
+          type: string
+          format: date
+          description: 'Дата рождения (допустимые форматы: ''dd/MM/yyyy'', ''dd.MM.yyyy'')'
+        sex:
+          $ref: '#/components/schemas/Sex'
+      required:
+        - surname
+        - name
+        - birthDate
+        
+    Sex:
+      type: string
+      enum:
+        - MALE
+        - FEMALE
+      description: |
+        Пол:
+         * `MALE` - мужской
+         * `FEMALE` - женский
+         
+        По умолчанию: `MALE`
+        
+    FirmResponseDto:
+      description: 'Данные организации (обязательны, если контрагентом является юридическое лицо)'
+      type: object
+      properties:
+        name:
+          type: string
+          description: 'Название'
+        egrpou:
+          type: string
+          description: 'Код ЕГРПОУ'
+        firmFullNameLatin:
+          type: string
+          description: 'Название (латиницей)'
+      required:
+        - name
+        - egrpou
+        
+    AuthorizedPersonResponseDto:
+      description: 'Уполномоченное лицо (если контрагентом является юридическое лицо)'
+      type: object
+      properties:
+        surname:
+          type: string
+          description: 'Фамилия'
+        name:
+          type: string
+          description: 'Имя'
+        patronymic:
+          type: string
+          description: 'Отчество'
+        post:
+          type: string
+          description: 'Должность'
+        doingBasedOn:
+          type: string
+          description: 'Действует на основании документа'
+        doingBasedOnNumber:
+          type: string
+          description: 'Действует на основании документа с номером'
+        doingBasedOnDate:
+          type: string
+          format: date
+          description: 'Действует на основании документа с датой выдачи (допустимые форматы: ''dd/MM/yyyy'', ''dd.MM.yyyy'')'
+          
+    BankDetailsResponseDto:
+      description: 'Банковские реквизиты'
+      type: object
+      properties:
+        mfo:
+          type: string
+          description: 'Код МФО банка'
+        egrpou:
+         type: string
+         description: 'Код ЕГРПОУ банка'
+        settlementAccount:
+          type: string
+          description: 'Расчетный счет (IBAN) (номер)'
+        cardPersonalAccount:
+          type: string
+          description: 'Карточный (личный) счет (номер)'
+        
+    ContactResponseDto:
+      description: 'Контактные данные'
+      type: object
+      properties:
+        email:
+          type: string
+          description: 'Адрес электронной почты'
+        phone:
+          $ref: '#/components/schemas/PhoneResponseDto'
+        contactPerson:
+          type: string
+          description: 'Контактное лицо (для юридического лица)'
+        
+    PhoneResponseDto:
+      description: 'Номер телефона'
+      type: object
+      properties:
+        countryCode:
+          type: string
+          description: 'Код страны'
+        number:
+          type: string
+          description: 'Номер телефона'
+        
+    IdentificationCardResponseDto:
+      description: 'Данные документа, удостоверяющего личность'
+      type: object
+      properties:
+        serie:
+          type: string
+          description: 'Серия документа'
+        number:
+          type: string
+          description: 'Номер документа'
+        issueDate:
+          type: string
+          format: date
+          description: 'Дата выдачи документа (допустимые форматы: ''dd/MM/yyyy'', ''dd.MM.yyyy'')'
+        issuedBy:
+          type: string
+          description: 'Кем выдан документ'
+        docTypeCode:
+          $ref: '#/components/schemas/DocTypeCode'
+      required:
+        - number
+        
+    DocTypeCode:
+      type: string
+      enum:
+        - PASSPORT
+        - ID_PASSPORT
+        - DRIVING_LICENSE
+        - PENSION_CERTIFICATE
+        - E_PENSION_CERTIFICATE
+        - DISABILITY_CERTIFICATE
+        - VETERAN_CERTIFICATE
+        - CHERNOBYL_CERTIFICATE
+        - EXTERNAL_PASSPORT
+        - FOREIGN_PASSPORT
+        - RESIDENCE_PERMIT
+        - REGISTRATION_CARD
+        - BIRTH_CERTIFICATE
+      description: |
+        Код типа документа, удостоверяющего личность:
+         * `PASSPORT` - паспорт
+         * `ID_PASSPORT` - ID-паспорт
+         * `DRIVING_LICENSE` - водительское удостоверение
+         * `PENSION_CERTIFICATE` - пенсионное удостоверение
+         * `E_PENSION_CERTIFICATE` - электронное пенсионное удостоверение
+         * `DISABILITY_CERTIFICATE` - удостоверение об инвалидности
+         * `VETERAN_CERTIFICATE` - удостоверение участника войны
+         * `CHERNOBYL_CERTIFICATE` - чернобыльское удостоверение
+         * `EXTERNAL_PASSPORT` - заграничный паспорт
+         * `FOREIGN_PASSPORT` - иностранный паспорт
+         * `RESIDENCE_PERMIT` - вид на жительство
+         * `REGISTRATION_CARD` - регистрационный талон
+         * `BIRTH_CERTIFICATE` - свидетельство о рождении
+         
+    AddressResponseDto:
+      description: 'Данные адреса'
+      type: object
+      properties:
+        country:
+          type: string
+          description: 'Страна (ISO-коды страны в двухбуквенной системе)'
+        region:
+          type: string
+          description: 'Область. Название области из справочника "Области" КСАСК "ProfITsoft"'
+        area:
+          type: string
+          description: 'Район'
+        town:
+          type: string
+          description: 'Населенный пункт. Название населенного пункта из справочника "Населенные пункты" КСАСК "ProfITsoft"'
+        street:
+          type: string
+          description: 'Улица'
+        house:
+          type: string
+          description: 'Номер дома'
+        addressLatin:
+          type: string
+          description: 'Адрес латиницей'
+        addressImported:
+          type: string
+          description: 'Адрес в неструктурированном виде'

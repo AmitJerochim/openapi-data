@@ -1,0 +1,3590 @@
+openapi: "3.0.0"
+servers: 
+  - url: https://api.hm.bemoby.com
+    description: "Ambiente de Homologação Bemoby"
+info:
+  description: "API dos serviços do CallCenter Bemoby"
+  version: "1.0.0"
+  title: Bemoby CallCenter API
+  contact:
+    email: bemoby@bemoby.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: Usuários
+    description: "Endpoints relativos a usuários"
+  - name: Usuários do CallCenter
+    description: "Endpoints relativos a usuários do CallCenter"
+  - name: Equipes
+    description: "Endpoints relativos a equipes"
+  - name: Centros de Custo
+    description: "Endpoints relativos a centros de custo"
+  - name: Configurações de Serviços
+    description: "Endpoints relativos a configurações de serviços"
+  - name: Filas
+    description: "Endpoints relativos a filas"
+  - name: Pausas
+    description: "Endpoints relativos a pausas de atendimento"
+  - name: Tabulações
+    description: "Endpoints relativos a tabulações"
+  - name: Operadores
+    description: "Endpoints relativos a operadores"
+  - name: Atendimentos
+    description: "Endpoints relativos a atendimentos"
+paths:
+  /users/login:
+    post:
+      tags:
+        - Usuários
+      summary: Efetua o login de um usuário
+      operationId: userLogin
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/Credentials'
+        description: "Corpo da requisição contendo as credenciais do usuário"
+      responses:
+        '200':
+          $ref: '#/components/responses/LoginSuccess'
+        '400':
+          $ref: '#/components/responses/LoginBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/isauthenticated:
+    get:
+      tags:
+        - Usuários
+      summary: Informa se o usuário está autenticado
+      operationId: userIsAuthenticated
+      parameters: 
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      responses:
+        '204':
+          description: "Sem conteúdo"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/roles:
+    get:
+      tags:
+        - Usuários
+      summary: Obtém a lista de papéis do usuário
+      operationId: userRoles
+      parameters: 
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      responses:
+        '200':
+          description: "Sucesso"
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/RolesListMessageBody'
+              example:
+                {
+                    "data": {
+                        "items": [
+                            "CALL_CENTER_ATTENDANCE",
+                            "CALL_CENTER_ATTENDANCE_OPERATE",
+                            "CALL_CENTER_ATTENDANCE_PAUSE",
+                            "CALL_CENTER_ATTENDANCE_CONTACT_LIST",
+                            "CALL_CENTER_ATTENDANCE_CONTACT_UPDATE",
+                            "DEFAULT"
+                        ]
+                    },
+                    "message": "OK",
+                    "statusCode": 200
+                }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/roles/plain:
+    get:
+      tags:
+        - Usuários
+      summary: Obtém os papéis do usuário como uma sequência de caracteres (texto plano separado por vírgula)
+      operationId: userRolesPlain
+      parameters: 
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      responses:
+        '200':
+          description: "Sucesso"
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/RolesPlainMessageBody'
+              example:
+                {
+                    "data": {
+                        "item": "CALL_CENTER_ATTENDANCE,CALL_CENTER_ATTENDANCE_OPERATE,CALL_CENTER_ATTENDANCE_PAUSE,CALL_CENTER_ATTENDANCE_CONTACT_LIST,CALL_CENTER_ATTENDANCE_CONTACT_UPDATE,DEFAULT"
+                    },
+                    "message": "OK",
+                    "statusCode": 200
+                }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/users{filters}:
+    get:
+      tags:
+        - Usuários do CallCenter
+      summary: Pesquisa paginada de usuários do CallCenter
+      operationId: usersSearch
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/UserResourceFilter'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserResourcePage'
+        '400':
+          $ref: '#/components/responses/UserResourceFilterBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/users;username={username}:
+    get:
+      tags:
+        - Usuários do CallCenter
+      summary: Obtém os dados de um usuário pelo nome de usuário (login)
+      operationId: usersGetByUsername
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/UsernameFilter'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserResource'
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/users:
+    post:
+      tags:
+        - Usuários do CallCenter
+      summary: Registra um novo usuário
+      operationId: usersCreate
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/UserResource'
+            example:
+              {
+                "personName": "API",
+                "username": "operador09@bemoby.com",
+                "password": "1234",
+                "type": "OPERATOR",
+                "team": 6,
+                "startTime": "08:00",
+                "endTime": "18:00",
+                "ips": [
+                  "10.0.0.2",
+                  "10.0.0.1"                  
+                ]
+              }
+      responses:
+        '204':
+          $ref: '#/components/responses/UserResourceCreated'
+        '400':
+          $ref: '#/components/responses/UserResourceBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/UserResourceConflict'
+        '422':
+          $ref: '#/components/responses/UserResourceUnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/users/{id}:
+    get:
+      tags:
+        - Usuários do CallCenter
+      summary: Obtém os dados de um usuário pelo identificador
+      operationId: usersGet
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/UserResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Usuários do CallCenter
+      summary: Atualiza dados de um usuário
+      operationId: usersUpdate
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/UserResource'
+            example:
+              {
+                "personName": "API",
+                "username": "operador09@bemoby.com",
+                "password": "1234",
+                "type": "OPERATOR",
+                "team": 6,
+                "startTime": "08:00",
+                "endTime": "18:00",
+                "ips": [
+                  "10.0.0.2",
+                  "10.0.0.1"                  
+                ]
+              }
+      responses:
+        '200':
+          $ref: '#/components/responses/UserResource'
+        '400':
+          $ref: '#/components/responses/UserResourceBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/UserResourceConflict'
+        '422':
+          $ref: '#/components/responses/UserResourceUnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Usuários do CallCenter
+      summary: Cancela (inativa) um usuário
+      operationId: usersDelete
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/UserResourceDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/UserResourceStatusConflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags:
+        - Usuários do CallCenter
+      summary: Altera o status do usuário
+      operationId: usersChangeStatus
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/StatusResource'
+            example:
+              {
+                "active": "true"
+              }
+      responses:
+        '200':
+          $ref: '#/components/responses/UserResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/UserResourceStatusConflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/users/{id}/team:
+    patch:
+      tags:
+        - Usuários do CallCenter
+      summary: Altera a equipe do usuário
+      operationId: usersChangeTeam
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/UserTeamResource'
+            example:
+              {
+                "team": 5
+              }
+      responses:
+        '200':
+          $ref: '#/components/responses/UserResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/UserTeamResourceConflict'
+        '422':
+          $ref: '#/components/responses/UserTeamResourceUnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/teams{filters}:
+    get:
+      tags:
+        - Equipes
+      summary: Pesquisa paginada de equipes
+      operationId: teamsSearch
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/TeamResourceFilter'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          $ref: '#/components/responses/TeamResourcePage'
+        '400':
+          $ref: '#/components/responses/TeamResourceFilterBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/teams:
+    post:
+      tags:
+        - Equipes
+      summary: Registra uma nova equipe
+      operationId: teamsCreate
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/TeamResource'
+            example:
+              {
+                  "name": "Equipe 06",
+                  "description": "Equipe Foo",
+                  "supervisors": [
+                    209
+                  ],
+                  "operators": [
+                    225,
+                    226,
+                    227,
+                    228,
+                    293
+                  ]
+              }
+      responses:
+        '201':
+          $ref: '#/components/responses/TeamResourceCreated'
+        '400':
+          $ref: '#/components/responses/TeamResourceBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/TeamResourceConflict'
+        '422':
+          $ref: '#/components/responses/TeamResourceUnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/teams/{id}:
+    get:
+      tags:
+        - Equipes
+      summary: Obtém os dados de uma equipe pelo identificador
+      operationId: teamsGet
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/TeamResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Equipes
+      summary: Atualiza dados de uma equipe
+      operationId: teamsUpdate
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/TeamResource'
+            example:
+              {
+                  "name": "Equipe 06",
+                  "description": "Equipe Foo",
+                  "supervisors": [
+                    209
+                  ],
+                  "operators": [
+                    225,
+                    226,
+                    227,
+                    228,
+                    293
+                  ]
+              }
+      responses:
+        '200':
+          $ref: '#/components/responses/TeamResource'
+        '400':
+          $ref: '#/components/responses/TeamResourceBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/TeamResourceConflict'
+        '422':
+          $ref: '#/components/responses/TeamResourceUnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Equipes
+      summary: Cancela (inativa) uma equipe
+      operationId: teamsDelete
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/TeamResourceDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/TeamResourceStatusConflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags:
+        - Equipes
+      summary: Altera o status da equipe
+      operationId: teamsChangeStatus
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/StatusResource'
+            example:
+              {
+                "active": "true"
+              }
+      responses:
+        '200':
+          $ref: '#/components/responses/TeamResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/TeamResourceStatusConflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/cost-centers{filters}:
+    get:
+      tags:
+        - Centros de Custo
+      summary: Pesquisa paginada de centros de custo
+      operationId: costCentersSearch
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/CostCenterResourceFilter'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          $ref: '#/components/responses/CostCenterResourcePage'
+        '400':
+          $ref: '#/components/responses/CostCenterResourceFilterBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/cost-centers/{id}:
+    get:
+      tags:
+        - Centros de Custo
+      summary: Obtém os dados de um centro de custo
+      operationId: costCentersGet
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/CostCenterResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/service-configs{filters}:
+    get:
+      tags:
+        - Configurações de Serviços
+      summary: Pesquisa paginada de configurações de serviços
+      operationId: serviceConfigsSearch
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/ServiceConfigResourceFilter'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          $ref: '#/components/responses/ServiceConfigResourcePage'
+        '400':
+          $ref: '#/components/responses/ServiceConfigResourceFilterBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/service-configs/{id}:
+    get:
+      tags:
+        - Configurações de Serviços
+      summary: Obtém os dados de uma configuração de serviço
+      operationId: serviceConfigsGet
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/ServiceConfigResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/queues{filters}:
+    get:
+      tags:
+        - Filas
+      summary: Pesquisa paginada de filas
+      operationId: queuesSearch
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/QueueResourceFilter'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          $ref: '#/components/responses/QueueResourcePage'
+        '400':
+          $ref: '#/components/responses/QueueResourceFilterBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/queues:
+    post:
+      tags:
+        - Filas
+      summary: Registra uma nova fila
+      operationId: queuesCreate
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/QueueResource'
+            example:
+              {
+                "name": "Fila 01",
+                "description": "Fila desc",
+                "defaultQueue": true,
+                "costCenter": 53,
+                "team": 6,
+                "serviceConfig": 6
+              }
+      responses:
+        '201':
+          $ref: '#/components/responses/QueueResourceCreated'
+        '400':
+          $ref: '#/components/responses/QueueResourceBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/QueueResourceConflict'
+        '422':
+          $ref: '#/components/responses/QueueResourceUnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/queues/{id}:
+    get:
+      tags:
+        - Filas
+      summary: Obtém os dados de uma fila pelo identificador
+      operationId: queuesGet
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/QueueResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Filas
+      summary: Atualiza dados de uma fila
+      operationId: queuesUpdate
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/QueueResource'
+            example:
+              {
+                "name": "Fila 01",
+                "description": "Fila desc",
+                "defaultQueue": true,
+                "costCenter": 115,
+                "team": 5,
+                "serviceConfig": 9
+              }
+      responses:
+        '200':
+          $ref: '#/components/responses/QueueResource'
+        '400':
+          $ref: '#/components/responses/QueueResourceBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/QueueResourceConflict'
+        '422':
+          $ref: '#/components/responses/QueueResourceUnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Filas
+      summary: Cancela (inativa) uma fila
+      operationId: queuesDelete
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/QueueResourceDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/QueueResourceStatusConflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags:
+        - Filas
+      summary: Altera o status da fila
+      operationId: queuesChangeStatus
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/StatusResource'
+            example:
+              {
+                "active": "true"
+              }
+      responses:
+        '200':
+          $ref: '#/components/responses/QueueResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/QueueResourceStatusConflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/breaks{filters}:
+    get:
+      tags:
+        - Pausas
+      summary: Pesquisa paginada de pausadas
+      operationId: breaksSearch
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/BreakResourceFilter'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          $ref: '#/components/responses/BreakResourcePage'
+        '400':
+          $ref: '#/components/responses/BreakResourceFilterBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/breaks:
+    post:
+      tags:
+        - Pausas
+      summary: Registra uma nova pausa
+      operationId: breaksCreate
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/BreakResource'
+            example:
+              {
+                "name": "Pausa 01",
+                "description": "Pausa desc",
+                "minutes": 30,
+                "team": null
+              }
+      responses:
+        '201':
+          $ref: '#/components/responses/BreakResourceCreated'
+        '400':
+          $ref: '#/components/responses/BreakResourceBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/BreakResourceConflict'
+        '422':
+          $ref: '#/components/responses/BreakResourceUnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/breaks/{id}:
+    get:
+      tags:
+        - Pausas
+      summary: Obtém os dados de uma pausa pelo identificador
+      operationId: breaksGet
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/BreakResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Pausas
+      summary: Atualiza dados de uma pausa
+      operationId: breaksUpdate
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/BreakResource'
+            example:
+              {
+                "name": "Pausa 01",
+                "description": "Pausa desc",
+                "minutes": 30,
+                "team": null
+              }
+      responses:
+        '200':
+          $ref: '#/components/responses/BreakResource'
+        '400':
+          $ref: '#/components/responses/BreakResourceBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BreakResourceConflict'
+        '422':
+          $ref: '#/components/responses/BreakResourceUnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Pausas
+      summary: Cancela (inativa) uma pausa
+      operationId: breaksDelete
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/BreakResourceDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BreakResourceStatusConflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags:
+        - Pausas
+      summary: Altera o status da pausa
+      operationId: breaksChangeStatus
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/StatusResource'
+            example:
+              {
+                "active": "true"
+              }
+      responses:
+        '200':
+          $ref: '#/components/responses/BreakResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BreakResourceStatusConflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/tabulations{filters}:
+    get:
+      tags:
+        - Tabulações
+      summary: Pesquisa paginada de tabulação
+      operationId: tabulationsSearch
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/TabulationsResourceFilter'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          $ref: '#/components/responses/TabulationResourcePage'
+        '400':
+          $ref: '#/components/responses/TabulationResourceFilterBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/tabulations:
+    post:
+      tags:
+        - Tabulações
+      summary: Registra uma nova tabulação
+      operationId: tabulationsCreate
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/TabulationResource'
+            example:
+              {
+                  "name": "Tabulação 01",
+                  "queue": 19
+              }
+      responses:
+        '201':
+          $ref: '#/components/responses/TabulationResourceCreated'
+        '400':
+          $ref: '#/components/responses/TabulationResourceBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/TabulationResourceConflict'
+        '422':
+          $ref: '#/components/responses/TabulationResourceUnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/tabulations/{id}:
+    get:
+      tags:
+        - Tabulações
+      summary: Obtém os dados de uma tabulação pelo identificador
+      operationId: tabulationsGet
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/TabulationResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Tabulações
+      summary: Atualiza dados de uma tabulação
+      operationId: tabulationsUpdate
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/TabulationResource'
+            example:
+              {
+                  "name": "Tabulação 01",
+                  "queue": 19
+              }
+      responses:
+        '200':
+          $ref: '#/components/responses/TabulationResource'
+        '400':
+          $ref: '#/components/responses/TabulationResourceBadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/TabulationResourceConflict'
+        '422':
+          $ref: '#/components/responses/TabulationResourceUnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Tabulações
+      summary: Cancela (inativa) uma tabulação
+      operationId: tabulationsDelete
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'   
+      responses:
+        '200':
+          $ref: '#/components/responses/TabulationResourceDeleted'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/TabulationResourceStatusConflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags:
+        - Tabulações
+      summary: Altera o status da tabulação
+      operationId: tabulationsChangeStatus
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+        - $ref: '#/components/parameters/PathIdentifierInt64'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/StatusResource'
+            example:
+              {
+                "active": "true"
+              }
+      responses:
+        '200':
+          $ref: '#/components/responses/TabulationResource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/TabulationResourceStatusConflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/operators/status:
+    patch:
+      tags:
+        - Operadores
+      summary: Define o status do operador
+      operationId: operatorsChangeStatus
+      parameters: 
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/OperatorStatusResource'
+            example:
+              {
+                "status": "ONLINE"
+              }
+      responses:
+        '200': 
+          $ref: '#/components/responses/Success'
+        '409':
+          $ref: '#/components/responses/OperatorStatusResourceConflict'
+  /callcenter/operators/pause:
+    patch:
+      tags:
+        - Operadores
+      summary: Define o status de pausa do operador
+      operationId: operatorsChangeBreakStatus
+      parameters: 
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/OperatorBreakStatusResource'
+            example:
+              {
+                "reason": 11,
+                "status": "PAUSED"
+              }
+      responses:
+        '200': 
+          $ref: '#/components/responses/Success'
+        '409':
+          $ref: '#/components/responses/OperatorBreakStatusResourceConflict'
+        '422':
+          $ref: '#/components/responses/OperatorBreakStatusResourceUnprocessableEntity'
+  /callcenter/operators/pause/types:
+    get:
+      tags:
+        - Operadores
+      summary: Lista os tipos de pausa disponíveis para o operador
+      operationId: operatorsPauseTypesGet
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      responses:
+        '200':
+          description: "Sucesso"
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/OperatorPauseTypesListMessageBody'
+              example:
+                {
+                  "data": {
+                      "items": [
+                          {
+                              "name": "Intervalo",
+                              "id": 10
+                          },
+                          {
+                              "name": "Pausa Laboral",
+                              "id": 11
+                          },
+                          {
+                              "name": "Pessoal",
+                              "id": 9
+                          },
+                          {
+                              "name": "Reunião",
+                              "id": 12
+                          }
+                      ]
+                  },
+                  "message": "OK",
+                  "statusCode": 200
+                }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /callcenter/attendances:
+    get:
+      tags: 
+        - Atendimentos
+      summary: Lista dos atendimentos das últimas 24 horas
+      operationId: attendancesGetAll
+      parameters: 
+        - $ref: '#/components/parameters/AuthorizationHeader'
+      responses:
+        '200':
+          $ref: '#/components/responses/AttendanceResourceList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  parameters:
+    AuthorizationHeader:
+      in: header
+      name: Authorization
+      required: true
+      schema:
+        type: string
+      description: "Cabeçalho HTTP contendo o token de acesso"
+      example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+    PathIdentifierInt64:
+      in: path
+      name: id
+      description: "Código identificador do recurso"
+      required: true
+      schema:
+        type: integer
+        format: int64
+    UsernameFilter:
+      in: path
+      name: username
+      description: "Nome de acesso do usuário"
+      style: matrix
+      explode: false
+      required: true
+      schema:
+        type: string
+      example: operador@example.com
+    PageNumber:
+      in: query
+      name: pageNumber
+      description: "O número da página de pesquisa"
+      schema:
+        type: integer
+        default: 0
+    PageSize:
+      in: query
+      name: pageSize
+      description: "A quantidade de elementos da página de pesquisa"
+      schema:
+        type: integer
+        default: 10
+    UserResourceFilter:
+      in: path
+      name: filters
+      required: true
+      description: "Filtros da pesquisa de usuários. Podem ser informados zero ou mais filtros."
+      schema:
+        type: object
+        properties:
+          personName:
+            type: string
+            example: Fulano
+          type:
+            $ref: '#/components/schemas/CallCenterUserType'
+          active:
+            type: boolean
+            example: true
+      style: matrix
+      explode: true
+    TeamResourceFilter:
+      in: path
+      name: filters
+      required: true
+      description: "Filtros da pesquisa de equipes. Podem ser informados zero ou mais filtros."
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+            example: Equipe Foo
+          active:
+            type: boolean
+            example: true
+      style: matrix
+      explode: true
+    CostCenterResourceFilter:
+      in: path
+      name: filters
+      required: true
+      description: "Filtros da pesquisa de centros de custo. Podem ser informados zero ou mais filtros."
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+            example: Fatura
+          active:
+            type: boolean
+            example: true
+      style: matrix
+      explode: true
+    ServiceConfigResourceFilter:
+      in: path
+      name: filters
+      required: true
+      description: "Filtros da pesquisa de configurações de serviços. Podem ser informados zero ou mais filtros."
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+            example: Águas Andradina
+          active:
+            type: boolean
+            example: true
+      style: matrix
+      explode: true
+    QueueResourceFilter:
+      in: path
+      name: filters
+      required: true
+      description: "Filtros da pesquisa de filas. Podem ser informados zero ou mais filtros."
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+            example: Águas Canarana
+          active:
+            type: boolean
+            example: true
+      style: matrix
+      explode: true
+    BreakResourceFilter:
+      in: path
+      name: filters
+      required: true
+      description: "Filtros da pesquisa de pausas. Podem ser informados zero ou mais filtros."
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+            example: Pessoal
+          active:
+            type: boolean
+            example: true
+      style: matrix
+      explode: true
+    TabulationsResourceFilter:
+      in: path
+      name: filters
+      required: true
+      description: "Filtros da pesquisa de tabulação. Podem ser informados zero ou mais filtros."
+      schema:
+        type: object
+        properties:
+          name:
+            type: string
+            example: Abastecimento
+          active:
+            type: boolean
+            example: true
+      style: matrix
+      explode: true
+  responses:
+    Success:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example:
+            {
+                "message": "OK",
+                "statusCode": 200
+            }
+    NoContent:
+      description: "Sem conteúdo"
+    Unauthorized:
+      description: "Não autorizado"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          examples:
+            Unauthorized:
+              value:
+                {
+                  "message": "Unauthorized",
+                  "statusCode": 401
+                }
+            ExpiredToken:
+              value:
+                {
+                  "message": "Expired_token",
+                  "statusCode": 401
+                }
+    Forbidden:
+      description: "Proibido"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example:
+            {
+              "message": "Forbidden",
+              "statusCode": 403
+            }
+    NotFound:
+      description: "Não encontrado"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example:
+            {
+              "message": "Recurso não encontrado",
+              "statusCode": 404
+            }
+    InternalServerError:
+      description: "Erro interno"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example:
+            {
+              "message": "Sorry, we could not process your request. Internal server error.",
+              "statusCode": 500
+            }
+    LoginSuccess:
+      description: "Sucesso"
+      headers:
+        Authorization:
+          schema:
+            type: string
+          description: "Cabeçalho HTTP contendo o mesmo token de acesso retornado no corpo da resposta"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/TokenMessageBody'
+          example: 
+              {
+                "data": {
+                    "item": {
+                        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+                    }
+                },
+                "message": "OK",
+                "statusCode": 200                     
+              }
+    LoginBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          example:
+            {
+                "errors": {
+                    "fields": {
+                        "password": [
+                            "Campo obrigatório"
+                        ],
+                        "username": [
+                            "Campo obrigatório"
+                        ]
+                    }
+                },
+                "message": "Bad Request",
+                "statusCode": 400
+            }
+    UserResource:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/UserResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "personName": "API",
+                      "active": true,
+                      "startTime": "08:00",
+                      "team": 5,
+                      "endTime": "18:00",
+                      "id": 304,
+                      "type": "OPERATOR",
+                      "ips": [
+                          "10.0.0.2",
+                          "10.0.0.1"
+                      ],
+                      "username": "operador09@bemoby.com"
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            } 
+    UserResourceCreated:
+      description: "Criado"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/UserResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "personName": "API",
+                      "active": true,
+                      "startTime": "08:00",
+                      "team": 5,
+                      "endTime": "18:00",
+                      "id": 304,
+                      "type": "OPERATOR",
+                      "ips": [
+                          "10.0.0.2",
+                          "10.0.0.1"
+                      ],
+                      "username": "operador09@bemoby.com"
+                  }
+              },
+              "message": "Created",
+              "statusCode": 201
+            }
+    UserResourceDeleted:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/UserResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "personName": "API",
+                      "active": false,
+                      "startTime": "08:00",
+                      "team": 5,
+                      "endTime": "18:00",
+                      "id": 304,
+                      "type": "OPERATOR",
+                      "ips": [
+                          "10.0.0.2",
+                          "10.0.0.1"
+                      ],
+                      "username": "operador09@bemoby.com"
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    UserResourcePage:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/UserResourcePageMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "currentPage": 0,
+                      "pageSize": 5,
+                      "hasNextPage": false,
+                      "firstPage": 0,
+                      "elements": [
+                          {
+                              "personName": "Adriana Sampaio",
+                              "active": true,
+                              "id": 238,
+                              "team": 5,
+                              "type": "OPERATOR",
+                              "ips": null,
+                              "username": "asampaio@iguasa.com"
+                          },
+                          {
+                              "personName": "API",
+                              "active": true,
+                              "startTime": "08:00",
+                              "id": 304,
+                              "team": 5,
+                              "endTime": "18:00",
+                              "type": "OPERATOR",
+                              "ips": null,
+                              "username": "operador09@bemoby.com"
+                          },
+                          {
+                              "personName": "API",
+                              "active": true,
+                              "startTime": "08:00",
+                              "id": 305,
+                              "team": 5,
+                              "endTime": "18:00",
+                              "type": "OPERATOR",
+                              "ips": null,
+                              "username": "operador10@bemoby.com"
+                          },
+                          {
+                              "personName": "API",
+                              "active": true,
+                              "startTime": "08:00",
+                              "id": 306,
+                              "team": 5,
+                              "endTime": "18:00",
+                              "type": "OPERATOR",
+                              "ips": null,
+                              "username": "operador11@bemoby.com"
+                          },
+                          {
+                              "personName": "Fulano",
+                              "active": true,
+                              "startTime": "09:00",
+                              "id": 307,
+                              "team": 5,
+                              "endTime": "18:00",
+                              "type": "OPERATOR",
+                              "ips": null,
+                              "username": "operador12@bemoby.com"
+                          }
+                      ]
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    UserResourceBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          example:
+            {
+              "errors": {
+                  "fields": {
+                      "personName": [
+                          "Campo obrigatório"
+                      ],
+                      "password": [
+                          "Campo obrigatório"
+                      ],
+                      "type": [
+                          "Campo obrigatório",
+                          "Valor inválido. Valores esperados [SUPERVISOR, OPERATOR]"
+                      ],
+                      "username": [
+                          "Campo obrigatório"
+                      ],
+                      "ips": {
+                          "0": [
+                              "10.0.01: valor inválido. Formato esperado: 0.0.0.0"
+                          ]
+                      },
+                      "startTime": [
+                          "24:00: valor inválido. Formato esperado: 00:00 (24h)"
+                      ],
+                      "endTime": [
+                          "36:00: valor inválido. Formato esperado: 00:00 (24h)"
+                      ]
+                  }
+              },
+              "message": "Bad Request",
+              "statusCode": 400
+            }
+    UserResourceFilterBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+          application/json;charset=UTF8:
+            schema:
+              $ref: '#/components/schemas/ErrorsMessageBody'
+            example:
+              {
+                  "errors": {
+                      "fields": {
+                          "active": [
+                              "Valor inválido. Valores esperados [true,false]"
+                          ],
+                          "type": [
+                              "Valor inválido. Valores esperados [SUPERVISOR,OPERATOR]"
+                          ]
+                      }
+                  },
+                  "message": "Bad Request",
+                  "statusCode": 400
+              }
+    UserResourceConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example: 
+            {
+              "message": "O usuário operador12@bemoby.com já cadastrado",
+              "statusCode": 409
+            }
+    UserResourceStatusConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example: 
+            {
+              "message": "Usuário já está cancelado",
+              "statusCode": 409
+            }
+    UserResourceUnprocessableEntity:
+      description: "Entidade não processável"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example:
+            {
+              "message": "A equipe de código 5 está cancelada",
+              "statusCode": 422
+            }
+    UserTeamResourceUnprocessableEntity:
+      description: "Entidade não processável"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example:
+            {
+              "message": "A equipe de código 5 não foi encontrada",
+              "statusCode": 422
+            }
+    UserTeamResourceConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example: 
+            {
+              "message": "A equipe de código 5 está cancelada",
+              "statusCode": 409
+            }
+    TeamResourceCreated:
+      description: "Created"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/TeamResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                    "name": "Equipe 06",
+                    "description": "Equpe Foo",
+                    "active": true,
+                    "id": 6,
+                    "supervisors": [
+                        209
+                    ],
+                    "operators": [
+                        225,226,227,228,293
+                    ]
+                  }
+              },
+              "message": "Created",
+              "statusCode": 201
+            }
+    TeamResource:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/TeamResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                    "name": "Equipe 06",
+                    "description": "Equpe Foo",
+                    "active": true,
+                    "id": 6,
+                    "supervisors": [
+                        209
+                    ],
+                    "operators": [
+                        225,226,227,228,293
+                    ]
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    TeamResourcePage:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/TeamResourcePageMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "currentPage": 0,
+                      "pageSize": 3,
+                      "hasNextPage": false,
+                      "firstPage": 0,
+                      "elements": [
+                          {
+                            "name": "Equipe 06",
+                            "description": "Equpe Foo",
+                            "active": true,
+                            "id": 6
+                          }
+                      ]
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    TeamResourceFilterBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+          application/json;charset=UTF8:
+            schema:
+              $ref: '#/components/schemas/ErrorsMessageBody'
+            example:
+              {
+                  "errors": {
+                      "fields": {
+                          "active": [
+                              "Valor inválido. Valores esperados [true,false]"
+                          ]
+                      }
+                  },
+                  "message": "Bad Request",
+                  "statusCode": 400
+              }
+    TeamResourceConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          examples:
+            Default:
+              value:
+                {
+                  "message": "Equipe já cadastrada",
+                  "statusCode": 409
+                }
+            FieldErrors:
+              value:
+                {
+                  "errors": {
+                      "fields": {
+                        "operators": {
+                            "1": [
+                                "226: usuário já está associado a outra equipe"
+                            ]
+                        },
+                        "supervisors": {
+                            "0": [
+                                "209: usuário não é um supervisor"
+                            ]
+                        }
+                      }
+                  },
+                  "message": "Conflict",
+                  "statusCode": 409
+                }
+    TeamResourceBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          example:
+            {
+              "errors": {
+                  "fields": {
+                    "name": [
+                        "Campo obrigatório"
+                    ]
+                  }
+              },
+              "message": "Bad Request",
+              "statusCode": 400
+            }
+    TeamResourceUnprocessableEntity:
+      description: "Entidade não processável"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          examples:
+            Default:
+              value:
+                {
+                  "message": "O operador de código 226 não foi encontrado",
+                  "statusCode": 422
+                }
+            FieldErros:
+              value:
+                {
+                  "errors": {
+                      "fields": {
+                        "operators": {
+                            "1": [
+                                "226: usuário não encontrado"
+                            ]
+                        },
+                        "supervisors": {
+                            "0": [
+                                "209: usuário não encontrado"
+                            ]
+                        }
+                      }
+                  },
+                  "message": "Unprocessable Entity",
+                  "statusCode": 422
+                }
+    TeamResourceDeleted:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/TeamResourceMessageBody'
+          example:
+            {
+              "data": {
+                "item": {
+                    "name": "Equipe 06",
+                    "description": "Equipe Foo",
+                    "active": false,
+                    "id": 6,
+                    "supervisors": [],
+                    "operators": []
+                }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    TeamResourceStatusConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example: 
+            {
+              "message": "Equipe já está cancelado",
+              "statusCode": 409
+            }
+    CostCenterResource:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/CostCenterResourceMessageBody'
+          example:
+            {
+                "data": {
+                    "item": {
+                        "name": "CRM",
+                        "active": true,
+                        "id": 44
+                    }
+                },
+                "message": "OK",
+                "statusCode": 200
+            }
+    CostCenterResourcePage:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/CostCenterResourcePageMessageBody'
+          example:
+            {
+                "data": {
+                    "item": {
+                        "currentPage": 0,
+                        "pageSize": 3,
+                        "hasNextPage": true,
+                        "firstPage": 0,
+                        "nextPage": 1,
+                        "elements": [
+                            {
+                                "name": "CRM",
+                                "active": true,
+                                "id": 44
+                            },
+                            {
+                                "name": "Fatura",
+                                "active": true,
+                                "id": 42
+                            },
+                            {
+                                "name": "MANUAL",
+                                "active": true,
+                                "id": 51
+                            }
+                        ]
+                    }
+                },
+                "message": "OK",
+                "statusCode": 200
+            }
+    CostCenterResourceFilterBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+          application/json;charset=UTF8:
+            schema:
+              $ref: '#/components/schemas/ErrorsMessageBody'
+            example:
+              {
+                  "errors": {
+                      "fields": {
+                          "active": [
+                              "Valor inválido. Valores esperados [true,false]"
+                          ]
+                      }
+                  },
+                  "message": "Bad Request",
+                  "statusCode": 400
+              }
+    ServiceConfigResource:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ServiceConfigResourceMessageBody'
+          example:
+            {
+                "data": {
+                    "item": {
+                        "name": "Águas Andradina",
+                        "active": true,
+                        "id": 44
+                    }
+                },
+                "message": "OK",
+                "statusCode": 200
+            }
+    ServiceConfigResourcePage:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ServiceConfigResourcePageMessageBody'
+          example:
+            {
+                "data": {
+                    "item": {
+                        "currentPage": 0,
+                        "pageSize": 3,
+                        "hasNextPage": true,
+                        "firstPage": 0,
+                        "nextPage": 1,
+                        "elements": [
+                            {
+                                "name": "Águas Alta Floresta",
+                                "active": true,
+                                "id": 8
+                            },
+                            {
+                                "name": "Águas Andradina",
+                                "active": true,
+                                "id": 2
+                            },
+                            {
+                                "name": "Águas Canarana",
+                                "active": true,
+                                "id": 9
+                            }
+                        ]
+                    }
+                },
+                "message": "OK",
+                "statusCode": 200
+            }
+    ServiceConfigResourceFilterBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+          application/json;charset=UTF8:
+            schema:
+              $ref: '#/components/schemas/ErrorsMessageBody'
+            example:
+              {
+                  "errors": {
+                      "fields": {
+                          "active": [
+                              "Valor inválido. Valores esperados [true,false]"
+                          ]
+                      }
+                  },
+                  "message": "Bad Request",
+                  "statusCode": 400
+              }
+    QueueResourcePage:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/QueueResourcePageMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "currentPage": 0,
+                      "pageSize": 3,
+                      "hasNextPage": false,
+                      "firstPage": 0,
+                      "elements": [
+                          {
+                              "serviceConfig": 9,
+                              "waitingMessage": null,
+                              "costCenter": 115,
+                              "name": "Águas Canarana",
+                              "description": null,
+                              "defaultQueue": false,
+                              "active": true,
+                              "id": 10,
+                              "team": 5
+                          }
+                      ]
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    QueueResourceFilterBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+        application/json;charset=UTF8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          example:
+            {
+              "errors": {
+                  "fields": {
+                      "active": [
+                          "Valor inválido. Valores esperados [true,false]"
+                      ]
+                  }
+              },
+              "message": "Bad Request",
+              "statusCode": 400
+            }
+    QueueResourceUnprocessableEntity:
+      description: "Entidade não processável"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          examples:
+            Default:
+              value:
+                {
+                  "message": "A configuração de serviço de código 9 não foi encontrada",
+                  "statusCode": 422
+                }
+            FieldErros:
+              value:
+                {
+                  "errors": {
+                      "fields": {
+                          "serviceConfig": [
+                              "A configuração de serviço de código 9 não foi encontrada"
+                          ],
+                          "costCenter": [
+                              "O centro de custo de código 115 não foi encontrado"
+                          ],
+                          "team": [
+                              "A equipe de código 5 não foi encontrada"
+                          ]
+                      }
+                  },
+                  "message": "Unprocessable Entity",
+                  "statusCode": 422
+                }
+    QueueResourceCreated:
+      description: "Created"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/QueueResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "serviceConfig": 9,
+                      "waitingMessage": null,
+                      "costCenter": 115,
+                      "name": "Fila 01",
+                      "description": "Fila desc",
+                      "defaultQueue": true,
+                      "active": true,
+                      "id": 19,
+                      "team": 5
+                  }
+              },
+              "message": "Created",
+              "statusCode": 201
+            }
+    QueueResource:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/QueueResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "serviceConfig": 9,
+                      "waitingMessage": null,
+                      "costCenter": 115,
+                      "name": "Fila 01",
+                      "description": "Fila desc",
+                      "defaultQueue": true,
+                      "active": true,
+                      "id": 19,
+                      "team": 5
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    QueueResourceBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          example:
+            {
+              "errors": {
+                  "fields": {
+                      "serviceConfig": [
+                          "Campo obrigatório"
+                      ],
+                      "costCenter": [
+                          "Campo obrigatório"
+                      ],
+                      "name": [
+                          "Campo obrigatório"
+                      ],
+                      "defaultQueue": [
+                          "Campo obrigatório"
+                      ],
+                      "team": [
+                          "Campo obrigatório"
+                      ]
+                  }
+              },
+              "message": "Bad Request",
+              "statusCode": 400
+            }
+    QueueResourceConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          examples:
+            Default:
+              value:
+                {
+                  "message": "Fila já cadastrada",
+                  "statusCode": 409
+                }
+            FieldErrors:
+              value:
+                {
+                  "errors": {
+                      "fields": {
+                          "name": [
+                              "A fila Fila 01 já está cadastrada"
+                          ],
+                          "defaultQueue": [
+                              "Já existe uma fila padrão cadastrada"
+                          ]
+                      }
+                  },
+                  "message": "Conflict",
+                  "statusCode": 409
+                }
+    QueueResourceDeleted:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/TeamResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "serviceConfig": 9,
+                      "waitingMessage": null,
+                      "costCenter": 115,
+                      "name": "Fila 01",
+                      "description": "Fila desc",
+                      "defaultQueue": false,
+                      "active": false,
+                      "id": 19,
+                      "team": 5
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    QueueResourceStatusConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example: 
+            {
+                "message": "A fila de código 19 é a fila padrão e não pode ser cancelada",
+                "statusCode": 409
+            }
+    BreakResourcePage:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/BreakResourcePageMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "currentPage": 0,
+                      "pageSize": 3,
+                      "hasNextPage": true,
+                      "firstPage": 0,
+                      "nextPage": 1,
+                      "elements": [
+                          {
+                              "minutes": 30,
+                              "name": "Intervalo",
+                              "description": "Pausa de 30 minutos",
+                              "active": true,
+                              "id": 10,
+                              "team": 5
+                          },
+                          {
+                              "minutes": 10,
+                              "name": "Pausa Laboral",
+                              "description": "Pausa laboral 10 minutos",
+                              "active": true,
+                              "id": 11,
+                              "team": 5
+                          },
+                          {
+                              "minutes": 10,
+                              "name": "Pessoal",
+                              "description": "Pausa de 10 minutos",
+                              "active": true,
+                              "id": 9,
+                              "team": 5
+                          }
+                      ]
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    BreakResourceFilterBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+        application/json;charset=UTF8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          example:
+            {
+              "errors": {
+                  "fields": {
+                      "active": [
+                          "Valor inválido. Valores esperados [true,false]"
+                      ]
+                  }
+              },
+              "message": "Bad Request",
+              "statusCode": 400
+            }
+    BreakResourceCreated:
+      description: "Created"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/BreakResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "minutes": 30,
+                      "name": "Pausa 01",
+                      "description": "Pausa desc",
+                      "active": true,
+                      "id": 13,
+                      "team": null
+                  }
+              },
+              "message": "Created",
+              "statusCode": 201
+            }
+    BreakResource:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/BreakResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "minutes": 30,
+                      "name": "Pausa 01",
+                      "description": "Pausa desc",
+                      "active": true,
+                      "id": 13,
+                      "team": null
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    BreakResourceBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          example:
+            {
+              "errors": {
+                  "fields": {
+                      "minutes": [
+                          "Campo obrigatório"
+                      ],
+                      "name": [
+                          "Campo obrigatório"
+                      ]
+                  }
+              },
+              "message": "Bad Request",
+              "statusCode": 400
+            }
+    BreakResourceConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          examples:
+            Default:
+              value:
+                {
+                  "message": "A Pausa 01 já está cadastrada",
+                  "statusCode": 409
+                }
+            FieldErrors:
+              value:
+                {
+                  "errors": {
+                      "fields": {
+                          "team": [
+                              "A equipe de código 5 está cancelada"
+                          ]
+                      }
+                  },
+                  "message": "Conflict",
+                  "statusCode": 409
+                }
+    BreakResourceUnprocessableEntity:
+      description: "Entidade não processável"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          examples:
+            Default:
+              value:
+                {
+                  "message": "A equipe de código 5 não foi encontrada",
+                  "statusCode": 422
+                }
+            FieldErros:
+              value:
+                {
+                  "errors": {
+                      "fields": {
+                          "team": [
+                              "A equipe de código 5 não foi encontrada"
+                          ]
+                      }
+                  },
+                  "message": "Unprocessable Entity",
+                  "statusCode": 422
+                }
+    BreakResourceDeleted:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/BreakResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "minutes": 30,
+                      "name": "Pausa 01",
+                      "description": "Pausa desc",
+                      "active": false,
+                      "id": 13,
+                      "team": null
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    BreakResourceStatusConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example: 
+            {
+              "message": "A pausa de código 13 já está cancelada",
+              "statusCode": 409
+            }
+    TabulationResourcePage:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/TabulationResourcePageMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "currentPage": 0,
+                      "pageSize": 3,
+                      "hasNextPage": true,
+                      "firstPage": 0,
+                      "nextPage": 1,
+                      "elements": [
+                          {
+                              "name": "Abastecimento por caminhão pipa",
+                              "active": true,
+                              "id": 133,
+                              "queue": 1
+                          },
+                          {
+                              "name": "Abastecimento por caminhão pipa",
+                              "active": true,
+                              "id": 79,
+                              "queue": 1
+                          },
+                          {
+                              "name": "Abastecimento por caminhão pipa",
+                              "active": true,
+                              "id": 101,
+                              "queue": 1
+                          }
+                      ]
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    TabulationResourceFilterBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+        application/json;charset=UTF8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          example:
+            {
+              "errors": {
+                  "fields": {
+                      "active": [
+                          "Valor inválido. Valores esperados [true,false]"
+                      ]
+                  }
+              },
+              "message": "Bad Request",
+              "statusCode": 400
+            }
+    TabulationResourceCreated:
+      description: "Created"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/TabulationResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "name": "Tabulação 01",
+                      "active": true,
+                      "id": 699,
+                      "queue": 19
+                  }
+              },
+              "message": "Created",
+              "statusCode": 201
+            }
+    TabulationResource:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/TabulationResourceMessageBody'
+          example:
+            {
+              "data": {
+                  "item": {
+                      "name": "Tabulação 01",
+                      "active": true,
+                      "id": 699,
+                      "queue": 19
+                  }
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+    TabulationResourceBadRequest:
+      description: "Requisição mal elaborada"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          example:
+            {
+              "errors": {
+                  "fields": {
+                      "name": [
+                          "Campo obrigatório"
+                      ]
+                  }
+              },
+              "message": "Bad Request",
+              "statusCode": 400
+            }
+    TabulationResourceConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          examples:
+            Default:
+              value:
+                {
+                  "message": "Tabulação 01 já cadastrada",
+                  "statusCode": 409
+                }
+            FieldErrors:
+              value:
+                {
+                  "errors": {
+                      "fields": {
+                          "name": [
+                              "Tabulação 01 já cadastrada"
+                          ]
+                      }
+                  },
+                  "message": "Conflict",
+                  "statusCode": 409
+                }
+    TabulationResourceUnprocessableEntity:
+      description: "Entidade não processável"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/ErrorsMessageBody'
+          examples:
+            Default:
+              value:
+                {
+                  "message": "A fila de código 123 não foi encontrada",
+                  "statusCode": 422
+                }
+            FieldErros:
+              value:
+                {
+                    "errors": {
+                        "fields": {
+                            "queue": [
+                                "A fila de código 123 não foi encontrada"
+                            ]
+                        }
+                    },
+                    "message": "Unprocessable Entity",
+                    "statusCode": 422
+                }
+    TabulationResourceDeleted:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/TabulationResourceMessageBody'
+          example:
+            {
+                "data": {
+                    "item": {
+                        "name": "Tabulação 01",
+                        "active": false,
+                        "id": 699,
+                        "queue": 19
+                    }
+                },
+                "message": "OK",
+                "statusCode": 200
+            }
+    TabulationResourceStatusConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example: 
+            {
+                "message": "A tabulação de código 699 já está cancelada",
+                "statusCode": 409
+            }
+    OperatorStatusResourceConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example: 
+            {
+              "message": "Não é possível atribuir os status. O operador já está online",
+              "statusCode": 409
+            }
+    OperatorBreakStatusResourceConflict:
+      description: "Conflito"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example: 
+            {
+              "message": "Não é possível atribuir os status. O operador já está offline",
+              "statusCode": 409
+            }
+    OperatorBreakStatusResourceUnprocessableEntity:
+      description: "Entidade não processável"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/MessageBody'
+          example: 
+            {
+              "message": "A pausa de código 10 não foi encontrada",
+              "statusCode": 422
+            }
+    AttendanceResourceList:
+      description: "Sucesso"
+      content:
+        application/json;charset=UTF-8:
+          schema:
+            $ref: '#/components/schemas/AttendanceResourceListMessageBody'
+          example:
+            {
+              "data": {
+                  "items": [
+                      {
+                          "endDate": "2019-11-13T19:06:05.168+0000",
+                          "ura": {
+                              "name": "Genérica 2",
+                              "id": 5
+                          },
+                          "observation": "Transferência de devolução por logout do operador Thieslley.",
+                          "channel": "WHATSAPP",
+                          "finalizationUser": null,
+                          "operator": {
+                              "personName": "Andreia Florentino dos Santos",
+                              "id": 277,
+                              "username": "afsantos@example.com.br"
+                          },
+                          "beginDate": "2019-11-13T11:50:31.782+0000",
+                          "protocol": "1911023000023277",
+                          "tabulation": {
+                              "name": "Inatividade do cliente",
+                              "id": 4
+                          },
+                          "transfers": [
+                              {
+                                  "date": "2019-11-13T17:21:38.627+0000",
+                                  "targetOperator": null,
+                                  "observation": "Transferência de devolução por logout do operador Thieslley.",
+                                  "id": 9910,
+                                  "targetQueue": {
+                                      "name": "Igua SA",
+                                      "id": 1
+                                  },
+                                  "user": {
+                                      "personName": "Thieslley Netto Melo",
+                                      "id": 279,
+                                      "username": "tnmelo@example.com.br"
+                                  }
+                              },
+                              {
+                                  "date": "2019-11-13T17:45:42.941+0000",
+                                  "targetOperator": {
+                                      "personName": "Andreia Florentino dos Santos",
+                                      "id": 277,
+                                      "username": "afsantos@example.com.br"
+                                  },
+                                  "observation": null,
+                                  "id": 9940,
+                                  "targetQueue": null,
+                                  "user": {
+                                      "personName": "Matheus Batista",
+                                      "id": 228,
+                                      "username": "mhbatista@example.com.br"
+                                  }
+                              }
+                          ],
+                          "contact": {
+                              "name": "dani paulino21",
+                              "id": 11588
+                          },
+                          "messages": [
+                              {
+                                  "date": "2019-11-13T12:01:35.526+0000",
+                                  "attachments": [],
+                                  "hsm": null,
+                                  "id": 429974,
+                                  "source": "CUSTOMER",
+                                  "media": {
+                                      "file": "http://example.com/static/sgm/account/23/callcenter/attendance/receive/346809fa43768e89e1b1eb0781c4aaa8.jpeg",
+                                      "name": "346809fa43768e89e1b1eb0781c4aaa8.jpeg",
+                                      "contentType": "image/jpeg"
+                                  },
+                                  "text": null,
+                                  "type": "IMAGE",
+                                  "title": null,
+                                  "operator": null
+                              },
+                              {
+                                  "date": "2019-11-13T14:02:58.816+0000",
+                                  "attachments": [],
+                                  "hsm": null,
+                                  "id": 432202,
+                                  "source": "OPERATOR",
+                                  "media": null,
+                                  "text": "Para mudança de titularidade preciso de um contrato assinado e autenticado, e dados pessoais (FOTOS)",
+                                  "type": "TEXT",
+                                  "title": null,
+                                  "operator": {
+                                      "personName": "Thieslley Netto Melo",
+                                      "id": 279,
+                                      "username": "tnmelo@example.com.br"
+                                  }
+                              },
+                              {
+                                  "date": "2019-11-13T14:03:05.199+0000",
+                                  "attachments": [],
+                                  "hsm": null,
+                                  "id": 432204,
+                                  "source": "OPERATOR",
+                                  "media": null,
+                                  "text": "Por gentileza informe O SEU NOME (solicitante do serviço), o N° da matricula com o digito, um telefone de contato COM o DDD e um endereço de E-MAIL para registro de atendimento.",
+                                  "type": "TEXT",
+                                  "title": null,
+                                  "operator": {
+                                      "personName": "Thieslley Netto Melo",
+                                      "id": 279,
+                                      "username": "tnmelo@example.com.br"
+                                  }
+                              },
+                              {
+                                  "date": "2019-11-13T14:26:28.649+0000",
+                                  "attachments": [],
+                                  "hsm": null,
+                                  "id": 432573,
+                                  "source": "OPERATOR",
+                                  "media": null,
+                                  "text": "A copia pode ser levada à loja, porém via chat somente fotos!",
+                                  "type": "TEXT",
+                                  "title": null,
+                                  "operator": {
+                                      "personName": "Thieslley Netto Melo",
+                                      "id": 279,
+                                      "username": "tnmelo@example.com.br"
+                                  }
+                              }
+                          ],
+                          "id": 23487,
+                          "queue": {
+                              "name": "Igua SA",
+                              "id": 1
+                          }
+                      }
+                  ]
+              },
+              "message": "OK",
+              "statusCode": 200
+            }
+  schemas:
+    DateTimeISO:
+      type: "string"
+      pattern: ^((?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[01]|0[1-9]|[12][0-9])T(2[0-3]|[01][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]{3})(\+|-)((0[0-9]|1[0-2])00)$
+      example: "2018-11-30T14:08:50.876+0300"
+    ShortTimeType:
+      type: string
+      description: "Hora no formato de 24h"
+      pattern: ^$|^([01][0-9]|2[0-3]):[0-5][0-9]$
+      example: "16:30"
+    IpType:
+      type: string
+      pattern: ^(25[0-5]|2[0-4]\d|[0-1]?\d?\d)(\.(25[0-5]|2[0-4]\d|[0-1]?\d?\d)){3}$
+      example: "192.168.0.1"
+    CallCenterUserType:
+      type: string
+      description: "O tipo de usuário do callcenter"
+      enum: 
+        - SUPERVISOR
+        - OPERATOR
+    ChannelType:
+      type: string
+      description: "Canal de atendimento"
+      enum: 
+        - SMS
+        - EMAIL
+        - WEBCHAT
+        - FACEBOOK
+        - WHATSAPP
+    CallCenterMessageSourceType:
+      type: string
+      description: "Origem da mensagem do callcenter"
+      enum: 
+        - SYSTEM
+        - URA
+        - OPERATOR
+        - CUSTOMER
+    CallCenterMessageType:
+      type: string
+      description: "Tipo da mensagem do callcenter"
+      enum: 
+        - EVENT
+        - TEXT
+        - EMAIL
+        - CUSTOMER
+        - SUGGESTION
+        - FILE
+        - AUDIO
+        - IMAGE
+        - VIDEO
+        - LOCATION
+    OperatorPauseType:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    Credentials:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: api.callcenter.bemoby@bemoby.com
+        password:
+          type: string
+          example: '1234'
+    ErrorItem:
+      type: object
+      properties:
+        code:
+          type: string
+        description:
+          type: string
+    Errors:
+      type: object
+      properties:
+        global:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorItem'
+        fields:
+          type: object
+          additionalProperties: true
+    StatusResource:
+      type: object
+      required:
+        - active
+      properties:
+        active:
+          type: boolean
+          description: "Status do recurso"
+    OperatorStatusResource:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          description: "O status do operador"
+          enum: 
+            - ONLINE
+            - OFFLINE
+    OperatorBreakStatusResource:
+      type: object
+      required:
+        - reason
+        - status
+      properties:
+        reason:
+          type: integer
+          format: int64
+        status:
+          type: string
+          description: "O status de pausa operador"
+          enum: 
+            - PAUSED
+            - UNPAUSED
+    Page:
+      type: object
+      properties:
+        firstPage:
+          type: integer
+          description: "Número da primeira página"
+        previousPage:
+          type: integer
+          description: "Número da página anterior"
+        currentPage:
+          type: integer
+          description: "Número da página atual"
+        nextPage:
+          type: integer
+          description: "Número da próxima página"
+        hasNextPage:
+          type: boolean
+          description: "Indica se há uma próxima página"
+        pageSize:
+          type: integer
+          description: "Tamanho da página (quantidade de elementos por página)"
+    MessageBody:
+      type: object
+      properties:
+        message:
+          type: string
+        statusCode:
+          type: integer
+    ErrorsMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            errors:
+              $ref: '#/components/schemas/Errors'
+    RolesListMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: string
+    RolesPlainMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  type: string
+    OperatorPauseTypesListMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OperatorPauseType'
+    TokenMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  type: string
+    UserBaseResource:
+      type: object
+      required: 
+        - personName
+        - username
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: "Identificador do recurso"
+        personName:
+          type: string
+          description: "Nome pessoal do usuário"
+        username:
+          type: string
+          description: "Nome de usuário (login de acesso)" 
+    UserResource:
+      allOf:
+        - $ref: '#/components/schemas/UserBaseResource'
+        - type: object
+          required: 
+            - password
+            - type
+          properties:
+            password:
+              type: string
+              description: "Senha de acesso do usuário"
+            active:
+              type: boolean
+              description: "Status do usuário"
+            type:
+              $ref: '#/components/schemas/CallCenterUserType'
+            team:
+              type: integer
+              format: int64
+            startTime:
+              $ref: '#/components/schemas/ShortTimeType'
+            endTime:
+              $ref: '#/components/schemas/ShortTimeType'
+            ips:
+              type: array
+              description: "Lista de IPs de origem dos quais o usuário pode realizar o acesso"
+              items:
+                $ref: '#/components/schemas/IpType'
+    UserTeamResource:
+      type: object
+      required: 
+        - team
+      properties:
+        team:
+          type: integer
+          format: int64
+          description: "Identificador da equipe"
+    UserResourceMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/UserResource'
+    UserResourcePage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserResource'
+    UserResourcePageMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/UserResourcePage'
+    TeamResource:
+      type: object
+      required:
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: "Identificador do recurso"
+        name:
+          type: string
+          description: "Nome da equipe"
+        description:
+          type: string
+          description: "Descrição da equipe"
+        supervisors:
+          type: array
+          items:
+            type: integer
+            format: int64
+        operators:
+          type: array
+          items:
+            type: integer
+            format: int64
+    TeamResourceMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/TeamResource'
+    TeamResourcePage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/TeamResource'
+    TeamResourcePageMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/TeamResourcePage'
+    CostCenterResource:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: "Identificador do recurso"
+        name:
+          type: string
+          description: "Descrição do centro custo"
+        active:
+          type: boolean
+          description: "Status do usuário"
+    CostCenterResourceMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/CostCenterResource'
+    CostCenterResourcePage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/CostCenterResource'
+    CostCenterResourcePageMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/CostCenterResourcePage'
+    ServiceConfigResource:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: "Identificador do recurso"
+        name:
+          type: string
+          description: "Descrição do centro custo"
+        active:
+          type: boolean
+          description: "Status do usuário"
+    ServiceConfigResourceMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/ServiceConfigResource'
+    ServiceConfigResourcePage:
+      allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/ServiceConfigResource'
+    ServiceConfigResourcePageMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/ServiceConfigResourcePage'
+    QueueBaseResource:
+        type: object
+        required:
+          - name
+        properties:
+          id:
+            type: integer
+            format: int64
+            description: "Identificador do recurso"
+          name:
+            type: string
+            description: "Nome da fila"
+    QueueResource:
+      allOf:
+        - $ref: '#/components/schemas/QueueBaseResource'
+        - type: object
+          required:
+            - defaultQueue
+            - costCenter
+            - team
+            - serviceConfig
+          properties:
+            id:
+              type: integer
+              format: int64
+              description: "Identificador do recurso"
+            name:
+              type: string
+              description: "Nome da fila"
+            description:
+              type: string
+              description: "Descrição da fila"
+            waitingMessage:
+              type: string
+              description: "Messagem de espera customizada da fila"
+            defaultQueue:
+              type: boolean
+              description: "Campo indicador de fila padrão"
+            costCenter:
+              type: integer
+              format: int64
+              description: "Identificador do centro de custo associado à fila"
+            team:
+              type: integer
+              format: int64
+              description: "Identificador da equipe associada à fila"
+            serviceConfig:
+              type: integer
+              format: int64
+              description: "Configuração de serviço associada à fila"
+            active:
+              type: boolean
+              description: "Status da fila"
+    QueueResourceMessageBody:
+        allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/QueueResource'
+    QueueResourcePage:
+        allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/QueueResource'
+    QueueResourcePageMessageBody:
+        allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                    $ref: '#/components/schemas/QueueResourcePage'
+    BreakResource:
+        type: object
+        required:
+          - name
+          - minutes
+        properties:
+          id:
+            type: integer
+            format: int64
+            description: "Identificador do recurso"
+          name:
+            type: string
+            description: "Nome da pausa"
+          description:
+            type: string
+            description: "Descrição da pausa"
+          active:
+            type: boolean
+            description: "Status da pausa"
+          team:
+            type: integer
+            format: int64
+            description: "Identificador da equipe associada a pausa"
+          minutes:
+            type: integer
+    BreakResourceMessageBody:
+        allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/BreakResource'
+    BreakResourcePage:
+        allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/BreakResource'
+    BreakResourcePageMessageBody:
+        allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/BreakResourcePage'
+    TabulationBaseResource:
+        type: object
+        required:
+          - name
+        properties:
+          id:
+            type: integer
+            format: int64
+            description: "Identificador do recurso"
+          name:
+            type: string
+            description: "Nome da tabulação"
+    TabulationResource:
+        allOf:
+        - $ref: '#/components/schemas/TabulationBaseResource'
+        - type: object
+          properties:
+            active:
+              type: boolean
+              description: "Status da tabulação"
+            queue:
+              type: integer
+              format: int64
+              description: "Identificador da fila associada a tabulação"
+    TabulationResourceMessageBody:
+        allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/TabulationResource'
+    TabulationResourcePage:
+        allOf:
+        - $ref: '#/components/schemas/Page'
+        - type: object
+          properties:
+            elements:
+              type: array
+              items:
+                $ref: '#/components/schemas/TabulationResource'
+    TabulationResourcePageMessageBody:
+        allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                item:
+                  $ref: '#/components/schemas/TabulationResourcePage'
+    UraBaseResource:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    ContactBaseResource:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    MediaBaseResource:
+      type: object
+      properties:
+        file:
+          type: string
+        name:
+          type: string
+        contentType:
+          type: string
+    HsmMessageResource:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    MessageResource:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        date:
+          $ref: '#/components/schemas/DateTimeISO'
+        source:
+          $ref: '#/components/schemas/CallCenterMessageSourceType'
+        type:
+          $ref: '#/components/schemas/CallCenterMessageType'
+        media:
+          $ref: '#/components/schemas/MediaBaseResource'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaBaseResource'
+        hsm:
+          $ref: '#/components/schemas/HsmMessageResource'
+        operator:
+          $ref: '#/components/schemas/UserBaseResource'
+        title:
+          type: string
+        text:
+          type: string
+    TransferAttendanceResource:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        date:
+          $ref: '#/components/schemas/DateTimeISO'
+        observation:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserBaseResource'
+        targetQueue:
+          $ref: '#/components/schemas/QueueBaseResource'
+        targetOperator:
+          $ref: '#/components/schemas/UserBaseResource'
+    AttendanceResource:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        protocol:
+          type: string
+        channel:
+          $ref: '#/components/schemas/ChannelType'
+        beginDate:
+          $ref: '#/components/schemas/DateTimeISO'
+        endDate:
+          $ref: '#/components/schemas/DateTimeISO'
+        observation:
+          type: string
+        queue:
+          $ref: '#/components/schemas/QueueBaseResource'
+        operator:
+          $ref: '#/components/schemas/UserBaseResource'
+        ura:
+          $ref: '#/components/schemas/UraBaseResource'
+        contact:
+          $ref: '#/components/schemas/ContactBaseResource'
+        tabulation:
+          $ref: '#/components/schemas/TabulationBaseResource'
+        finalizationUser:
+          $ref: '#/components/schemas/UserBaseResource'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageResource'
+        transfers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferAttendanceResource'
+    AttendanceResourceListMessageBody:
+      allOf:
+        - $ref: '#/components/schemas/MessageBody'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AttendanceResource'

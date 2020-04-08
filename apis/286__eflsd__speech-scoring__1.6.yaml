@@ -1,0 +1,407 @@
+penapi: 3.0.0
+servers:
+  - url: 'https://speech-us.ai.ef.com/v1/'
+  - url: 'https://speech-cn.ai.ef.cn/v1/'
+info:
+  description: This is speech scoring API
+  version: "1.6"
+  title: Speech scoring and recommendation
+  contact:
+    email: bob.zhou@ef.com
+
+
+
+paths:
+  /score:
+    parameters:
+    - in: header
+      name: x-api-key
+      schema:
+        type: string
+      required: true
+      description: obtain the key to use the API
+    - in: header
+      name: Authorization
+      schema:
+        type: string
+      required: true
+      description: Bearer authorization with the token  
+    post:
+      summary: send audio for scoring
+      description: send audio and text for scoring. By default it will be in sync mode, which means HTTP request will be waiting for response for at most 15 seconds. If timeout, you will get a 200 response with taskId, so you can fetch it later on from result API. This usually happens when your audio is too long or the server has a long queue to process
+      responses:
+        '200':
+          description: return score
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScoringBody'
+        description: request payload
+  /recommend:
+    post:
+      parameters:
+      - in: header
+        name: x-api-key
+        schema:
+          type: string
+        required: true
+        description: obtain the key to use the API
+      - in: header
+        name: Authorization
+        schema:
+          type: string
+        required: true
+        description: Bearer authorization with the token  
+
+      summary: request recommendation of a speaker
+      description: scores are persisted under speaker_id, so the recommendation is made based on that. Same 15-second timeout behaviour as the scoring API.
+      responses:
+        '200':
+          description: return recommendations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendBody'
+        description: request payload
+  /recommend/search/{search_method}:
+    post:
+      parameters:
+      - in: header
+        name: x-api-key
+        schema:
+          type: string
+        required: true
+        description: obtain the key to use the API
+      - in: header
+        name: Authorization
+        schema:
+          type: string
+        required: true
+        description: Bearer authorization with the token  
+      - in: path
+        name: search_method
+        schema:
+          type: string
+          enum: [word, sent]
+        required: true
+        description: the search method  
+      summary: search recommendation data pool
+      description: Search the data pool with g2p or words for words or sentences with more granular control
+      responses:
+        '200':
+          description: return words or sentences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendSearchBody'
+        description: request payload
+  /result:
+    get:
+      parameters:
+      - in: header
+        name: x-api-key
+        schema:
+          type: string
+        required: true
+        description: obtain the key to use the API
+      - in: header
+        name: Authorization
+        schema:
+          type: string
+        required: true
+        description: Bearer authorization with the token   
+      - in: query
+        name: utterance_id
+        schema:
+          type: string
+        description: to fetch a particular utterance result. The ID is same as task_id
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: The numbers of items to return, max 100
+      - in: query
+        name: speaker_id
+        schema:
+          type: string
+        description: specify the speaker for the result 
+      - in: query
+        name: start_date
+        schema:
+          type: number
+        description: to filter the start date of the score, in 10-digit timestamp (epoch time in seconds)
+      - in: query
+        name: end_date
+        schema:
+          type: number
+        description: to filter the end date of the score, in 10-digit timestamp (epoch time in seconds) 
+      - in: query
+        name: metadata_tags
+        schema:
+          type: string
+        description: a "," separated tags, such as "hello,hi"
+      summary: fetch scores by utterance_id, speaker_id or most recent scores. At most 100 results are returned.
+      responses:
+        '200':
+          description: return a list of historical scores
+  /stats:
+    get:
+      parameters:
+      - in: header
+        name: x-api-key
+        schema:
+          type: string
+        required: true
+        description: obtain the key to use the API
+      - in: header
+        name: Authorization
+        schema:
+          type: string
+        required: true
+        description: Bearer authorization with the token   
+      - in: query
+        name: speaker_id
+        schema:
+          type: string
+        description: specify the speaker for the result 
+      - in: query
+        name: start_date
+        schema:
+          type: number
+        description: to filter the start date of the score, in 10-digit timestamp (epoch time in seconds)
+      - in: query
+        name: end_date
+        schema:
+          type: number
+        description: to filter the end date of the score, in 10-digit timestamp (epoch time in seconds) 
+      - in: query
+        name: transcription
+        schema:
+          type: string
+        description: the transcription to search (parsed transcription, not original transcription)
+      summary: generate statistics of the given parameter
+      responses:
+        '200':
+          description: return the required statistics
+  /token:
+    parameters:
+    - in: header
+      name: x-api-key
+      schema:
+        type: string
+      required: true
+      description: obtain the key to use the API
+    - in: header
+      name: Authorization
+      schema:
+        type: string
+      required: true
+      description: Bearer authorization with the token  
+    post:
+      summary: get a short-lived token for a speaker_id
+      description: the master key should be hidden by the server. So this method is to get a token that can be exposed to the client (like webpage). You should use the same x-api-key and the new token for this speaker. The speaker is only limited to create or fetch scores or recommendations under this speaker_id
+      responses:
+        '200':
+          description: return the token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenBody'
+        description: request payload
+  /token/presign:
+    parameters:
+    - in: header
+      name: x-api-key
+      schema:
+        type: string
+      required: true
+      description: obtain the key to use the API
+    - in: header
+      name: Authorization
+      schema:
+        type: string
+      required: true
+      description: Bearer authorization with the token  
+    post:
+      summary: presign the audio urls
+      description: audio and other files stored in s3 are private. So in order for the client to read it directly, you have to presign the GET request. 
+      responses:
+        '200':
+          description: return a list or presigned urls
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenPresignBody'
+        description: request payload
+components:
+  schemas:
+    ScoringBody:
+      type: object
+      required:
+        - input
+        - audio
+      properties:
+        input:
+          type: string
+          example: how are you
+        alternative_inputs:
+          type: array
+          items:
+            type: string
+          example: ["fine i want this", "what's your name"]
+        audio:
+          type: string
+          example: base64 audio string, or a public-accessible URL
+        speaker_id:
+          type: string
+          example: any id or string.
+          description: if speaker_id is not provided, the result will not be persisted.
+        format:
+          type: string
+          example: wav 
+          description: if format == 'wav' and sample_rate == 16000, then there is no conversion. Make sure it is mono if you do not want conversion of audio files
+        sample_rate:
+          type: number
+          example: 16000
+        profile_name:
+          type: string
+          enum: [default, kids_cn]
+          example: kids_cn
+          description: default value is "default"
+        persist:
+          type: boolean
+          example: true
+          description: if persist === false, the result will not be persisted and thus not show up in the result API, nor will it be used for recommendation. Use this option for testing scoring API when you don't want to create garbage data.
+        async:
+          type: boolean
+          example: false
+          description: default to false. if async is true. The server will return taskId immediately and you can fetch the result later from the result API. If async is true and persist is false, an error will be thrown as you can never get the result.
+        trim_noise:
+          type: string
+          enum: [strong, weak]
+          example: strong
+          description: default is strong. whether to trim the noise. Can be strong or weak. It uses audio level detection at the beginning and the end of the audio. You can get audio trim result in the returned object
+        metadata:
+          type: object
+          description: the metadata to be stored. it must be an object and if metadata["tags"] is specified, it will be indexed and searchable in the result fetch with metadata_tags parameter
+        min_audio_length:
+          type: number
+          example: 1
+          description: the adjustable minimum audio length in seconds. Default to 0.5
+        presign_audio_url_expires_in:
+          type: number
+          example: 3600
+          description: if supplied, the audio_url returned will already be presigned with the given expire_in seconds. If not supplied, the audio will not be presigned and you need to call /token/presign
+        alternative_detail:
+          type: string
+          enum: [word, phoneme]
+          example: word
+          description: optional. default is null, which leads to only sentence level details on alternative inputs. If the value is "word", alternatives will give word-level scores; if "phoneme", the detail level will be the same as the main input.
+    RecommendBody:
+      type: object
+      required:
+        - speaker_id
+      properties:
+        speaker_id:
+          type: string
+          example: any id, uuid
+        mode:
+          type: string
+          example: stat
+          description: if mode is 'stat', it will only return the statistics of the historical data of this speaker
+        word_size:
+          type: number
+          example: 10
+          description: the number of recommended words to return, default to 10
+        sent_size:
+          type: number
+          example: 10
+          description: the number of recommended sentences to return, default to 10
+        history_fetch_size:
+          type: number
+          example: 20
+          description: the number of recent activities to use on which the recommendation is based. Default to 20
+    RecommendSearchBody:
+      type: object
+      properties:
+        g2ps:
+          type: array
+          items:
+            type: string
+          example: ["t=TT"]
+          description: g2ps to be included in search
+        phonemes:
+          type: array
+          items:
+            type: string
+          example: ["TT"]
+          description: phonemes to be included in search
+        words:
+          type: array
+          items:
+            type: string
+          example: ["hello"]
+          description: words to be included in search, only valid with method sent
+        exclude_g2ps:
+          type: array
+          items:
+            type: string
+          example: ["t=TT"]
+          description: g2ps to be excluded in search
+        exclude_phonemes:
+          type: array
+          items:
+            type: string
+          example: ["TT"]
+          description: phonemes to be excluded in search
+        exclude_words:
+          type: array
+          items:
+            type: string
+          example: ["hello"]
+          description: words to be excluded in search, only valid with method sent
+        word_size:
+          type: number
+          example: 10
+          description: only valid with method word
+        sent_size:
+          type: number
+          example: 10
+          description: only valid with method sent
+        df:
+          type: number
+          example: 0.3
+          description: pron difficulty level to search around [df *0.8, df * 1.2]
+          
+    TokenBody:
+      type: object
+      required:
+        - speaker_id
+      properties:
+        speaker_id:
+          type: string
+          example: any id, uuid
+        expires_in:
+          type: number
+          example: 100
+          description: the token expires in seconds. By default is 3600 seconds, maximum 30 days in seconds (3600*24*30)
+    TokenPresignBody:
+      type: object
+      required:
+        - urls
+      properties:
+        urls:
+          type: array
+          items:
+            type: string
+          example: ["https://s3.amazonaws.com/com.ef.speechscoringdata-us/userdata-v1-dev/test/ssv2%2B3_.%2A%21%40%23%24%252F%25%5E%260.19880717675665416/test.wav?AWSAccessKeyId=AKIAJCYLTSLU4SYTLRUA&Expires=1568966220&Signature=UNL3klJJpOii5lR44sXN7PIZ0Fw%3D", "https://s3.amazonaws.com/com.ef.speechscoringdata-us/userdata-v1-dev/test/ssv2%2B3_.%2A%21%40%23%24%252F%25%5E%260.19880717675665416/test.wav"]
+          description: those urls must be the audil_url you got from the score API. With original signature is fine since the system will get the basename of the url
+        expires_in:
+          type: number
+          example: 100
+          description: the token expires in seconds. By default is 3600 seconds. There is no maximum

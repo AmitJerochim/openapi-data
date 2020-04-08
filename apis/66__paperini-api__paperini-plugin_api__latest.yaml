@@ -1,0 +1,402 @@
+penapi: 3.0.0
+info:
+  title: Paperini Plugin API
+  description: |
+    Steps
+
+      * Get a plugin key, contact us
+      * Get Authentication Token ```POST /auth/token``` 
+      * Create article ``` POST /article```
+      * Update article ``` PUT /article/{article_id}```
+      * Delete article ``` DELETE /article/{article_id}```
+      * Bulk insert    ``` POST /bulk/articles```
+
+  contact: {
+    "name": "API Support",
+    "email": "support@paperini.com"
+  }
+  version: "latest"
+servers:
+- url: https://plugin.paperini.com
+  variables: {}
+- url: http://localhost:8888/api
+  variables: {}
+paths:
+  /auth/token:
+    post:
+      tags:
+      - Plugin Article
+      summary: Get Authentication Token
+      description: |
+        `key` is a publication key provided by paperini for geting authentication token. If you don't have please ask for it. 
+
+        Exchange the key with an installation key: 
+        
+        Request `{
+          "key": "abc"
+        }`
+        
+        Response `{
+            "token": "xyz"
+        }`
+        
+        When the client gets authentication token, save it for next requests. All the requests that need authentication requires this token.
+      operationId: GetAuthenticationToken
+      security:  []
+      requestBody:
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Authentication'
+      responses:
+        200:
+          description: Authors and token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authors:
+                    type: object
+                    additionalProperties:
+                      type: string
+                    description: Author name & id map.
+                  key:
+                    type: string
+                    description: Authentication token which must be used in the next requests
+
+        400:
+          description: 'Returs custom codes if applicable'
+          headers: {}
+        401:
+          description: 'Returns 401 when can not find the key'
+          headers: {}
+      deprecated: false
+  /article:
+    post:
+      tags:
+      - Plugin Article
+      summary: Creates new article, if `post_id` exists returns existing article.
+      description: 'Creates new article by plugin'
+      operationId: PluginCreateArticle
+      requestBody:
+        description: ArticleUpsert object.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PluginArticleUpsert'
+      responses:
+        200:
+          description: Returns created article
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginArticleResponse'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        404:
+          $ref: '#/components/responses/NotFound'  
+        403:
+          $ref: '#/components/responses/Forbidden'  
+      deprecated: false
+  /article/{article_id}:
+    put:
+      tags:
+      - Plugin Article
+      summary: Update existing article
+      description: 'Updates article by plugin'
+      operationId: PluginUpdateArticle
+      parameters:
+        - in: path
+          name: article_id
+          schema:
+            type: string
+          required: true
+          description: Article ID
+      requestBody:
+        description: Returns updated article
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PluginArticleUpsert'
+      responses:
+        200:
+          description: Returns article
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginArticleResponse'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        404:
+          $ref: '#/components/responses/NotFound'  
+        403:
+          $ref: '#/components/responses/Forbidden'  
+      deprecated: false
+  /bulk/articles:
+    post:
+      tags:
+      - Plugin Article
+      summary: Bulk Insert
+      description: 'Bulk insert'
+      operationId: PluginBulkInsert
+      requestBody:
+        description: Array of ArticleBulkInsert object.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PluginBulkArticleUpsert'
+      responses:
+        200:
+          description: Returns created articles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginBulkArticleUpsertResponse'
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        404:
+          $ref: '#/components/responses/NotFound'  
+        403:
+          $ref: '#/components/responses/Forbidden'  
+      deprecated: false
+    delete:
+        tags:
+        - Plugin Article
+        summary: Delete article
+        description: 'Deletes article by plugin'
+        operationId: PluginDeleteArticle
+        parameters:
+          - in: path
+            name: article_id
+            schema:
+              type: string
+            required: true
+            description: Article ID
+        deprecated: false
+        responses:
+          204:
+            $ref: '#/components/responses/NoContent' 
+          401:
+            $ref: '#/components/responses/Unauthenticated'
+          404:
+            $ref: '#/components/responses/NotFound'  
+          403:
+            $ref: '#/components/responses/Forbidden'  
+  
+components:
+  responses:
+    PluginBulkArticleUpsert:
+      description: Bulk Request Response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PluginBulkArticleUpsertResponse'
+          examples:
+            articles:
+              value:
+                - id: 10
+                  name: Jessica Smith
+                - id: 20
+                  name: Ron Stewart
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ClientError'
+    NoContent:
+      description: Request successfully performed
+    NotFound:
+      description: The specified resource was not found
+    Unauthenticated:
+      description: Token is expired or invalidated
+    Forbidden:
+       description: Token is not authorized to perform the operation
+  schemas:
+    Authentication:
+      title: AuthenticationRequest
+      required:
+      - key
+      type: object
+      properties:
+        key:
+          type: string
+          description: visit publication settings and create it there or contact us for help
+      example:
+        key: bedratjy0gs348fsdfs5456j6pdsdda08dasv455sdfsdfsdfs
+    PluginAuthor:
+      title: PluginAuthor
+      required:
+      - fullname
+      type: object
+      properties:
+        email:
+          type: string
+        id:
+          type: string
+        fullname:
+          type: string
+      example:
+        email: example@paperini.com
+        id: '12345'
+        fullname: Jon Snow
+    PluginImage:
+      title: PluginImage
+      required:
+      - url
+      type: object
+      properties:
+        url:
+          type: string
+        copyright:
+          type: string
+        credit:
+          type: string
+      example:
+        url: https://paperini.com/images/1.png
+        copyright: 'Paperini'
+        credit: Jon Snow
+    PluginArticleResponse:
+      title: PluginResponseType
+      type: object
+      properties:
+        article_id:
+          type: string
+    PluginArticleUpsert:
+      title: PluginArticleInsertRequest
+      required:
+      - post_id
+      - title
+      - content
+      - lang
+      - authors
+      - published
+      - publish_at
+      - url
+      type: object
+      properties:
+        post_id:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        content:
+          type: string
+        intro:
+          type: string
+        lang:
+          type: string
+          description: Supported languages:Finnish(fi), Swedish(sv), English(en)
+          enum: [fi, sv, en]
+        short_title:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        publish_at:
+          type: integer
+          format: int64
+          description: unix time
+        published:
+          type: boolean
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PluginAuthor'
+        heading_image:
+          $ref: '#/components/schemas/PluginImage'
+        images:
+          type: array
+          description: galary images or additional images which are not in the article content
+          items:
+            $ref: '#/components/schemas/PluginImage'
+      example:
+        post_id: "12345"
+        title: title title
+        url: 'https://originalhost.com/article/1'
+        content: html content <p> paragraph </p> <img src="https://sample.com/image/1"/>
+        intro: summary of content if it has
+        lang: fi
+        authors: 
+          - email: example@paperini.com
+            id: '12345'
+            fullname: Jon Snow
+        heading_image: 
+            url: https://paperini.com/images/1.png
+            copyright: 'Paperini'
+            credit: Jon Snow
+        images: 
+          - url: https://paperini.com/images/1.png
+            copyright: 'Paperini'
+            credit: Jon Snow
+        publish_at: 1562584178
+        published: true
+        tags:
+        - tag1
+        - tag2
+    PluginBulkInsertItem:
+      title: PluginBulkInsertArticle
+      required:
+        - track_id
+        - article
+      type: object
+      properties:
+        track_id:
+          type: string
+        article:
+          $ref: '#/components/schemas/PluginArticleUpsert'
+    PluginBulkArticleUpsert:
+      type: array
+      items:
+          $ref: '#/components/schemas/PluginBulkInsertItem'
+    PluginBulkArticleUpsertResponse:
+      title: Bulk insert response
+      type: array
+      items:
+        type: object
+        properties:
+          track_id:
+            type: string
+          status_code:
+            type: integer
+          body:
+            type: object
+            properties:
+              article_id:
+                type: string
+      example:
+        - track_id: "track_id"
+          status_code: 200 
+        - track_id: "track_id"
+          status_code: 200
+    ClientError:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
+  securitySchemes:
+    BearerAuth:            
+      type: http
+      scheme: bearer
+security:
+  - BearerAuth: []
+tags:
+- name: Plugin Article

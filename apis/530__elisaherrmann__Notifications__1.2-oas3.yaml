@@ -1,0 +1,376 @@
+penapi: 3.0.0
+info:
+  version: "1.2-oas3"
+  title: Notifications
+  description: Interface to receive notifications
+paths:
+  '/CspNotifications':
+    post:
+      summary: Receive notifications
+      tags:
+        - Notification
+      responses:
+        '200':
+          description: Notification received.
+        '400':
+          description: Bad request.
+        '500':
+          "$ref": "#/components/responses/Standard500ErrorResponse"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/Notifications"
+        description: Push or delete notification
+        required: true
+servers:
+  - url: 'https://yourURL:443/api'
+components:
+  responses:
+    Standard500ErrorResponse:
+      description: An unexpected error occured.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    SignalDoesNotExistResponse:
+      description: Signal does not exist.
+    MeasurementChannelDoesNotExistResponse:
+      description: MeasurementChannel does not exist.
+    CloudStorageProviderDoestNotExist:
+      description: Cloud Storage Provider does not exist.
+    CPPOwnerDoestNotExist:
+      description: CPP Owner does not exist.
+    ServiceProviderDoestNotExist:
+      description: Service Provider does not exist.
+    ServiceProviderOfferDoesNotExistResponse:
+      description: ServiceProviderOffer does not exist.
+    ContractDoesNotExistResponse:
+      description: Contract does not exist.
+    DataTransactionDoesNotExistResponse:
+      description: DataTransaction does not exist.
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Auth-Token
+  schemas:
+    Notifications:
+      description: Array of notification received.
+      type: array
+      items:
+        $ref: '#/components/schemas/Notification'
+    Notification:
+      description: Information about a data notification
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - datapackage_push
+            - datapackage_delete
+        content:
+          type: array
+          items:
+            type: object
+            required:
+              - vault-id
+              - datapackages
+            properties:
+              vault-id:
+                type: string
+                format: uuid
+                example: d290f1ee-6c54-4b01-90e6-d701748f0851
+              datapackages:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataPackage'
+    DataPackage:
+      type: object
+      properties:
+        datapackage-id:
+          type: string
+        vault-id:
+          type: string
+        trip-id:
+          type: string
+        cpp-id:
+          type: string
+        cvim-version:
+          type: string
+          enum:
+          - 1.0.0
+          - 1.0.1
+          - 1.2.0
+          - 1.2.1
+        cpp-type:
+          type: string
+          enum:
+          - vehicle
+          - building
+        type:
+          type: string
+          enum:
+          - time-series
+          - histogram
+          - geo-histogram
+          - general-purpose
+          - event-based
+          - basic-cpp-information
+        measurement-channel-id:
+          type: string
+        timestamp-start:
+          type: string
+          format: date-time
+        timestamp-stop:
+          type: string
+          format: date-time
+        submit-time:
+          type: string
+          format: date-time
+        mileage-start:
+          type: number
+        room-id:
+          type: string
+        mileage-stop:
+          type: number
+        geo-bounding-box:
+          type: object
+          properties:
+            latitude-min:
+              type: number
+            latitude-max:
+              type: number
+            longitude-min:
+              type: number
+            longitude-max:
+              type: number
+            altitude-min:
+              type: number
+            altitude-max:
+              type: number
+          additionalProperties: false
+        location:
+          type: object
+          properties:
+            latitude:
+              type: number
+            longitude:
+              type: number
+          additionalProperties: false
+        oem-certification:
+          type: object
+          properties:
+            signature: {}
+            checksum: {}
+            sequence-number: {}
+          additionalProperties: false
+        expiration-date:
+          type: string
+          format: date-time
+        data-ownership-information:
+          type: object
+          properties:
+            privacy-veto-rights:
+              type: object
+              properties:
+                consent-level:
+                  type: string
+                  enum:
+                  - public
+                  - shared
+                  - private
+                data-format:
+                  type: string
+                  enum:
+                  - time-series
+                  - histogram
+                jurisdiction:
+                  type: string
+                  enum:
+                  - Europe
+                  - any
+                storage-constraint:
+                  type: string
+                  enum:
+                  - OEM storage
+                  - Personal storage
+              required:
+              - consent-level
+            copyright-stakeholders:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  status:
+                    type: string
+                required:
+                - name
+                - status
+            data-stakeholders:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  status:
+                    type: string
+                required:
+                - name
+                - status
+            data-privacy-level:
+              type: string
+              enum:
+              - public
+              - shared
+              - private
+        data-masking-active:
+          type: boolean
+        signatures:
+          type: array
+          items:
+            type: object
+            properties:
+              signatory:
+                type: string
+              checksum:
+                type: string
+              signature:
+                type: string
+            required:
+            - signatory
+            - checksum
+            - signature
+      required:
+      - cvim-version
+      - type
+      - measurement-channel-id
+      - vault-id
+      - cpp-type
+      oneOf:
+      - type: object
+        properties:
+          type:
+            type: string
+            enum:
+            - time-series
+          number-of-samples:
+            type: integer
+            minimum: 1
+          statistic-properties:
+            type: object
+            properties:
+              min:
+                type: number
+              max:
+                type: number
+              average:
+                type: number
+              histogram:
+                type: object
+                properties:
+                  measurement-channel-id:
+                    type: string
+                  data:
+                    type: array
+                    minItems: 0
+                    maxItems: 10
+                    items:
+                      type: number
+                required:
+                - measurement-channel-id
+                - data
+          data:
+            type: array
+            minItems: 1
+            items:
+              type: object
+              properties:
+                timestamp:
+                  type: string
+                  format: date-time
+                value:
+                  type: array
+                  items:
+                    type: string
+        required:
+        - type
+        - number-of-samples
+        - data
+      - type: object
+        properties:
+          type:
+            type: string
+            enum:
+            - histogram
+            - geo-histogram
+          data:
+            type: array
+            items:
+              type: array
+              minItems: 1
+              items:
+                type: number
+        required:
+        - type
+        - data
+      - type: object
+        properties:
+          type:
+            type: string
+            enum:
+            - 'general-purpose'
+            - 'basic-cpp-information'
+          data: {}
+        required:
+        - type
+        - data
+      - type: object
+        properties:
+          type:
+            type: string
+            enum:
+            - event-based
+          data:
+            type: object
+            properties:
+              event-type:
+                type: string
+                enum:
+                - real-time-event
+                - trigger-event
+                - threshold-event
+              event-data:
+                type: object
+                properties:
+                  event-time-stamp:
+                    type: string
+                    format: date-time
+                  value:
+                    type: string
+                  event-datapackages:
+                    type: array
+                    minItems: 1
+                    items:
+                      $ref: '#/components/schemas/DataPackage'    
+                required:
+                  - time-stamp
+                  - value
+            required:
+            - event-type
+            - event-data
+        required:
+        - type
+        - data
+
+    Error:
+      description: Error definition. It is composed by code error and message
+      properties:
+        code:
+          type: string
+        message:
+          type: string

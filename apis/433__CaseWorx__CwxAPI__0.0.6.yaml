@@ -1,0 +1,789 @@
+penapi: 3.0.0
+info:
+  version: "0.0.6"
+  title: 'CaseWorx API'
+  description: "[CaseWorx](https://app.caseworx-baurecht.de/) API"
+  license: 
+    name: GNU Affero General Public License v3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+  contact:
+    name: CaseWorx Support
+    email: caseworx@wolterskluwer.com
+
+servers:
+  - description: Production environment
+    url: https://api.caseworx-baurecht.de/v0
+
+tags: 
+  - name: cases
+    description: Operations on cases
+  - name: documents
+    description: Operations on document resources
+  - name: media
+    description: Operations on document media (aka the body of the document as opposed to metadata)
+  
+security: 
+  - oAuth2AuthCode: []
+  - apiKeyAuth: []
+
+paths:
+  /cases:
+    # -------- List cases --------
+    get:
+      tags: 
+        - cases
+      description: Returns a collecion of all cases the user has access to
+      responses:
+        '200':
+          description: Returns an array of cases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Case'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+    # -------- Create a case --------
+    post:
+      tags:
+        - cases
+      description: Creates a new case resource
+      requestBody:
+        description: Case item to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Case'
+      responses:
+        '201':
+          description: New case item successfully added
+          headers:
+            location:
+              description: URL of the created resource
+              schema:
+                type: string
+                example: https://api.caseworx-baurecht.de/v0/cases/12345
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /cases/{caseId}/documents:
+    parameters:
+      - name: caseId
+        description: Case identifier
+        in: path
+        required: true
+        schema:
+          type: integer
+        example: 12345
+
+    # -------- List selected properties of all documents in a case
+    get:
+      tags:
+        - documents
+      description: Returns selected properties of documents in a case. At present `id`, `title`, `date` and `types` are returned if specified by the user. Implementation may return other properties as well. If a particular document exists only in its raw layer (not enriched) only `id` is returned.
+      responses:
+        '200':
+          description: Returns an array of documents in a case with available properties
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  anyOf:
+                    - $ref: '#/components/schemas/DocumentRaw'
+                    - $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+    # -------- Create a new document in a case by document body upload --------
+    post:
+      tags:
+        - media
+      description: |
+        Uploads a document media. The upload results in creating a document resource.  
+        At present this is the only way to create a document resource - the creation flow starts with uploading the document media. Once the media is processed, the document resource receives its basic collection of metadata assigned by the system.
+      parameters:
+        - name: content-disposition
+          description: |
+            Provides a file name that should be assigned to the media resource being uploaded. See [RFC6266](https://tools.ietf.org/html/rfc6266). Disposition type 'attachment' and with disposition parameter 'filename'. Characters outside of ISO-8859-1 must use 'filename*' and URL-escaped UTF-8 encoding per [RFC6266 sec. 4.3](https://tools.ietf.org/html/rfc6266#section-4.3).
+          in: header
+          schema:
+            type: string
+          required: true
+          example: attachment; filename*=utf-8''d%C3%A9j%C3%A0vu.pdf
+        - name: content-length
+          description: An [indication of the content length](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/content-length) in octets
+          in: header
+          schema:
+            type: integer
+            maximum: 5242880
+          required: true
+          example: 1000
+        - name: content-type
+          description: The [media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/POST) of the content returned in payload
+          in: header
+          schema:
+            $ref: '#/components/schemas/SupportedMediaTypes'
+          required: true
+          example: application/pdf
+      requestBody:
+        description: Document body for upload. The document size limit is 5MB (5242880 bytes), for larger documents HTTP 413 is returned.  
+        content:
+          application/pdf:
+            schema:
+              $ref: '#/components/schemas/PdfPayload'
+          application/vnd.oasis.opendocument.spreadsheet:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.oasis.opendocument.spreadsheet-template:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.sun.xml.calc:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.ms-excel:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          text/csv:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          text/tab-separated-values:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.oasis.opendocument.text:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.oasis.opendocument.text-template:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.sun.xml.writer:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/rtf:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/msword:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.wordperfect:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          text/plain:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.oasis.opendocument.presentation:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.oasis.opendocument.presentation-template:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.sun.xml.impress:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.ms-powerpoint:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          application/vnd.openxmlformats-officedocument.presentationml.presentation:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          image/jpeg:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          image/bmp:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          image/gif:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          image/png:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+          image/tiff:
+            schema:
+              $ref: '#/components/schemas/OctetStreamPayload'
+              
+      responses:
+        '201':
+          description: Document resource created and media successfully uploaded for the document
+          headers:
+            location:
+              description: URL of the created document resource
+              schema:
+                type: string
+                example: https://api.caseworx-baurecht.de/v0/cases/12345/documents/567890
+              required: true
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '411':
+          $ref: '#/components/responses/Error411'
+        '413':
+          $ref: '#/components/responses/Error413'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /cases/{caseId}/documents/{documentId}:
+    parameters:
+      - name: caseId
+        description: Case identifier
+        in: path
+        required: true
+        schema:
+          type: integer
+        example: 12345
+      - name: documentId
+        description: Document identifier
+        in: path
+        required: true
+        schema:
+          type: integer
+        example: 67890
+
+    # -------- Get document metadata --------
+    get:
+      tags:
+        - documents
+      description: Returns properties of a document
+      responses:
+        '200':
+          description: Returns properties of a document
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/DocumentRaw'
+                  - $ref: '#/components/schemas/Document'
+              example:
+                id: 67890
+                filename: mySampleFilet.pdf
+                created: '2020-01-18T18:00:00Z'
+                updated: '2020-01-18T18:00:00Z'
+                title: My first document
+                date: '2019-12-01'
+                type:
+                  - Fax
+                  - Complaint
+                parties:
+                  - John Doe
+                  - Acme Corp.
+                trades:
+                  - plumbing
+                  - masonery
+                defects:
+                  - 122562
+                  - 122680
+                tags:
+                  - to do
+                  - easy win
+                suggestions:
+                  defects:
+                    descriptions:
+                      - Mangel Nr. 122562
+                      - Mangel Nr. 122680
+                    identifiers:
+                      - 122562
+                      - 122680
+                    refs:
+                      - 12345
+                      - 67890
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '500':
+          $ref: '#/components/responses/Error500'
+
+  /cases/{caseId}/documents/{documentId}/media:
+    parameters:
+      - name: caseId
+        description: Case identifier
+        in: path
+        required: true
+        schema:
+          type: integer
+        example: 12345
+      - name: documentId
+        description: Document identifier
+        in: path
+        required: true
+        schema:
+          type: integer
+        example: 67890
+
+    # -------- Download a document media --------
+    get:
+      tags: 
+        - media
+      description: Returns a document media for download.
+      parameters:
+        - name: accept
+          description: A [list of media types](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept) the client is willing to accept. If Accept is not specified, defaults to \*/*.  
+          in: header
+          schema:
+            type: string
+          example: application/pdf
+      responses:
+        '200':
+          description: Document media in binary format is returned in response payload with approriate headers. The document size limit is 5MB, for larger documents HTTP 500 is returned.
+          headers:
+            content-type:
+              description: The [media type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type) of the content returned in payload
+              schema:
+                type: string
+              example: application/pdf
+              required: true
+            content-disposition:
+              description: An [indication of how the returned content should be handled](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Disposition). Filename must be specified. See [RFC6266 sec. 4.3](https://tools.ietf.org/html/rfc6266#section-4.3) for handling characters outside of ISO-8859-1.
+              schema:
+                type: string
+              example: 'attachment; filename="mydocument.pdf"'
+              required: true
+          content:
+            application/pdf:
+              schema:
+                $ref: '#/components/schemas/PdfPayload'
+        '202':
+          $ref: '#/components/responses/Info202'
+        '400':
+          $ref: '#/components/responses/Error400'
+        '401':
+          $ref: '#/components/responses/Error401'
+        '403':
+          $ref: '#/components/responses/Error403'
+        '404':
+          $ref: '#/components/responses/Error404'
+        '415':
+          $ref: '#/components/responses/Error415'
+        '500':
+          $ref: '#/components/responses/Error500' 
+
+components:
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+    oAuth2AuthCode:
+      description: OAuth2 authorization scheme for production endpoint (Authorization Code grant)
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: 'https://login.wolterskluwer.eu/as/authorization.oauth2?pfidpadapterid=BaumeisterCompositeAdapter'
+          tokenUrl: 'https://login.wolterskluwer.eu/as/token.oauth2'
+          scopes: {}
+  schemas:
+    Case:
+      description: User-controlled properties of a case
+      type: object
+      required:
+        - id
+        - name
+        - client
+        - references
+      properties:
+        id:
+          description: Internal ID of the case
+          type: integer
+          readOnly: true
+          example: 12345
+        created:
+          description: Case creation timestamp
+          type: string
+          format: date-time
+          readOnly: true
+          example: '2020-01-18T18:00:00Z'
+        updated:
+          description: Case last update timestamp
+          type: string
+          format: date-time
+          readOnly: true
+          example: '2020-01-18T18:00:00Z'
+        name:
+          description: Case name / Name des Mandats
+          type: string
+          minLength: 1
+          example: 'My test mandate'
+        client:
+          description: Name of a client for whom the case is opened / Name des Mandanten
+          type: string
+          minLength: 1
+          example: 'John Doe'
+        description:
+          description: Description of a case / Kurzbeschreibung  
+          type: string
+          minLength: 1
+          maxLength: 300
+          example: 'A demo mandate'
+        references:
+          description: |
+            A collection of reference numbers of a case / Aktenzeichen  
+            A case requires minimum one reference number. Reference numbers must be unique.
+          type: array
+          items:
+            description: Label representing a reference number
+            type: string
+            minLength: 1
+          uniqueItems: true
+          minItems: 1
+          maxItems: 20
+          example: 
+            - 123/2020
+            - 12/A/20
+
+    DocumentRaw:
+      description: Properties of raw (not enriched) document 
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          description: Internal ID of the document
+          type: integer
+          readOnly: true
+          example: 67890
+        filename:
+          description: Filename under which the document's media have been registered during upload
+          type: string
+          readOnly: true
+          example: 'mySampleFile.pdf'
+        created:
+          description: Document creation timestamp
+          type: string
+          format: date-time
+          readOnly: true
+          example: '2020-01-18T18:00:00Z'
+        updated:
+          description: Document last update timestamp
+          type: string
+          format: date-time
+          readOnly: true
+          example: '2020-01-18T18:00:00Z'
+
+    Document:
+      description: Properties of an enriched document resource
+      allOf:
+        - $ref: '#/components/schemas/DocumentRaw'
+        - type: object
+          description: Properties of a document resource
+          required:
+            - title
+            - date
+            - types
+          properties:
+            id:
+              description: Internal ID of the document
+              type: integer
+              readOnly: true
+              example: 67890
+            filename:
+              description: Filename under which the document's media have been registered during upload
+              type: string
+              readOnly: true
+              example: 'mySampleFile.pdf'
+            created:
+              description: Document creation timestamp
+              type: string
+              format: date-time
+              readOnly: true
+              example: '2020-01-18T18:00:00Z'
+            updated:
+              description: Document last update timestamp
+              type: string
+              format: date-time
+              readOnly: true
+              example: '2020-01-18T18:00:00Z'
+            title:
+              description: Document title / Dokumenttitel
+              type: string
+              minLength: 1
+              example: 'My test document title'
+            date:
+              description: Document date coordinate in the case timeline / Datum
+              type: string
+              format: date
+              example: '2019-12-01'
+            types:
+              description: |
+                A collection of document types / Dokumententyp  
+                A document requires minimum one type. Types must be unique.  
+              type: array
+              items:
+                type: string
+                minLength: 1
+              uniqueItems: true
+              minItems: 1
+              maxItems: 500
+              example:
+                - 'Fax'
+                - 'Complaint'
+            parties:
+              description: |
+                A collection of parties associated with a document / Beteiligte  
+                Parties must be unique.
+              type: array
+              items:
+                type: string
+                minLength: 1
+              uniqueItems: true
+              maxItems: 500
+              example:
+                - 'John Doe'
+                - 'Acme Corp.'
+            trades:
+              description: |
+                A collection of technical trades associated with a document / Gewerk  
+                Trades must be unique.
+              type: array
+              items:
+                type: string
+                minLength: 1
+              uniqueItems: true
+              maxItems: 500
+              example:
+                - 'plumbing'
+                - 'masonery'
+            defects:
+              description: |
+                A collection of defects associated with a document / Mängel  
+                Defects must be unique.
+              type: array
+              items:
+                type: integer
+              uniqueItems: true
+              maxItems: 500
+              example:
+                - 122562
+                - 122680
+            tags:
+              description: |
+                A collection of tags associated with a document / Eigene Schlagworte  
+                Tags must be unique.
+              type: array
+              items:
+                type: string
+                minLength: 1
+              uniqueItems: true
+              maxItems: 500
+              example:
+                - 'to do'
+                - 'easy win'
+            suggestions:
+              description: Automatically recognized values of document metadata
+              type: object
+              properties:
+                defects:
+                  description: |
+                    A collection of defects associated with a document / Mängel  
+                    Defects must be unique.
+                  type: object
+                  properties:
+                    descriptions:
+                      type: array
+                      items:
+                        type: string
+                      uniqueItems: true
+                      maxItems: 500
+                    identifiers:
+                      type: array
+                      items:
+                        type: string
+                      uniqueItems: true
+                      maxItems: 500
+                    refs:
+                      description: An array of references to defect identifiers 
+                      type: array
+                      items:
+                        type: integer
+                      uniqueItems: true
+                      maxItems: 500
+                  example:
+                    descriptions:
+                      - Mangel Nr. 122562
+                      - Mangel Nr. 122680
+                    identifiers:
+                      - 122562
+                      - 122680
+                    refs:
+                      - 12345
+                      - 67890
+
+    Error:
+      description: Standard error object
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 100000
+        message:
+          type: string
+          minLength: 1
+          example: Something went wrong
+        hint:
+          type: string
+          minLength: 1
+          example: Fix the problem
+      required: 
+        - message
+
+    SupportedMediaTypes:
+      description: Enumeration of supported content types that document media can be uploaded in
+      externalDocs:
+        description: Supported Media Types
+        url: https://confluence.wolterskluwer.io/display/WKBAUM/Supported+Media+Types
+      enum:
+        - application/pdf
+        - application/vnd.oasis.opendocument.spreadsheet
+        - application/vnd.oasis.opendocument.spreadsheet-template
+        - application/vnd.sun.xml.calc
+        - application/vnd.ms-excel
+        - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+        - text/csv
+        - text/tab-separated-values
+        - application/vnd.oasis.opendocument.text
+        - application/vnd.oasis.opendocument.text-template
+        - application/vnd.sun.xml.writer
+        - application/rtf
+        - application/msword
+        - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+        - application/vnd.wordperfect
+        - text/plain
+        - application/vnd.oasis.opendocument.presentation
+        - application/vnd.oasis.opendocument.presentation-template
+        - application/vnd.sun.xml.impress
+        - application/vnd.ms-powerpoint
+        - application/vnd.openxmlformats-officedocument.presentationml.presentation
+        - image/jpeg
+        - image/bmp
+        - image/gif
+        - image/png
+        - image/tiff
+      default: application/pdf
+      
+    OctetStreamPayload:
+      description: Any octet stream payload schema
+      type: string
+      format: binary
+    
+    PdfPayload:
+      description: PDF schema
+      type: string
+      format: binary
+
+  responses:
+    Info202:
+      description: |
+        Resource not ready  
+        Requested resource exists but it has not yet reached the state in its lifecycle where the requested criteria are satisfied. It may or may not reach this state in the future
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'  # Error schema fits here, striclty speaking this is not an error
+          example:
+            code: 202001
+            message: Requested media of the document resource {documentId} is not ready
+            hint: Requested resource exists but it has not yet reached the state in its lifecycle where the requested criteria are satisfied. It may or may not reach this state in the future
+    Error400:
+      description: |
+        Bad request  
+        All unhandled client-side errors
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error401:
+      description: |
+        Unauthorized  
+        Check access token. The token might be invalid or might have expired.  
+        Sent when the identity of the user cannot be established (including cases when the token cannot be trusted)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error403:
+      description: |
+        Forbidden  
+        The user for whom the access token was issued cannot access requested resource. Check access rights of the user.  
+        Sent when the identity of the user has been established and the user has not been granted permission to access the resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error404:
+      description: |
+        Not Found  
+        Requested case or document doesn't exist.  
+        Check how do you obtain the case and document IDs used. Case or document might have been deleted.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error411:
+      description: |
+        Cannot establish request payload size  
+        Content-Length header either not specified or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error413:
+      description: |
+        Request payload too large  
+        The document body cannot be larger than 5 MB (5242880 bytes). Partial upload to be implemented later.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error415:
+      description: |
+        Unsupported Media Type  
+        Content in required format is not available or cannot be accepted.  
+        Content-Type header indicates a media type that is not supported.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Error500:
+      description: |
+        Internal server error  
+        All unhandled server-side errors
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

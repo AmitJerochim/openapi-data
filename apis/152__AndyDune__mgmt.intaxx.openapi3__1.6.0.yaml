@@ -1,0 +1,402 @@
+penapi: 3.0.0
+servers: 
+ - url: '{protocol}://{domain}/api/v1'
+   variables:
+      protocol:
+        enum:
+          - https
+          - http
+        default: https   
+      domain:
+         default: mgmt.intaxx.com
+         enum:
+           - mgmt.intaxx.com
+           - mgmt.intaxx.local
+           - dev-mgmt.intaxx.com
+security:
+  - ApiKeyAuth: []            
+components:
+  securitySchemes:
+    ApiKeyAuth:       
+      type: apiKey
+      in: header  
+      name: X-API-KEY
+  schemas:
+    Images:
+      type: object
+      properties:
+        id:
+          type: string
+        selfie:
+          type: string
+          format: binary
+        signature:
+          type: string
+          format: binary
+    Response:
+      type: object
+      required: 
+        - success
+      properties:
+        success: 
+          type: boolean 
+        message: 
+          type: string
+        contextType: 
+          type: string
+        contextId: 
+          type: number
+          format: int64
+        data:
+          type: object
+          additionalProperties: true
+          nullable: true
+      description: Common response from server.
+    PincodeCheck:
+      type: object
+      required: 
+        - login
+        - pin
+      properties:
+        login: 
+          type: string
+          minLength: 5
+          example: "gendalf@middlearth.org"
+        pin: 
+          minLength: 4
+          maxLength: 12
+          type: string
+          example: 12345
+        type:
+          type: number
+          format: int32
+    EmailConfirmation:
+      type: object
+      required: 
+        - hash
+      properties:
+        hash:
+          type: string
+          example: "kldsfjsfw884th"
+    Order:
+      type: object
+      required: 
+        - email
+      properties:
+        email: 
+          type: string
+          minLength: 5
+          maxLength: 128
+          format: email
+          example: "gendalf@middleearth.org"
+        first_name: 
+          type: string
+          maxLength: 64
+          example: "Geldalf"
+        last_name: 
+          type: string
+          maxLength: 64
+          example: "Grey"
+        gender: 
+          type: string
+          pattern: '^male|female$'
+          example: male
+        birthday: 
+          type: string
+          format: date
+          example: "1980-11-26"
+        phone: 
+          type: string
+          minLength: 10 
+          example: +7 930 785-32-23
+        country_code: 
+          type: string
+          maxLength: 2
+          example: "GE"
+        city:
+          type: string
+          maxLength: 64
+          example: "New Hobbiton"
+        street:
+          type: string
+          maxLength: 64
+          example: "Ryzbnaya"
+        house:
+          type: string
+          maxLength: 24
+          example: "24 korp 1"
+        room:
+          type: string
+          maxLength: 12
+          example: 31
+          nullable: true
+        state:
+          type: string
+          title: State / Province / Region
+          maxLength: 64
+          example: "Hobbiton valley"
+        zip:
+          type: string
+          title: Zip / Postal Code
+          maxLength: 32
+          example: "390037"
+        items:
+          type: array
+          nullable: true
+          description: If items is null - site must have only one product to use.
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        ip:
+          type: string
+          title: Customer IP
+          maxLength: 40
+          example: "192.168.0.3"
+        user_agent:
+          type: string
+          title: User agent
+          example: "Mozilla/5.0 (Windows NT 10.0; WOW64) ..."
+        domain:
+          type: string
+          maxLength: 128
+          example: "github.com"
+        cookie:
+          type: object
+          additionalProperties: true
+          nullable: true
+        credit_request_info:
+          $ref: '#/components/schemas/CreditRequestInfo'
+        utm_source:
+          type: string
+          title: Utm source
+          example: "Eriador"
+        utm_content:
+          type: string
+          title: Utm content
+          example: "Amon Hen"
+        utm_campaign:
+          type: string
+          title: Utm content
+          example: "Elfs post service"
+          
+      description: Order customar details.
+    OrderItem:
+      type: object
+      properties:
+        product_id:
+          type: number
+          format: int32
+        price:
+          type: number
+          format: float
+          nullable: true
+          description: If priсe is null - it will use established price
+    CreditRequestInfo:
+      nullable: true
+      type: object
+      properties:
+        desired_amount:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        mobile_phone:
+          type: string
+          nullable: true
+        job_status:
+          type: string
+          nullable: true
+        net_income_per_month:
+          type: string
+          nullable: true
+        nationality:
+          type: string
+          nullable: true
+        marital_status:
+          type: string
+          nullable: true
+        housing_situation:
+          type: string
+          nullable: true
+        rent_house_deduction_per_month:
+          type: string
+          nullable: true
+        resident_since_month:
+          type: string
+          nullable: true
+        resident_since_year:
+          type: string
+          nullable: true
+        employer_name:
+          type: string
+          nullable: true
+        employer_street:
+          type: string
+          nullable: true
+        employer_house_num:
+          type: string
+          nullable: true
+        employer_zip:
+          type: string
+          nullable: true
+        employer_city:
+          type: string
+          nullable: true
+        employer_country:
+          type: string
+          nullable: true
+        employed_since_month:
+          type: string
+          nullable: true
+        employed_since_year:
+          type: string
+          nullable: true
+        newsletter: 
+          type: boolean 
+          nullable: true
+        rechtliches: 
+          type: boolean
+          nullable: true
+
+info:
+  version: "1.6.0"
+  title: 'Api mgmt.intaxx'
+  description: ''
+paths: 
+  /data:
+    get:
+      summary: Check customer pincode.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+                
+        '401':
+          description: Wrong api key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+          
+
+  /customer/pincode-check:
+    post:
+      summary: Request to check customer pincode.
+      requestBody:
+        description: Email and pincode
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/PincodeCheck'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+                
+        '404':
+          description: No data to work with
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        '401':
+          description: Wrong api key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+  /email-confirm:
+    post:
+      summary: Customer email confirmation.
+      requestBody:
+        description: Customer email confirmation.
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/EmailConfirmation'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+                
+        '404':
+          description: No data to work with
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        '401':
+          description: Wrong api key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+          
+  /create-order:
+    post:
+      summary: Create order with product of given brand
+      requestBody:
+        description: Order and customer datails
+        required: true
+        content:
+          application/json:
+            schema: 
+              $ref: '#/components/schemas/Order'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        '404':
+          description: Wrong data to save order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        '401':
+          description: Wrong api key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+  /upload-images:
+    post:
+      summary: Upload selfie, signature and maybe more
+      requestBody:
+        description: Selfie, signature and maybe more
+        content:
+          multipart/form-data:
+            schema: 
+              $ref: '#/components/schemas/Images'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        '404':
+          description: Wrong data to save order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+        '401':
+          description: Wrong api key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'

@@ -1,0 +1,300 @@
+penapi: 3.0.0
+servers: []
+info:
+  description: The Cooler Mod Manager - Server API
+  version: "1.0.0"
+  title: The Cooler Mod Manager
+  contact:
+    email: gkovalechyn@gmail.com
+  license:
+    name: All Rights Reserved
+tags:
+  - name: repositories
+    description: Repository management and file download.
+  - name: tasks
+    description: Task management.
+
+paths:
+  "/{repositoryName}/file/{fileName}":
+    get:
+      tags:
+        - repositories
+      summary: Gets a file's content
+      operationId: getFile
+      description: |
+        Gets a file's content where the raw bytes will be in the response body.
+      parameters:
+        - $ref: "#/parameters/repositoryName"
+        - $ref: "#/parameters/fileName"
+        - in: query
+          name: offset
+          required: false
+          description: |
+            The offset inside the file from which to serve it from.
+            For example, if this value is `5` it will start serving from
+            the 5th byte.
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - $ref: "#/parameters/environment"
+      responses:
+        '200':
+          description: The raw file bytes
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: The repository or file were not found.
+
+  "/{repositoryName}/file/{fileName}/stats":
+    get:
+      tags:
+        - repositories
+      summary: Gets a file's stats.
+      operationId: getFileStats
+      description: |
+        Returns information for a single file in the given repository.
+        You cannot get information about a directory.
+      parameters:
+        - $ref: "#/parameters/repositoryName"
+        - $ref: "#/parameters/fileName"
+        - $ref: "#/parameters/environment"
+      responses:
+        404:
+          description: Repository, environment or file not found.
+        200:
+          description: The file information.
+          content:
+            application/json:
+              schema: 
+                $ref: "#/components/schemas/FileStats"
+
+  "/repositories":
+    get:
+      tags:
+        - repositories
+      summary: Returns all the repositories created.
+      operationId: getRepositories
+      description: | 
+        Returns all the repositories created.
+        Does not return all their items, for information about a repository's items
+        see /repositories/{repositoryName}
+      responses:
+        200:
+          description: All the repositories that exist.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SimpleRepository"
+    post:
+      tags:
+        - repositories
+      summary: Creates a new repository
+      description: Creates a new repository
+      operationId: createRepository
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref: "#/components/schemas/CreateRepositoryDTO"
+      responses:
+        422:
+          description: Another repository with that name already exists.
+        201:
+          description: New repository created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Repository"
+              
+
+  "/repositories/{repositoryName}":
+    get:
+      tags:
+        - repositories
+      summary: |
+        Returns the repository information, including all the file information too.
+      operationId: getDetails
+      description: |
+        Returns all the repository information including the entire file structure
+        present in the given repository and environment.
+        This information is only valid if the repository is in the "ready" state.
+      parameters:
+        - $ref: "#/parameters/repositoryName"
+        - $ref: "#/parameters/environment"
+      responses:
+        404:
+          description: Repository not found.
+        200:
+          description: The repository information.
+          content:
+            application/json:
+              schema: 
+                $ref: "#/components/schemas/Repository"
+
+  "/repositories/{repositoryName}/details":
+    $ref: "#/paths/~1repositories~1{repositoryName}"
+    
+  "/repositories/{repositoryName}/build":
+    post:
+      tags:
+        - repositories
+      summary: Builds a repository
+      description: |
+        Builds a repository, calculating all the file information for it to be
+        served properly.
+      operationId: buildRepository
+      parameters:
+        - $ref: "#/parameters/repositoryName"
+        - $ref: "#/parameters/environment"
+      responses:
+        404:
+          description: Repository not found or environment not found.
+        201:
+          description: | 
+            Task to build the repository has been started.
+            The resulting task ID is returned in the response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskId"
+                
+  "/tasks/${taskId}/status":
+    get:
+      tags:
+        - tasks
+      description: |
+        Returns a task's status and notifications.
+      operationId: getStatus
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          description: The task ID returned by the build call.
+          schema:
+            type: integer
+      responses:
+        404:
+          description: Task not found.
+        200:
+          description: Task information.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+
+parameters:
+  repositoryName:
+    in: path
+    name: repositoryName
+    description: The repository name
+    required: true
+    schema:
+      type: string
+  fileName:
+    in: path
+    name: fileName
+    required: true
+    description: |
+      The relative path of the file from the repository root.
+      The "/" should be replaced by ";".
+    schema:
+      type: string
+  environment:
+    in: query
+    name: environment
+    required: false
+    description: From which environment inside the repository to get the file from.
+    schema:
+      type: string
+      enum:
+        - "production"
+        - "staging"
+
+components:
+  schemas:
+    SimpleRepository:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: integer
+    Repository:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Test repository"
+        status:
+          type: string
+          enum: 
+            - pending-scan
+            - scanning
+            - ready
+        items:
+          type: object
+          additionalProperties: 
+            $ref: "#/components/schemas/ModItem"
+    ModItem:
+      type: object
+      properties:
+        isDirectory:
+          type: boolean
+        hash:
+          type: string
+        size:
+          type: integer
+        children:
+          type: object
+          additionalProperties: 
+            $ref: "#/components/schemas/ModItem"
+      example:
+        isDirectory: true
+        children:
+          child1:
+            isDirectory: false
+            hash: "abcd1234"
+            size: 1234
+
+    FileStats:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        hash:
+          type: string
+    TaskId:
+      type: object
+      properties:
+        id:
+          type: integer
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+        state:
+          type: string
+          enum: 
+            - "waiting"
+            - "running"
+            - "done"
+            - "error"
+        messages:
+          type: array
+          items:
+            type: string
+
+    CreateRepositoryDTO:
+      type: object
+      properties:
+        name:
+          type: string

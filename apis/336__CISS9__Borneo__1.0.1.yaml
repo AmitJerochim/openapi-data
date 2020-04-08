@@ -1,0 +1,387 @@
+penapi: 3.0.0
+info:
+  description: |
+    API concernant les bornes
+  version: "1.0.1"
+  title: Borneo
+tags:
+  - name: tpa
+    description: Routes concernant le tpa
+  - name: scanneur
+    description: Routes concernant le scanneur
+  - name: imprimante
+    description: Routes concernant l'imprimante
+  - name: paiement
+    description: Routes concernant le paiement
+  - name: impression
+    description: Routes concernant l'impression
+  - name: lecture
+    description: Routes concernant la lecture
+  - name: maintenance
+    description: Routes concernant la maintenance
+paths:
+  /v1/tpa/solvency:
+    post:
+      tags: 
+        - paiement
+        - tpa
+      summary: Demande de solvabilité
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  description: La montant de la transaction en centimes
+                  type: integer
+                  example: 200
+                currency:
+                  description: Le code ISO 4217 de la devise
+                  type: string
+                  default: '978'
+                  example: '978'
+                mock:
+                  description: (optionnel) Permet de mock un appel, il contient le statut de la réponse à recevoir (exemple 200 pour un succès)
+                  type: integer
+                  example: 200
+              required:
+                - amount
+      responses:
+        '200':
+          description: Paiement autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolvencyResponse'
+        '401':
+          description: Paiement refusé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolvencyResponse'
+        '402':
+          description: Paiement annulé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolvencyResponse'
+        '403':
+          description: Licence invalide
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error50X'
+    delete:
+      tags:
+        - paiement
+        - tpa
+      summary: Annule la demande de solvabilité
+      responses:
+        '200':
+          description: Annulation réussie
+        '403':
+          description: Licence invalide
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error50X'
+  /v1/tpa/payment:
+    post:
+      tags:
+        - paiement
+        - tpa
+      summary: Valide le paiement
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  description: La montant réel de la transaction en centimes
+                  type: integer
+                  example: 200
+                currency:
+                  description: Le code ISO 4217 de la devise
+                  type: string
+                  default: '978'
+                  example: '978'
+                mock:
+                  description: (optionnel) Permet de mock un appel, il contient le statut de la réponse à recevoir (exemple 200 pour un succès)
+                  type: integer
+                  example: 200
+              required:
+                - amount
+      responses:
+        '200':
+          description: Paiement validé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '401':
+          description: Montant du paiement supérieur au montant de la demande de solvabilité
+        '403':
+          description: Licence invalide
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error50X'
+  /v1/printer/print:
+    post:
+      tags:
+        - impression
+        - imprimante
+      summary: Demande d'impression
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                base64:
+                  description: Base64 du fichier à imprimer
+                  type: string
+                  format: byte
+                type:
+                  description:  > 
+                       Type envoyé
+                        * 0 => RAW
+                        * 1 => PDF
+                  type: integer
+      responses:
+        '200':
+          description: Impression réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  near_end_paper:
+                    type: boolean
+                    description: Permet de savoir lorsque l'on approche de la fin du rouleau
+                    default: false
+        '403':
+          description: Licence invalide
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error50X'
+  /v1/scanner/read:
+    get:
+      tags:
+        - lecture
+        - scanneur
+      summary: Demande de lecture du scanneur
+      responses:
+        '200':
+          description: Lecture réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    description: Les données scannées
+                    type: string
+        '403':
+          description: Licence invalide
+        '404':
+          description: Aucun scan effectué
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error50X'
+    delete:
+      tags:
+        - lecture
+        - scanneur
+      summary: Annule la demande de lecture du scanneur
+      responses:
+        '200':
+          description: Annulation réussie
+        '403':
+          description: Licence invalide
+  /v1/tpa/status:
+    get:
+      tags:
+        - maintenance
+        - tpa
+      summary: Retourne l'état du matériel bancaire
+      responses:
+        '200':
+          description: Récupération de l'état réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cr:
+                    description: > 
+                      Permet d'avoir l'état du TPA
+                        * '0' => TPA Ok
+                        * '1' => TPA indisponible (traitement en cours)
+                        * '2' => TPA indisponible (en mode maintenance)
+                    type: string
+                    enum:
+                      - '0'
+                      - '1'
+                      - '2'
+                  carte:
+                    description: > 
+                      Permet de savoir si une carte est insérée dans le lecteur
+                        * '0' => Pas de carte dans le lecteur
+                        * '1' => Carte présente dans le lecteur
+                    type: string
+                    enum:
+                      - '0'
+                      - '1'
+                  etat:
+                    description: > 
+                      Permet de savoir l'état des appels serveurs
+                        * '0' => Aucun appel en cours
+                        * '1' => Télécollecte en cours
+                        * '2' => Téléparamétrage en cours
+                    type: string
+                    enum:
+                      - '0'
+                      - '1'
+                      - '2'
+                  periph:
+                    description: >
+                      Permet de savoir l'état des périphériques
+                        * '0' => Périphériques fonctionnels
+                        * '1' => PinPad hors service
+                        * '2' => Lecteur hors service
+                        * '3' => PinPad et lecteur hors service
+                    type: string
+                    enum:
+                      - '0'
+                      - '1'
+                      - '2'
+                      - '3'
+        '403':
+          description: Licence invalide
+  /v1/printer/status:
+    get:
+      tags:
+        - maintenance
+        - imprimante
+      summary: Demande du statut de l'imprimante
+      responses:
+        '200':
+          description: Récupération de l'état réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  offline:
+                    type: boolean
+                    description: Permet de savoir si l'inprimante est détectée
+                    default: false
+                  no_paper:
+                    type: boolean
+                    description: Permet de savoir s'il reste du papier
+                    default: false
+                  near_end_paper:
+                    type: boolean
+                    description: Permet de savoir lorsque l'on approche de la fin du rouleau
+                    default: false
+                  ticket_out:
+                    type: boolean
+                    description: Permet de savoir si un ticket est toujours dans l'imprimante
+                    default: false
+                  no_cover:
+                    type: boolean
+                    description: Permet de savoir si le capot est ouvert
+                    default: false
+                  spooling:
+                    type: boolean
+                    description: Permet de savoir si l'imprimante est en cours d'impression
+                    default: false
+                  over_temp:
+                    type: boolean
+                    description: Permet de savoir si l'imprimante à un problème de température
+                    default: false
+                  hl_volt:
+                    type: boolean
+                    description: Permet de savoir si l'imprimante à un problème d'alimentation
+                    default: false
+                  paper_jam:
+                    type: boolean
+                    description: Permet de savoir s'il y a un bourrage papier
+                    default: false
+                  cut_error:
+                    type: boolean
+                    description: Permet de savoir s'il y a un problème de cutter
+                    default: false
+                  ram_error:
+                    type: boolean
+                    description: Permet de savoir s'il y a un problème avec la ram de l'imprimante
+                    default: false
+        '403':
+          description: Licence invalide
+  /v1/activate:
+    post:
+      tags:
+        - maintenance
+      summary: Activation de la borne
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                licence:
+                  description: Votre licence d'activation
+                  type: integer
+      responses:
+        '200':
+          description: Borne activée
+        '404':
+          description: Licence invalide
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error50X'
+components:
+  schemas:
+    SolvencyResponse:
+      type: object
+      properties:
+        receipt:
+          description: Le ticket retourné par le TPA (si aucun ticket n'est envoyé par le TPA alors c'est une chaine vide) 
+          type: string
+    PaymentResponse:
+      type: object
+      properties:
+        receipt:
+          description: Le ticket retourné par le TPA (si aucun ticket n'est envoyé par le TPA alors c'est une chaine vide) 
+          type: string
+    Error50X:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Le code d'erreur
+        msg:
+          type: string
+          description: Le message d'erreur
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/CISS9/Borneo/0.9.0-alpha

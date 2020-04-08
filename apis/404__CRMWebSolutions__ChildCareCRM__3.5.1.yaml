@@ -1,0 +1,4083 @@
+openapi: 3.0.0
+info:
+  description: An API for accessing ChildCareCRM data
+  version: "3.5.1"
+  title: ChildCareCRM API
+  contact:
+    email: support@childcarecrm.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: Read-access
+    description: For read-only calls, basic user access
+  - name: Write-access
+    description: For write access calls, implies read-access permissions
+  - name: Billable-writer
+    description: Can write data with billing implications
+  - name: Delete-access
+    description: For delete calls, implies read-access
+  - name: Developers
+    description: Operations available to developers in test environment
+paths:
+
+  /login:
+    post:
+      security: []
+      tags:
+        - Anonymous
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  format: username
+                password:
+                  type: string
+                  format: password
+      responses:
+        200:
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Login'
+        401: 
+          description: Login failed                    
+          
+  '/login/refresh':
+    post:
+      security: []
+      tags:
+        - Anonymous
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      requestBody:
+        description: Body to submit refresh token
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        200:
+          description: The refresh response
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Login'
+        403:
+          description: Invalid refresh token
+          
+  '/alerts':
+    get:
+      parameters:
+      - in: query
+        name: user_ids
+        description: A list of user_ids to get alerts for
+        required: false
+        schema:
+          type: array
+          items:
+            type: integer
+      - in: query
+        name: center_ids
+        schema:
+          type: array
+          items:
+            type: integer
+        description: A list of center ids to limit results. Defaults to all that the current user has access to.
+        required: false
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          maximum: 100
+          default: 100
+        description: The total records to return
+        required: false
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        description: The offset to start counting from
+        required: false          
+      tags:
+      - Read-access
+      - Write-access
+      - Delete-access
+      - Developers
+      summary: Get alerts data
+      description: Allows user to retrieve alerts
+      responses:
+        '200':
+          description: A list of alerts
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Alert'
+    
+  '/alerts/{id}':
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+        description: The id of the alert entity
+    get:
+      tags:
+      - Read-access
+      - Write-access
+      - Delete-access
+      - Developers
+      responses:
+        '200':
+          description: An alert object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '403':
+          description: 'Access denied'
+        '404':
+          description: 'Alert with that id not found'
+    delete:
+      tags:
+      - Delete-access
+      - Developers
+      responses:
+        '204':
+          description: 'Alert deleted'
+        '403':
+          description: 'Access denied'
+        '404':
+          description: 'Alert with that id not found'
+      
+
+  '/centers':
+    get:
+      parameters:
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          default: 0
+          minimum: 0
+          description: The number of items to skip.
+        required: false
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 100
+          minimum: 1
+          maximum: 100
+        description: The number of records to return.
+        required: false
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Retrieves all center data
+      operationId: getCenters
+      description: 'Retrieve all of your centers. Requires user account to be associated with a company.'
+      responses:
+        '200':
+          description: Object with center data
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Center'
+        '403':
+          description: Access forbidden.
+    post:
+      tags:
+        - Billable-writer
+      summary: Add a center
+      operationId: addCenter
+      description: Add a center.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CenterCreate'
+        description: Center data
+      responses:
+        '201':
+          description: Center created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Center'
+        '400':
+          description: Bad request
+        401:
+          description: Unauthorized
+    
+  '/centers/{id}':
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Get a center
+      description: Get a center. Requires user to be associated with the company.
+      operationId: getCenter
+      responses:
+        '200':
+          description: Object returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Center'
+        '404':
+          description: Center id not found
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Update a center
+      description: Update a center. Requires to be associated with the company.
+      operationId: updateCenter
+      responses:
+        '200':
+          description: Center updated
+        '400':
+          description: Malformed request object
+        '404':
+          description: Center id not found
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Center'
+        description: Center information to update
+    delete:
+      tags:
+        - Delete-access
+        - Developers
+      summary: Delete a center
+      operationId: deleteCenter
+      description: Deletes a center from the system
+      responses:
+        '204':
+          description: Item deleted
+        '404':
+          description: Company or Center ID not found
+  '/centers/{center_id}/classrooms':
+    parameters:
+      - in: path
+        name: center_id
+        required: true
+        schema:
+          type: integer
+    get:
+      parameters:
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          default: 0
+          minimum: 0
+          description: The number of items to skip.
+        required: false
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 100
+          minimum: 1
+          maximum: 100
+        description: The number of records to return.
+        required: false
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Retrieve all classroom data
+      operationId: getClassrooms
+      description: Get all classrooms for a given center
+      responses:
+        '200':
+          description: Object with the classroom data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Classroom'
+        '404':
+          description: Center not found
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Adds a classroom
+      operationId: addClassroom
+      description: Adds a classroom to the system
+      responses:
+        '201':
+          description: Classroom created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Classroom'
+        '400':
+          description: 'Invalid input, object invalid'
+        '409':
+          description: An existing item already exists
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Classroom'
+        description: Classroom information to add
+  '/centers/{center_id}/classrooms/{id}':
+    parameters:
+      - in: path
+        name: center_id
+        required: true
+        schema:
+          type: integer
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Get a classroom
+      description: Get a classroom
+      operationId: getClassroom
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Classroom'
+        '404':
+          description: Classroom not found
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Update a classroom
+      description: Update a classroom
+      operationId: updateClassroom
+      responses:
+        '200':
+          description: Item updated.
+        '400':
+          description: Bad request
+        '404':
+          description: Id not found
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassroomCreate'
+        description: Classroom information to update
+    delete:
+      tags:
+        - Delete-access
+        - Developers
+      summary: Delete a classroom
+      operationId: deleteClassroom
+      description: Delete a classroom from the system
+      responses:
+        '204':
+          description: Item deleted
+        '404':
+          description: ID not found
+          
+  '/emails':
+    get:
+      parameters:
+      - in: query
+        name: since
+        schema:
+          type: string
+          format: datetime
+        description: Filter to only show messages since this datetime
+        required: false
+      - in: query
+        name: filter_user_id
+        schema:
+          type: integer
+        description: A user id; used to filter only emails sent / received by that user
+        required: false
+      - in: query
+        name: include_dismissed
+        schema:
+          type: boolean
+          default: false
+        description: Include messages that the user has dismissed
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          maximum: 100
+          default: 100
+        description: The total records to return
+        required: false
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        description: The offset to start counting from
+        required: false
+      tags:
+      - Read-access
+      - Write-access
+      - Delete-access
+      - Developers
+      summary: Get an array of all emails
+      responses:
+        '200':
+          description: An array of emails
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema: 
+                type: array
+                items:
+                  $ref: '#/components/schemas/Email'
+        '403':
+          description: Access denied
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Create an email
+      description: Creates and send an email in the system. Emails will be marked to send immediately.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailCreate'
+      responses:
+        '201':
+          description: Email created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Email'
+        '400':
+          description: Invalid data
+        '403':
+          description: Access denied
+          
+  '/emails/incoming':
+    get:
+      parameters:
+      - in: query
+        name: since
+        schema:
+          type: integer
+        description: UNIX timestamp; used to retrieve emails sent since that time
+        required: false
+      - in: query
+        name: filter_user_id
+        schema:
+          type: integer
+        description: A user id; used to filter only emails sent / received by that user
+        required: false
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          maximum: 100
+          default: 100
+        description: The total records to return
+        required: false
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        description: The offset to start counting from
+        required: false
+      tags:
+      - Read-access
+      - Write-access
+      - Delete-access
+      - Developers
+      summary: Get an array of all incoming emails
+      responses:
+        200:
+          description: An array of incoming emails
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema: 
+                type: array
+                items:
+                  $ref: '#/components/schemas/Email'
+        401:
+          description: Access denied
+      
+  '/emails/incoming/{id}':
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+    description: Retrieves an incoming email
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:
+        200:
+          description: The content of the email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Email'
+        401:
+          description: Access denied.
+        404:
+          description: Email not found
+          
+  '/emails/outgoing':
+    get:
+      parameters:
+      - in: query
+        name: since
+        schema:
+          type: integer
+        description: UNIX timestamp; used to retrieve emails sent since that time
+        required: false
+      - in: query
+        name: filter_user_id
+        schema:
+          type: integer
+        description: A user id; used to filter only emails sent / received by that user
+        required: false
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          maximum: 100
+          default: 100
+        description: The total records to return
+        required: false
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        description: The offset to start counting from
+        required: false
+      tags:
+      - Read-access
+      - Write-access
+      - Delete-access
+      - Developers
+      summary: Get an array of all outgoing emails
+      responses:
+        200:
+          description: An array of outgoing emails
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema: 
+                type: array
+                items:
+                  $ref: '#/components/schemas/Email'
+        401:
+          description: Unauthorized.
+          
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Create an outgoing email. Sends immediately.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailCreate'
+      responses:
+        201:
+          description: Email created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Email'
+        400:
+          description: Bad request
+        401:
+          description: Access denied
+          
+  '/emails/outgoing/{id}':
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+    description: Retrieves an outgoing email
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:
+        200:
+          description: The content of the email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Email'
+        401:
+          description: Access denied.
+        404:
+          description: Email not found 
+          
+  '/enrollments':
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Create enrollment
+      operationId: createEnrollment
+      requestBody:
+        content: 
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentCreate'
+        
+      responses:
+        '201':
+          description: Enrollment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+            
+    get:
+      parameters:
+      - in: query
+        name: start_before_date
+        required: false
+        schema:
+          type: string
+          format: datetime
+          example: '2019-03-21T23%3A59%3A59%2B00%3A00'
+      - in: query
+        name: start_after_date
+        required: false
+        schema:
+          type: string
+          format: datetime
+      - in: query
+        name: withdrawn_before_date
+        required: false
+        schema:
+          type: string
+          format: datetime
+      - in: query
+        name: withdrawn_after_date
+        required: false
+        schema:
+          type: string
+          format: datetime
+      - in: query
+        name: center_ids
+        description: Limit to only enrollments in these centers
+        required: false
+        schema:
+          type: string
+          format: list
+          example: 1,2,3,4,5
+      - in: query
+        name: children_ids
+        description: Limit to only enrollments for these children
+        required: false
+        schema:
+          type: string
+          format: list
+          example: 1,2,3
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Retrieves a list of enrollments
+      description: Get a list of enrollments with various possible filters
+      responses:
+        200:
+          description: A list of enrollments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Enrollment'
+      
+  '/enrollments/{id}':
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Retrieves enrollment data
+      operationId: getEnrollmentById
+      description: 'Pass in an id for a enrollment, retrieve its data'
+      responses:
+        '200':
+          description: Object with the enrollment data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+        '404':
+          description: Enrollment not found
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Update an enrollment
+      operationId: updateEnrollmentById
+      responses:
+        '200':
+          description: Enrollment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+        '400':
+          description: Bad request
+        '404':
+          description: Enrollment not found
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollmentCreate'
+      
+  '/events':
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      parameters:
+      - in: query
+        name: center_ids
+        schema:
+          type: array
+          items:
+            type: integer
+        description: A list of center ids to limit results. Defaults to all that the current user has access to.
+        required: false
+      - in: query
+        name: family_id
+        schema:
+          type: integer
+        required: false
+        description: Limit events to a specific family
+      - in: query
+        name: type
+        schema:
+          type: integer
+        description: Limit events to a specific type; available from the /types/tasks endpoint
+      responses:
+        200:
+          description: An array of events
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:
+        200:
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventCreate'
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:
+        200:
+          description: Update an event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventUpdate'
+  
+  '/events/{id}':
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+          description: The unique id of the event to operate on.
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:
+        200:
+          description: The event object found by that id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        403:
+          description: Access forbidden
+        404:
+          description: Event not found
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventUpdate'
+      responses:
+        200:
+          description: The updated event object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        400:
+          description: Invalid data.
+        403:
+          description: Access denied.
+    delete:
+      tags:
+        - Delete-access
+        - Developers
+      responses:
+        204:
+          description: Record deleted
+        403:
+          description: Access denied
+          
+  /families:
+    get:
+      parameters:
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          default: 0
+          minimum: 0
+          description: The number of items to skip.
+        required: false
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 100
+          minimum: 1
+          maximum: 100
+        description: The number of records to return.
+        required: false
+      - in: query
+        name: center_ids
+        schema:
+          type: array
+          items:
+            type: integer
+        description: A list of center ids to limit results. Defaults to all that the current user has access to.
+        required: false
+      - in: query
+        name: center_id
+        schema:
+          type: integer
+        description: A single center to filter by. User must have access to this center.
+      - in: query
+        name: origin_id
+        schema:
+          type: integer
+        description: The origin id for the family.
+      - in: query
+        name: integration_id
+        schema:
+          type: integer
+        description: Retrieve a family with the matching integration id
+      - in: query
+        name: integration_partner_id
+        schema:
+          type: integer
+        description: Retrieve only families with integrations ids for a specific integration partner. Integrations per center can be retrieved from the /integrations endpoint
+      - in: query
+        name: integration_type_id
+        schema:
+          type: integer
+        description: Retrieve families with ids for a specific type of integration
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Retrieves family data
+      operationId: getFamilies
+      description: 'Retrieve all families'
+      responses:
+        '200':
+          description: Object with an array of families
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Family'
+        '404':
+          description: No families found
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Add a family
+      operationId: addFamily
+      description: Adds a family to the system
+      responses:
+        '201':
+          description: Item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Family'
+        '400':
+          description: 'Invalid input, object invalid'
+        '409':
+          description: An existing item already exists
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Family'
+        description: Family information to add
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Bulk update families
+      operationId: updateFamilies
+      description: Bulk update of families
+      responses:
+        '200':
+          description: Families updated
+        '400':
+          description: Invalid input
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Family'
+        description: Family information to update
+        
+  '/families/{id}':
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Get family data
+      operationId: getFamily
+      description: Gets family data
+      parameters:
+        - in: path
+          name: id
+          description: Pass an id to look up a family
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+      responses:
+        '200':
+          description: Object with the family data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Family'
+        '404':
+          description: Family not found
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Update a family
+      operationId: updateFamily
+      description: Updates a family
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: Family ID to update
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+      responses:
+        '200':
+          description: Item updated
+        '400':
+          description: Bad input format
+        '404':
+          description: Family with that ID not found
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Family'
+        description: Family information to update
+        required: true
+    delete:
+      tags:
+        - Delete-access
+        - Developers
+      summary: Delete a family
+      operationId: deleteFamily
+      description: Deletes a family from the system
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Item deleted
+        '404':
+          description: Family ID not found
+          
+  '/families/{id}/guardians':
+    parameters:
+      - in: path
+        name: id
+        description: Pass an id to look up a family
+        required: true
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Retrieves guardian data
+      operationId: getGuardians
+      description: Retrieve all guardian data for the family
+      responses:
+        '200':
+          description: Object with the guardian/parent data
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Guardian'
+        '404':
+          description: Family id not found
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Add a Guardian
+      operationId: addGuardian
+      description: Add a guardian to the system
+      responses:
+        '201':
+          description: item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Guardian'
+        '400':
+          description: 'invalid input, object invalid'
+        '409':
+          description: an existing item already exists
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Guardian'
+        description: Parent information to add
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Bulk update guardians
+      operationId: updateGuardians
+      description: Updates guardians
+      responses:
+        '200':
+          description: Items updated
+        '400':
+          description: 'invalid input, object invalid'
+        '404':
+          description: 'Record(s) not found'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Guardian'
+        description: Guardian information to update
+        
+  '/families/{family_id}/guardians/{guardian_id}':
+    parameters:
+    - in: path
+      name: guardian_id
+      description: pass an required id for looking up a guardian
+      required: true
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+    - name: family_id
+      in: path
+      description: The id of the family
+      required: true
+      schema:
+        type: integer
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Retrieves guardian data
+      operationId: getGuardianById
+      description: Retrieve a single guardian's data for the family
+      responses:
+        '200':
+          description: Object with the guardian's data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Guardian'
+        '404':
+          description: Guardian not found
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Update a guardian
+      operationId: updateGuardian
+      description: Updates a guardian to the system
+      responses:
+        '200':
+          description: 'Item updated'
+        '400':
+          description: 'invalid input, object invalid'
+        '404':
+          description: Guardian or family with that ID not found
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Guardian'
+        description: Guardian information to update
+    delete:
+      tags:
+        - Delete-access
+        - Developers
+      summary: Delete a guardian
+      operationId: deleteGuardian
+      description: Deletes a guardian from the system
+      responses:
+        '204':
+          description: Item deleted
+        '404':
+          description: Guardian or family not found
+          
+  '/families/{family_id}/children':
+    parameters:
+      - in: path
+        name: family_id
+        description: pass an required id for looking up a family
+        required: true
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+    get:
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: integer
+          required: false
+          description: Filter children by status id.
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Retrieve all children data
+      operationId: getChildren
+      description: Retrieve child data for a family
+      responses:
+        '200':
+          description: Object with the child data
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Child'
+        '404':
+          description: Child not found
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Adds children
+      operationId: addChildren
+      description: Adds children to the system
+      responses:
+        '201':
+          description: Item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Child'
+        '400':
+          description: 'Invalid input, object invalid'
+        '404':
+          description: Family not found
+        '409':
+          description: An existing item already exists
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Child'
+        description: Child information to add
+        
+  '/families/{family_id}/children/{child_id}':
+    parameters:
+      - name: family_id
+        in: path
+        description: The id of the family
+        required: true
+        schema:
+          type: integer
+      - name: child_id
+        in: path
+        description: The id of the child
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Get a child
+      operationId: getChild
+      description: Gets a child from the system
+      responses:
+        '200':
+          description: Record retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Child'
+        '404':
+          description: Child or family with that ID not found
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Update a child
+      operationId: updateChild
+      description: Updates a child in the system
+      responses:
+        '200':
+          description: Record updated
+        '400':
+          description: 'invalid input, object invalid'
+        '404':
+          description: Child or family with that ID not found
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Child'
+    delete:
+      tags:
+        - Delete-access
+        - Developers
+      summary: Delete a child
+      operationId: deleteChild
+      description: Deletes a child from the system
+      responses:
+        '204':
+          description: Item deleted
+        '404':
+          description: Child ID not found
+          
+  '/families/{family_id}/contacts':
+    parameters:
+      - in: path
+        name: family_id
+        description: pass an required id for looking up a family
+        required: true
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Retrieve all additional contact data
+      operationId: getContacts
+      description: Retrieve all additional contacts for a family
+      responses:
+        '200':
+          description: Object with the contact data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contact'
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Add a contact
+      operationId: addContact
+      description: Adds an additional contact to the family
+      responses:
+        '201':
+          description: Item created
+        '409':
+          description: An existing item already exists
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Contact'
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Bulk update additional contacts
+      operationId: updateContacts
+      description: Bulk update additional contacts
+      responses:
+        '200':
+          description: Items updated
+        '400':
+          description: 'invalid input, object invalid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Contact'
+        description: contact info to update
+        
+  '/families/{family_id}/contacts/{id}':
+    parameters:
+      - in: path
+        name: id
+        required: true
+        description: contact id
+        schema:
+          type: integer
+      - in: path
+        name: family_id
+        description: pass an required id for looking up a family
+        required: true
+        schema:
+          type: integer
+          format: int32
+          minimum: 1
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Get a contact
+      operationId: getContact
+      description: Get an additional contact for a family
+      responses:
+        '200':
+          description: item retrieved
+          content:
+            application/json:
+              schema:   
+                $ref: '#/components/schemas/Contact'
+        '404':
+          description: Contact with that id not found
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Update a contact
+      operationId: updateContact
+      description: Updates an additional contact in the system
+      responses:
+        '200':
+          description: item updated
+        '400':
+          description: 'invalid input, object invalid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Contact'
+    delete:
+      tags:
+        - Delete-access
+        - Developers
+      summary: Delete a contact
+      operationId: deleteContact
+      description: Deletes an additional contact from the system
+      responses:
+        '204':
+          description: Item deleted
+        '404':
+          description: Contact ID not found
+          
+  '/families/pending':
+    get:
+      parameters:
+      - in: query
+        name: centerId
+        schema:
+          type: integer
+        description: Limit pending families to only this center
+        required: false
+      - in: query
+        name: before
+        schema:
+          type: string
+          format: datetime
+        example: '2018-01-01T00:00:00+00:00'
+        description: Limit pending families to only those added before the given datetime
+        required: false
+      - in: query
+        name: after
+        schema:
+          type: string
+          format: datetime
+        example: '2018-01-02T00:00:00+00:00'
+        description: Limit pending families to only those added after the given datetime
+        required: false
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Get a list of all pending families
+      responses:
+        '200':
+          description: A list of pending families
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Family'
+                  
+  '/families/pending/{id}/accept':
+    put:
+      parameters:
+      - in: path
+        name: id
+        required: true
+        description: Id of the pending family to accept
+        schema:
+          type: integer
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Accept a pending family
+      description: Allows you to accept a pending family, if the family is not a duplicate
+      responses: 
+        '200':
+          description: The family was accepted.
+        '400':
+          description: An invalid request. Most likely caused by pending family lacking a center, a prerequisite to accepting a family. Or the family is flagged as a duplicate.
+        '401':
+          description: Unauthorized; user lacks permission to accept this family.
+        '404':
+          description: Not found. Pending family with that id not found.
+          
+  '/families/pending/{id}/reject':
+    put:
+      parameters:
+      - in: path
+        name: id
+        required: true
+        description: Id of the pending family to reject
+        schema:
+          type: integer
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Reject a pending family
+      description: Allows you to reject a pending family, if not marked as a duplicate. Reason is an id to a rejection reason in ChildCareCRM. 
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectFamilyReason'
+            example:
+              reason: 1
+              comment: "Spam Lead"
+        description: A JSON object with the rejection reason
+      responses: 
+        '200':
+          description: The family was accepted.
+        '400':
+          description: An invalid request. Probably because a reason for the rejection was not provided or the family is a duplicate.
+        '401':
+          description: Unauthorized; user lacks permission to accept this family.
+        '404':
+          description: Not found. Pending family with that id not found.
+        
+          
+  '/forgot-username':
+    get:
+      parameters:
+      - in: query
+        name: email
+        schema:
+          type: string
+          format: email
+        required: true
+      tags:
+        - Read-access
+      description: Send a username reminder to the email provided
+      responses:
+        200:
+          description: Request was received. Will send an email, if the email address is on file
+          content:
+            application/json:
+              schema:
+                type: string
+                
+  '/forgot-password':
+    get:
+      tags:
+      - Read-access
+      parameters:
+      - in: query
+        name: email
+        required: true
+        description: Email address of the user
+        schema:
+          type: string
+          format: email
+      - in: query
+        name: username
+        required: true
+        description: Username of the user
+        schema:
+          type: string
+      description: Reset the user's password and send a temporary password. Will require password change on next login.
+      responses:
+        200:
+          description: Request for password reset received.
+          content:
+            application/json:
+              schema:
+                type: string
+                
+  /integrations:
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      description: A list of integrations per center
+      responses:
+        200:
+          description: A list of integrations per center
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Integration'
+                  
+  /integrations/{id}:
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: The id of the integration to retrieve information about
+          schema:
+            type: integer
+            minimum: 1
+      description: Retrieve information per center about a single integration
+      responses:
+        200:
+          description: Information per center about an integration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Integration'
+                  
+  '/marketing-campaigns':
+    get:
+      tags:
+      - Read-access
+      - Write-access
+      - Delete-access
+      - Developers
+      parameters:
+      - in: query
+        name: limit
+        description: Max number of records to return
+        schema:
+          type: integer
+          maximum: 100
+          default: 100
+      - in: query
+        name: offset
+        description: The offset to start at
+        schema:
+          type: integer
+          default: 0
+      description: Retrieve a list of marketing campaigns
+      responses:
+        200:
+          description: A list of marketing campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MarketingCampaign'
+        401:
+          description: Not authorized
+  '/marketing-campaigns/{id}':
+    get:
+      tags:
+      - Read-access
+      - Write-access
+      - Delete-access
+      - Developers
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+      description: Return a specific marketing campaign
+      responses:
+        200:
+          description: A marketing campaign
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketingCampaign'
+        404:
+          description: Marketing campaign with that id not found
+        401:
+          description: Unauthorized
+
+  '/tasks':
+    get:
+      tags:
+      - Read-access
+      - Write-access
+      - Delete-access
+      - Developers
+      parameters:
+      - in: query
+        name: due_before
+        schema:
+          type: string
+          format: datetime
+        description: A datetime string; filter to only tasks due before then
+        required: false
+      - in: query
+        name: due_after
+        schema:
+          type: string
+          format: datetime
+        description: A datetime string; filter to only tasks due after then
+        required: false
+      - in: query
+        name: type
+        schema:
+          type: integer
+        description: Filter only to tasks of this type; types available from /types/tasks
+        required: false
+      - in: query
+        name: result
+        schema:
+          type: integer
+        description: Filter only to tasks with this result; results available from /types/tasks/results
+      - in: query
+        name: center_ids
+        schema:
+          type: array
+          items:
+            type: integer
+        required: false
+        description: Limit to tasks only for families in the given centers
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          default: 0
+          minimum: 0
+          description: The number of items to skip.
+        required: false
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 100
+          minimum: 1
+          maximum: 100
+        description: The number of records to return.
+        required: false
+      summary: Retrieves tasks data
+      operationId: getTasks
+      description: 'Returns all tasks'
+      responses:
+        '200':
+          description: Object with the tasks data
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '404':
+          description: No tasks found
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Create a task
+      operationId: createTask
+      responses:
+        '201':
+          description: Item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Update task data
+      operationId: updateTasks
+      description: 'Take an array of task data. Update them all.'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Tasks updated
+        '400':
+          description: Invalid data.
+        '404':
+          description: Tasks with given id not found.
+  '/tasks/{id}':
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Retrieves task data
+      operationId: getTask
+      description: 'Returns a task'
+      responses:
+        '200':
+          description: Object with the tasks data
+          content:
+            application/json:
+              schema: 
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: No task found
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Update task data
+      operationId: updateTask
+      description: 'Update a task'
+      requestBody:
+        content:
+          application/json:
+            schema:
+                $ref: '#/components/schemas/TaskUpdate'
+      responses:
+        '200':
+          description: Task updated
+        '400':
+          description: Invalid data.
+        '404':
+          description: Task with given id not found.
+    delete:
+      tags:
+        - Delete-access
+        - Developers
+      summary: Delete a task
+      operationId: deleteTask
+      description: 'Delete a task'
+      responses:
+        '204':
+          description: Task deleted.
+        '404':
+          description: Task not found.
+        
+  
+  '/tasks/{id}/complete':
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    put:
+      description: Mark the task as complete
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskComplete'
+      responses:
+        200:
+          description: Task marked as complete
+        400:
+          description: Bad request
+        403:
+          description: Unauthorized
+        404:
+          description: Task not found
+        
+  '/tasks/{id}/cancel':
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    put:
+      description: Cancel the task
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:
+        200:
+          description: Task cancelled
+        403:
+          description: Unauthorized
+        404:
+          description: Task not found
+          
+  '/search':
+    get:
+      parameters:
+      - in: query
+        name: guardian_first_name
+        schema:
+          type: string
+      - in: query
+        name: guardian_last_name
+        schema:
+          type: string
+      - in: query
+        name: phone_number
+        schema:
+          type: string
+      - in: query
+        name: email_address
+        schema:
+          type: string
+          format: email
+      - in: query
+        name: child_first_name
+        schema:
+          type: string
+      - in: query
+        name: child_last_name
+        schema:
+          type: string
+      - in: query
+        name: centers
+        schema:
+          type: array
+          items:
+            type: integer
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Search for leads or children
+      responses:
+        '200': 
+          description: Array of HATEOAS links to families found
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Link'
+                  
+  '/staff':
+    get:
+      parameters:
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          default: 0
+          minimum: 0
+          description: The number of items to skip.
+        required: false
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          default: 100
+          minimum: 1
+          maximum: 100
+        description: The number of records to return.
+        required: false
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Get a list of staff for a client.
+      operationId: getAllStaff
+      responses:
+        '200':
+          description: List of staff
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Staff'
+        '401':
+          description: 'Unauthorized'
+        '404':
+          description: 'Staff not found'
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Create a new staff member.
+      operationId: createStaff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Staff'
+      responses:
+        '201':
+          description: 'Item created'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Staff'
+        '400':
+          description: 'Invalid data'
+        '401':
+          description: 'Unauthorized'
+    put:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Update staff information
+      operationId: updateStaff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Staff'
+      responses:
+        '200':
+          description: 'Items updated'
+        '400':
+          description: 'Invalid data'
+        '404':
+          description: 'Record not found'
+          
+  '/staff/{id}':
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Get staff information
+      operationId: getStaff
+      responses:
+        '200':
+          description: 'Staff data'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Staff'
+        '401':
+          description: 'Unauthorized'
+        '404':
+          description: 'Staff not found'
+    delete:
+      tags:
+        - Developers
+      summary: Delete a staff member
+      operationId: deleteStaff
+      responses:
+        '204':
+          description: 'Staff deleted'
+        '401':
+          description: 'Unauthorized'
+        '404':
+          description: 'Staff not found'
+         
+  '/statuses':
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Get information about statuses
+      responses:
+        '200':
+          description: A list of statuses and names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Status'
+                  
+  '/statuses/{id}':
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Get a specific status
+      responses:
+        '200':
+          description: Information about a single status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+                
+  '/texts':
+    get:
+      parameters:
+      - in: query
+        name: since
+        schema:
+          type: integer
+        description: UNIX timestamp; used to retrieve texts sent since that time
+        required: false
+      - in: query
+        name: filter_user_id
+        schema:
+          type: integer
+        description: A user id; used to filter only texts received by that user
+        required: false
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          maximum: 100
+          default: 100
+        description: The total records to return
+        required: false
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        description: The offset to start counting from
+        required: false
+      tags:
+      - Read-access
+      - Write-access
+      - Delete-access
+      - Developers
+      summary: Get an array of all texts
+      responses:
+        '200':
+          description: An array of texts
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema: 
+                type: array
+                items:
+                  $ref: '#/components/schemas/Text'
+        '403':
+          description: Access denied
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Create a text
+      description: Creates and send a text in the system. Texts will be marked to send immediately.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextCreate'
+      responses:
+        '201':
+          description: Text created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Text'
+        '400':
+          description: Invalid data
+        '403':
+          description: Access denied
+          
+  '/texts/incoming':
+    get:
+      parameters:
+      - in: query
+        name: since
+        schema:
+          type: integer
+        description: UNIX timestamp; used to retrieve texts sent since that time
+        required: false
+      - in: query
+        name: filter_user_id
+        schema:
+          type: integer
+        description: A user id; used to filter only texts sent / received by that user
+        required: false
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          maximum: 100
+          default: 100
+        description: The total records to return
+        required: false
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        description: The offset to start counting from
+        required: false
+      tags:
+      - Read-access
+      - Write-access
+      - Delete-access
+      - Developers
+      summary: Get an array of all incoming texts
+      responses:
+        200:
+          description: An array of incoming texts
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema: 
+                type: array
+                items:
+                  $ref: '#/components/schemas/Text'
+        401:
+          description: Access denied
+      
+  '/texts/incoming/{id}':
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+    description: Retrieves an incoming text
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:
+        200:
+          description: The content of the text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Text'
+        401:
+          description: Access denied.
+        404:
+          description: Text not found
+          
+  '/texts/outgoing':
+    get:
+      parameters:
+      - in: query
+        name: since
+        schema:
+          type: integer
+        description: UNIX timestamp; used to retrieve texts since that time
+        required: false
+      - in: query
+        name: filter_user_id
+        schema:
+          type: integer
+        description: A user id; used to filter only texts sent / received by that user
+        required: false
+      - in: query
+        name: limit
+        schema:
+          type: integer
+          maximum: 100
+          default: 100
+        description: The total records to return
+        required: false
+      - in: query
+        name: offset
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+        description: The offset to start counting from
+        required: false
+      tags:
+      - Read-access
+      - Write-access
+      - Delete-access
+      - Developers
+      summary: Get an array of all outgoing texts
+      responses:
+        200:
+          description: An array of outgoing texts
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema: 
+                type: array
+                items:
+                  $ref: '#/components/schemas/Text'
+        401:
+          description: Unauthorized.
+          
+    post:
+      tags:
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Create an outgoing text. Sends immediately.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TextCreate'
+      responses:
+        201:
+          description: Email created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Text'
+        400:
+          description: Bad request
+        401:
+          description: Access denied
+          
+  '/texts/outgoing/{id}':
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+    description: Retrieves an outgoing text
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:
+        200:
+          description: The content of the text
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Text'
+        401:
+          description: Access denied.
+        404:
+          description: Text not found   
+          
+  /types/family:
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:    
+        200:
+          description: A list of all types available for families
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: array
+                  items: 
+                    $ref: '#/components/schemas/Type'
+        
+  /types/family/inquiry:    
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:    
+        200:
+          description: A list of family inquiry types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Type'
+          
+  /types/family/source:
+    description: A list of sources available for families to arrive in the system from
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:    
+        200:
+          description: A list of sources available for families to come from
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Type'
+          
+  /types/reasons/enrolled:
+    description: A list of reasons a child was enrolled
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:    
+        200:
+          description: A list of reasons child enrolled
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Type'
+                  
+  /types/marketing-campaigns:
+    description: A list of marketing campaign types
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:
+        200:
+          description: A list of marketing campaign types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Type'
+                  
+  /types/marketing-campaigns/{id}:
+    description: Get a specific marketing campaign type
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        200:
+          description: A marketing campaign type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Type'
+        404:
+          description: No marketing campaign type with that id found
+          
+  /types/reasons/rejected:
+    description: A list of reasons a pending family was rejected (e.g. Spam)
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:    
+        200:
+          description: A list of reasons a pending family was rejected
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Type'
+          
+  /types/reasons/withdrawn:
+    description: A list of reasons a child was withdrawn from care
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:    
+        200:
+          description: A list of reasons a child was withdrawn from care
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Type'
+                  
+  /types/tasks:
+    description: A list of task types
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:
+        200:
+          description: A list of task types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Type'
+                  
+  /types/tasks/results:
+    description: A list of task result types
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      responses:
+        200:
+          description: A list of task result types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Type'
+          
+  '/updates':
+    parameters:
+      - in: query
+        name: since
+        required: true
+        schema:
+          type: integer
+      - in: query
+        name: index
+        required: false
+        schema:
+          type: integer
+          default: 0
+        description: Index number at which to start returning results
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          default: 100
+          maximum: 100
+        description: How many records to return
+    get:
+      tags:
+        - Read-access
+        - Write-access
+        - Delete-access
+        - Developers
+      summary: Get all updates to families since a given time
+      operationId: getUpdates
+      responses:
+        '200':
+          description: Returns updates
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: The total number of records available that match the query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Update'
+      
+servers:
+  - url: 'https://live.childcarecrm.com/api/v3'
+  - url: 'https://live.childcarecrm.com.au/api/v3'
+components:
+  securitySchemes:
+    bearerAuth:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT    # optional, arbitrary value for documentation purposes
+  schemas:
+    Family:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        is_active:
+          type: boolean
+          example: true
+        do_not_call:
+          type: boolean
+        do_not_text:
+          type: boolean
+        primary_guardian:
+          $ref: '#/components/schemas/Guardian'
+        guardians:
+          type: array
+          items:
+            $ref: '#/components/schemas/Guardian'
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Child'
+        good_standing:
+          type: boolean
+        marketing_campaign:
+          $ref: '#/components/schemas/Link'
+        source_type:
+          $ref: '#/components/schemas/Link'
+        inquiry_type:
+          $ref: '#/components/schemas/Link'
+    RejectFamilyReason:
+      type: object
+      properties:
+        reason:
+          type: integer
+        comment:
+          type: string
+      required: [reason]
+    Guardian:
+      type: object
+      required:
+        - name
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        center_id:
+          type: integer
+        status:
+          type: integer
+        name:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        title:
+          type: string
+        gender:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        address:
+          $ref: '#/components/schemas/Address'
+        timezone:
+          type: string
+        image:
+          type: string
+        email:
+          type: string
+        alternate_email:
+          type: string
+        primary_phone:
+          $ref: '#/components/schemas/Phone'
+        alternate_phone:
+          $ref: '#/components/schemas/Phone'
+        integrations:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationId'
+            
+    Child:
+      type: object
+      required:
+        - name
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        name:
+          type: string
+        preferred_name:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        gender:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        image:
+          type: string
+        primary_language:
+          type: string
+        secondary_language:
+          type: string
+        immunizations_compliant:
+          type: boolean
+        allergies:
+          type: string
+        medical_conditions:
+          type: string
+        dietary_requirements:
+          type: string
+        emergency_contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Contact'
+        address:
+          $ref: '#/components/schemas/Address'
+        enrollments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Enrollment'
+        integrations:
+          type: array
+          items:
+            $ref: '#/components/schemas/IntegrationId'
+            
+    Contact:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        name:
+          type: string
+        phone:
+          $ref: '#/components/schemas/Phone'
+        email:
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+    Address:
+      type: object
+      properties:
+        address1:
+          type: string
+        address2:
+          type: string
+        address3:
+          type: string
+        address4:
+          type: string
+        locality:
+          type: string
+          example: Bedford
+        region:
+          type: string
+          example: TX
+        postcode:
+          type: string
+          example: '76021'
+        country_code:
+          type: string
+        latitude:
+          type: number
+          example: 32.839
+        longitude:
+          type: number
+          example: -97.135
+    Phone:
+      type: object
+      properties:
+        number:
+          type: integer
+        country_code:
+          type: integer
+        extension:
+          type: integer
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        contact:
+          $ref: '#/components/schemas/Contact'
+        name:
+          type: string
+        logo:
+          type: string
+        phone:
+          $ref: '#/components/schemas/Phone'
+        tax_id:
+          type: string
+    Center:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        name:
+          type: string
+        contact:
+          $ref: '#/components/schemas/Contact'
+        logo:
+          type: string
+        tax_id:
+          type: string
+        timezone:
+          type: string
+        url:
+          type: string
+        open_saturday:
+          type: boolean
+        open_sunday:
+          type: boolean
+        classrooms:
+          type: array
+          items:
+            $ref: '#/components/schemas/Classroom'
+            
+    CenterCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Location One"
+        code:
+          type: string
+          example: "LOC 1"
+        organization_id:
+          type: integer
+        contact:
+          $ref: '#/components/schemas/Contact'
+        tax_id:
+          type: string
+        timezone:
+          type: string
+          example: "America/Chicago"
+        url:
+          type: string
+          format: url
+        open_saturday:
+          type: boolean
+          default: false
+        open_sunday:
+          type: boolean
+          default: false
+        
+    Classroom:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        capacity:
+          type: integer
+        begin_age:
+          type: integer
+          description: Age in months
+          example: 36
+        end_age:
+          type: integer
+          description: Age in months
+          example: 72
+        open_saturday:
+          type: boolean
+        open_sunday:
+          type: boolean
+        external_system_id:
+          type: integer
+          format: int32
+          description: An external id matching this classroom to one in another system
+        rates:
+          type: object
+          properties:
+            ratename:
+              type: integer
+              format: int32
+              description: Expect "ratename" to be the actual name of the rate; there will be multiple entries here
+        availability:
+          type: object
+          description: What availability does the classroom have per day?
+          properties:
+            monday:
+              type: object
+              properties:
+                am:
+                  type: boolean
+                pm:
+                  type: boolean
+            tuesday:
+              type: object
+              properties:
+                am:
+                  type: boolean
+                pm:
+                  type: boolean
+            wednesday:
+              type: object
+              properties:
+                am:
+                  type: boolean
+                pm:
+                  type: boolean
+            thursday:
+              type: object
+              properties:
+                am:
+                  type: boolean
+                pm:
+                  type: boolean
+            friday:
+              type: object
+              properties:
+                am:
+                  type: boolean
+                pm:
+                  type: boolean
+             
+    ClassroomCreate:
+      type: object
+      properties:
+        capacity:
+          type: integer
+        begin_age:
+          type: integer
+          description: Age in months
+          example: 36
+        end_age:
+          type: integer
+          description: Age in months
+          example: 72
+        open_saturday:
+          type: boolean
+        open_sunday:
+          type: boolean
+        external_system_id:
+          type: integer
+          format: int32
+          description: An external id matching this classroom to one in another system
+        rates:
+          type: object
+          properties:
+            ratename:
+              type: integer
+              format: int32
+              description: Expect "ratename" to be the actual name of the rate; there will be multiple entries here
+        availability:
+          type: object
+          description: What availability does the classroom have per day?
+          properties:
+            monday:
+              type: object
+              properties:
+                am:
+                  type: boolean
+                pm:
+                  type: boolean
+            tuesday:
+              type: object
+              properties:
+                am:
+                  type: boolean
+                pm:
+                  type: boolean
+            wednesday:
+              type: object
+              properties:
+                am:
+                  type: boolean
+                pm:
+                  type: boolean
+            thursday:
+              type: object
+              properties:
+                am:
+                  type: boolean
+                pm:
+                  type: boolean
+            friday:
+              type: object
+              properties:
+                am:
+                  type: boolean
+                pm:
+                  type: boolean
+          
+    Enrollment:
+      type: object
+      required:
+        - id
+        - center
+        - child
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 1
+        center_id:
+          type: integer
+          format: int32
+        child_id:
+          type: integer
+          format: int32
+        classroom_id:
+          type: integer
+          format: int32
+        expected_start_date:
+          type: string
+          format: datetime
+        wait_list_date:
+          type: string
+          format: datetime
+        register_date:
+          type: string
+          format: datetime
+
+        schedule:
+          type: object
+          description: The child's schedule for care
+          properties:
+            monday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            tuesday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            wednesday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            thursday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            friday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            saturday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            sunday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean          
+        expected_enrollment:
+          type: object
+          properties:
+            date:
+              type: string
+              format: datetime
+            reason:
+              $ref: '#/components/schemas/Link'
+        enrollment:
+          type: object
+          properties:
+            date:
+              type: string
+              format: datetime
+            reason:
+              $ref: '#/components/schemas/Link'
+              
+        estimated_withdrawn:
+          type: object
+          properties:
+            date:
+              type: string
+              format: datetime
+            reason:
+              $ref: '#/components/schemas/Link'
+        withdrawn:
+          type: object
+          properties:
+            date:
+              type: string
+              format: datetime
+            reason:
+              $ref: '#/components/schemas/Link'
+        child_of_staff:
+          type: boolean
+          default: false
+          
+    EnrollmentCreate:
+      type: object
+      description: The POST/PUT object to create or update an enrollment. "enrollment" and "withdrawn" are mutually exclusive. You cannot POST both objects at once. The "reason" for either object is available from /api/v3/types/reasons/enrolled and /api/v3/types/reasons/withdrawn, respectively.
+      required: 
+      - child
+      - center
+      - child_of_staff
+      - schedule
+      properties:
+        child:
+          type: integer
+          description: The child id
+        center:
+          type: integer
+          description: The center's id
+        child_of_staff:
+          type: boolean
+          description: Is this child a child of a staff member at the center?
+        schedule:
+          type: object
+          description: The child's schedule for care
+          properties:
+            monday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            tuesday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            wednesday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            thursday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            friday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            saturday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+            sunday:
+              type: object
+              properties:
+                am: 
+                  type: boolean
+                pm: 
+                  type: boolean
+        expected_start_date:
+          type: string
+          format: datetime
+        wait_list_date:
+          type: string
+          format: datetime
+        register_date:
+          type: string
+          format: datetime
+        enrollment: 
+          type: object
+          properties:
+            date:
+              type: string
+              format: datetime
+            reason: 
+              type: integer
+        withdrawn:
+          type: object
+          properties:
+            date:
+              type: string
+              format: datetime
+            reason:
+              type: integer
+          
+    EmailCreate:
+      type: object
+      description: The POST object needed to create an email
+      required:
+      - send_by_user
+      - send_to_guardian
+      - subject
+      - html
+      properties:
+        html: 
+          type: string
+          example: '<body>Welcome to our school. Please fill out this survey - </body>'
+          description: The HTML content of the email
+        subject: 
+          type: string
+          example: "Welcome to our school"
+        send_by_user:
+          type: integer
+          minimum: 1
+          example: 1
+          description: The staff / user id for the email to be sent from
+        send_to_guardian:
+          type: integer
+          minimum: 1
+          example: 1000
+          description: The lead / guardian id to send the email to
+        reply_to_user:
+          type: integer
+          minimum: 1
+          example: 5
+          description: Set the staff/user id for the reply-to address; default is the send_by_user
+        cc_user:
+          type: integer
+          minimum: 1
+          example: 7
+          description: The staff / user id to be CCed
+        bcc_user:
+          type: integer
+          minimum: 1
+          example: 10
+          description: The staff / user id to be BCCed
+        replied_to_message:
+          type: integer
+          example: 10002
+          description: The id of the incoming email being replied to
+          
+    Email:
+      type: object
+      description: The object returned for emails from a GET
+      properties:
+        id:
+          type: integer
+          example: 1
+        type:
+          type: string
+          description: Is this an incoming or outgoing email?
+          example: "direction"
+        html:
+          type: string
+        subject: 
+          type: string
+        sent_date_time:
+          type: object
+          description: When the message was sent
+          properties:
+            date:
+              type: string
+              format: datetime
+            timezone_type:
+              type: integer
+              example: 3
+              description: The internal timezone id
+            timezone:
+              type: string
+              example: UTC
+        from_email_address:
+          type: string
+          format: email
+        status:
+          type: string
+          example: "Pending"
+        replied_to_message:
+          $ref: '#/components/schemas/Link'
+        send_to_guardian:
+          $ref: '#/components/schemas/Link'
+              
+    EventCreate:
+      type: object
+      properties:
+        family: 
+          type: integer
+          format: int32
+          description: id of the family event added to
+        added_by_staff: 
+          type: integer
+          format: int32
+          description: id of staff member who added the event
+        performed_by_staff: 
+          type: integer
+          format: int32
+          description: id of the staff member who performed the event
+        description:
+          type: string
+          description: Text describing the event
+        type:
+          type: integer
+          format: int32
+          description: The id of the event type, available from /api/v3/events/types
+        task:
+          type: integer
+          format: int32
+          description: The id of the task that caused the event
+        event_time:
+          type: string
+          format: date-time
+          description: A datetime string for when the event occurred
+        added_time:
+          type: string
+          format: date-time
+          description: The datetime string describing when the event was added to the system
+      required: [family, type]
+    EventUpdate:
+      allOf:
+        - $ref: '#/components/schemas/EventCreate'
+        - type: object
+      required: [id]
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: The id of the event to modify
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Unique identifier for the event
+        added_by_staff:
+          $ref: '#/components/schemas/Link'
+        family:
+          $ref: '#/components/schemas/Link'
+        performed_by_staff:
+          $ref: '#/components/schemas/Link'
+        task:
+          $ref: '#/components/schemas/Link'
+        description:
+          type: string
+          description: A text description of the event
+          example: Called, left message
+        event_time:
+          type: string
+          format: date-time
+          description: A date-time string representing when the event occurred
+        added_time:
+          type: string
+          format: date-time
+          description: A date-time string when the event was added to the system
+        type:
+          type: integer
+          format: int32
+          description: The unique identifier of the type of the task; available ids at /api/v3/events/types
+          
+    Integration:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        is_active:
+          type: boolean
+        name:
+          type: string
+        partner_id:
+          type: integer
+          format: int32
+          description: The partner id used for filtering families by integration_partner_id
+          
+    IntegrationId:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: The external system id / integration id for this entity
+        integration:
+          $ref: '#/components/schemas/Integration'
+        
+    
+    MarketingCampaign:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+        is_active:
+          type: boolean
+        type:
+          $ref: '#/components/schemas/Link'
+        description:
+          type: string
+        start_datetime:
+          type: string
+          format: datetime
+        end_datetime:
+          type: string
+          format: datetime
+        created_by_user:
+          $ref: '#/components/schemas/Link'
+          
+    Task:
+      type: object
+      required:
+        - family
+      properties:
+        id:
+          type: integer
+          format: int32
+        family:
+          $ref: '#/components/schemas/Link'
+        type:
+          $ref: '#/components/schemas/Link'
+        assigned_by_staff:
+          $ref: '#/components/schemas/Link'
+        assigned_to_staff:
+          $ref: '#/components/schemas/Link'
+        description:
+          type: string
+        original_due_date_time:
+          type: string
+          format: datetime
+        due_date_time:
+          type: string
+          format: datetime
+        is_completed:
+          type: boolean
+        completed_by_staff:
+          $ref: '#/components/schemas/Link'
+        completed_date_time:
+          type: string
+          format: datetime
+        result:
+          type: string
+        result_description:
+          type: string
+        is_cancelled:
+          type: boolean
+        reminder_times:
+          $ref: '#/components/schemas/ReminderTimes'
+
+    TaskCreate:
+      type: object
+      required:
+        - type
+        - family
+        - assigned_by_staff
+        - assigned_to_staff
+        - due_date_time
+      properties:
+        type:
+          type: integer
+          description: The task type. Found in /types/tasks
+        family:
+          type: integer
+          description: Id of the family the tasks is linked to.
+        assigned_by_staff:
+          type: integer
+        assigned_to_staff:
+          type: integer
+        description:
+          type: string
+        original_due_date_time:
+          type: string
+          format: datetime
+        due_date_time:
+          type: string
+          format: datetime
+        is_completed:
+          type: boolean
+        completed_by_staff:
+          type: integer
+        completed_date_time:
+          type: string
+          format: datetime
+        result:
+          type: string
+        result_description:
+          type: string
+        is_cancelled:
+          type: boolean
+        staff_email_reminder_amount:
+          type: integer
+          description: How many units in advance of the task's due datetime to send reminder text to staff?
+        staff_email_reminder_units:
+          type: string
+          description: What units to calculate the reminder to send?
+          example: 'hour'
+        staff_text_reminder_amount:
+          type: integer
+          description: How many units in advance of the task's due datetime to send reminder text to staff?
+        staff_text_reminder_units:
+          type: string
+          description: What units to calculate the reminder to send?
+          example: 'minute'
+        primary_guardian_email_reminder_amount:
+          type: integer
+          description: How many units in advance of the task's due datetime to send reminder text to primary guardian?
+        primary_guardian_email_reminder_units:
+          type: integer
+          description: What units to calculate the reminder to send?
+          example: 'day'
+        primary_guardian_text_reminder_amount:
+          type: integer
+          description: How many units in advance of the task's due datetime to send reminder text to primary guardian?
+        primary_guardian_text_reminder_units:
+          type: integer
+          description: What units to calculate the reminder to send?
+          example: 'day'
+          
+          
+    TaskUpdate:
+      type: object
+      properties:
+        type:
+          type: integer
+          description: The task type. Found in /types/tasks
+        family:
+          type: integer
+          description: Id of the family the tasks is linked to.
+        assigned_by_staff:
+          type: integer
+        assigned_to_staff:
+          type: integer
+        description:
+          type: string
+        original_due_date_time:
+          type: string
+          format: datetime
+        due_date_time:
+          type: string
+          format: datetime
+        is_completed:
+          type: boolean
+        completed_by_staff:
+          type: integer
+        completed_date_time:
+          type: string
+          format: datetime
+        result:
+          type: string
+        result_description:
+          type: string
+        is_cancelled:
+          type: boolean
+        staff_email_reminder_amount:
+          type: integer
+          description: How many units in advance of the task's due datetime to send reminder text to staff?
+        staff_email_reminder_units:
+          type: string
+          description: What units to calculate the reminder to send?
+          example: 'hour'
+        staff_text_reminder_amount:
+          type: integer
+          description: How many units in advance of the task's due datetime to send reminder text to staff?
+        staff_text_reminder_units:
+          type: string
+          description: What units to calculate the reminder to send?
+          example: 'minute'
+        primary_guardian_email_reminder_amount:
+          type: integer
+          description: How many units in advance of the task's due datetime to send reminder text to primary guardian?
+        primary_guardian_email_reminder_units:
+          type: integer
+          description: What units to calculate the reminder to send?
+          example: 'day'
+        primary_guardian_text_reminder_amount:
+          type: integer
+          description: How many units in advance of the task's due datetime to send reminder text to primary guardian?
+        primary_guardian_text_reminder_units:
+          type: integer
+          description: What units to calculate the reminder to send?
+          example: 'day'
+          
+    TaskComplete:
+      description: Object to complete a task
+      required:
+        - result_type
+      properties:
+        result_type:
+          type: integer
+          description: The result type for the task. Ids available at /types/tasks/results
+        result_description:
+          type: string
+          description: A text description of the result
+        completed_date_time:
+          type: string
+          format: datetime
+          description: The date-time on which the task was completed.
+
+    ReminderTimes:
+      description: 'Times to send email and text reminders to staff and primary guardians'
+      type: object
+      properties:
+        staff_email_reminder:
+          type: string
+          format: datetime
+          example: "2019-08-06T15:00:00+00:00"
+        staff_text_reminder:
+          type: string
+          format: datetime
+          example: "2019-08-06T15:00:00+00:00"
+        primary_guardian_email_reminder:
+          type: string
+          format: datetime
+          example: "2019-08-06T15:00:00+00:00"
+        primary_guardian_text_reminder:
+          type: string
+          format: datetime
+          example: "2019-08-06T15:00:00+00:00"
+    
+          
+    Staff:
+      type: object
+      required:
+        - username
+        - email_address
+        - first_name
+        - last_name
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        password:
+          type: string
+        last_login_time:
+          type: integer
+        timezone:
+          type: string
+        hire_time:
+          type: integer
+        termination_time:
+          type: integer
+        is_active:
+          type: boolean
+        force_password_change:
+          type: boolean
+        failed_attempts:
+          type: integer
+        position_title:
+          type: string
+        comments:
+          type: string
+        manager_id:
+          type: integer
+        is_on_enrollment_team:
+          type: boolean
+        address:
+          $ref: '#/components/schemas/Address'
+        phone:
+          $ref: '#/components/schemas/Phone'
+        schedule:
+          $ref: '#/components/schemas/Schedule'
+    Schedule:
+      type: object
+      required:
+        - start_date_time
+        - end_date_time
+        - is_available
+      properties:
+        start_date_time:
+          type: string
+          format: date-time
+        end_date_time:
+          type: string
+          format: date-time
+        description:
+          type: string
+        is_available:
+          type: boolean
+          
+    TextCreate:
+      type: object
+      required:
+      - send_by_user
+      - data
+      - send_to_guardian
+      properties:
+        send_by_user:
+          type: integer
+          minimum: 1
+          example: 100
+          description: The id of the staff / user who is sending the text
+        data:
+          type: string
+          example: 'This is a text message'
+          description: The content of the text message
+        send_to_guardian:
+          type: integer
+          minimum: 1
+          example: 1000
+          description: The id of the lead / guardian to send the text message to.
+        replied_to_message:
+          type: integer
+          minimum: 1
+          example: 100
+          description: The id of the text message being replied to.
+    
+    Text:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 42
+        type:
+          type: string
+          example: outgoing
+          description: The direction of the text, to/from ChildCareCRM
+        data:
+          type: string
+          example: This is a text message.
+        send_to_number:
+          type: string
+          example: 8675309
+        status:
+          type: string
+          example: Sent
+        sent_date_time:
+          type: object
+          properties:
+            date:
+              type: string
+              format: datetime
+              example: 2019-04-18 20:28:44.000000
+            timezone_type:
+              type: integer
+              example: 1
+              description: The id of the timezone
+            timezone:
+              type: string
+              example: '+00:00'
+        send_to_guardian:
+          $ref: '#/components/schemas/Link'
+          
+    Update:
+      type: object
+      properties:
+        family_id:
+          type: integer
+        changes:
+          type: object
+          properties:
+            user_id:
+              type: integer
+            date_time:
+              type: string
+              format: date-time
+            type:
+              type: string
+            action:
+              type: string
+            details:
+              type: string
+    Link:
+      type: object
+      description: HATEAOS formatted links to resources in the API
+      properties:
+        id:
+          type: integer
+        links:
+          type: array
+          items:
+            type: object
+            properties:
+              href:
+                type: string
+                format: uri
+                description: Link to the resource in the API
+                example: '/api/v3/endpoint/id'
+              rel:
+                type: string
+                description: Description of the type of the entity type. 
+                example: 'entityName'
+              type:
+                type: string
+                description: Method of the request endpoint
+                example: GET
+                
+    Login:
+      type: object
+      description: Object return on login
+      properties:
+        token:
+          type: string
+          description: JWT auth
+        refresh_token:
+          type: string
+          description: A refresh token
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+          
+    
+    Status:
+      type: object
+      description: A status value for a lead or child
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "New Lead"
+          
+    Alert:
+      type: object
+      description: An alert message
+      properties:
+        id:
+          type: integer
+          example: 1
+        code:
+          type: string
+          example: "Child Age Out"
+        detail:
+          type: string
+          example: "Child exceeds maximum age to attend"
+        lead:
+          $ref: '#/components/schemas/Link'
+        child:
+          $ref: '#/components/schemas/Link'
+        added_time:
+          type: string
+          format: date-time
+          example: '2019-04-19T21:58:56Z'
+          
+    Type:
+      type: object
+      description: An object describing a type
+      properties:
+        id:
+          type: integer
+          example: 1
+        value:
+          type: string
+          example: "This is a value"
+        is_default:
+          type: boolean
+          example: false
+
+# 2) Apply the security globally to all operations
+security:
+  - bearerAuth: []         # use the same name as above

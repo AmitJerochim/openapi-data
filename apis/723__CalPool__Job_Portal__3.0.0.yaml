@@ -1,0 +1,610 @@
+penapi: 3.0.0
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://mycpl.calpool.com/api
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/jacobscarter/Job_Portal/3.0.0
+info:
+  description: API to interact with Job Portal Server
+  version: "3.0.0"
+  title: Cal Pool Job Portal
+  contact:
+    email: jc@jacobcarter.com
+tags:
+  - name: auth
+    description: Authenticate against app
+  - name: settings
+    description: Retrieve user settings by lead id or job number
+  - name: push
+    description: Send push notification out to specific devices
+  - name: users
+    description: Retrieve data on all users
+  - name: registration
+    description: Register new users for job portal app
+paths:
+  /user-settings:
+    get:
+      security:
+          - bearerAuth: []
+      tags:
+        - settings
+      summary: retrieve settings
+      operationId: retrieveSettings
+      description: |
+        By passing a lead ID or job number you can retrieve the settings for all user matching that criteria
+      parameters:
+        - in: query
+          name: jobNumber
+          description: job number you are retrieving users for
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: leadId
+          description: lead id you are retrieving users for, if job number and lead id are provided it will default to lead id
+          required: false
+          schema:
+            type: string
+        - in: header
+          name: Authorization
+          description: Bearer token
+          schema:
+            type: string
+          required: true
+          
+      responses:
+        '200':
+          description: successfully queried for users
+          content:
+            application/json:
+              schema:
+                  type: object
+                  required:
+                    - result
+                    - errors
+                  properties:
+                    result:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/userSettings'
+                
+        '400':
+          description: bad input parameter
+  /users:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      summary: retrieve users
+      operationId: retrieveUsers
+      description: |
+        Retrieve all users for the job portal app
+      parameters:
+        - in: header
+          name: Authorization
+          description: Bearer token
+          schema:
+            type: string
+          required: true
+          
+      responses:
+        '200':
+          description: successfully queried for users
+          content:
+            application/json:
+              schema:
+                  type: object
+                  required:
+                    - result
+                    - errors
+                  properties:
+                    result:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/user'
+                
+        '400':
+          description: bad input parameter
+  /users/{id}:
+    delete:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      summary: delete user
+      operationId: deleteUser
+      description: |
+        Delete a single user and associated settings
+      parameters:
+        - in: header
+          name: Authorization
+          description: Bearer token
+          schema:
+            type: string
+          required: true
+        - in: path
+          name: id
+          description: user ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successfully deleted user
+          content:
+            application/json:
+              schema:
+                  type: object
+                  required:
+                    - result
+                    - errors
+                  properties:
+                    result:
+                      type: string
+                      format: uuid
+                      example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        '400':
+          description: bad input parameter
+    put:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      summary: Update a user
+      operationId: updateUser
+      description: Updates a user with the fields you pass in
+      parameters:
+        - in: header
+          name: Authorization
+          description: Bearer token
+          schema:
+            type: string
+          required: true
+        - in: path
+          name: id
+          description: user ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - result
+                  - errors
+                properties:
+                  result:
+                    type: string
+                    example: User successfully updated
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserData'
+        description: User data to use for updating
+  /login:
+    post:
+      tags:
+        - auth
+      summary: Authenticates a user
+      operationId: authLogin
+      description: Authenticates a user and returns a token
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - result
+                  - errors
+                properties:
+                  result:
+                    $ref: '#/components/schemas/AuthToken'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+        description: User data to use for authentication
+  /register/generate-token:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - registration
+      summary: Create token to register new user with job portal.
+      operationId: generateRegistrationToken
+      description: Push notifications to specific users
+      parameters:
+        - in: header
+          name: Authorization
+          description: Bearer token
+          schema:
+            type: string
+          required: true
+      responses:
+        '201':
+          description: Successfully generated token
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - result
+                  - errors
+                properties:
+                  result:
+                    $ref: '#/components/schemas/tokenGenerated'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/userToRegister'
+        description: Data used to generate token for user registration
+  /send-push:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - push
+      summary: Push notification to specific users.
+      operationId: sendPush
+      description: Push notifications to specific users
+      responses:
+        '200':
+          description: Successfully sent push notification
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - result
+                  - errors
+                properties:
+                  result:
+                    $ref: '#/components/schemas/pushSent'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/pushToSend'
+        description: Data used to send push notifications
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AuthToken:
+      type: object
+      required:
+        - token
+        - user
+      properties:
+        token:
+          type: string
+          example: eyJ0eXAiOiJKV1QiLCJhbGciOi
+        user: 
+          $ref: '#/components/schemas/UserData'
+    UserData:
+      type: object
+      required:
+        - _id
+        - firstName
+        - lastName
+        - username
+        - jobNumber
+        - email
+        - leadId
+        - phoneNumber
+        - secondaryPhoneNumber
+        - created
+        - updated
+        - claims
+        - oneSignalUserToken
+        - oneSignalUserId
+      properties:
+        _id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        firstName:
+          type: string
+          example: john
+        lastName:
+          type: string
+          example: does
+        userName:
+          type: string
+          example: johndoe
+        jobNumber:
+          type: string
+          example: ABC123
+        email:
+          type: string
+          example: johndoe@sample.com
+        leadId:
+          type: number
+          example: 123456
+        phoneNumber:
+          type: string
+          example: "6025551234"
+        secondaryPhoneNumber:
+          type: string
+          example: "6025551234"
+        created:
+          type: string
+          example: "2018-06-24T17:45:12.980Z"
+        updated:
+          type: string
+          example: "2018-06-24T17:45:12.980Z"
+        claims:
+          type: array
+          items:
+            type: string
+            example: "user"
+        oneSignalUserToken:
+          type: array
+          items:
+            type: string
+            example: "7660b075708364b354ffad..."
+        oneSignalUserId:
+          type: array
+          items:
+            type: string
+            example: "84b910f0-2a76-4050-85a4-641f99e862e4"
+    UpdateUserData:
+      type: object
+      properties:
+        jobNumber:
+          type: string
+          example: ABC123
+        leadId:
+          type: string
+          example: 123456
+        email:
+          type: string
+          example: johndoe@sample.com
+        firstName:
+          type: string
+          example: john
+        lastName:
+          type: string
+          example: doe
+        phoneNumber:
+          type: string
+          example: (602) 931-0000
+        secondaryPhoneNumber:
+          type: string
+          example: (602) 931-0000
+        oneSignalUserId:
+          type: array
+          items:
+            type: string
+            example: "26d59878-1a6b-4bae-a1ef"
+        oneSignalUserToken:
+          type: array
+          items:
+            type: string
+            example: "3a96bf28388ff285"
+    UserLogin:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          example: johndoe@gmail.com
+        password:
+          type: string
+          example: letmein!
+    userSettings:
+      type: object
+      required:
+        - _id
+        - jobNumber
+        - email
+        - leadId
+        - oneSignalUserId
+        - oneSignalUserToken
+        - settings
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        jobNumber:
+          type: string
+          example: ABC123
+        email:
+          type: string
+          example: johndoe@sample.com
+        leadId:
+          type: number
+          example: 123456
+        oneSignalUserId:
+          type: array
+          items:
+            type: string
+            example: "26d59878-1a6b-4bae-a1ef...."
+        oneSignalUserToken:
+          type: array
+          items:
+            type: string
+            example: "3a96bf28388ff285"
+        settings:
+          $ref: '#/components/schemas/Settings'
+    Settings:
+      required:
+        - email
+        - push
+      properties:
+        email:
+          $ref: '#/components/schemas/EmailSettings'
+        push:
+          $ref: '#/components/schemas/PushSettings'
+      type: object
+    EmailSettings:
+      required:
+        - detailedEmails
+        - reminderEmails
+        - disabled
+      properties:
+        detailedEmails:
+          type: boolean
+          example: true
+        reminderEmails:
+          type: boolean
+          example: true
+        disabled:
+          type: boolean
+          example: true
+      type: object
+    PushSettings:
+      required:
+        - jobAlerts
+        - jobNotifications
+        - messages
+        - payments
+      properties:
+        jobAlerts:
+          type: boolean
+          example: true
+        jobNotifications:
+          type: boolean
+          example: true
+        messages:
+          type: boolean
+          example: true
+        payments:
+          type: boolean
+          example: true
+      type: object
+    pushSent:
+      type: object
+      required:
+        - id
+        - recipients
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        recipients:
+          type: number
+          example: 1
+    pushToSend:
+      type: object
+      required:
+        - contents
+        - headings
+        - userIds
+      properties:
+        contents:
+          type: object
+          required:
+            - en
+          properties:
+            en:
+              type: string
+              example: This is the notification body
+        headings:
+          type: object
+          required:
+            - en
+          properties:
+            en:
+              type: string
+              example: This is the notification title
+        userIds:
+          type: array
+          items:
+            type: string
+            example: UserIdGUUID
+    user:
+      type: object
+      required:
+        - _id
+        - firstName
+        - lastName
+        - username
+        - jobNumber
+        - email
+        - leadId
+        - created
+        - updated
+      properties:
+        _id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        firstName:
+          type: string
+          example: john
+        lastName:
+          type: string
+          example: doe
+        username:
+          type: string
+          example: johndoe
+        jobNumber:
+          type: string
+          example: ABC123
+        email:
+          type: string
+          example: john@doe.com
+        leadId:
+          type: string
+          example: 123456
+        created:
+          type: string
+          example: "2018-05-07T14:09:22.890Z"
+        updated:
+          type: string
+          example: "2018-05-07T14:09:22.890Z"
+    tokenGenerated:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          example: eyJ0eXAiOiJKV1QiLCJhbGciOi
+    userToRegister:
+      type: object
+      required:
+        - jobPortal
+        - firstName
+        - lastName
+        - email
+        - jobNumber
+        - leadId
+      properties:
+        jobPortal:
+          type: boolean
+          example: true
+        firstName:
+          type: string
+          example: "John"
+        lastName:
+          type: string
+          example: "Smith"
+        email:
+          type: string
+          example: "jsmith@email.com"
+        leadId:
+          type: string
+          example: "290027"
+        jobNumber:
+          type: string
+          example: "BT190002"

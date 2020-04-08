@@ -1,0 +1,921 @@
+penapi: "3.0.0"
+# Added by API Auto Mocking Plugin
+# Note: this can be safely removed.
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/giovannicuriel/cadastro/1.0.0
+  - description: Development environment @ AWS
+    url: https://virtserver.swaggerhub.com/giovannicuriel/cadastro/1.0.0
+info:
+  description: |
+    This API contains all features related to user registration.
+  version: "1.0.0"
+  title: Registration API
+  termsOfService: 'http://swagger.io/terms/'
+  contact:
+    email: giovanni.santos@somospi.com.br
+  license:
+    name: Private
+    url: ''
+tags:
+  - name: user-data
+    description: User data
+paths:
+  /v1/account:
+    post:
+      tags:
+        - user-data
+      summary: Adds a new account into the system
+      description: |
+        Adding a new account by this endpoint will create a bare minimum user
+        account registration. Its contents are yet to be confirmed by the user via a
+        registration process. All other registration operations are performed
+        only after user confirms all its data.
+      operationId: inputUserData
+      requestBody:
+        description: The user data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreRegistration' 
+      responses:
+        '200':
+          description: User data was successfully imported
+        '500':
+          description: An error occurred while importing user data.
+  /v1/account/{cpf}:
+    get:
+      tags:
+        - user-data
+      summary: Retrieves user data  
+      operationId: retrieveUserData
+      parameters:
+        - name: cpf
+          in: path
+          description: User CPF (unique)
+          required: true
+          schema:
+            $ref: "#/components/schemas/CPF"
+          example: '111.222.333-44'
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserData'
+        '404':
+          description: User not found
+  /v1/account/{cpf}/status:
+    get:
+      tags:
+        - user-data
+      summary: Retrieves user registration status
+      operationId: retrieveRegistrationStatus
+      parameters:
+        - name: cpf
+          in: path
+          description: User CPF (unique)
+          required: true
+          schema:
+            $ref: "#/components/schemas/CPF"
+          example: '111.222.333-44'
+      responses:
+        '200':
+          description: User registration status was found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRegistrationStatus'
+              examples:
+                registeredUser:
+                  value: { status: 'completo', statusMacro: 'Ativo', email: 'teste@teste.com'}
+                  description: Example of registered user
+                blockedUser:
+                  value: { status: 'completo', statusMacro: 'Bloqueio', motivo: 'PLD' }
+                  description: Example of blocked user
+                incompleteUser:
+                  value: { status: 'incompleto', etapaCadastro: 'Tela Documentos', statusMacro: 'Pendentes', motivo: 'Aguardando finalização' }
+                  description: Example of incomplete user
+        '404':
+          description: User not found
+  /v1/account/{cpf}/invite:
+    get:
+      tags:
+        - b2b
+        - user-invite
+      summary: User invite sent by a B2B parnter
+      parameters:
+        - name: cpf
+          in: path
+          description: User CPF (unique)
+          required: true
+          schema:
+            $ref: "#/components/schemas/CPF"
+          example: '112.223.334-56'
+      responses:
+        '200':
+          description: All user invites (including rejected, accepted and opened.)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInvite"
+        '500':
+          description: If there is any internal error.
+    post:
+      tags:
+        - b2b
+        - user-invite
+      summary: Add new user invite
+      parameters:
+        - name: cpf
+          in: path
+          description: User CPF (unique)
+          required: true
+          schema:
+            $ref: "#/components/schemas/CPF"
+          example: '112.223.334-56'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInviteRequest"
+      responses:
+        '201':
+          description: The user invite just created (including all generated IDs and relevant dates)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserInvite"
+        '500':
+          description: If there is any internal error.
+  /v1/account/{cpf}/invite/partner/{partnerId}:
+    delete:
+      tags:
+        - b2b
+        - user-invite
+      summary: Remove all invites from a particular partner
+      parameters:
+        - name: cpf
+          in: path
+          description: User CPF (unique)
+          required: true
+          schema:
+            $ref: "#/components/schemas/CPF"
+          example: '112.223.334-56'
+        - name: partnerId
+          in: path
+          description: Partner ID
+          required: true
+          schema:
+            type: string
+          example: 'cd664184-aff6-4fe9-ad23-7aab57679423'
+      responses:
+        '200':
+          description: All user invites were removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    example: 'invites were successfully removed'
+        '404':
+          description: If there is no open invites.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    example: 'no invite for that partner was found'
+        '500':
+          description: If there is any internal error.
+    patch:
+      tags:
+        - b2b
+        - user-invite
+      summary: Update a user invite (with user response)
+      parameters:
+        - name: cpf
+          in: path
+          description: User CPF (unique)
+          required: true
+          schema:
+            $ref: "#/components/schemas/CPF"
+          example: '112.223.334-56'
+        - name: partnerId
+          in: path
+          description: Partner ID
+          required: true
+          schema:
+            type: string
+          example: 'cd664184-aff6-4fe9-ad23-7aab57679423'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - ACCEPTED
+                    - REJECTED
+                  description: User response to the invite
+      responses:
+        '201':
+          description: Updated invite
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserInvite"
+        '404':
+          description: If there is no open invites.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    example: 'no unanswered invite for that partner was found'
+        '500':
+          description: If there is any internal error.
+
+components:
+  schemas:
+    CPF:
+      type: string
+      pattern: '^[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}$'
+      example: "111.222.333-44"
+    UserInvite:
+      allOf: 
+        - $ref: "#/components/schemas/UserInviteRequest"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              description: Invite unique ID
+              readOnly: true
+            creationDate:
+              type: string
+              format: date-time
+              description: Invite creation date
+              readOnly: true
+            responseDate:
+              type: string
+              format: date-time
+              description: Invite response date
+              readOnly: true
+            status:
+              type: string
+              enum:
+                - OPEN
+                - ACCEPTED
+                - REJECTED
+              description: Invite status
+    UserInviteRequest:
+      type: object
+      properties:
+        partnerId:
+          type: string
+          description: Partner ID
+          example: 6aa06499-4398-4dd5-a149-5db3e6255e04
+        partnerName:
+          type: string
+          description: Partner name
+          example: Wolfram Investments DTVM
+      required:
+        - partnerId
+        - partnerName
+    BankAccount:
+      type: object
+      properties:
+        nomeConta:
+            type: string
+            description: Alias for this account
+            example: 'Nubank'
+        nomeTitular:
+            type: string
+            description: First owner of this account
+            example: 'José Maria de Sá Pereira'
+        cpfTitular:
+            type: string
+            description: First owner CPF
+            example: '111.222.333-44'
+        nomeTitular2:
+            type: string
+            description: Second owner of this account
+            example: 'Carlos Antônio Vaz de Souza'
+        cpfTitular2:
+            type: string
+            description: Second owner CPF
+            example: '556.723.843-56'
+        coTitular:
+            type: boolean
+            description: Flag indicating whether this user is second owner
+            example: false
+        tipo:
+            type: string
+            description: Account type
+            enum:
+              - Conta-corrente
+              - Conta-poupança
+            example: Conta-corrente
+        codigoBanco:
+            type: string
+            description: Global bank code
+            example: '033'
+        nomeBanco:
+            type: string
+            description: Bank name
+            example: '033 - Santander'
+        agencia:
+            type: string
+            description: Financial center code
+            example: '1238'
+        numeroConta:
+            type: string
+            description: Account number (with verification digit)
+            example: '588220603'
+        contaConjunta:
+            type: boolean
+            description: Flag indicating whether this is a shared account.
+            example: true
+        status:
+            type: string
+            description: Account registration status
+            enum:
+             - Closed
+             - Paid out 
+             - Open
+             - On Hold 
+             - Pending
+             - Charge-off
+             - Declined
+             - Lost
+             - Withdrawn
+             - Active
+             - Expired
+             - Cancelled
+             - Conta Válida 
+             - Em Processamento
+    ThirdParty:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Partner ID. This is a free-form string
+          example: 'Super Partner'
+        terceiro:
+          type: boolean
+          description: Flag indicating whether this is an external partner or not
+          example: false  
+    Fatca:
+      type: object
+      properties:
+        contaMovimentadaProcurador:
+          type: boolean
+        cpfProcurador:
+          type: string
+          pattern: '^[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}$'
+          example: "111.222.333-44"
+          description: |
+            This MUST be not the same CPF as user's CPF.
+        incluirOperadorConta:
+          type: boolean
+        cpfOperador:
+          type: string
+          pattern: '^[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}$'
+          example: "111.222.333-44"
+          description: |
+            This MUST be not the same CPF as user's CPF.
+        usPerson:
+          type: boolean
+        possuiITINouSsn:
+          type: boolean
+          description: |
+            This property is valid only if usPerson is true. If set to true,
+            then user has ITIN or SSN. Otherwise, the reason why the user has
+            no such documents must be described in `justificativa` field.
+        justificativa:
+          type: string
+          description: |
+            Reason why user has no ITIN or SSN
+        numeroITINouSSN:
+          type: string
+          description: Number of ITIN or SSN
+        residenciaOutroPais:
+          type: boolean
+          description: This should be true if user resides abroad.
+        naoPossuoNIF:
+          type: boolean
+          description: |
+            This indicates whether user resides abroad and has no NIF. This is
+            only valid if `residenciaOutroPais` is true
+        justificativaNIF:
+          type: string
+          description: |
+            Reason why user has no NIF. This is only valid if `naoPossuoNIF` is
+            true.
+        nif:
+          type: string
+        paisFatca:
+          type: string
+        politicamenteExposta:
+          type: boolean
+        vinculadoPi:
+          type: boolean
+    UserWealth:
+      type: object
+      properties:
+        naoPossuiPatrimonio:
+          type: boolean
+        patrimonioAutomoveis:
+          type: number
+          minimum: 0
+          maximum: 100
+        patrimonioImoveis:
+          type: number
+          minimum: 0
+          maximum: 100
+        patrimonioInvestimentos:
+          type: number
+          minimum: 0
+          maximum: 100
+        patrimonioOutros:
+          type: number
+          minimum: 0
+          maximum: 100
+        valorPatrimonio:
+          type: number
+          minimum: 1
+    UserPhoneNumber:
+      type: object
+      properties:
+        numTelefoneMovel:
+          type: string
+          pattern: "^\\([0-9]{2}\\)\\s[0-9]{5}-[0-9]{4}$"
+          example: "(29) 84293-5789"
+          description: This number must be long distance code around parenthesis
+            followed by a 5-digit number, a dash, and 4-digit number.
+        numTelefoneFixo:
+          type: string
+          pattern: "^\\([0-9]{2}\\)\\s[0-9]{4}-[0-9]{4}$"
+          example: "(29) 4293-5789"
+          description: This number must be long distance code around parenthesis
+            followed by a 4-digit number, a dash, and 4-digit number.
+    UserPersonalDocument:
+      type: object
+      properties:
+        tipoDocumento:
+          type: string
+          enum:
+            - RG
+            - CNH
+            - Outros
+          example: RG
+        nomeDocumentoOutros:
+          type: string
+          example: 'RNE'
+          description: |
+            This property is only necessary when 'Outros' is selected.
+        tipoDocumentoOutros:
+          type: string
+          example: 'Outro tipo de documento'
+          description: |
+            This property is only necessary when 'Outros' is selected.
+        numeroDocumento:
+          type: string
+          example: '663.886.4'
+        estadoEmissor:
+          type: string
+          example: 'MG'
+        dataEmissao:
+          type: string
+          format: Date
+          example: '2018-10-05'
+          description: |
+            This property MUST be in the past but after user's birthday.
+        orgaoEmissor:
+          type: string
+          example: 'SSP-MG'
+    Address:
+      type: object
+      properties:
+        cidade:
+          type: string
+          example: "Rio Branco"
+        pais:
+          type: string
+          example: "Brasil"
+        cep:
+          type: string
+          example: "69900-412"
+        estado:
+          type: string
+          example: "AC"
+        rua:
+          type: string
+          example: "Travessa Alagoas I"
+        complemento:
+          type: string
+          example: 'Fundos'
+        codigoCidade:
+          type: string
+          example: '356774'
+        numero:
+          type: number
+          example: 19
+        bairro:
+          type: string 
+          example: "Cambuí"
+    UserAddress:
+      type: object
+      properties:
+        tipoEndereco:
+          type: string
+          enum:
+            - Residencial
+            - Comercial
+            - Caixa
+            - Escritório
+            - Fábrica
+            - Depósito
+            - Outros
+            - Cobrança
+            - Sede
+            - Matriz
+            - Filial
+          example: 'Residencial'
+        residencial:
+          $ref: "#/components/schemas/Address"
+        correspondencia:
+          $ref: "#/components/schemas/Address"
+        endCorrespondenciaResidencial:
+          type: boolean
+          example: true
+    UserOccupation:
+      type: object
+      properties:
+        profissaoPessoa:
+          type: string
+          description: |
+            The values accepted in this list follows the occupation list from
+            SINACOR. If the user has another occupation, then this attribute
+            should be set to 'Others' and 'profissaoOutros' should be set
+            accordingly.
+        trabalhaAtualmente:
+          type: boolean
+        areaDeAtuacao:
+          type: string
+          description: |
+            This is not mandatory for user registrations. This will be
+            automatically filled after user is registered.
+        empresaOndeTrabalha:
+          type: string
+          description: |
+            This is only valid if `trabalhaAtualmente` flag is set. This is a
+            free-form property. No consideration about its format or content is
+            made.
+        profissaoOutros:
+          type: string
+          description: |
+            This is a free-form occupation status. No considerations are made
+            on this property.
+    UserNationality:
+      type: object
+      properties:
+        nacionalidade:
+          type: string
+          enum:
+            - Brasileiro Nato
+            - Brasileiro Naturalizado
+            - Estrangeiro
+          example: 'Brasileiro Nato'
+        estadoOndeNasceu:
+          type: string
+          example: MG
+          description: |
+            This property is only valid when 'Brasileiro Nato' is selected.
+            Otherwise, this property won't be considered.
+        cidadeOndeNasceu:
+          type: string
+          example: Itajubá
+          description: |
+            This property is only valid when 'Brasileiro Nato' is selected.
+            Otherwise, this property won't be considered.
+        paisOndeNasceu:
+          type: string
+          example: Holanda
+          description: |
+            This property is only valid when 'Brasileiro Naturalizado' or
+            'Estrangeiro' is selected.
+    BasicUserInfo:
+      type: object
+      properties:
+        nome:
+            type: string
+            example: "José"
+            description: |
+              This parameter should be an alphabetic string. No numbers, no
+              special characters - such as arrows or emojis, etc. Unicode
+              characters accepted by \p{L} regular expression command will be
+              also accepted.
+            externalDocs:
+              url: https://stackoverflow.com/a/15806080
+              description: Using regular expression to validate unicode names.
+        sobrenome:
+            type: string
+            example: "da Silva"
+            description: |
+              As noted in `nome` parameter, this should accept unicode strings,
+              but no special characters, such as emojis or blocks.
+            externalDocs:
+              url: https://stackoverflow.com/a/15806080
+              description: Using regular expression to validate unicode names.
+        apelido:
+            type: string
+            example: "Zezinho"
+        email:
+            type: string
+            format: email
+        cpf:
+            type: string
+            pattern: '^[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}$'
+            example: "111.222.333-44"
+        nomeMae:
+            type: string
+            example: "Maria da Silva"
+            description: |
+              Mother's name should have, at least, two words - a name and a last
+              name. No consideration about name length is made. This property
+              will accept any type of unicode string that regular expression
+              \p{L} also accepts.
+            externalDocs:
+              url: https://stackoverflow.com/a/15806080
+              description: Using regular expression to validate unicode names.
+        nomePai:
+            type: string
+            example: "João da Silva"
+            description: |
+              Father's name should have, at least, two words - a name and a last
+              name. No consideration about name length is made. This property
+              will accept any type of unicode string that regular expression
+              \p{L} also accepts.
+            externalDocs:
+              url: https://stackoverflow.com/a/15806080
+              description: Using regular expression to validate unicode names.
+        estadoCivil:
+            type: string
+            enum:
+              - C
+              - D
+              - I
+              - S
+              - V
+              - M
+            description: |
+              Options may be "C" for married, "D" for separated, "I" for
+              divorced, "S" for single, "V" for widowed and "M" for stable
+              relationship.
+        genero:
+            type: string
+            enum:
+              - M
+              - F
+            example: "M"
+        dataDeAniversario:
+            type: string
+            format: date
+            description: |
+              This parameter can't be a future date, for obvious reasons. The
+              definition of "now" is given by the server. Also, it MUST not
+              be prior to 1900-01-01.
+        cpfConjugeOuCompanheiro:
+            type: string
+            pattern: '^[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}$'
+            example: "111.222.333-44"
+        nomeConjugeOuCompanheiro:
+            type: string
+            example: "Maria da Silva"
+    UserRegistrationStatus:
+      type: object
+      properties:
+        statusMacro:
+          type: string
+          description: Estado atual da conta
+          enum:
+          - Ativo
+          - Bloqueio
+          - Cadastro Inválido
+          - Inativo/Encerrado
+          - Pendentes
+          example: 'Bloqueio'
+        motivo:
+          type: string
+          description: Motivo da recusa/bloqueio da conta
+          enum:
+          - Aguardando finalização
+          - Análise PLD
+          - Atualização cadastral
+          - Blacklist
+          - Cadastro duplicado
+          - CPF inválido
+          - CPF Irregular
+          - Documento Ilegível
+          - Documento Inválido
+          - Enviar CNH
+          - Enviar comprovante de residência
+          - Enviar RG
+          - Espólio
+          - Incompleto
+          - Pendencia de documentos
+          - PLD
+          - Quebra de relacionamento
+          - Repetir Ativo
+          - Repetir Inativo/Encerrado
+          - Sem interesse no momento
+          - Testes
+          - Documento reenviado
+          example: 'CPF Irregular'
+        status:
+          type: string
+          description: Estado geral da conta
+          enum:
+          - completo
+          - incompleto
+          example: 'completo'
+        etapaCadastro:
+          type: string
+          enum:
+          - Tela Cadastro
+          - Tela CPF
+          - Tela CPF Prox
+          - Tela Endereço
+          - Tela Documentos
+          - Tela Contato
+          - Tela SMS
+          - Tela Politicamente exposto
+          - Tela Profissão
+          - Tela Patrimonio
+          - Tela Fátca
+          - Tela Bancárias
+          - Tela Bancárias Meu Banco
+          - Tela Validar dados
+          - Cliente
+          example: 'Cliente'
+        email:
+          type: string
+          example: 'teste@teste.com'
+    UserData:
+      type: object
+      properties:
+        infoBasica:
+          $ref: '#/components/schemas/BasicUserInfo'
+        profissao:
+          $ref: '#/components/schemas/UserOccupation'
+        nacionalidade:
+          $ref: '#/components/schemas/UserNationality'
+        endereco: 
+          $ref: '#/components/schemas/UserAddress'
+        documento:
+          $ref: '#/components/schemas/UserPersonalDocument'
+        telefone:
+          $ref: '#/components/schemas/UserPhoneNumber'
+        renda:
+          type: object
+          properties:
+            rendaMensal:
+              type: number
+              format: float
+              minimum: 30.00
+        patrimonio:
+          $ref: '#/components/schemas/UserWealth'
+        fatca:
+          $ref: '#/components/schemas/Fatca'
+        termos:
+          type: object
+          properties:
+            termoAdesao:
+              type: string
+            termoCondicoesGerais:
+              type: string
+            termoRegrasParametro:
+              type: string
+            termosDeclaracaoResidencia:
+              type: string
+            termosServico:
+              type: string
+        dadosBancarios:
+          type: array
+          items:
+            $ref: "#/components/schemas/BankAccount"
+        services:
+          $ref: '#/components/schemas/Services'
+        suitability:
+          $ref: '#/components/schemas/UserRiskProfile'
+    UserRiskProfile:
+      type: object
+      properties:
+        scores:
+          type: object
+          properties:
+            scoreNivelConhecimento:
+              type: integer
+              format: int32
+              minimum: 0
+              maximum: 5
+            scoreObjetivos:
+              type: integer
+              format: int32
+              minimum: 0
+              maximum: 5
+            scoreRisco:
+              type: integer
+              format: int32
+              minimum: 0
+              maximum: 5
+            scoreSituacaoFinanceira:
+              type: integer
+              format: int32
+              minimum: 0
+              maximum: 5
+        token:
+          type: string
+          format: uuid
+        perfil:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 5
+        dataProcessamento:
+          type: string
+          format: date-time
+        versaoQuestionario:
+          type: string
+          example: Alpha
+    Services:
+      type: object
+      properties:
+        cco:
+          type: object
+          properties:
+            codigo:
+              type: string
+              example: '0'
+            ctanum:
+              type: string
+              example: '675335307'
+            mensagem:
+              type: string
+              example: 'SUCESSO'
+        cuc:
+          type: object
+          properties:
+            codigoFilial:
+              type: string
+              example: "0000"
+            codigoPessoa:
+              type: string
+              example: "2288"
+        oms:
+          type: object
+        sinacor:
+          type: object
+        suitability:
+          type: object
+    UserPreRegistration:
+      type: object
+      properties:
+        infoBasica:
+          $ref: '#/components/schemas/BasicUserInfo'
+        profissao:
+          $ref: '#/components/schemas/UserOccupation'
+        nacionalidade:
+          $ref: '#/components/schemas/UserNationality'
+        endereco:
+          $ref: '#/components/schemas/UserAddress'
+        documento:
+          $ref: '#/components/schemas/UserPersonalDocument'
+        telefone:
+          $ref: '#/components/schemas/UserPhoneNumber'
+        renda:
+          type: object
+          properties:
+            rendaMensal:
+              type: number
+              format: float
+              minimum: 30.00
+        patrimonio:
+          $ref: '#/components/schemas/UserWealth'
+        fatca:
+          $ref: '#/components/schemas/Fatca'
+        parceiro:
+          $ref: '#/components/schemas/ThirdParty'

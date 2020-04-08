@@ -1,0 +1,2704 @@
+openapi: 3.0.0
+
+servers:
+  - description: Dev Server
+    url: https://localhost:3000/api/v1/
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/twohat/inbox/2.1.2
+
+info:
+  title: Inbox API
+  description: >
+    Manage work for human moderators by adding, checking out and completing work items.
+    Store User Generated Content to the database.  This will store it twice, once in short-term
+    storage in it's exact form amd again in long term storage in it's redacted and pseudonymized
+    form
+  version: "2.1.2"
+  contact:
+    email: support@twohat.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+
+security: []
+  #- ApiKeyAuth: []
+
+tags:
+  - name: SIFT_ADMIN
+    description: Limit to the SIFT ClientId
+
+paths:
+
+  /inbox:
+    get:
+      operationId: getInbox
+      summary: list all queues with pending and total counts
+      description: Will list all the queues that are available and the count of items in them
+      responses:
+        '200':
+          description: A list of content items
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 1000
+                items:
+                  $ref: '#/components/schemas/Queue'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /inbox/client/{clientId}:
+
+    delete:
+      operationId: deleteClient
+      summary: Delete a client and all their data
+      description: |
+        This will delete all data we have on a client. Typically called after a client leaves
+      tags:
+        - SIFT_ADMIN
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema:
+            type: integer
+          description: The unique identifier for this client
+      responses:
+        '200':
+          description: All content for the client has been removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Queue'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /inbox/queue/{queueId}:
+
+    get:
+      operationId: getQueue
+      summary: Get the queue
+      description: A Queue is a group of work to be done by moderators.  This will get the queue and it's information
+      parameters:
+        - in: path
+          name: queueId
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this queue
+      responses:
+        '200':
+          description: The content queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Queue'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      operationId: putQueue
+      summary: Add a queue
+      description: A Queue is a group of work to be done by moderators.  This will create or update a queue.
+      tags:
+        - SIFT_ADMIN
+      parameters:
+        - in: path
+          name: queueId
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this queue
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Queue'
+        description: The queue to be added
+      responses:
+        '200':
+          description: The content queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Queue'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      summary: Delete a queue
+      description: This will remove this queue and if there are content inside it then that too.  If you are just trying to remove content then you should use ./items API endpoint.
+      operationId: deleteQueue
+      tags:
+        - SIFT_ADMIN
+      parameters:
+        - in: path
+          name: queueId
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this queue
+      responses:
+        '200':
+          description: The content queue has been scheduled to be removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Queue'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /inbox/queue/rulesAudit/items:
+
+    post:
+      operationId: addRuleAuditItems
+      summary: Add rules to be audited
+      description: |
+        Our primary purpose is as a content filter.  To achieve this you can manually add word patterns to the system.  But how do you know if it is creating errors like false positives
+
+        To handle that we count how many times that rule is used in your new content and on key points like when it is said 100 times we bring it up here for review.  In this way you know you are working on the most impactful things first.  If the rule has already been added it will increase it's priority.
+
+        Note that the request accepts an array of minimum 1 to maximum 100 items so you can do a bulk insert.
+      parameters:
+        - $ref: '#/components/parameters/updateDataParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 100
+              items:
+                $ref: '#/components/schemas/RuleAuditInput'
+      responses:
+        '201':
+          description: Example was created
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  success:
+                    type: boolean
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      operationId: getRuleAuditItems
+      summary: Search for items in this queue
+      description: Lookup items for this queue
+      parameters:
+        - $ref: '#/components/parameters/AIParam'
+        - $ref: '#/components/parameters/checkoutParam'
+        - $ref: '#/components/parameters/clientIdsParam'
+        - $ref: '#/components/parameters/contentIdsParam'
+        - $ref: '#/components/parameters/notContentIdsParam'
+        - $ref: '#/components/parameters/dateCreatedEndParam'
+        - $ref: '#/components/parameters/dateCreatedStartParam'
+        - $ref: '#/components/parameters/dateReviewedStartDateParam'
+        - $ref: '#/components/parameters/dateReviewedEndDateParam'
+        - $ref: '#/components/parameters/checkoutAvailableParam'
+        - $ref: '#/components/parameters/doneByModeratorIdParam'
+        - $ref: '#/components/parameters/languageParam'
+        - $ref: '#/components/parameters/limitParam'
+        #- $ref: '#/components/parameters/maxPriorityParam'
+        #- $ref: '#/components/parameters/minPriorityParam'
+        #- $ref: '#/components/parameters/onCountParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/sortByParam'
+        - $ref: '#/components/parameters/tagsParam'
+        - $ref: '#/components/parameters/textParam'
+        - $ref: '#/components/parameters/topicsParam'
+        - $ref: '#/components/parameters/unresolvedCommentsParam'
+        #- $ref: '#/components/parameters/ruleParam'
+        #- $ref: '#/components/parameters/userIdsParam'
+      responses:
+        '200':
+          description: A list of work items from the queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleAuditOutput'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      operationId: deleteRuleAuditItems
+      summary: Delete all items in this queue
+      description: As this may take some time and this server may be scaled out we will setup a long running task to accomplish this and that will restart if doesn't finish.
+      parameters:
+        - $ref: '#/components/parameters/clientIdParam'
+        - $ref: '#/components/parameters/languagesParam'
+      responses:
+        '200':
+          description: The content queue has been scheduled to be removed.
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'          
+
+  /inbox/queue/examples/items:
+
+    post:
+      operationId: addExamples
+      summary: Add examples of text to be reviewed
+      description: |
+        Add an example of short text for Quality Control.  This will later be used for
+
+        - Regression Tests | Once you mark an item as wrong and it is fixed you will want to be able to run it through the filter again to ensure the errors are not reproduced by creating future rules.
+        - Examples | When reviewing things like spelling mistakes or rules it makes a huge difference to look at how words are really used.  For instance one might think that "made out" is sexual till they see the example "made out of plastic"
+        - Training AI | We can improve the filter in the future by training AI to predict the risks and labels you provide and in so doing combine a rules based approach you can control with the fuzzy matching of AI to find similar things.
+      parameters:
+        - $ref: '#/components/parameters/updateDataParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 100
+              items:
+                $ref: '#/components/schemas/ExampleInput'
+      responses:
+        '201':
+          description: Example was created
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      operationId: getExamples
+      summary: Search for or checkout items in this queue
+      description: Lookup items for this queue
+      parameters:
+        - $ref: '#/components/parameters/AIParam'
+        - $ref: '#/components/parameters/checkoutParam'
+        - $ref: '#/components/parameters/clientIdsParam'
+        - $ref: '#/components/parameters/contentIdsParam'
+        - $ref: '#/components/parameters/notContentIdsParam'
+        - $ref: '#/components/parameters/dateCreatedEndParam'
+        - $ref: '#/components/parameters/dateCreatedStartParam'
+        - $ref: '#/components/parameters/dateReviewedStartDateParam'
+        - $ref: '#/components/parameters/dateReviewedEndDateParam'
+        - $ref: '#/components/parameters/checkoutAvailableParam'
+        - $ref: '#/components/parameters/doneByModeratorIdParam'
+        - $ref: '#/components/parameters/languageParam'
+        - $ref: '#/components/parameters/limitParam'
+        #- $ref: '#/components/parameters/maxPriorityParam'
+        #- $ref: '#/components/parameters/minPriorityParam'
+        #- $ref: '#/components/parameters/onCountParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/sortByParam'
+        - $ref: '#/components/parameters/tagsParam'
+        - $ref: '#/components/parameters/textParam'
+        - $ref: '#/components/parameters/topicsParam'
+        - $ref: '#/components/parameters/unresolvedCommentsParam'
+        #- $ref: '#/components/parameters/ruleParam'
+        #- $ref: '#/components/parameters/userIdsParam'
+      responses:
+        '200':
+          description: A list of work items from the queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExampleOutput'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    
+    delete:
+      operationId: deletExampleItems
+      summary: Delete all items in this queue
+      description: As this may take some time and this server may be scaled out we will setup a long running task to accomplish this and that will restart if doesn't finish.
+      parameters:
+        - $ref: '#/components/parameters/clientIdParam'
+        - $ref: '#/components/parameters/languagesParam'
+      responses:
+        '200':
+          description: The content queue has been scheduled to be removed.
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'      
+
+  /inbox/queue/spelling/items:
+
+    post:
+      operationId: addSpelling
+      summary: Add a common spelling mistake for review
+      description: |
+        One of the greatest impacts early on when you use the system is spelling mistakes, most often words unique to your product.  We automatically count which words are used and how often.  If it is frequently misspelled we will escalate it here.
+      parameters:
+        - $ref: '#/components/parameters/updateDataParam'
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 100
+              items:
+                $ref: '#/components/schemas/SpellingMistakeInput'
+      responses:
+        '201':
+          description: Example was created
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  success:
+                    type: boolean
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      operationId: getSpelling
+      summary: Search for or checkout items in this queue
+      description: Lookup items for this queue
+      parameters:
+        - $ref: '#/components/parameters/AIParam'
+        - $ref: '#/components/parameters/checkoutParam'
+        - $ref: '#/components/parameters/clientIdsParam'
+        - $ref: '#/components/parameters/contentIdsParam'
+        - $ref: '#/components/parameters/notContentIdsParam'        
+        - $ref: '#/components/parameters/dateCreatedEndParam'
+        - $ref: '#/components/parameters/dateCreatedStartParam'
+        - $ref: '#/components/parameters/dateReviewedStartDateParam'
+        - $ref: '#/components/parameters/dateReviewedEndDateParam'
+        - $ref: '#/components/parameters/checkoutAvailableParam'
+        - $ref: '#/components/parameters/doneByModeratorIdParam'
+        - $ref: '#/components/parameters/languageParam'
+        - $ref: '#/components/parameters/limitParam'
+        #- $ref: '#/components/parameters/maxPriorityParam'
+        #- $ref: '#/components/parameters/minPriorityParam'
+        #- $ref: '#/components/parameters/onCountParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/sortByParam'
+        - $ref: '#/components/parameters/tagsParam'
+        - $ref: '#/components/parameters/textParam'
+        - $ref: '#/components/parameters/topicsParam'
+        - $ref: '#/components/parameters/unresolvedCommentsParam'
+        #- $ref: '#/components/parameters/ruleParam'
+        #- $ref: '#/components/parameters/userIdsParam'
+      responses:
+        '200':
+          description: A list of work items from the queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpellingMistakeOutput'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      operationId: deleteSpellingItems
+      summary: Delete all items in this queue
+      description: As this may take some time and this server may be scaled out we will setup a long running task to accomplish this and that will restart if doesn't finish.
+      parameters:
+        - $ref: '#/components/parameters/clientIdParam'
+        - $ref: '#/components/parameters/languagesParam'
+      responses:
+        '200':
+          description: The content queue has been scheduled to be removed.
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  
+  /inbox/queue/task/items:          
+    post:
+      operationId: addTaskItems
+      summary: Add a task for the team to do work on
+      description: |
+        You can create a task to work on.  For example split all the sexting words into sexual body parts and sexual activity.
+      parameters:
+        - $ref: '#/components/parameters/updateDataParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 100
+              items:
+                $ref: '#/components/schemas/TaskInput'
+      responses:
+        '201':
+          description: Task was created
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  success:
+                    type: boolean
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      operationId: getTaskItems
+      summary: Search for tasks in the queue
+      description: Lookup items for this queue
+      parameters:
+        #- $ref: '#/components/parameters/AIParam'
+        #- $ref: '#/components/parameters/checkoutParam'
+        - $ref: '#/components/parameters/clientIdsParam'
+        - $ref: '#/components/parameters/contentIdsParam'
+        - $ref: '#/components/parameters/notContentIdsParam'
+        - $ref: '#/components/parameters/dateCreatedEndParam'
+        - $ref: '#/components/parameters/dateCreatedStartParam'
+        - $ref: '#/components/parameters/dateReviewedStartDateParam'
+        - $ref: '#/components/parameters/dateReviewedEndDateParam'
+        - $ref: '#/components/parameters/checkoutAvailableParam'
+        - $ref: '#/components/parameters/doneByModeratorIdParam'
+        - $ref: '#/components/parameters/assignedToModeratorIdParam'
+        - $ref: '#/components/parameters/languageParam'
+        - $ref: '#/components/parameters/limitParam'
+        #- $ref: '#/components/parameters/maxPriorityParam'
+        #- $ref: '#/components/parameters/minPriorityParam'
+        #- $ref: '#/components/parameters/onCountParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/sortByParam'
+        - $ref: '#/components/parameters/tagsParam'
+        - $ref: '#/components/parameters/textParam'
+        #- $ref: '#/components/parameters/topicsParam'
+        - $ref: '#/components/parameters/unresolvedCommentsParam'
+        #- $ref: '#/components/parameters/ruleParam'
+        #- $ref: '#/components/parameters/userIdsParam'
+      responses:
+        '200':
+          description: A list of work items from the queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskOutput'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      operationId: deleteTaskItems
+      summary: Delete all items in this queue
+      description: As this may take some time and this server may be scaled out we will setup a long running task to accomplish this and that will restart if doesn't finish.
+      parameters:
+        - $ref: '#/components/parameters/clientIdParam'
+        - $ref: '#/components/parameters/languagesParam'
+      responses:
+        '200':
+          description: The content queue has been scheduled to be removed.
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError' 
+          
+  /inbox/queue/usernames/items:
+
+    post:
+      operationId: AddUseranmes
+      summary: Add usernames to be reviewed
+      description: |
+        Add an example of a username for Quality Control.  This will later be used for
+
+        - Regression Tests | Once you mark an item as wrong and it is fixed you will want to be able to run it through the filter again to ensure the errors are not reproduced by creating future rules.
+        - Training AI | We can improve the filter in the future by training AI to predict the risks and labels you provide and in so doing combine a rules based approach you can control with the fuzzy matching of AI to find similar things.
+      parameters:
+        - $ref: '#/components/parameters/updateDataParam'
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 100
+              items:
+                $ref: '#/components/schemas/UsernameInput'
+      responses:
+        '201':
+          description: Username was created
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  success:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      operationId: getUsernames
+      summary: Search for or checkout items in this queue
+      description: Lookup items for this queue
+      parameters:
+        - $ref: '#/components/parameters/AIParam'
+        - $ref: '#/components/parameters/checkoutParam'
+        - $ref: '#/components/parameters/clientIdsParam'
+        - $ref: '#/components/parameters/contentIdsParam'
+        - $ref: '#/components/parameters/notContentIdsParam'
+        - $ref: '#/components/parameters/dateCreatedEndParam'
+        - $ref: '#/components/parameters/dateCreatedStartParam'
+        - $ref: '#/components/parameters/dateReviewedStartDateParam'
+        - $ref: '#/components/parameters/dateReviewedEndDateParam'
+        - $ref: '#/components/parameters/checkoutAvailableParam'
+        - $ref: '#/components/parameters/doneByModeratorIdParam'
+        - $ref: '#/components/parameters/languageParam'
+        - $ref: '#/components/parameters/limitParam'
+        #- $ref: '#/components/parameters/maxPriorityParam'
+        #- $ref: '#/components/parameters/minPriorityParam'
+        #- $ref: '#/components/parameters/onCountParam'
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/sortByParam'
+        - $ref: '#/components/parameters/tagsParam'
+        - $ref: '#/components/parameters/textParam'
+        - $ref: '#/components/parameters/topicsParam'
+        - $ref: '#/components/parameters/unresolvedCommentsParam'
+        #- $ref: '#/components/parameters/ruleParam'
+        #- $ref: '#/components/parameters/userIdsParam'
+      responses:
+        '200':
+          description: A list of work items from the queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsernameOutput'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    
+    delete:
+      operationId: deleteUsernameItems
+      summary: Delete all items in this queue
+      description: As this may take some time and this server may be scaled out we will setup a long running task to accomplish this and that will restart if doesn't finish.
+      parameters:
+        - $ref: '#/components/parameters/clientIdParam'
+        - $ref: '#/components/parameters/languagesParam'
+      responses:
+        '200':
+          description: The content queue has been scheduled to be removed.
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'                
+          
+  /inbox/queue/{queueId}/items:
+
+    delete:
+      operationId: deleteItems
+      summary: Delete all items in this queue
+      description: As this may take some time and this server may be scaled out we will setup a long running task to accomplish this and that will restart if doesn't finish.
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/clientIdParam'
+        - $ref: '#/components/parameters/languagesParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessSimple'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /inbox/queue/{queueId}/items/checkout:
+    delete:
+      operationId: deleteAllCheckouts
+      summary: Release all checkouts on a queue
+      description: |
+        Sometimes people go for coffee and still have items checked out.  When you get down to a few items left this can be a problem.  This will free up all non-expiring checkouts.
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/clientIdParam'
+        - $ref: '#/components/parameters/languagesParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessWithTotalResult'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /inbox/queue/{queueId}/items/{contentId}/text:
+
+    put:
+      operationId: redactItem
+      summary: Update the text of an item
+      description: |
+        Update the content.  Typically used for redacting.  It is limited in what you can do.
+      
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/contentIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                text:
+                  type: string
+                  description: You can change the text to another field
+                redacted:
+                  type: boolean
+                  description: This updates the item to state it has been redacted so can be used for long term storage.
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessWithTotalResult'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /inbox/queue/{queueId}/items/{contentId}/checkout:
+
+    put:
+      operationId: updateItemCheckout
+      summary: Renew a checkout on an item
+      description: |
+        When you first get an item if checkout=True you will have checked it out.  You should be showing a warning when the checkout is almost expired.  Calling this API will allow you to renew it.
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/contentIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Checkout'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessWithTotalResult'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      operationId: getItemCheckout
+      summary: Get the checkout for this item
+      description: Get the checkout for this item
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/contentIdParam'
+      responses:
+        '200':
+          description: A list of work items from the queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checkout'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      operationId: deleteItemCheckout
+      summary: Abandon a checkout
+      description: Remove a checkout assigned to you without doing any work.
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/contentIdParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessWithTotalResult'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /inbox/queue/{queueId}/items/{contentId}/comments:
+
+    get:
+      operationId: listCommentsForContentId
+      summary: List comments on this content item
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/contentIdParam'
+      responses:
+        '200':
+          description: A list of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      operationId: addComment
+      summary: Add a comment to this content item
+      description: |
+        Comments are ways to leave a note to say why a person made the decision they did.  Or it could be a question or answer trying to get help on an item.
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/contentIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentInput'
+      responses:
+        '201':
+          description: This comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /inbox/queue/{queueId}/items/{contentId}/comments/{commentId}:
+
+    get:
+      operationId: getComment
+      summary: Get a comment
+      description: Get a comment by Id for this item
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/contentIdParam'
+        - $ref: '#/components/parameters/commentIdParam'
+      responses:
+        '200':
+          description: This comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      operationId: updateComment
+      summary: Update a comment
+      description: |
+        Comments are ways to leave a note to say why a person made the decision they did.  Or it could be a question or answer trying to get help on an item.
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/contentIdParam'
+        - $ref: '#/components/parameters/commentIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Comment'
+      responses:
+        '200':
+          description: This comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      operationId: deleteComment
+      summary: Delete a comment
+      description: Remove a comment
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/contentIdParam'
+        - $ref: '#/components/parameters/commentIdParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccessWithTotalResult'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /inbox/queue/{queueId}/items/{contentId}/comments/{commentId}/resolved:
+
+    put:
+      operationId: resolveComment
+      summary: Mark a comment as resolved (or reopen)
+      description: |
+        Comments can be marked as needing to be answered.
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/contentIdParam'
+        - $ref: '#/components/parameters/commentIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                resolved:
+                  $ref: '#/components/schemas/Resolved'
+      responses:
+        '200':
+          description: This comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /inbox/queue/{queueId}/items/{contentId}/decision:
+
+    post:
+      operationId: itemDone
+      summary: Add your decision to this content item
+      description: |
+        This will 
+         - Release your checkout on the item
+         - Record how long you spent on it (should be total items on screen / seconds since started minus any pauses)
+         - record what the current risk is when reviewed (if applicable)
+         - record what tags you set it as (including the decision you made where ban user, agree, disagree, delete content are all tags)
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/contentIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Decision'
+      responses:
+        '201':
+          description: Decision was added
+          content:
+            application/json:
+              schema:
+                additionalProperties: false
+                properties:
+                  success:
+                    type: boolean
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  # /inbox/queue/{queueId}/items/{contentId}/review/{reviewId}:
+  #   get:
+  #     summary: Get a review on an item
+  #     description: Get the checkout for this item
+  #     operationId: getItemReview
+  #     parameters:
+  #     - $ref: '#/components/parameters/queueIdParam'
+  #     - $ref: '#/components/parameters/contentIdParam'
+  #     - in: path
+  #       name: reviewId
+  #       required: true
+  #       schema:
+  #         type: string
+  #       description: The unique identifier for the review
+  #     responses:
+  #       '200':
+  #         description: A list of work items from the queue
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: array
+  #               maxItems: 1000
+  #               items:
+  #                 $ref: '#/components/schemas/RuleAudit'
+  #       '204':
+  #         $ref: '#/components/responses/NoResults'
+  #       '400':
+  #         $ref: '#/components/responses/BadRequest'
+  #       '403':
+  #         $ref: '#/components/responses/NotAllowed'
+  #       '500':
+  #         $ref: '#/components/responses/ServerError'
+  #   delete:
+  #     summary: Delete a review
+  #     description: Remove a review done to an item.  Typically if you pressed back and then abandoned the review.  It may not be able to update your stats however.
+  #     operationId: deleteItemReview
+  #     parameters:
+  #     - $ref: '#/components/parameters/queueIdParam'
+  #     - $ref: '#/components/parameters/contentIdParam'
+  #     - in: path
+  #       name: reviewId
+  #       required: true
+  #       schema:
+  #         type: string
+  #       description: The unique identifier for the review
+  #     responses:
+  #       '200':
+  #         description: The checkout has been removed
+  #       '204':
+  #         $ref: '#/components/responses/NoResults'
+  #       '400':
+  #         $ref: '#/components/responses/BadRequest'
+  #       '403':
+  #         $ref: '#/components/responses/NotAllowed'
+  #       '500':
+  #         $ref: '#/components/responses/ServerError'
+
+  /inbox/queue/{queueId}/param/{paramId}:
+
+    put:
+      operationId: updateParam
+      summary: Add a custom param
+      description: |
+        You can customize some fields.  To get all the params use GET /inbox/queue/{queueId}
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/paramIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                value:
+                  $ref: '#/components/schemas/ParamValue'
+      responses:
+        '200':
+          description: item added
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      operationId: deleteParam
+      summary: Delete a param
+      description: Delete a param and use the default instead
+      parameters:
+        - $ref: '#/components/parameters/queueIdParam'
+        - $ref: '#/components/parameters/paramIdParam'
+      responses:
+        '200':
+          description: The param has been removed
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /inbox/user/{userId}:
+
+    delete:
+      operationId: deleteUser
+      summary: Delete a users data
+      description: |
+        This will delete all data we have on a user. This is recommended for GDPR and CCPA compliance around terms like right to be forgetten.  Probably what you want instead however is to pseudonymize all the data with a put request instead.
+
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this user
+      responses:
+        '200':
+          description: All content for the user has been scheduled to be removed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Queue'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      operationId: redactUser
+      summary: Redact a users data
+      description: |
+        This will redact and pseudonymize all data we have on a user. This is recommended for GDPR and CCPA compliance around terms like right to be forgetten.
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this user
+      responses:
+        '200':
+          description: All content for the user has been scheduled to be redacted.  This may take a while.  You can call GET /inbox/user/{userId} later to confirm it is all gone
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Queue'
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      operationId: getUserData
+      summary: Get a users data
+      description: |
+        This will retrieve all information on a user.  This is recommended for GDPR around right to access.  It can also be used if you are downloading a report to send in to the police around criminal activity.
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+          description: The unique identifier for this user
+      responses:
+        '200':
+          description: This will stream all the data we have on a user.  The data will come back as newline deliminated json file.  http://ndjson.org/
+          content:
+            application/x-ndjson:
+              schema:
+                type: array
+                items:
+                  type: object
+        '204':
+          $ref: '#/components/responses/NoResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/NotAllowed'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+
+  responses:
+    SuccessSimple:
+      description: the request executed successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                description: Was the request successful.  True means it worked with no errors
+                type: boolean
+                example: true                  
+    SuccessWithTotalResult:
+      description: the request executed successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                description: Was the request successful.  True means it worked with no errors
+                type: boolean
+                example: true                  
+              total: 
+                description: How many items where affected
+                type: number
+                example: 1    
+    SuccessWithCommentResult:
+      description: the request executed successfully
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                description: Was the request successful.  True means it worked with no errors
+                type: boolean
+                example: true                  
+              total: 
+                description: How many items where affected
+                type: number
+                example: 1  
+              comment:
+                $ref: '#/components/schemas/Comment'
+    BadRequest:
+      description: 'Validation failed on the request body, query, or params'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: An error has occurred on the server
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NoResults:
+      description: 'The request succeeded, but did not return any results'
+    NotAllowed:
+      description: >-
+        Attempted to access or update a resource that the user doesn't have
+        permission for
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Attempted access or update a resource that doesn't exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: Rate limited
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: No authorization token was present in the request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  parameters:
+    AIParam:
+      in: query
+      name: ai
+      description: Show items the AI predicts as useful because moderators in the past have taken an action on this items
+      style: form
+      schema:
+        type: array
+        items:
+          type: object
+          properties:
+            modelName:
+              description: The name of the model you want to test against
+              type: string
+              pattern: ^[a-zA-Z]+$
+              example: isGoodRule
+              
+            minPrediction:
+              type: integer
+              format: double
+              minimum: 0.0
+              maximum: 1.0
+              default: 0.0
+            maxPrediction:
+              type: integer
+              format: double
+              minimum: 0.0
+              maximum: 1.0
+              default: 1.0
+    checkoutParam:
+      in: query
+      name: checkout
+      description: Checkout this item for review
+      schema:
+        type: boolean
+    clientIdParam:
+      name: clientId
+      description: Show results for a given client.  Typically this is set for you by the internal system based on the API_KEY you are using.  However some clients are allowed to view other clients such as when they have a sandbox or when they are a large enterprise and have multiple clients they manage.  It will only allow you to view client data you have access to.
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+      in: query
+    contentIdsParam:
+      in: query
+      name: contentIds
+      description: Get these specific contentIds.  Frequently used when you use the Previous button.
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+    notContentIdsParam:
+      in: query
+      name: notContentIds
+      description: | 
+        Exclude these specific contentIds.  Originally designed so you can call checkout and pass in the item you are working on
+        right now and it will give you a different one.  The default checkout behaviour will assign the items you already have checked out 
+        (which is on your screen).
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string          
+    dateCreatedEndParam:
+      in: query
+      name: endDate
+      description: Show results occurring before the given date in unixtimestamp (milliseconds since Epoch)
+      required: false
+      schema:
+        type: integer
+        format: int64
+    dateCreatedStartParam:
+      in: query
+      name: startDate
+      description: Show results occurring after the given date in unixtimestamp (milliseconds since Epoch)
+      required: false
+      schema:
+        type: integer
+        format: int64
+    dateReviewedStartDateParam:
+      in: query
+      name: reviewedStartDate
+      description: Show results that where reviewed between given date in unixtimestamp (milliseconds since Epoch)
+      required: false
+      schema:
+        type: integer
+        format: int64
+    dateReviewedEndDateParam:
+      in: query
+      name: reviewedEndDate
+      description: Show results that where reviewed between given date in unixtimestamp (milliseconds since Epoch)
+      required: false
+      schema:
+        type: integer
+        format: int64
+    checkoutAvailableParam:
+      in: query
+      name: checkoutAvailable
+      description: Only show items where the item could be checked out by me.  This is the same as checkout=true but it does not check it out.
+      required: false
+      schema:
+        type: boolean
+    doneByModeratorIdParam:
+      in: query
+      name: doneByModeratorId
+      description: Only show work done by this moderatorId
+      required: false
+      schema:
+        $ref: '#/components/schemas/ModeratorId'
+
+    assignedToModeratorIdParam:
+     in: query
+     name: assignedToModeratorId
+     description: Show items assigned to this moderator
+     required: false
+     schema:
+       $ref: '#/components/schemas/ModeratorId'
+
+    languagesParam:
+      in: query
+      name: languages
+      description: Which languages does this apply to
+      style: form
+      example: 
+       - en
+       - fr
+      schema:
+        type: array
+        items:
+          description: ISO 2 char langauge code
+          type: string
+          example: en
+          minLength: 2
+          maxLength: 2
+          pattern: ^[a-z]{2}$
+              
+    languageParam:
+      in: query
+      name: language
+      description: Show results for the given language only.   This is the language used, could have been set by the user or detected by language id.
+      required: true
+      example: en
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 2
+        pattern: ^[a-z]{2}$
+
+    limitParam:
+      in: query
+      name: limit
+      description: Limit the number of results
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10000000
+        default: 1
+    maxPriorityParam:
+      in: query
+      name: maxPriority
+      description: You can set the priority of an item when you upload it.  If it is uploaded again it may go up depending on the queue configuration.
+      required: false
+      schema:
+        type: integer
+        format: int64
+    minPriorityParam:
+      in: query
+      name: minPriority
+      description: You can set the priority of an item when you upload it.  If it is uploaded again it may go up depending on the queue configuration.
+      required: false
+      schema:
+        type: integer
+        format: int64
+    offsetParam:
+      in: query
+      name: offset
+      description: |
+        Start the search from offset 0.  For instance if your using pagination page 2 would be on totalItemsPerPage*pageNum.
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    onCountParam:
+      in: query
+      name: onCount
+      description: Only show items that where flagged as needing review on X times.
+      schema:
+        type: array
+        items:
+          type: integer
+    queueIdParam:
+      in: path
+      name: queueId
+      required: true
+      example: rulesAudit
+      schema:
+        type: string
+      description: The unique identifier for this queue
+    contentIdParam:
+      in: path
+      name: contentId
+      required: true
+      schema:
+        type: string
+      description: The unique identifier for the content
+    commentIdParam:
+      in: path
+      name: commentId
+      required: true
+      schema:
+        type: string
+      description: The unique identifier for the comment
+    paramIdParam:
+      in: path
+      name: paramId
+      required: true
+      schema:
+        type: string
+      description: A custom configuration for a client
+      example: ITEMS_PER_PAGE
+    sortByParam:
+      in: query
+      name: sortBy
+      description: |
+        What do you want to sort the results by
+
+        - FIFO | First in First Out, the same order they came in
+        - Recent | Handle the most recent items first
+        - Priority | By priority (if applicable).  For quality control like spelling it is the times used so it will show the items misspelled 1000 times before the ones 500 times.  For reported users it will be the ones where multiple users have reported the same user.
+        - AI | Deal with the higest AI predictions first that predict this should be relevant for me.  (NOTE: to search by AI you must also have set the ai.modelName in the first item of the parameter ai)
+      required: false
+      schema:
+        type: string
+        enum:
+          - FIFO
+          - Recent
+          - Priority
+          - AI
+    tagsParam:
+      in: query
+      name: tags
+      description: Only find items matching a certain tag
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+    textParam:
+      in: query
+      name: text
+      description: Text search.  This uses fuzzy matching.
+      required: false
+      schema:
+        type: string
+    topicsParam:
+      in: query
+      name: topics
+      description: Only show items for these topics (topicId) between risk level minRisk and maxRisk
+      required: false
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: object
+          properties:
+            topicId:
+              type: integer
+              minimum: 0
+              maximum: 32
+            riskLevels:
+              type: array
+              items:
+                type: integer
+                minimum: 0
+                maximum: 7
+    clientIdsParam:
+      in: query
+      name: clientIds
+      description: Show results for a given client.  Typically this is set for you by the internal system based on the API_KEY you are using.  However some clients are allowed to view other clients such as when they have a sandbox or when they are a large enterprise and have multiple clients they manage.  It will only allow you to view client data you have access to.
+      
+        You can set this to -1 to apply to all clients you have access to.
+      required: false
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: integer
+          format: int32
+          minimum: -1
+    ruleParam:
+      in: query
+      name: rule
+      description: A particular rule was used.  You can use items like {{mild_bullying_word}} which may not show in the original text.  This typically only finds rules where they are risk 3 or higher OR the rule was created recently.
+      required: false
+      schema:
+        type: string
+    unresolvedCommentsParam:
+      in: query
+      name: unresolvedComments
+      description: Will see if there are any unresolved comments for you and show only those
+      schema:
+        type: boolean
+      example: True
+      
+    updateDataParam:
+      in: query
+      name: updateData
+      description: If the item already exists should we update the values of the body element
+      schema:
+        type: boolean      
+
+    userIdsParam:
+      in: query
+      name: userIds
+      description: List of UserIds.  useful for looking at the conversation of two people such as in grooming.  It will return all the content from those users listed.
+      schema:
+        type: array
+        items:
+          type: string
+  schemas:
+    ClientId:
+      description: The unique id for this client
+      type: integer
+      format: int64
+      minimum: -1
+      maximum: 2147483647
+      example: 999
+
+    ClientIdOptional:
+      description: | 
+        (Optional) The unique if for the client you want to update.  If empty it will set it to the client in your API key
+        however if you are on Enterprise or Enterprise Site Licence you can have a sandbox or subClients.  A sandbox is an 
+        environment where you can test the rules and you can use this to push data to your sandbox.  A subclient is another install
+        of CommunitySift that allows you to have different rules, triggers, policies, queues but inherit the defaults from your 
+        parent organization.  This allows you to have consistently.  So in the subclient case you can push items to queues to any of
+        the clientIds you control
+      type: integer
+      format: int64
+      example: 
+      
+    ReviewsNeeded:
+      description: |
+        We allow for multiple moderators to review the same item so we can cross validate important decisions.  If this value is 0 then it means it is done (which would be same as status == DONE)
+      type: integer
+      format: int64
+      example: 1
+      
+    Priority:
+      description: |
+        How important is this item to get to, can be used for
+        sorting the queues so it breaks out of First in First out
+        (FIFO).  Defaults to 0 to give FIFO
+      type: integer
+      format: int64
+      example: 0
+
+    ModeratorId:
+      description: The unique identifier for the moderator who has this checkout.  Note the checkout may be historic so check the expires date.
+      type: string
+      example: first.last@company.com
+
+    LanguageCode:
+      description: ISO 2 char langauge code
+      type: string
+      example: en
+      minLength: 2
+      maxLength: 2
+      pattern: ^[a-z]{2}$
+
+    Error:
+      type: object
+      description: There was an error in processing this request
+      required:
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
+    Queue:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: The screen visible name
+          example: Common Phrases
+        filters:
+          type: array
+          description: List of filter sections available
+          items:
+            type: string
+            example: TextSearch
+        queueId:
+          type: string
+          description: unique identifier for internal use
+          example: commonPhrases
+        # default:
+        #   type: boolean
+        #   description: Make this queue available to all clients.
+        # clientId:
+        #   $ref: '#/components/schemas/ClientId'
+        schema:
+          description: These are the fields required for this queue.  In OpenAPI format.
+          type: object
+        deduplicationStrategy:
+          $ref: '#/components/schemas/DeduplicationStrategy'
+        params:
+          description: You can customize some queues with UI elements and settings.  Each queue lists what can be customized here
+          type: array
+          items:
+            $ref: '#/components/schemas/Param'
+        tags:
+          $ref: '#/components/schemas/QueueTags'
+        hooks:
+          $ref: '#/components/schemas/Hooks'
+    QueueTags:
+      type: object
+      description: these are the tags that this item can be labelled as and how they interact with each other
+      additionalProperties: false
+      properties:
+        contentType:
+          description: What kind of content can this be
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueTag'
+        labelGroups:
+          description: Definition for which tags can be applied for labelling the queue items
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueLabelGroup'
+    QueueLabelGroup:
+      type: object
+      additionalProperties: false
+      required:
+        - options
+      properties:
+        ifTag:
+          type: string
+          description: This label group is only required if the specified tag is on the queue item
+        multiple:
+          type: boolean
+          description: If true, then multiple options are allowed, otherwise, only one of the options is allowed
+        defaultValue:
+          description: The default value for this label if none is found
+        options:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              name:
+                type: string
+              value:
+                type: string
+              description:
+                type: string
+    QueueTag:
+      type: object
+      description: A single tag that can be chosen
+      additionalProperties: false
+      properties:
+        name:
+          description: The label to show on the screen
+          type: string
+        description: 
+          description: The help or alternate text to show to explain what this is for
+          type: string
+        value:
+          description: The tag code to store in the system
+          type: string
+    QueueLabels:
+      type: object
+      description: Human labels that can be added to this item
+      additionalProperties: false
+      properties:
+        type:
+          description: | 
+            What kind of tag is this
+            
+            enum - A list of values.  Can only be one. Works like a radio button.
+            tag - A single tag
+            tags - A list of tags that you can choose
+            
+          type: string
+          enum:
+           - enum
+           - tag
+           - tags
+        name:
+          description: The label to show on the screen
+          type: string
+        description: 
+          description: The help or alternate text to show to explain what this is for
+          type: string
+        hooks:
+          description: Set this item to true when the moderator takes another actions
+          type: array
+          items:
+            type: string
+        value:
+          description: The tag code to store in the system
+          type: string
+        values:
+          description: If the item is nested you can add more items here
+          type: array
+          items: 
+            $ref: '#/components/schemas/QueueLabels'
+          
+    Hooks:
+      type: object
+      description: In some cases you will want to call the filter or an AI piece ahead of saving the queue.
+      additionalProperties: false
+      properties:
+        lookupUser:
+          description: Will look up a user.  Will check for the userId in user.userId then userId if it does not exist.  It will populate the object user
+          type: boolean
+        lookupReportingUser:
+          description: Will look up a user.  Will check for the userId in reportingUser.userId then userId if it does not exist.  It will populate the object reportingUser.  This is the user who reported another user.
+          type: boolean
+        lookupContext:
+          description: Will look up the context (ex. server and room OR channel OR postId).  Will check for the context in context.name then context if it does not exist.  It will populate the object context
+          type: boolean
+        lookupContent:
+          description: How many lines of context should we load from the content logs.  Default is 0 which skips this step.  It will look up the user based on the context.name + the user.userId + timestamp fields + text.text.  If any of those fields is missing it will search without it and use the last x (this number) lines.  It will populate the array context with all the content log results
+          type: integer
+        languageId:
+          description: Will look up the language.  Will check for text in text.text and if not present use text.  Will set queueItem.language.language and queueItem.language.detected overriding any current language hard-coded.
+          type: boolean
+        queueAI:
+          description: |
+            List all the AI models you want to call here.  You can trump a model with a client specific model by setting queue.param where name == 'thisModelName' so individual clients can override it with custom models trained as a professional service. This is called last after the other fields have been loaded as it will use them to make predictions.  It will set the queueItem.predictions array to the results.
+
+            The following formats will be used
+             - modelName (can this model for all languages)
+             - modelName_{language} (will replace {language} with the value in queueItem.language.language)
+          type: array
+          items:
+            type: string
+    DeduplicationStrategy:
+      type: object
+      description: The default behaviour is to just add the items which is also the fastest.  If they are new then they are queued.  If they are already in the system and dealt with close them.
+      additionalProperties: false
+      properties:
+        fields:
+          description: For de-duplication list the fields in order
+          type: array
+          items:
+            type: string
+        reopenAfterXSeconds:
+          description: If the item is a duplicate and it is already closed then only reopen it after so many seconds since it was closed.  The default is 0 which means do not reopen.  For reported content we recommend 24 hours which is 86400 seconds.
+          type: integer
+          example: 0
+        prioritize:
+          description: If an item is repeated should it increase in priority?  This would make it no longer a FIFO (First in first out) out like queue where items go out in the order they went in.  A practical use case is for reported content by userId.  You would set the deduplication on the field reportedUserId and then tell it to increase the priority.  The users that are reported more often will be at the front of the workload allowing you to deal with your most serious offenders first.
+          type: boolean
+          example: False
+
+    RuleAuditOutput:
+      type: object
+      description: 'Results from a get queue item request.'
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+          description: Total number of items that match the search.  You can use this to show how many items remain.  So you may have only requested 10 items but a 1000 are still available.
+          example: 1000
+        items:
+          type: array
+          items:
+            type: object
+            description: | 
+              The queue item is broken into two main items, the data which is the payload or unique data to show on the screen to audit
+              and the contentItems
+            properties:
+              data:
+                $ref: '#/components/schemas/RuleAuditData'
+              queueItem:
+                $ref: '#/components/schemas/QueueItem'
+            
+
+    RuleAuditInput:
+      type: object
+      additionalProperties: false
+      description: |
+        Our primary purpose is as a content filter.  To achieve this you can manually add word patterns to the system.  But how do you know if it is creating errors like false positives. 
+        To handle that we count how many times that rule is used in your new content and on key points like when it is said 100 times we bring it up here for review.  In this way you know you are working on the most impactful things first.  If the rule has already been added it will increase it's priority.
+      required:
+        - language
+        - data
+        - type
+      properties:
+        language:
+          $ref: '#/components/schemas/LanguageCode'
+        clientId:
+          $ref: '#/components/schemas/ClientIdOptional' 
+        priority:
+          $ref: '#/components/schemas/Priority'
+        reviewsNeeded:
+          $ref: '#/components/schemas/ReviewsNeeded' 
+        topics:
+          $ref: '#/components/schemas/Topics'
+        data:
+          $ref: '#/components/schemas/RuleAuditData'
+        type:
+          description: |
+            What kind of rule audit is this for
+
+            - FIX_THIS | We recommend that when you filter an item you show on the screen of the user who tried to enter it that it was filtered.  They can press a button on your app to submit it as a false positive.  Likewise users that see chat can report them as false negatives.  Both are fix this.  We analyze what words and rules are used and on the xth time it is used (typically 10, 25, 50, 100, etc) we falg it for you to review.
+            - RECENT_RULE | Whenever a rule is changed we return it in every UGC line we get for the next 14 days.  We count how many times it gets used and on the xth time we bring it up for you to review.  When you start with us this will review all the higher risk rules as well so you can check for false positives.
+          type: string
+          enum: [RECENT_RULE, RULE_AUDIT, FIX_THIS]
+          example: ON_X
+        decision:
+         $ref: '#/components/schemas/Decision'
+          
+    RuleAuditData:
+      type: object
+      description: |
+        Our primary purpose is as a content filter.  To achieve this you can manually add word patterns to the system.  But how do you know if it is creating errors like false positives. 
+        To handle that we count how many times that rule is used in your new content and on key points like when it is said 100 times we bring it up here for review.  In this way you know you are working on the most impactful things first.  If the rule has already been added it will increase it's priority.
+      additionalProperties: true
+      required:
+       - text
+      properties:
+        onCount:
+          type: integer
+          description: This rule was triggered after it was viewed x times
+          example: 100
+        text:
+          type: string
+          description: The rule that was triggered
+          example: badword
+                 
+          
+    SpellingMistakeOutput:
+      type: object
+      description: 'Results from a get queue item request.'
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+          description: Total number of items that match the search.  You can use this to show how many items remain.  So you may have only requested 10 items but a 1000 are still available.
+          example: 1000
+        items:
+          type: array
+          items:
+            type: object
+            description: | 
+              The queue item is broken into two main items, the data which is the payload or unique data to show on the screen to audit
+              and the contentItems
+            properties:
+              data:
+                $ref: '#/components/schemas/SpellingMistakeData'
+              queueItem:
+                $ref: '#/components/schemas/QueueItem'
+
+    SpellingMistakeInput:
+      type: object
+      additionalProperties: false
+      required:
+        - language
+        - data
+      properties:
+        language:
+          $ref: '#/components/schemas/LanguageCode'
+        clientId:
+          $ref: '#/components/schemas/ClientIdOptional'
+        priority:
+          $ref: '#/components/schemas/Priority'          
+        reviewsNeeded:
+          $ref: '#/components/schemas/ReviewsNeeded'             
+        data:
+          $ref: '#/components/schemas/SpellingMistakeData'
+        decision:
+         $ref: '#/components/schemas/Decision'
+          
+    SpellingMistakeData:
+      type: object
+      description: |
+        The most common errors when you begin are spelling mistakes.
+      additionalProperties: false
+      required:
+       - text
+      properties:
+        onCount:
+          type: integer
+          description: This rule was triggered after it was mispelled x times
+          example: 100
+        text:
+          type: string
+          description: The word that is misspelled
+          example: badword
+
+    TaskOutput:
+      type: object
+      description: 'Results from a get queue item request.'
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+          description: Total number of items that match the search.  You can use this to show how many items remain.  So you may have only requested 10 items but a 1000 are still available.
+          example: 1000
+        items:
+          type: array
+          items:
+            type: object
+            description: | 
+              The queue item is broken into two main items, the data which is the payload or unique data to show on the screen to audit
+              and the contentItems
+            properties:
+              data:
+                $ref: '#/components/schemas/TaskData'
+              queueItem:
+                $ref: '#/components/schemas/QueueItem'
+            
+
+    TaskInput:
+      type: object
+      additionalProperties: false
+      description: |
+        This is a task to work on .
+      required:
+        - language
+        - clientId
+      properties:
+        language:
+          $ref: '#/components/schemas/LanguageCode'
+        clientId:
+          $ref: '#/components/schemas/ClientIdOptional' 
+        priority:
+          $ref: '#/components/schemas/Priority'
+        # reviewsNeeded:
+        #   $ref: '#/components/schemas/ReviewsNeeded' 
+        # topics:
+        #   $ref: '#/components/schemas/Topics'
+        data:
+          $ref: '#/components/schemas/TaskData'
+        # type:
+        #   description: |
+        #     What kind of rule audit is this for
+
+        #     - FIX_THIS | We recommend that when you filter an item you show on the screen of the user who tried to enter it that it was filtered.  They can press a button on your app to submit it as a false positive.  Likewise users that see chat can report them as false negatives.  Both are fix this.  We analyze what words and rules are used and on the xth time it is used (typically 10, 25, 50, 100, etc) we falg it for you to review.
+        #     - RECENT_RULE | Whenever a rule is changed we return it in every UGC line we get for the next 14 days.  We count how many times it gets used and on the xth time we bring it up for you to review.  When you start with us this will review all the higher risk rules as well so you can check for false positives.
+        #   type: string
+        #   enum: [RECENT_RULE, RULE_AUDIT, FIX_THIS]
+        #   example: ON_X
+        # decision:
+        # $ref: '#/components/schemas/Decision'
+          
+    TaskData:
+      type: object
+      description: |
+        This is for adding work such as filter changes to be done.
+      additionalProperties: true
+      required:
+       - task
+       - instructions
+      properties:
+        task:
+          type: string
+          description: The name of the task
+          example: Split {{sex_body_part}} to {{sex_body_part}} and {{ineundo_body_part}}
+        instructions:
+          type: string
+          description: A long form description of what you need done and why.
+          example: |
+             Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum
+        dueDate:
+          description: Unixtimestamp (milliseconds since Epoch) of when this item is due
+          type: integer
+          format: int64
+          example: 1577275200000
+          
+    ExampleOutput:
+      type: object
+      description: 'Results from a get queue item request.'
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+          description: Total number of items that match the search.  You can use this to show how many items remain.  So you may have only requested 10 items but a 1000 are still available.
+          example: 1000
+        items:
+          type: array
+          items:
+            type: object
+            description: | 
+              The queue item is broken into two main items, the data which is the payload or unique data to show on the screen to audit
+              and the contentItems
+            properties:
+              data:
+                $ref: '#/components/schemas/ExampleData'
+              queueItem:
+                $ref: '#/components/schemas/QueueItem'
+                
+    ExampleInput:
+      type: object
+      additionalProperties: false
+      required:
+        - language
+        - data
+        - type
+      properties:
+        language:
+          $ref: '#/components/schemas/LanguageCode'
+        clientId:
+          $ref: '#/components/schemas/ClientIdOptional'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        originalDate:
+          description: Unixtimestamp (milliseconds since Epoch) of when the item was originally said.  This is important for data retention when you import older data.
+          type: integer
+          format: int64
+          example: 1577402514000
+          
+        features:
+          description: Features to use to train AI, for internal sift use
+          type: object
+          additionalProperties: true
+        tags:
+          description: |
+            What tags are associated with this item
+
+            To add or remove a tag use the POST .../review API endpoint
+
+          type: array
+          example:
+            - ACTIONED
+          items:
+            type: string
+        type:
+          description: |
+            What kind of example is this
+
+            - FIX_THIS | We recommend that when you filter an item you show on the screen of the user who tried to enter it that it was filtered.  They can press a button on your app to submit it as a false positive.  Likewise users that see chat can report them as false negatives.  Both are fix this.  We analyze what words and rules are used and on the xth time it is used (typically 10, 25, 50, 100, etc) we falg it for you to review.
+            - COMMON | We run a script every night and count which are yesterdays most common examples.
+            - SAMPLE | We run a script every night and sample the data per topic per risk level to create a QA queue
+            - TRENDING_WORDS | Some of the words used in this are trending (used 10,25,50, etc times) and this is an example to go with it
+          type: string
+          enum: [FIX_THIS, COMMON, SAMPLE, TRENDING_WORDS]
+          example: COMMON             
+        reviewsNeeded:
+          $ref: '#/components/schemas/ReviewsNeeded'             
+        data:
+          $ref: '#/components/schemas/ExampleData'
+        decision:
+         $ref: '#/components/schemas/Decision'
+          
+    ExampleData:
+      type: object
+      description: |
+        A text message.  Could be a common phrase, a random sample for QA reasons or an escalated item
+      additionalProperties: false
+      required:
+       - text
+      properties:
+        text:
+          type: string
+          description: The example
+          example: you are a badword and not a very nice person
+            
+    UsernameOutput:
+      type: object
+      description: 'Results from a get queue item request.'
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+          description: Total number of items that match the search.  You can use this to show how many items remain.  So you may have only requested 10 items but a 1000 are still available.
+          example: 1000
+        items:
+          type: array
+          items:
+            type: object
+            description: | 
+              The queue item is broken into two main items, the data which is the payload or unique data to show on the screen to audit
+              and the contentItems
+            properties:
+              data:
+                $ref: '#/components/schemas/UsernameData'
+              queueItem:
+                $ref: '#/components/schemas/QueueItem'
+                
+    UsernameInput:
+      type: object
+      additionalProperties: false
+      required:
+        - language
+        - data
+        - type
+      properties:
+        language:
+          $ref: '#/components/schemas/LanguageCode'
+        clientId:
+          $ref: '#/components/schemas/ClientIdOptional'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        originalDate:
+          description: Unixtimestamp (milliseconds since Epoch) of when the item was originally said.  This is important for data retention when you import older data.
+          type: integer
+          format: int64
+          example: 1577402514000
+          
+        features:
+          description: Features to use to train AI, for internal sift use
+          type: object
+          additionalProperties: true
+        tags:
+          description: |
+            What tags are associated with this item
+
+            To add or remove a tag use the POST .../review API endpoint
+
+          type: array
+          example:
+            - ACTIONED
+          items:
+            type: string 
+        type:
+          description: |
+            What kind of example is this
+
+            - FIX_THIS | We recommend that when you filter an item you show on the screen of the user who tried to enter it that it was filtered.  They can press a button on your app to submit it as a false positive.  Likewise users that see chat can report them as false negatives.  Both are fix this.  We analyze what words and rules are used and on the xth time it is used (typically 10, 25, 50, 100, etc) we falg it for you to review.
+            - COMMON | We run a script every night and count which are yesterdays most common examples.
+            - SAMPLE | WE run a script every night and sample the data per topic per risk level to create a QA queue
+            - SAMPLE_ON_X | We run a script every night and sample usernames when the user has said their xth item.  If you set this number high you can 
+               audit long-standing members with the assumption that all the names are clean as they would have been reported by now.  You can also use this
+               when you don't call our username feature and just want to sample some names.
+          type: string
+          enum: [FIX_THIS, COMMON, SAMPLE, SAMPLE_ON_X]
+          example: COMMON             
+        reviewsNeeded:
+          $ref: '#/components/schemas/ReviewsNeeded'             
+        data:
+          $ref: '#/components/schemas/UsernameData'
+        decision:
+         $ref: '#/components/schemas/Decision'
+          
+    UsernameData:
+      type: object
+      description: |
+        A username
+      additionalProperties: false
+      required:
+       - text
+      properties:
+        text:
+          type: string
+          description: The username
+          example: StinkyFeet77
+
+    CommentDetails:
+      type: object
+      description: Counters about comments.  
+      additionalProperties: false
+      properties:
+        total:
+          type: integer
+          format: int64
+          example: 0
+        unresolved:
+          type: integer
+          format: int64
+          example: 0
+    Decision:
+      type: object
+      description: A Moderator Decision made to an item
+      additionalProperties: false
+      properties:
+        moderatorId:
+          $ref: '#/components/schemas/ModeratorId'
+        timestamp:
+          description: | 
+            OVERWRITTEN The time when this decision was recorded unixtime (in milliseconds since Epoch)
+            
+            Note that when you add a new item this field is overwritten with the current itme
+          type: integer
+          format: int64
+          example: 1577820684000
+        seconds:
+          description: How many seconds did they spent working on this item?  This should be the total items reviewed on this page divided by seconds spent.  You can pause the counter if they were inactive such as when they went for a coffee.  This will role into the moderators stats.   Client Side to allow for pausing but it reduces the authority of the stats for HR purposes as the moderator could taint it.
+          type: integer
+          format: int64
+          example: 3
+        tags:
+          description: What tags (action) did they add to the item
+          type: array
+          example:
+            - ACTIONABLE
+          items:
+            type: string
+        tagsRemoved:
+          description: Remove tags that others have set.
+          type: array
+          example: []
+          items:
+            type: string
+        correctTopics:
+          $ref: '#/components/schemas/Topics'
+        reviewedTopics:
+          $ref: '#/components/schemas/Topics'
+
+    Checkout:
+      type: object
+      additionalProperties: false
+      description: |
+        Each queue has a series of work that needs to be done.  As a moderator check out the next X items.  This will mean they will have a lock on those items so others can only READ them but cannot check them out at the same time.  This allows many moderators to work through the queue at the same time.
+
+        If you are submitting a new item leave this blank
+      properties:
+        moderatorId:
+          $ref: '#/components/schemas/ModeratorId'
+        expires:
+          description: Unixtimestamp (milliseconds since Epoch) of when it will expire.  After this date it is free to be checked out by others.
+          type: integer
+          format: int64
+          example: 1577402514000
+
+    Resolved:
+      description: Mark this item as requires an answer
+      type: boolean
+      example: False
+
+    Comment:
+      type: object
+      description: Moderators can leave comments and questions about an item.  This is a way to communicate with the SiftTeam about an item
+      additionalProperties: false
+      properties:
+        commentId:
+          description: the unique identifier for this comment
+          type: string
+          example: Z7QS_m8B5XL_Ld3fsGs6
+        dateCreated:
+          description: Unixtimestamp (milliseconds since Epoch) of when this comment was added
+          type: integer
+          format: int64
+          example: 1577402514000
+        text:
+          description: The message itself
+          type: string
+          example: 'How do you fix this?'
+        resolved:
+          $ref: '#/components/schemas/Resolved'
+        moderatorId:
+          $ref: '#/components/schemas/ModeratorId'
+        clientId:
+          $ref: '#/components/schemas/ClientId'
+        clientIdTo:
+          $ref: '#/components/schemas/ClientId'
+        contentId:
+          description: The id for this queue item
+          type: string
+          example: test_800_en_b444ac06613fc8d63795be9ad0beaf55011936ac
+
+    CommentInput:
+      type: object
+      description: Moderators can leave comments and questions about an item.  This is a way to communicate with the SiftTeam about an item
+      additionalProperties: false
+      properties:
+        text:
+          description: The message itself
+          type: string
+          example: 'How do you fix this?'
+        resolved:
+          $ref: '#/components/schemas/Resolved'
+        moderatorId:
+          $ref: '#/components/schemas/ModeratorId'
+        clientId:
+          $ref: '#/components/schemas/ClientId'
+        clientIdTo:
+          $ref: '#/components/schemas/ClientId'
+    QueueItem:
+      type: object
+      description: |
+        This has the metadata about this work item
+      additionalProperties: false
+      properties:
+        checkout:
+          $ref: '#/components/schemas/Checkout'
+        clientId:
+          $ref: '#/components/schemas/ClientId'
+        dateCreated:
+          description: Unixtimestamp (milliseconds since Epoch) of when this item was first made
+          type: integer
+          format: int64
+          example: 1577275200000
+        contentId:
+          description: The id for this queue so if you want to update it or modify it's subfields you will need this
+          type: string
+          example: test_800_en_b444ac06613fc8d63795be9ad0beaf55011936ac
+        # dateUpdated:
+        #   description: Unixtimestamp (milliseconds since Epoch) of when this item was last updated
+        #   type: integer
+        #   format: int64
+        #   example: 1577820862000
+        
+        decisions:
+          description: What moderator decisions where made on this item
+          type: array
+          items:
+            $ref: '#/components/schemas/Decision'
+        comments:
+          $ref: '#/components/schemas/CommentDetails'            
+        language:
+          $ref: '#/components/schemas/Language'
+        predictions:
+          description: FUTURE | Occasionally we may run AI on certain users to check for things like grooming, suidice, sextortion and other conversation items.  This will have any predictions that have been so far.
+          type: object
+          additionalProperties: {}
+          example:
+            isGoodRule: 0.67
+        priority:
+          description: How important is this item.  For example if it is reported content it will go up in priority each time it is added
+          type: integer
+          format: int64
+          example: 100
+        redacted:
+          type: object
+          description: If the item has been redacted we store some data here
+          properties:
+            redactedText:
+              type: boolean
+              description: This item has been manually redacted so can be kept for long term storage.
+              example: False
+            redactedUsername:
+              type: boolean
+              description: This item has been manually redacted so can be kept for long term storage.
+              example: False              
+            moderatorId:
+              $ref: '#/components/schemas/ModeratorId'
+            pseudonymizedDate:
+              description: Unixtimestamp (milliseconds since Epoch) when we should go through this item and redact and pseudonymize all the data for long term storage.  Set to 0 to keep the original.  If it has potential of grooming or a criminal activity you generally don't want to lose the record.  If it is under GDPR or CCPA right to be forgotten and you are not calling our api for right to be forgetten you likely want to set it to < 30 days so it automatically is pseudonymized prior to a typical acceptable wait period to do thier request.
+              type: integer
+              format: int64              
+        reviewsNeeded:
+          $ref: '#/components/schemas/ReviewsNeeded'
+        simplified:
+          description: |
+            If it was text and ran through CommunitySift it will use the simplified form here.  This is the actual rules used to 
+            determine the risk of the text.  So "HELLLOOOO!!!!" should become lowercase, without caps as a rule matches "helloo".
+            Likewise "you are ugly" should become "you are {{mild_bully_word}}" if a smart rule was used.  This also helps with search
+            as it fixes the spelling and allows you to find text that have rules.
+          type: string
+          example: badword
+        tags:
+          description: |
+            What tags are associated with this item
+
+            To add or remove a tag use the POST .../review API endpoint
+
+          type: array
+          example:
+            - ACTIONED
+          items:
+            type: string
+        topics:
+          $ref: '#/components/schemas/Topics'
+    Language:
+      type: object
+      description: "In order to understand text we need to know what language it is for. A request can be * for enable language detection.  Otherwise if the servers are divided into english, french, etc then use the language for the server.  If you don't know use the language the user has chosen for their UI"
+      additionalProperties: false
+      required:
+       - language
+      properties:
+        language:
+          $ref: '#/components/schemas/LanguageCode'
+        languageRequested:
+          type: string
+          description: '2 char iso_code that was the originally sent in language. * for use language detection'
+          example: en
+        detected:
+          type: object
+          additionalProperties: true
+          description: If language detection was called what languages did it predict.  The key is the 2 char ISO language code and the value is the prediction.
+          example:
+            en: 0.90
+            fr: 0.10
+          items:
+            $ref: '#/components/schemas/Prediction'
+    Param:
+      type: object
+      description: Custom setting for a client on a queue
+      additionalProperties: false
+      properties:
+        clientId:
+          $ref: '#/components/schemas/ClientId'
+        default:
+          type: boolean
+          description: Make this queue available to all clients.
+        name:
+          description: The name of the paramater
+          type: string
+          example: ITEMS_PER_PAGE
+        value:
+          $ref: '#/components/schemas/ParamValue'
+
+    ParamValue:
+      description: what you set it to.  Has to be a string.  So '10' instead of 10 and 'true' instead of True
+      type: string
+      example: '1'
+
+    Prediction:
+      type: object
+      description: An AI prediction
+      additionalProperties: false
+      properties:
+        name:
+          description: The name of the model that made this prediction.
+          type: string
+        prediction:
+          description: The prediction made.  A floating point number between 0.00 and 1.00
+          type: integer
+          format: double
+          minimum: 0
+          maximum: 1
+    ItemDoneRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        decision:
+          $ref: '#/components/schemas/Decision'
+        reviewedTopics:
+          $ref: '#/components/schemas/Topics'
+
+    Topics:
+      type: object
+      description: Our system classifies text, images, video into standardized risk topics. Instead of a traditional system that returns good or bad we rate each topic on a cross-industry standard of 0 to 7.  The lowest number 0 means it is really clean or there is no risk of this topic detected.  4 typically means spelling mistake, 5 mild, 6 bad, and 7 is typically extreme.  Note that not all topics are bad some like Site Specific Terms can be positive.
+      additionalProperties: false
+      example:
+        0: 5
+        5: 5
+      properties:
+        '0':
+          description: 'General Risk'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '1':
+          description: 'Bullying'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '2':
+          description: 'Fighting'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '3':
+          description: 'PII'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '4':
+          description: 'Dating and Sexting'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '5':
+          description: 'Vulgar'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '6':
+          description: 'Drugs and Alcohol'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '7':
+          description: 'Site Specific Terms'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '8':
+          description: 'Alarm'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '9':
+          description: 'Fraud'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '10':
+          description: 'Racist'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '11':
+          description: 'Religion'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '13':
+          description: 'Website'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '14':
+          description: 'Grooming'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '15':
+          description: 'Public Threats'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '16':
+          description: 'Real Name'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '17':
+          description: 'Terrorist Recruitment'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '18':
+          description: 'Subversive'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '19':
+          description: 'Sentiment'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '20':
+          description: 'Politics'
+          type: integer
+          minimum: 0
+          maximum: 7          
+        '27':
+          description: 'Custom1'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '28':
+          description: 'Custom2'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '29':
+          description: 'Custom3'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '30':
+          description: 'Custom4'
+          type: integer
+          minimum: 0
+          maximum: 7
+        '31':
+          description: 'Custom5'
+          type: integer
+          minimum: 0
+          maximum: 7

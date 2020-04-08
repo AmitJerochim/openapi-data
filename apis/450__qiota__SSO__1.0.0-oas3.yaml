@@ -1,0 +1,249 @@
+penapi: 3.0.0
+info:
+  version: "1.0.0-oas3"
+  title: SSO QIOTA OAuth2 Project
+  description: >-
+    This is an SSO of using OAuth2 Application Flow in a specification to
+    describe security to your API.
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    application:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: 'https://ssopp.qiota.com/api/v1'
+          scopes:
+            user: allows user resources
+            admin: allows admin resources
+security:
+  - BearerAuth:
+      - admin
+      - user
+paths:
+  /api/v1/accessToken:
+    post:
+      description: Send parameters to get access token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                grant_type:
+                  type: string
+                client_secret:
+                  type: string
+                scope:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                client_id:
+                  type: string
+            examples:
+              'GetToken User':
+                value: '{"grant_type": "password","client_secret" : "secret", "scope" : "*", "username":"qiotatest@qiota.com", "password":"QiotaTest2019", "client_id":"5dd508e80ff0f"}'
+              'GetToken Client':
+                value: '{"grant_type": "client_credentials", "client_secret": "secret", "scope": "*", "client_id": "5dd508e80ff0f"}'
+              'GetToken with authorization code':
+                value: '{"grant_type": "authorization_code", "client_secret": "secret", "client_id": "5dd508e80ff0f", "redirect_uri": "http://sso.sitea.com/", "code": "def50200eba0d2a1462af0b06e24cf3d785fe15a9b92c782ae99e7fc99d1026fd05167d08ded3f75041ecc32170688b17ec0b38e5fd7b2a168070683f98ba9e5aaab020b7ce3624a241266dc75ccc85625dd52e7ced7f9bfb30857a6e79b776e330f80a6742b2acf5616a6950bc067a2fcae0269276b0a545ec578894ccce9e98c07be8a795c5c8af30feeea57370b830e3ea8bd859ab95dd54893ce877ff16abfb92d4ad0024cb5387dbd1850f8ba1bcbd2b271f4c303b499b225f271fec18bfc1d74c8f11c18129b344eed29133d41dab5da81e624d4d2a80b839aef15dfbfcb9a155d837e54d73de4f3e49759d137b3857fedccab0b0e82ce5eead30d451417714affbd4fdeeb10776b995db9ab3a6c5bee55fb91a99fbfa37f22a2ae2202b6bff054fbcc32e0cec3a0d6b5833bd72462e0826119e9413b106c6f84b97b3349760fc9271f9e3e57f60be9fce604a9b9472cf18d2cec685bc31a2b3fd60c7a2d5772bf9a75"}'
+      responses:
+        '200':
+          description: return access token datas. the token's type is bearer. the bearer decoded contains the next data ("scopes", "roles", "refEditeur", "codeClient")
+        '401':
+          description: this error is returned if the user's informations are wrong
+        '400':
+          description: Functional error
+        '500':
+          description: SERVER ERROR
+  /api/v1/tokenInfo:
+    get:
+      description: Check if user is authenticated
+      security:
+        - BearerAuth: [admin, user]   # Use OAuth with a different scope
+      responses:
+        '200':
+          description: success, user is authenticated
+        '400':
+          description: Functional error
+  /api/v1/forgottenPassword:
+    post:
+      description: launch forgotten password processus
+      security:
+        - BearerAuth: [user] # Use OAuth with a different scope
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                email:
+                  type: string
+                id_template:
+                  type: integer
+                  description: mail's id to send
+            examples:
+              'forgottenPassword':
+                value: '{"email": "example@email.com", "id_template": 35}'
+      responses:
+        '200':
+          description: success,
+        '400':
+          description: Functional error
+  /api/v1/updatePassword:
+    post:
+      description: Update user's password
+      security:
+        - BearerAuth: [user]   # Use OAuth with a different scope
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                password:
+                  type: string
+                confirm_password:
+                  type: string
+            examples:
+              'updatePassword':
+                value: '{"password": "password", "confirm_password": "password", "reset_token", "token_received_in_mail"}'
+      responses:
+        '200':
+          description: Success, password updated
+        '400':
+          description: Functional error
+  /api/v1/createAccount:
+    post:
+      description: Create a new account
+      security:
+        - BearerAuth: [admin]   # Use OAuth with a different scope
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+            examples:
+              'createAccount':
+                value: '{"first_name": "first_name", "last_name": "last_name", "email": "example@email.com", "password": "password"}'
+      responses:
+        '200':
+          description: success, user created
+        '400':
+          description: Functional error
+  /api/v1/authorize:
+    get:
+      description: Only GET case, if user is connected, this endpoind generate a new authentication code and redirect to redirect uri with the code in parameter
+      parameters:
+        - in: path
+          name: response_type
+          schema:
+            type: string
+          description: with de value "code"
+          required: true
+        - in: path
+          name: client_id
+          schema:
+            type: string
+          description: the client_id correspond to unique client's id
+          required: true
+        - in: path
+          name: scope
+          schema:
+            type: string
+          description: a space delimited list of scopes
+          required: true
+        - in: path
+          name: redirect_uri
+          schema:
+            type: string
+          description: the client redirect URI, must be a callback uri for get code
+          required: true
+        - in: path
+          name: error_uri
+          schema:
+            type: string
+          description: url to redirect if user is not connected
+          required: false
+      responses:
+        '200':
+          description: redirection to redirect_uri with a code for a successful request
+        '400':
+          description: Functional error
+  /api/v1/login:
+    post:
+      description: connecting user to the sso qiota
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                client_id:
+                  type: string
+                response_type:
+                  type: string
+                scope:
+                  type: string
+                redirect_uri:
+                  type: string
+                error_uri:
+                  type: string
+              required:
+                - email
+                - password
+                - client_id
+                - response_type
+                - scope
+                - redirect_uri
+                - error_uri
+              example:
+                email: user@email.com
+                password: password
+                client_id: 5dd508e80ff0f
+                scope: email
+                redirect_uri: http://www.sitea.com/success
+                error_uri: http://www.sitea.com/login
+      responses:
+        '200':
+          description: redirection to redirect_uri with a code for an authentication success or redirection to error_uri for an authentication failure
+        '400':
+          description: Functionnal error
+  /api/v1/logout:
+    get:
+      description: Only GET case, logout user connected
+      parameters:
+        - in: path
+          name: redirect_uri
+          schema:
+            type: string
+          description: redirect uri after logout
+          required: true
+      responses:
+        '400':
+          description: Functional error
+  /api/v1/health_check:
+    get:
+      description: Only GET case, check if server is available or not
+      responses:
+        '200':
+          description: if server is available
+        '500':
+          description: Server error
+servers:
+  - url: 'https://ssopp.qiota.com'

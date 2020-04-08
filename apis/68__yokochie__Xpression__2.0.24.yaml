@@ -1,0 +1,3474 @@
+openapi: 3.0.0
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: 'https://virtserver.swaggerhub.com/yokochie/Xpression/2.0.24'
+info:
+  version: 2.0.24
+  title: Xpression server
+  license:
+    name: Proprietary
+  description: |
+    ## OAuthについて
+
+    ### 新規登録
+      ```/user/auth/twitter``` または ```/user/auth/facebook```にブラウザでアクセスします。
+      `v1`などのバージョンプレフィクスはありません
+
+    ### 追加連携
+      ```/user/auth/add_twitter?token=<Xpressionトークン>```
+      または ```/user/auth/add_facebook?token=<Xpressionトークン>```にブラウザでアクセスします。
+      `v1`などのバージョンプレフィクスはありません
+      すでに該当のSNSが連携されている場合、連携先を書き換えます。
+
+    ### 新規登録・追加連携成功後のフロー
+      連携に成功すると ```/user/auth/oauth_landing?token=DCKoNWRQy8cbfJgxi6DC``` のようなURLへリダイレクトされます。
+      tokenパラメタがXpressionのトークンです。連携するとトークンも更新されます。
+
+    ### 新規連携・追加連携失敗後のフロー
+      連携に失敗すると ```/user/auth/oauth_landing?errorCode=109&message=SomeURIEncodedErrorMessage``` のようなURLへリダイレクトされます。
+      エラーメッセージはhtmlとして表示されると同時にクエリパラメタへ渡されます
+
+    ### エラーについて
+      次のような原因でエラーが発生します。
+      1. 連携をキャンセルした
+      1. 連携先SNSアカウントが、すでに他のアカウントで使用されている
+      1. アカウントが凍結されている
+      * 「連携先SNSアカウントがすでに他のアカウントで使用されている」パターンが発生するのは既存アカウントに対する連携追加・変更時のみです。
+
+
+    ### OAuth処理マトリックス図
+    ```
+      | 対象SNS連携済 | 連携追加 | 追加対象アカウントがすでに使用されている | 処理       |
+      |---------------|----------|------------------------------------------|------------|
+      | FALSE         | FALSE    | -                                        | 新規登録   |
+      | TRUE          | FALSE    | -                                        | ログイン   |
+      | FALSE         | TRUE     | FALSE                                    | 連携追加   |
+      | FALSE         | TRUE     | TRUE                                     | エラー     |
+      | TRUE          | TRUE     | FALSE                                    | 連携先変更 |
+      | TRUE          | TRUE     | TRUE                                     | エラー     |
+    ```
+
+    ### アイコンについて
+      アイコンの更新は新規登録時のみ行われます。
+      各SNSを新規登録し、かつ各SNSのデフォルトでないアイコンが設定されていた場合はそのアイコンを使用します。
+      そうでない場合はデフォルトのアイコンを使用します。
+    ## 更新履歴
+    ### 2.0.24
+    * モデル更新
+      * PostUserMimicryMovieRequest, PostUserSubjectMovieRequestにmovieRotationを追加
+     
+    ### 2.0.23
+    * Client更新
+      * Swift5.x, RxSwift 5.x に対応したコードを生成するように変更
+
+    ### 2.0.22
+    * モデル更新
+      * SubjectModelEntryのpublishedAtをOptionalへ変更
+
+    ### 2.0.21
+    * モデル更新
+      * 自分自身のユーザ情報を取得した時にユーザ情報に投稿ネタ・ネタ元動画数、いいねした動画数が追加されるように変更
+
+    ### 2.0.20
+    * API更新
+      * `snsShare`を削除し `POST /i/mimicries`へ統合
+      * tokenがなくても呼び出し可能なAPIを設定
+
+    ### 2.0.19
+    * モデル更新
+      * 自分自身のユーザ情報を取得したときにユーザ情報にemailアドレスが追加されるように変更
+
+    ### 2.0.18
+    * モデル更新
+      * 動画の更新・投稿リクエストを分離
+      * ユーザ登録時のlanguageCodeを追加
+
+    ### 2.0.17
+    * モデル更新
+      * ErrorResponseをもとに戻した
+    * API更新
+      * コメントのいいね・いいね解除にoperationIdを割り当てた
+
+    ### 2.0.16
+    * API更新w
+      * `PUT /i/profile` の各リクエストボディをoptionalへ変更
+
+    ### 2.0.15
+    * モデル更新
+      * codegenがうまく動かないため、ログイン系リクエストでallofを使わないよう修正
+      * 動画コメントのいいね数を追加
+
+    ### 2.0.14
+    * モデル更新
+      * ErrorResponseにエラー詳細情報(errorDetails)を追加
+
+    ### 2.0.13
+    * モデル更新
+      * ハッシュタグをタイトルに含めるよう変更
+        * PutMimicryMovieEntryRequestからhashtagsを削除
+
+    ### 2.0.12
+    * API更新
+      * 通知系APIの削除
+    * モデル更新
+      * MimicryMovieEntryにsubjectMovieIdを追加
+
+    ### 2.0.11
+    * モデル更新
+      * Examle修正、Userに投稿数(PostCount)を追加
+
+    ### 2.0.10
+    * モデル更新
+      * Userにいいね数(likedCount)を追加
+
+    ### 2.0.9
+    * モデル更新
+      * PutMimicryMovieEntryRequestモデルにネタ元動画ID(subjectMovieEntryId)を追加
+
+    ### 2.0.8
+    * モデル更新
+      * MimicryMovieEntryにトランスコード状態(movieTransocdeState)を追加
+
+    ### 2.0.7
+    * モデル更新
+      * PutMovieRequestに動画解像度・拡張子の指定を追加
+    * OAuthエラー時のエラーメッセージをリダイレクト先クエリパラメタに追加
+
+    ### 2.0.6
+    * API修正
+      * `/mimicries/followeeNewArrivals` へフォロワーの新着動画リスト取得APIの追加
+    * コメントリストの応答例を修正
+
+    ### 2.0.5
+    * API修正
+      * omniauth対応に伴い、`/i/register` `/i/login`で各SNSトークンの取扱を廃止
+      * `PUT|DELETE /i/sns` の廃止
+    * ```/user/auth/twitter``` ```/user/auth/facebook``` へoauth用URLを追加
+
+    ### 2.0.4
+    * API修正
+      * `/i/snsShare` omniauth対応に伴い、SNS投稿もサーバ側で行うように修正
+
+    ### 2.0.3
+    * API修正
+      * ベアラートークンの受け渡しを Authorizationヘッダで行うよう修正
+      * ユーザ認証関連リクエストのlanguaceCodeを廃止し、Accept-Languageヘッダで言語を指定するよう修正
+      * フォロワーの削除を `/i/follow/{userId}` で行うよう修正
+
+    ### 2.0.1
+    * API修正
+      * すべてのバイナリデータ投稿のContent-Typeを `multipart/form-data` へ修正
+      * `POST /i/subjects`に静止画を投稿する手段を追加
+      * 内容のない肯定的応答のステータスコードを202、204へ修正
+
+    ### 2.0.0
+    * 初版
+tags:
+  - name: UserAuth
+    description: ユーザの登録、認証
+  - name: UserInfo
+    description: ログインユーザの設定。フォロワー、プッシュ設定等
+  - name: UserMovie
+    description: ログインユーザの投稿した動画に関する操作
+  - name: UserCommunity
+    description: 他者のユーザに関する操作
+  - name: SNS
+    description: ユーザのSNSに関する連携、解除、シェア操作等
+  - name: SubjectMovie
+    description: ネタ元動画
+  - name: MimicryMovie
+    description: ネタ動画
+paths:
+  '/mimicries/{mimicryId}/comments':
+    get:
+      tags:
+        - MimicryMovie
+      summary: ◆ネタ動画のコメント一覧取得
+      operationId: getMimicryMovieComments
+      security:
+        - tokenAuth: []
+        - none: []
+      parameters:
+        - in: path
+          name: mimicryId
+          required: true
+          description: ネタ動画ID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - in: query
+          name: nextToken
+          required: false
+          description: 次のコメントリストを取得するためのトークン
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MimicryMovieCommentList'
+        '404':
+          description: 動画が存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - MimicryMovie
+      summary: ネタ動画へのコメント投稿
+      operationId: submitMimicryMovieComment
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: mimicryId
+          required: true
+          description: ネタ動画ID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '204':
+          description: 投稿成功
+        '400':
+          description: 禁止キーワードが含まれている等
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 動画が存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitMimicryEntryCommentRequest'
+        required: true
+  '/mimicries/{mimicryId}/comments/{commentId}':
+    delete:
+      tags:
+        - MimicryMovie
+      summary: ネタ動画コメントの削除
+      operationId: deleteMimicryMovieComment
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: mimicryId
+          required: true
+          description: ネタ動画ID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - in: path
+          name: commentId
+          required: true
+          description: ネタ動画コメントID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          description: 他者のコメントを削除しようとした場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: コメントまたは動画が存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/mimicries/{mimicryId}':
+    get:
+      tags:
+        - MimicryMovie
+      summary: ◆ネタ動画情報取得
+      operationId: getMimicryMovieDetail
+      security:
+        - tokenAuth: []
+        - none: []
+      parameters:
+        - in: path
+          name: mimicryId
+          required: true
+          description: ネタ動画ID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MimicryMovieEntry'
+        '404':
+          description: 動画が存在しないか、他者の未公開動画だった場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/mimicries/{mimicryId}/like':
+    post:
+      tags:
+        - MimicryMovie
+      summary: ネタ動画へいいね送信
+      operationId: submitLike
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: mimicryId
+          required: true
+          description: ネタ動画ID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '204':
+          description: いいね成功
+        '404':
+          description: 動画が存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - MimicryMovie
+      summary: ネタ動画のいいね取り消し
+      operationId: cancelLike
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: mimicryId
+          required: true
+          description: ネタ動画ID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '204':
+          description: いいね取り消し成功
+        '404':
+          description: 動画が存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/mimicries/{mimicryId}/comments/{commentId}/like':
+    post:
+      tags:
+        - MimicryMovie
+      summary: ネタ動画コメントへのいいね送信
+      operationId: submitCommentLike
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: mimicryId
+          required: true
+          description: ネタ動画ID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - in: path
+          name: commentId
+          required: true
+          description: ネタ動画コメントID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '204':
+          description: いいね成功
+        '404':
+          description: コメントまたは動画が存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - MimicryMovie
+      summary: ネタ動画コメントへのいいね取り消し
+      operationId: cancelCommentLike
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: mimicryId
+          required: true
+          description: ネタ動画ID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - in: path
+          name: commentId
+          required: true
+          description: ネタ動画コメントID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '204':
+          description: いいね取り消し成功
+        '404':
+          description: コメントまたは動画が存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /mimicries/newArrivals:
+    get:
+      tags:
+        - MimicryMovie
+      summary: ◆新着ネタ動画リスト取得
+      operationId: listMimicryNewArrivals
+      security:
+        - tokenAuth: []
+        - none: []
+      parameters:
+        - in: query
+          name: nextToken
+          required: false
+          description: 次の動画リストを取得するためのトークン
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          description: 最大取得数
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MimicryMovieList'
+  /mimicries/followeeNewArrivals:
+    get:
+      tags:
+        - MimicryMovie
+      summary: フォローユーザ新着ネタ動画リスト取得
+      operationId: listMimicryFolloweeNewArrivals
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: query
+          name: nextToken
+          required: false
+          description: 次の動画リストを取得するためのトークン
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MimicryMovieList'
+  /mimicries/ranking:
+    get:
+      tags:
+        - MimicryMovie
+      summary: ◆新着ネタ動画ランキング取得
+      operationId: listMimicryRanking
+      security:
+        - tokenAuth: []
+        - none: []
+      parameters:
+        - in: query
+          name: nextToken
+          required: false
+          description: 次の動画リストを取得するためのトークン
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MimicryMovieList'
+  /mimicries:
+    get:
+      tags:
+        - MimicryMovie
+      summary: ◆ネタ動画検索
+      operationId: findMimicries
+      security:
+        - tokenAuth: []
+        - none: []
+      parameters:
+        - in: query
+          name: q
+          required: true
+          description: 検索クエリ
+          schema:
+            type: string
+        - in: query
+          name: nextToken
+          required: false
+          description: 検索結果の続きを取得するためのトークン
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          description: 最大取得数
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 検索成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MimicryMovieList'
+  /i/sns:
+    get:
+      tags:
+        - SNS
+      summary: SNS連携状態取得
+      operationId: getSNSState
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SNSLinkStateResponse'
+  '/subjects/{subjectId}':
+    get:
+      tags:
+        - SubjectMovie
+      summary: ◆ネタ元動画情報取得
+      description: ネタ元動画情報取得
+      operationId: getSubjectMovieDetail
+      security:
+        - tokenAuth: []
+        - none: []
+      parameters:
+        - in: path
+          name: subjectId
+          required: true
+          description: ネタ元動画ID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubjectMovieEntry'
+        '404':
+          description: 動画が存在しないか、他者の未公開動画だった場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /subjects/newArrivals:
+    get:
+      tags:
+        - SubjectMovie
+      summary: ◆新着ネタ元動画一覧取得
+      operationId: listSubjectNewArrivals
+      security:
+        - tokenAuth: []
+        - none: []
+      parameters:
+        - in: query
+          name: nextToken
+          required: false
+          description: 次の動画リストを取得するためのトークン
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          description: 最大取得数
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubjectMovieList'
+  /subjects/ranking:
+    get:
+      tags:
+        - SubjectMovie
+      summary: ◆新着ネタ元動画ランキング取得
+      operationId: listSubjectRanking
+      security:
+        - tokenAuth: []
+        - none: []
+      parameters:
+        - in: query
+          name: nextToken
+          required: false
+          description: 次の動画リストを取得するためのトークン
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          description: 最大取得数
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubjectMovieList'
+  /tags/suggest:
+    get:
+      tags:
+        - MimicryMovie
+      summary: ◆タグのサジェスト
+      security:
+        - tokenAuth: []
+        - none: []
+      parameters:
+        - in: query
+          name: tagName
+          required: true
+          description: タグ
+          schema:
+            type: string
+      responses:
+        '200':
+          description: サジェスト成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tags:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HashTag'
+                required:
+                  - tags
+              example:
+                tags:
+                  - hashTagId: 0
+                    hashTagName: DonaldTrump
+                  - hashTagId: 1
+                    hashTagName: GreatAmerica
+                  - hashTagId: 2
+                    hashTagName: President
+                  - hashTagId: 5
+                    hashTagName: Путин
+                  - hashTagId: 6
+                    hashTagName: Russia
+                  - hashTagId: 7
+                    hashTagName: 공격전이다
+                  - hashTagId: 8
+                    hashTagName: 麻生太郎
+  '/users/{userId}/subjects':
+    get:
+      tags:
+        - UserCommunity
+      summary: ◆ユーザのネタ元動画一覧取得
+      operationId: listUserSubjects
+      security:
+        - tokenAuth: []
+        - none: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          description: ユーザID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - in: query
+          name: nextToken
+          required: false
+          description: 次の動画リストを取得するためのトークン
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubjectMovieList'
+  '/users/{userId}/mimicries':
+    get:
+      tags:
+        - UserCommunity
+      summary: ◆ネタ動画一覧取得
+      operationId: listUserMimicries
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          description: ユーザID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - in: query
+          name: nextToken
+          required: false
+          description: 次の動画リストを取得するためのトークン
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MimicryMovieList'
+  '/users/{userId}':
+    get:
+      tags:
+        - UserCommunity
+      summary: ◆ユーザ情報取得
+      operationId: getUserDetail
+      security:
+        - tokenAuth: []
+        - none: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          description: ユーザID
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '404':
+          description: ユーザが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /i/follows:
+    get:
+      tags:
+        - UserInfo
+      summary: 自分のフォローリスト取得
+      operationId: listFollowUsers
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: リスト取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowList'
+    post:
+      tags:
+        - UserInfo
+      summary: 他者のフォロー操作
+      operationId: followUser
+      security:
+        - tokenAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: integer
+                  format: int64
+                  description: ユーザID
+              required:
+                - userId
+              example:
+                userId: 1
+      responses:
+        '204':
+          description: フォロー成功
+        '404':
+          description: ユーザが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/i/follows/{userId}':
+    delete:
+      tags:
+        - UserInfo
+      summary: 他者のフォロー解除操作
+      operationId: unfollowUser
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          description: 削除対象のユーザID
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: フォロー解除成功
+        '404':
+          description: ユーザが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /i/followers:
+    get:
+      tags:
+        - UserInfo
+      summary: 自分のフォロワーリスト取得
+      operationId: listFollowerUsers
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: リスト取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FollowList'
+  /i/profile:
+    get:
+      tags:
+        - UserInfo
+      summary: 自分のユーザ情報取得
+      operationId: getYourUserDetail
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+    put:
+      tags:
+        - UserInfo
+      summary: 自分のユーザ情報更新
+      operationId: updateYourUserDetail
+      security:
+        - tokenAuth: []
+      responses:
+        '200':
+          description: 更新成功した場合。更新後のアイコンを含む自分のプロフィール情報が得られる
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          description: アイコンが無効か、ニックネームが重複していた場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                requestBody:
+                  $ref: '#/components/schemas/UpdateUserProfileRequest'
+                iconData:
+                  type: string
+                  format: binary
+            encoding:
+              requestBody:
+                contentType: application/json
+              iconData:
+                contentType: 'image/jpeg, image/png, image/gif'
+        description: ユーザ情報更新リクエスト
+        required: true
+  /i/login:
+    post:
+      tags:
+        - UserAuth
+      summary: ログイン
+      description: |
+        email addressを識別子としてXpressionサービスを利用するためのトークンを発行します
+      operationId: loginUser
+      responses:
+        '200':
+          description: ログイン成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserTokenResponse'
+        '400':
+          description: |
+            ログイン失敗
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginWithEmailRequest'
+        required: true
+  /i/register:
+    post:
+      tags:
+        - UserAuth
+      summary: ユーザ登録
+      description: |
+        email addressを識別子としてXpressionアカウントを発行します。
+      operationId: registerUser
+      responses:
+        '200':
+          description: 登録成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserTokenResponse'
+        '400':
+          description: |
+            登録失敗した場合
+            以下の理由により発生します。
+            * リクエストが不正
+            * emailAddressがすでに使われている
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterWithEmailRequest'
+            example:
+              $ref: '#/components/schemas/RegisterWithEmailRequest/example'
+        required: true
+  /i/mimicries:
+    post:
+      tags:
+        - UserMovie
+      summary: 自分のネタ動画投稿投稿
+      operationId: postYourMimicryMovie
+      security:
+        - tokenAuth: []
+      responses:
+        '202':
+          description: 投稿成功
+        '400':
+          description: hashTagsやtitleが不正な場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                requestBody:
+                  $ref: '#/components/schemas/PostUserMimicryMovieRequest'
+                movieData:
+                  type: string
+                  format: binary
+              required:
+                - requestBody
+                - movieData
+            encoding:
+              requestBody:
+                contentType: application/json
+              movieData:
+                contentType: 'video/mpeg, video/mp4, video/webm'
+    get:
+      tags:
+        - UserMovie
+      summary: 自分のネタ動画一覧取得
+      description: 未投稿の動画も対象になります。
+      operationId: listYourMimicries
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: query
+          name: nextToken
+          required: false
+          description: 次の動画リストを取得するためのトークン
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          description: 最大取得数
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MimicryMovieList'
+  /i/subjects:
+    post:
+      tags:
+        - UserMovie
+      summary: 自分のネタ元動画投稿
+      operationId: postYourSubjectMovie
+      security:
+        - tokenAuth: []
+      responses:
+        '202':
+          description: 投稿成功
+        '400':
+          description: リクエストが不正な場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                requestBody:
+                  $ref: '#/components/schemas/PostUserSubjectMovieRequest'
+                movieData:
+                  type: string
+                  format: binary
+                imageData:
+                  type: string
+                  format: binary
+              required:
+                - requestBody
+            encoding:
+              requestBody:
+                contentType: application/json
+              movieData:
+                contentType: 'video/mpeg, video/mp4, video/webm'
+              imageData:
+                contentType: 'image/jpeg, image/png, image/gif'
+    get:
+      tags:
+        - UserMovie
+      summary: 自分のネタ元動画一覧取得
+      description: 未投稿の動画も対象になります。
+      operationId: listYourSubjects
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: query
+          name: nextToken
+          required: false
+          description: 次の動画リストを取得するためのトークン
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          description: 最大取得数
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubjectMovieList'
+  /i/likes/mimicries:
+    get:
+      tags:
+        - UserMovie
+      summary: 自分がいいねしている動画一覧を取得
+      operationId: listYourLikedMovies
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: query
+          name: nextToken
+          required: false
+          description: 次の動画リストを取得するためのトークン
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          description: 最大取得数
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MimicryMovieList'
+  '/i/mimicries/{mimicryId}':
+    put:
+      tags:
+        - UserMovie
+      summary: 自分のネタ動画更新
+      operationId: updateYourMimicryMovie
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: mimicryId
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '204':
+          description: 更新成功
+        '400':
+          description: hashTagsやtitleが不正な場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 存在しない動画を操作しようとした場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserMimicryMovieRequest'
+        required: true
+    delete:
+      tags:
+        - UserMovie
+      summary: 自分のネタ動画削除リクエスト
+      operationId: deleteYourMimicryMovie
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: mimicryId
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '204':
+          description: 削除成功
+        '404':
+          description: 存在しない動画を操作しようとした場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  '/i/subjects/{subjectId}':
+    put:
+      tags:
+        - UserMovie
+      summary: 自分のネタ元動画更新
+      operationId: updateYourSubjectMovie
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: subjectId
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '204':
+          description: 更新成功
+        '400':
+          description: リクエストが不正な場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 存在しない動画を操作しようとした場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserSubjectMovieRequest'
+        required: true
+    delete:
+      tags:
+        - UserMovie
+      summary: 自分のネタ元動画削除リクエスト
+      operationId: deleteYourSubjectMovie
+      security:
+        - tokenAuth: []
+      parameters:
+        - in: path
+          name: subjectId
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        '204':
+          description: 削除成功
+        '404':
+          description: 存在しない動画を操作しようとした場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        errorCode:
+          type: integer
+          format: int32
+          example: 100
+        localizedMessage:
+          type: string
+          example: エラーメッセージ
+      required:
+        - errorCode
+        - localizedMessage
+      example:
+        errorCode: 100
+        localizedMessage: なんだかエラーみたい
+    MimicryMovieComment:
+      type: object
+      properties:
+        commentId:
+          type: integer
+          format: int64
+        commentBody:
+          type: string
+        author:
+          $ref: '#/components/schemas/UserProfile'
+        liked:
+          type: boolean
+          description: ログインユーザがいいねしている場合true
+        likedCount:
+          type: integer
+          format: int32
+          description: コメントのいいね数
+        commentedAt:
+          type: string
+          format: date-time
+          description: コメント時刻
+      example:
+        commentId: 5
+        commentBody: テストコメント
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          postCount: 123
+          emailAddress: realdnaldtrump@xpression.jp
+          mimicryMovieCount: 5
+          subjectMovieCount: 100
+          likedMovieCount: 2
+        liked: true
+        likedCount: 1266
+        commentedAt: '2017-07-21T17:32:28Z'
+      required:
+        - commentId
+        - commentBody
+        - author
+        - liked
+        - likedCount
+        - commentedAt
+    MimicryMovieCommentList:
+      type: object
+      description: コメント一覧
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/MimicryMovieComment'
+        nextToken:
+          type: string
+          description: コメントリストの続きを取得するためのトークン。nullの場合リストの終端
+      example:
+        comments:
+          - commentId: 4
+            commentBody: 素晴らしい
+            author:
+              userId: 3
+              nickname: 麻生太郎(aso)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+              followerCount: 126800000
+              followCount: 220
+              followed: true
+              likedCount: 500000
+              subjectCount: 1235
+              mimicryCount: 4566
+              likedMovieCount: 7892
+            liked: true
+            likedCount: 220
+            commentedAt: '2017-07-21T17:35:29Z'
+          - commentId: 3
+            commentBody: 공격전이다
+            author:
+              userId: 2
+              nickname: 金正恩(jong-un)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+              followerCount: 25490000
+              followCount: 130
+              followed: false
+              subjectCount: 2123
+              mimicryCount: 356
+              likedMovieCount: 4789
+            liked: false
+            likedCount: 425
+            commentedAt: '2017-07-21T17:35:28Z'
+          - commentId: 2
+            commentBody: хорошо
+            author:
+              userId: 1
+              nickname: Путин(Putin)
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+              followerCount: 144500000
+              followCount: 130
+              followed: true
+              likedCount: 35
+              subjectCount: 4123
+              mimicryCount: 4456
+              likedMovieCount: 2789
+            liked: false
+            likedCount: 563
+            commentedAt: '2017-07-21T17:34:28Z'
+          - commentId: 1
+            commentBody: Awesome
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            liked: false
+            likedCount: 5
+            commentedAt: '2017-07-21T17:33:28Z'
+          - commentId: 0
+            commentBody: I love this video
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            liked: true
+            likedCount: 123456789
+            commentedAt: '2017-07-21T17:32:28Z'
+        nextToken: YWJjZGVmZw
+      required:
+        - comments
+    MimicryMovieEntry:
+      type: object
+      properties:
+        mimicryMovieId:
+          type: integer
+          format: int64
+        subjectMovieId:
+          type: integer
+          format: int64
+        author:
+          $ref: '#/components/schemas/UserProfile'
+        movieUrl:
+          type: string
+          example: ''
+          description: |
+            ネタ元動画のURL
+            エンコード中かエンコードエラー時はnullになります
+        thumbnailUrl:
+          type: string
+          description: |
+            サムネイルURL(jpg)
+            エンコード中かエンコードエラー時はnullになります
+        regionCode:
+          type: integer
+          format: int32
+        title:
+          type: string
+          description: 動画のタイトル
+        hashTags:
+          type: array
+          items:
+            $ref: '#/components/schemas/HashTag'
+          description: ハッシュタグ
+        likedCount:
+          type: integer
+          format: int32
+          description: いいね数
+        commentCount:
+          type: integer
+          format: int32
+          description: コメント数
+        sharedCount:
+          type: integer
+          format: int32
+          description: シェアされた回数
+        liked:
+          type: boolean
+          description: いいねしているかどうか
+        ranking:
+          type: integer
+          format: int32
+          description: ランキングAPIから取得された場合、ログイン中のユーザのリージョンでのランキング順位が1以上の値で代入されます
+        isPublished:
+          type: boolean
+          description: 下書き状態フラグ。自身の動画のみ、下書き状態が取得できます。
+        publishedAt:
+          type: string
+          format: date-time
+          description: 公開されている場合、公開された時刻、下書きの場合Nullが入ります
+        movieTranscodeState:
+          type: integer
+          format: int32
+          description: |
+            自分の投稿した動画のみ存在するパラメタで、動画のトランスコード状態を表します。
+            0 = 完了, 1 = エラー, 2 = トランスコード中
+      required:
+        - mimicryMovieId
+        - author
+        - regionCode
+        - title
+        - hashTags
+        - likedCount
+        - commentCount
+        - sharedCount
+        - liked
+      example:
+        mimicryMovieId: 5
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          postCount: 123
+          emailAddress: realdnaldtrump@xpression.jp
+          mimicryMovieCount: 5
+          subjectMovieCount: 100
+          likedMovieCount: 2
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/thumbnails/subject_trump_90p.0000000.jpg
+        regionCode: 0
+        title: キャッチーなタイトル
+        hashTags:
+          - hashTagId: 0
+            hashTagName: DonaldTrump
+          - hashTagId: 1
+            hashTagName: GreatAmerica
+        likedCount: 993
+        commentCount: 10023
+        sharedCount: 5
+        liked: true
+        ranking: 1
+        isPublished: true
+        publishedAt: '2017-07-21T17:32:28Z'
+        movieTranscodeState: 0
+    HashTag:
+      type: object
+      properties:
+        hashTagId:
+          type: integer
+          format: int32
+        hashTagName:
+          type: string
+      required:
+        - hashTagId
+        - hashTagName
+      example:
+        hashTagId: 5
+        hashTagName: 口パクしてみた
+    MimicryMovieList:
+      type: object
+      properties:
+        movies:
+          type: array
+          items:
+            $ref: '#/components/schemas/MimicryMovieEntry'
+        nextToken:
+          type: string
+          description: 動画リストの続きを取得するためのトークン、null場合リストの終端です
+      example:
+        movies:
+          - mimicryMovieId: 6
+            author:
+              userId: 3
+              nickname: 麻生太郎(aso)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+              followerCount: 126800000
+              followCount: 220
+              followed: true
+              likedCount: 500000
+              subjectCount: 1235
+              mimicryCount: 4566
+              likedMovieCount: 7892
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_aso/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_aso/thumbnails/mimicry_aso_90p.0000000.jpg
+            regionCode: 1
+            title: '財務大臣 #麻生太郎'
+            hashTags:
+              - hashTagId: 8
+                hashTagName: 麻生太郎
+            likedCount: 100
+            commentCount: 10
+            sharedCount: 30
+            isPublished: true
+            publishedAt: '2018-10-25T09:00:28Z'
+            liked: true
+            movieTranscodeState: 0
+          - mimicryMovieId: 5
+            author:
+              userId: 2
+              nickname: 金正恩(jong-un)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+              followerCount: 25490000
+              followCount: 130
+              followed: false
+              subjectCount: 2123
+              mimicryCount: 356
+              likedMovieCount: 4789
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_jong-un/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_jong-un/thumbnails/mimicry_jong-un_90p.0000000.jpg
+            regionCode: 1
+            title: '#공격전이다 !!'
+            hashTags:
+              - hashTagId: 7
+                hashTagName: 공격전이다
+            likedCount: 0
+            commentCount: 10
+            sharedCount: 5
+            isPublished: true
+            publishedAt: '2017-10-25T10:00:28Z'
+            liked: false
+            movieTranscodeState: 0
+          - mimicryMovieId: 4
+            author:
+              userId: 1
+              nickname: Путин(Putin)
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+              followerCount: 144500000
+              followCount: 130
+              followed: true
+              likedCount: 35
+              subjectCount: 4123
+              mimicryCount: 4456
+              likedMovieCount: 2789
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_putin/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_putin/thumbnails/mimicry_putin_90p.0000000.jpg
+            regionCode: 0
+            title: 'Владимир Владимирович #Путин #Russia'
+            hashTags:
+              - hashTagId: 5
+                hashTagName: Путин
+              - hashTagId: 6
+                hashTagName: Russia
+            likedCount: 10000
+            commentCount: 0
+            sharedCount: 0
+            isPublished: true
+            publishedAt: '2017-09-25T10:00:28Z'
+            liked: true
+            movieTranscodeState: 0
+          - mimicryMovieId: 1
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump2/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump2/thumbnails/mimicry_trump2_90p.0000000.jpg
+            regionCode: 0
+            title: '001 Greatest #President of america, #DonaldTrump'
+            hashTags:
+              - hashTagId: 0
+                hashTagName: DonaldTrump
+              - hashTagId: 2
+                hashTagName: President
+            likedCount: 12333
+            commentCount: 0
+            sharedCount: 0
+            ranking: 2
+            isPublished: true
+            publishedAt: '2017-08-21T10:00:28Z'
+            liked: true
+            movieTranscodeState: 0
+          - mimicryMovieId: 0
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump/thumbnails/mimicry_trump_90p.0000000.jpg
+            regionCode: 0
+            title: '000 Make great america again! #DonaldTrump #GreatAmerica'
+            hashTags:
+              - hashTagId: 0
+                hashTagName: DonaldTrump
+              - hashTagId: 1
+                hashTagName: GreatAmerica
+            likedCount: 12222
+            commentCount: 10
+            sharedCount: 234
+            ranking: 1
+            isPublished: true
+            publishedAt: '2017-07-21T17:32:28Z'
+            liked: false
+            movieTranscodeState: 0
+        nextToken: aAggOwsS
+      required:
+        - movies
+    SubmitMimicryEntryCommentRequest:
+      description: 動画へのコメント投稿リクエスト
+      type: object
+      properties:
+        commentBody:
+          type: string
+          description: コメント本文
+      required:
+        - commentBody
+      example:
+        commentBody: 動画へのコメント
+    SNSLinkState:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum:
+            - twitter
+            - facebook
+          example: twitter
+          description: 対象リンク先
+        iconUrl:
+          type: string
+          nullable: true
+          description: |
+            SNSアイコンのURL
+            各SNSのデフォルトアイコンを使用している場合はnullになります。
+        name:
+          type: string
+          description: SNSのID又は名前
+      required:
+        - kind
+        - iconUrl
+        - name
+      example:
+        kind: twitter
+        iconUrl: 'https://via.placeholder.com/128x128?text=SNSIcon'
+        name: '@DonaldTrump'
+    SNSLinkStateResponse:
+      type: object
+      description: SNSリンク状態
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SNSLinkState'
+          description: SNSリンク状態リスト
+      required:
+        - items
+      example:
+        items:
+          - kind: twitter
+            iconUrl: 'https://via.placeholder.com/128x128?text=SNSIcon'
+            name: Donald Trump
+          - kind: facebook
+            iconUrl: 'https://via.placeholder.com/128x128?text=SNSIcon'
+            name: Donald Trump
+    RegisterWithEmailRequest:
+      type: object
+      properties:
+        nickname:
+          type: string
+          description: 表示用ニックネーム
+        email:
+          type: string
+          description: 有効なメールアドレス
+        password:
+          type: string
+          description: 設定したいパスワード
+        languageCode:
+          type: integer
+          description: 言語コード
+      required:
+        - email
+        - password
+        - nickname
+        - languageCode
+      example:
+        nickname: ドナルド・トランプ
+        email: donald_trump@trumptower.com
+        password: GreatAmerica
+        languageCode: 0
+    LoginWithEmailRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          description: 有効なメールアドレス
+        password:
+          type: string
+          description: ログインパスワード
+      required:
+        - email
+        - password
+        - nickname
+      example:
+        email: donald_trump@trumptower.com
+        password: GreatAmerica
+    UserTokenResponse:
+      description: |
+        Xpressionサービスを利用するのに必要なトークン
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+      example:
+        token: TWFrZUdyZWF0QW1lcmljYUFnYWlu
+    PostUserMimicryMovieRequest:
+      type: object
+      description: ユーザネタ動画投稿リクエスト
+      properties:
+        title:
+          type: string
+          description: タイトル
+          example: '#trump loves #america'
+        subjectMovieEntryId:
+          type: integer
+          format: int64
+          example: 5
+          description: ネタ元動画ID
+        movieWidth:
+          type: integer
+          example: 1280
+          description: 動画の幅(px)
+        movieHeight:
+          type: integer
+          example: 720
+          description: 動画の高さ(px)
+        movieRotation:
+          type: integer
+          example: 90
+          description: 動画の回転角
+        movieExtension:
+          type: string
+          example: mp4
+          description: 動画の拡張子
+        isPublished:
+          type: boolean
+          example: true
+          description: 公開状態
+        shareTargets:
+          type: array
+          items:
+            type: string
+            enum:
+              - twitter
+              - facebook
+            description: 共有先SNS
+          example:
+            - twitter
+            - facebook
+      required:
+        - title
+        - movieWidth
+        - movieHeight
+        - movieExtension
+        - isPublished
+        - subjectMovieEntryId
+        - shareTargets
+      example:
+        title: '#trump loves #america'
+        movieWidth: 1280
+        movieHeight: 720
+        movieRotation: 0
+        movieExtension: mp4
+        isPublished: true
+        subjectMovieEntryId: 5
+        shareTargets:
+          - twitter
+          - facebook
+    UpdateUserMimicryMovieRequest:
+      type: object
+      description: ユーザネタ動画更新リクエスト
+      properties:
+        title:
+          type: string
+          description: タイトル
+          example: '#trump loves #america'
+        isPublished:
+          type: boolean
+          example: true
+          description: 公開状態
+      required:
+        - title
+        - isPublished
+      example:
+        title: '#trump loves #america'
+        isPublished: true
+    PostUserSubjectMovieRequest:
+      type: object
+      description: ユーザネタ元動画投稿リクエスト
+      properties:
+        movieWidth:
+          type: integer
+          example: 1280
+          description: 動画の幅(px)
+        movieHeight:
+          type: integer
+          example: 720
+          description: 動画の高さ(px)
+        movieRotation:
+          type: integer
+          example: 90
+          description: 動画の回転角
+        movieExtension:
+          type: string
+          example: mp4
+          description: 動画の拡張子
+        isPublished:
+          type: boolean
+          example: true
+          description: 公開状態
+      required:
+        - movieWidth
+        - movieHeight
+        - movieExtension
+        - isPublished
+      example:
+        movieWidth: 1280
+        movieHeight: 720
+        movieExtension: mp4
+        isPublished: false
+    UpdateUserSubjectMovieRequest:
+      type: object
+      description: ユーザネタ元動画更新リクエスト
+      properties:
+        isPublished:
+          type: boolean
+          example: true
+          description: 公開状態
+      required:
+        - isPublished
+      example:
+        isPublished: false
+    UpdateUserProfileRequest:
+      type: object
+      properties:
+        nickname:
+          type: string
+          description: 変更後のニックネーム
+          example: バラク・オバマ
+      example:
+        nickname: バラク・オバマ
+    SubjectMovieEntry:
+      type: object
+      properties:
+        subjectMovieId:
+          type: integer
+          format: int64
+          example: 1234
+        author:
+          $ref: '#/components/schemas/UserProfile'
+        movieUrl:
+          type: string
+          example: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/media.m3u8
+          description: |
+            ネタ元動画のURL
+            エンコード中かエンコードエラー時はnullになります
+            エンコード済み動画はmovieUrlとimageUrlのいずれかに必ず値が存在します。
+        thumbnailUrl:
+          type: string
+          example: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/thumbnails/subject_trump_90p.0000000.jpg
+          description: |
+            サムネイルURL
+            エンコード中かエンコードエラー時はnullになります
+        imageUrl:
+          type: string
+          example: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/thumbnails/subject_trump_180p.0000000.jpg
+          description: |
+            ネタ元静止画のURL
+            エンコード中かエンコードエラー時はnullになります
+            エンコード済み動画はmovieUrlとimageUrlのいずれかに必ず値が存在します。
+        regionCode:
+          type: integer
+          format: int32
+          example: 0
+        mimicriedCount:
+          type: integer
+          format: int32
+          example: 230003
+        isPublished:
+          type: boolean
+          example: true
+          description: 下書き状態フラグ。自身の動画のみ、下書き状態が取得できます。
+        publishedAt:
+          type: string
+          format: date-time
+          description: 公開されている場合、公開された時刻、下書きの場合Nullが入ります
+          example: '2017-07-21T17:32:28Z'
+        movieTranscodeState:
+          type: integer
+          format: int32
+          description: |
+            自分の投稿した動画のみ存在するパラメタで、動画のトランスコード状態を表します。
+            0 = 完了, 1 = エラー, 2 = トランスコード中
+      required:
+        - subjectMovieId
+        - author
+        - regionCode
+        - mimicriedCount
+      example:
+        subjectMovieId: 1234
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          postCount: 123
+          emailAddress: realdnaldtrump@xpression.jp
+          mimicryMovieCount: 5
+          subjectMovieCount: 100
+          likedMovieCount: 2
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/thumbnails/subject_trump_90p.0000000.jpg
+        imageUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/thumbnails/subject_trump_180p.0000000.jpg
+        regionCode: 0
+        mimicriedCount: 230003
+        isPublished: true
+        publishedAt: '2017-07-21T17:32:28Z'
+        movieTranscodeState: 0
+    SubjectMovieList:
+      type: object
+      properties:
+        movies:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubjectMovieEntry'
+        nextToken:
+          type: string
+          description: 動画リストの続きを取得するためのトークン、null場合リストの終端です
+          example: YWJjZGVmZw
+      required:
+        - movies
+      example:
+        movies:
+          - subjectMovieId: 0
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/thumbnails/subject_trump_90p.0000000.jpg
+            regionCode: 0
+            mimicriedCount: 500
+            isPublished: true
+            publishedAt: '2017-05-21T17:32:28Z'
+            movieTranscodeState: 0
+          - subjectMovieId: 1
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump2/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump2/thumbnails/subject_trump2_90p.0000000.jpg
+            regionCode: 0
+            mimicriedCount: 112345666
+            isPublished: true
+            publishedAt: '2017-07-21T17:32:28Z'
+            movieTranscodeState: 0
+          - subjectMovieId: 4
+            author:
+              userId: 1
+              nickname: Путин(Putin)
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+              followerCount: 144500000
+              followCount: 130
+              followed: true
+              likedCount: 35
+              subjectCount: 4123
+              mimicryCount: 4456
+              likedMovieCount: 2789
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_putin/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_putin/thumbnails/subject_putin_90p.0000000.jpg
+            regionCode: 0
+            mimicriedCount: 0
+            isPublished: true
+            publishedAt: '2017-07-24T00:32:28Z'
+            movieTranscodeState: 0
+          - subjectMovieId: 6
+            author:
+              userId: 3
+              nickname: 麻生太郎(aso)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+              followerCount: 126800000
+              followCount: 220
+              followed: true
+              likedCount: 500000
+              subjectCount: 1235
+              mimicryCount: 4566
+              likedMovieCount: 7892
+            imageUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_aso/subject_aso.jpg
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_aso/subject_aso.jpg
+            regionCode: 1
+            mimicriedCount: 5
+            isPublished: true
+            publishedAt: '2018-08-24T00:32:28Z'
+            movieTranscodeState: 0
+          - subjectMovieId: 5
+            author:
+              userId: 2
+              nickname: 金正恩(jong-un)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+              followerCount: 25490000
+              followCount: 130
+              followed: false
+              subjectCount: 2123
+              mimicryCount: 356
+              likedMovieCount: 4789
+            imageUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_jong-un/subject_jong-un.jpg
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_jong-un/subject_jong-un.jpg
+            regionCode: 1
+            mimicriedCount: 0
+            isPublished: true
+            publishedAt: '2017-08-24T00:32:28Z'
+            movieTranscodeState: 0
+        nextToken: zXXagkdwW
+    FollowList:
+      type: object
+      description: フォローまたはフォロワーリスト
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserProfile'
+          example:
+            - $ref: '#/components/examples/user_aso'
+            - $ref: '#/components/examples/user_putin'
+        nextToken:
+          type: string
+          description: フォローリストの続きを取得するためのトークン、null場合リストの終端です
+          example: YWJjZGVmZw
+      required:
+        - users
+      example:
+        users:
+          - userId: 3
+            nickname: 麻生太郎(aso)
+            languageCode: 1
+            iconUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+            followerCount: 126800000
+            followCount: 220
+            followed: true
+            likedCount: 500000
+            subjectCount: 1235
+            mimicryCount: 4566
+            likedMovieCount: 7892
+          - userId: 1
+            nickname: Путин(Putin)
+            languageCode: 0
+            iconUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+            followerCount: 144500000
+            followCount: 130
+            followed: true
+            likedCount: 35
+            subjectCount: 4123
+            mimicryCount: 4456
+            likedMovieCount: 2789
+          - userId: 2
+            nickname: 金正恩(jong-un)
+            languageCode: 1
+            iconUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+            followerCount: 25490000
+            followCount: 130
+            followed: false
+            subjectCount: 2123
+            mimicryCount: 356
+            likedMovieCount: 4789
+        nextToken: AsfAWW
+    UserProfile:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+          example: 0
+        nickname:
+          type: string
+          example: Donald trump
+        languageCode:
+          type: integer
+          format: int64
+          example: 0
+        iconUrl:
+          type: string
+          example: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+        followerCount:
+          type: integer
+          format: int32
+          example: 130000
+        followCount:
+          type: integer
+          format: int32
+          example: 5
+        followed:
+          type: boolean
+          example: true
+          description: ログインユーザがフォローしている場合true
+        likedCount:
+          type: integer
+          format: int32
+          example: 50
+          description: そのユーザの動画の総いいね数
+        mimicryMovieCount:
+          type: integer
+          format: int32
+          example: 5
+          description: |
+            ユーザの投稿ネタ動画数
+            自分のプロフィールを参照した時のみ表示されます
+        subjectMovieCount:
+          type: integer
+          format: int32
+          example: 9
+          description: |
+            ユーザの投稿ネタ元動画数
+            自分のプロフィールを参照した時のみ表示されます
+        likedMovieCount:
+          type: integer
+          format: int32
+          example: 8
+          description: |
+            ユーザがいいねした動画数
+            自分のプロフィールを参照した時のみ表示されます
+        emailAddress:
+          type: string
+          example: realdnaldtrump@xpression.jp
+          description: |
+            ユーザのメールアドレス
+            自分のプロフィールを参照した時のみ表示されます
+      required:
+        - userId
+        - nickname
+        - languageCode
+        - iconUrl
+        - followed
+      example:
+        userId: 0
+        nickname: Donald trump
+        languageCode: 0
+        iconUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+        followerCount: 325700000
+        followCount: 500
+        followed: false
+        likedCount: 500
+        postCount: 123
+        emailAddress: realdnaldtrump@xpression.jp
+        mimicryMovieCount: 5
+        subjectMovieCount: 100
+        likedMovieCount: 2
+  examples:
+    user_trump:
+      value:
+        userId: 0
+        nickname: Donald trump
+        languageCode: 0
+        iconUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+        followerCount: 325700000
+        followCount: 500
+        followed: false
+        likedCount: 500
+        subjectCount: 1123
+        mimicryCount: 6456
+        likedMovieCount: 8789
+        emailAddress: realdnaldtrump@xpression.jp
+    user_putin:
+      value:
+        userId: 1
+        nickname: Путин(Putin)
+        languageCode: 0
+        iconUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+        followerCount: 144500000
+        followCount: 130
+        followed: true
+        likedCount: 35
+        subjectCount: 4123
+        mimicryCount: 4456
+        likedMovieCount: 2789
+    user_jongun:
+      value:
+        userId: 2
+        nickname: 金正恩(jong-un)
+        languageCode: 1
+        iconUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+        followerCount: 25490000
+        followCount: 130
+        followed: false
+        subjectCount: 2123
+        mimicryCount: 356
+        likedMovieCount: 4789
+    user_aso:
+      value:
+        userId: 3
+        nickname: 麻生太郎(aso)
+        languageCode: 1
+        iconUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+        followerCount: 126800000
+        followCount: 220
+        followed: true
+        likedCount: 500000
+        subjectCount: 1235
+        mimicryCount: 4566
+        likedMovieCount: 7892
+    mimicry_trump1:
+      value:
+        mimicryMovieId: 0
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          subjectCount: 1123
+          mimicryCount: 6456
+          likedMovieCount: 8789
+          emailAddress: realdnaldtrump@xpression.jp
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump/thumbnails/mimicry_trump_90p.0000000.jpg
+        regionCode: 0
+        title: '000 Make great america again! #DonaldTrump #GreatAmerica'
+        hashTags:
+          - hashTagId: 0
+            hashTagName: DonaldTrump
+          - hashTagId: 1
+            hashTagName: GreatAmerica
+        likedCount: 12222
+        commentCount: 10
+        sharedCount: 234
+        ranking: 1
+        isPublished: true
+        publishedAt: '2017-07-21T17:32:28Z'
+        liked: false
+        movieTranscodeState: 0
+    mimicry_trump2:
+      value:
+        mimicryMovieId: 1
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          subjectCount: 1123
+          mimicryCount: 6456
+          likedMovieCount: 8789
+          emailAddress: realdnaldtrump@xpression.jp
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump2/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump2/thumbnails/mimicry_trump2_90p.0000000.jpg
+        regionCode: 0
+        title: '001 Greatest #President of america, #DonaldTrump'
+        hashTags:
+          - hashTagId: 0
+            hashTagName: DonaldTrump
+          - hashTagId: 2
+            hashTagName: President
+        likedCount: 12333
+        commentCount: 0
+        sharedCount: 0
+        ranking: 2
+        isPublished: true
+        publishedAt: '2017-08-21T10:00:28Z'
+        liked: true
+        movieTranscodeState: 0
+    mimicry_trump3:
+      value:
+        mimicryMovieId: 2
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          subjectCount: 1123
+          mimicryCount: 6456
+          likedMovieCount: 8789
+          emailAddress: realdnaldtrump@xpression.jp
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump3/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump3/thumbnails/mimicry_trump3_90p.0000000.jpg
+        regionCode: 0
+        title: '002 We need more hotels #DonaldTrump'
+        hashTags:
+          - hashTagId: 0
+            hashTagName: DonaldTrump
+        likedCount: 0
+        commentCount: 0
+        sharedCount: 0
+        isPublished: true
+        publishedAt: '2017-08-25T10:00:28Z'
+        liked: true
+        movieTranscodeState: 0
+    mimicry_trump4:
+      value:
+        mimicryMovieId: 3
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          subjectCount: 1123
+          mimicryCount: 6456
+          likedMovieCount: 8789
+          emailAddress: realdnaldtrump@xpression.jp
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump4/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump4/thumbnails/mimicry_trump4_90p.0000000.jpg
+        regionCode: 0
+        title: 003 Great draft
+        hashTags: []
+        likedCount: 0
+        commentCount: 0
+        sharedCount: 0
+        isPublished: false
+        liked: false
+        movieTranscodeState: 0
+    mimicry_putin1:
+      value:
+        mimicryMovieId: 4
+        author:
+          userId: 1
+          nickname: Путин(Putin)
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+          followerCount: 144500000
+          followCount: 130
+          followed: true
+          likedCount: 35
+          subjectCount: 4123
+          mimicryCount: 4456
+          likedMovieCount: 2789
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_putin/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_putin/thumbnails/mimicry_putin_90p.0000000.jpg
+        regionCode: 0
+        title: 'Владимир Владимирович #Путин #Russia'
+        hashTags:
+          - hashTagId: 5
+            hashTagName: Путин
+          - hashTagId: 6
+            hashTagName: Russia
+        likedCount: 10000
+        commentCount: 0
+        sharedCount: 0
+        isPublished: true
+        publishedAt: '2017-09-25T10:00:28Z'
+        liked: true
+        movieTranscodeState: 0
+    mimicry_jongun1:
+      value:
+        mimicryMovieId: 5
+        author:
+          userId: 2
+          nickname: 金正恩(jong-un)
+          languageCode: 1
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+          followerCount: 25490000
+          followCount: 130
+          followed: false
+          subjectCount: 2123
+          mimicryCount: 356
+          likedMovieCount: 4789
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_jong-un/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_jong-un/thumbnails/mimicry_jong-un_90p.0000000.jpg
+        regionCode: 1
+        title: '#공격전이다 !!'
+        hashTags:
+          - hashTagId: 7
+            hashTagName: 공격전이다
+        likedCount: 0
+        commentCount: 10
+        sharedCount: 5
+        isPublished: true
+        publishedAt: '2017-10-25T10:00:28Z'
+        liked: false
+        movieTranscodeState: 0
+    mimicry_aso1:
+      value:
+        mimicryMovieId: 6
+        author:
+          userId: 3
+          nickname: 麻生太郎(aso)
+          languageCode: 1
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+          followerCount: 126800000
+          followCount: 220
+          followed: true
+          likedCount: 500000
+          subjectCount: 1235
+          mimicryCount: 4566
+          likedMovieCount: 7892
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_aso/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_aso/thumbnails/mimicry_aso_90p.0000000.jpg
+        regionCode: 1
+        title: '財務大臣 #麻生太郎'
+        hashTags:
+          - hashTagId: 8
+            hashTagName: 麻生太郎
+        likedCount: 100
+        commentCount: 10
+        sharedCount: 30
+        isPublished: true
+        publishedAt: '2018-10-25T09:00:28Z'
+        liked: true
+        movieTranscodeState: 0
+    subject_trump1:
+      value:
+        subjectMovieId: 0
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          subjectCount: 1123
+          mimicryCount: 6456
+          likedMovieCount: 8789
+          emailAddress: realdnaldtrump@xpression.jp
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/thumbnails/subject_trump_90p.0000000.jpg
+        regionCode: 0
+        mimicriedCount: 500
+        isPublished: true
+        publishedAt: '2017-05-21T17:32:28Z'
+        movieTranscodeState: 0
+    subject_trump2:
+      value:
+        subjectMovieId: 1
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          subjectCount: 1123
+          mimicryCount: 6456
+          likedMovieCount: 8789
+          emailAddress: realdnaldtrump@xpression.jp
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump2/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump2/thumbnails/subject_trump2_90p.0000000.jpg
+        regionCode: 0
+        mimicriedCount: 112345666
+        isPublished: true
+        publishedAt: '2017-07-21T17:32:28Z'
+        movieTranscodeState: 0
+    subject_trump3:
+      value:
+        subjectMovieId: 2
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          subjectCount: 1123
+          mimicryCount: 6456
+          likedMovieCount: 8789
+          emailAddress: realdnaldtrump@xpression.jp
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump3/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump3/thumbnails/subject_trump3_90p.0000000.jpg
+        regionCode: 0
+        mimicriedCount: 500000
+        isPublished: true
+        publishedAt: '2017-07-22T17:32:28Z'
+        movieTranscodeState: 0
+    subject_trump4:
+      value:
+        subjectMovieId: 3
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          subjectCount: 1123
+          mimicryCount: 6456
+          likedMovieCount: 8789
+          emailAddress: realdnaldtrump@xpression.jp
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump4/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump4/thumbnails/subject_trump4_90p.0000000.jpg
+        regionCode: 0
+        mimicriedCount: 0
+        isPublished: false
+        movieTranscodeState: 0
+    subject_putin1:
+      value:
+        subjectMovieId: 4
+        author:
+          userId: 1
+          nickname: Путин(Putin)
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+          followerCount: 144500000
+          followCount: 130
+          followed: true
+          likedCount: 35
+          subjectCount: 4123
+          mimicryCount: 4456
+          likedMovieCount: 2789
+        movieUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_putin/media.m3u8
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_putin/thumbnails/subject_putin_90p.0000000.jpg
+        regionCode: 0
+        mimicriedCount: 0
+        isPublished: true
+        publishedAt: '2017-07-24T00:32:28Z'
+        movieTranscodeState: 0
+    subject_jongun1:
+      value:
+        subjectMovieId: 5
+        author:
+          userId: 2
+          nickname: 金正恩(jong-un)
+          languageCode: 1
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+          followerCount: 25490000
+          followCount: 130
+          followed: false
+          subjectCount: 2123
+          mimicryCount: 356
+          likedMovieCount: 4789
+        imageUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_jong-un/subject_jong-un.jpg
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_jong-un/subject_jong-un.jpg
+        regionCode: 1
+        mimicriedCount: 0
+        isPublished: true
+        publishedAt: '2017-08-24T00:32:28Z'
+        movieTranscodeState: 0
+    subject_aso1:
+      value:
+        subjectMovieId: 6
+        author:
+          userId: 3
+          nickname: 麻生太郎(aso)
+          languageCode: 1
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+          followerCount: 126800000
+          followCount: 220
+          followed: true
+          likedCount: 500000
+          subjectCount: 1235
+          mimicryCount: 4566
+          likedMovieCount: 7892
+        imageUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_aso/subject_aso.jpg
+        thumbnailUrl: >-
+          https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_aso/subject_aso.jpg
+        regionCode: 1
+        mimicriedCount: 5
+        isPublished: true
+        publishedAt: '2018-08-24T00:32:28Z'
+        movieTranscodeState: 0
+    comment_trump1:
+      value:
+        commentId: 0
+        commentBody: I love this video
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          subjectCount: 1123
+          mimicryCount: 6456
+          likedMovieCount: 8789
+          emailAddress: realdnaldtrump@xpression.jp
+        liked: true
+        likedCount: 123456789
+        commentedAt: '2017-07-21T17:32:28Z'
+    comment_trump2:
+      value:
+        commentId: 1
+        commentBody: Awesome
+        author:
+          userId: 0
+          nickname: Donald trump
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+          followerCount: 325700000
+          followCount: 500
+          followed: false
+          likedCount: 500
+          subjectCount: 1123
+          mimicryCount: 6456
+          likedMovieCount: 8789
+          emailAddress: realdnaldtrump@xpression.jp
+        liked: false
+        likedCount: 5
+        commentedAt: '2017-07-21T17:33:28Z'
+    comment_putin1:
+      value:
+        commentId: 2
+        commentBody: хорошо
+        author:
+          userId: 1
+          nickname: Путин(Putin)
+          languageCode: 0
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+          followerCount: 144500000
+          followCount: 130
+          followed: true
+          likedCount: 35
+          subjectCount: 4123
+          mimicryCount: 4456
+          likedMovieCount: 2789
+        liked: false
+        likedCount: 563
+        commentedAt: '2017-07-21T17:34:28Z'
+    comment_jongun1:
+      value:
+        commentId: 3
+        commentBody: 공격전이다
+        author:
+          userId: 2
+          nickname: 金正恩(jong-un)
+          languageCode: 1
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+          followerCount: 25490000
+          followCount: 130
+          followed: false
+          subjectCount: 2123
+          mimicryCount: 356
+          likedMovieCount: 4789
+        liked: false
+        likedCount: 425
+        commentedAt: '2017-07-21T17:35:28Z'
+    comment_aso1:
+      value:
+        commentId: 4
+        commentBody: 素晴らしい
+        author:
+          userId: 3
+          nickname: 麻生太郎(aso)
+          languageCode: 1
+          iconUrl: >-
+            https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+          followerCount: 126800000
+          followCount: 220
+          followed: true
+          likedCount: 500000
+          subjectCount: 1235
+          mimicryCount: 4566
+          likedMovieCount: 7892
+        liked: true
+        likedCount: 220
+        commentedAt: '2017-07-21T17:35:29Z'
+    list_user1:
+      value:
+        users:
+          - userId: 3
+            nickname: 麻生太郎(aso)
+            languageCode: 1
+            iconUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+            followerCount: 126800000
+            followCount: 220
+            followed: true
+            likedCount: 500000
+            subjectCount: 1235
+            mimicryCount: 4566
+            likedMovieCount: 7892
+          - userId: 1
+            nickname: Путин(Putin)
+            languageCode: 0
+            iconUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+            followerCount: 144500000
+            followCount: 130
+            followed: true
+            likedCount: 35
+            subjectCount: 4123
+            mimicryCount: 4456
+            likedMovieCount: 2789
+          - userId: 2
+            nickname: 金正恩(jong-un)
+            languageCode: 1
+            iconUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+            followerCount: 25490000
+            followCount: 130
+            followed: false
+            subjectCount: 2123
+            mimicryCount: 356
+            likedMovieCount: 4789
+        nextToken: AsfAWW
+    list_comment1:
+      value:
+        comments:
+          - commentId: 4
+            commentBody: 素晴らしい
+            author:
+              userId: 3
+              nickname: 麻生太郎(aso)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+              followerCount: 126800000
+              followCount: 220
+              followed: true
+              likedCount: 500000
+              subjectCount: 1235
+              mimicryCount: 4566
+              likedMovieCount: 7892
+            liked: true
+            likedCount: 220
+            commentedAt: '2017-07-21T17:35:29Z'
+          - commentId: 3
+            commentBody: 공격전이다
+            author:
+              userId: 2
+              nickname: 金正恩(jong-un)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+              followerCount: 25490000
+              followCount: 130
+              followed: false
+              subjectCount: 2123
+              mimicryCount: 356
+              likedMovieCount: 4789
+            liked: false
+            likedCount: 425
+            commentedAt: '2017-07-21T17:35:28Z'
+          - commentId: 2
+            commentBody: хорошо
+            author:
+              userId: 1
+              nickname: Путин(Putin)
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+              followerCount: 144500000
+              followCount: 130
+              followed: true
+              likedCount: 35
+              subjectCount: 4123
+              mimicryCount: 4456
+              likedMovieCount: 2789
+            liked: false
+            likedCount: 563
+            commentedAt: '2017-07-21T17:34:28Z'
+          - commentId: 1
+            commentBody: Awesome
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            liked: false
+            likedCount: 5
+            commentedAt: '2017-07-21T17:33:28Z'
+          - commentId: 0
+            commentBody: I love this video
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            liked: true
+            likedCount: 123456789
+            commentedAt: '2017-07-21T17:32:28Z'
+        nextToken: YWJjZGVmZw
+    list_subject1:
+      value:
+        movies:
+          - subjectMovieId: 0
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump/thumbnails/subject_trump_90p.0000000.jpg
+            regionCode: 0
+            mimicriedCount: 500
+            isPublished: true
+            publishedAt: '2017-05-21T17:32:28Z'
+            movieTranscodeState: 0
+          - subjectMovieId: 1
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump2/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_trump2/thumbnails/subject_trump2_90p.0000000.jpg
+            regionCode: 0
+            mimicriedCount: 112345666
+            isPublished: true
+            publishedAt: '2017-07-21T17:32:28Z'
+            movieTranscodeState: 0
+          - subjectMovieId: 4
+            author:
+              userId: 1
+              nickname: Путин(Putin)
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+              followerCount: 144500000
+              followCount: 130
+              followed: true
+              likedCount: 35
+              subjectCount: 4123
+              mimicryCount: 4456
+              likedMovieCount: 2789
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_putin/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_putin/thumbnails/subject_putin_90p.0000000.jpg
+            regionCode: 0
+            mimicriedCount: 0
+            isPublished: true
+            publishedAt: '2017-07-24T00:32:28Z'
+            movieTranscodeState: 0
+          - subjectMovieId: 6
+            author:
+              userId: 3
+              nickname: 麻生太郎(aso)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+              followerCount: 126800000
+              followCount: 220
+              followed: true
+              likedCount: 500000
+              subjectCount: 1235
+              mimicryCount: 4566
+              likedMovieCount: 7892
+            imageUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_aso/subject_aso.jpg
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_aso/subject_aso.jpg
+            regionCode: 1
+            mimicriedCount: 5
+            isPublished: true
+            publishedAt: '2018-08-24T00:32:28Z'
+            movieTranscodeState: 0
+          - subjectMovieId: 5
+            author:
+              userId: 2
+              nickname: 金正恩(jong-un)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+              followerCount: 25490000
+              followCount: 130
+              followed: false
+              subjectCount: 2123
+              mimicryCount: 356
+              likedMovieCount: 4789
+            imageUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_jong-un/subject_jong-un.jpg
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/subject/subject_jong-un/subject_jong-un.jpg
+            regionCode: 1
+            mimicriedCount: 0
+            isPublished: true
+            publishedAt: '2017-08-24T00:32:28Z'
+            movieTranscodeState: 0
+        nextToken: zXXagkdwW
+    list_mimicry1:
+      value:
+        movies:
+          - mimicryMovieId: 3
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump4/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump4/thumbnails/mimicry_trump4_90p.0000000.jpg
+            regionCode: 0
+            title: 003 Great draft
+            hashTags: []
+            likedCount: 0
+            commentCount: 0
+            sharedCount: 0
+            isPublished: false
+            liked: false
+            movieTranscodeState: 0
+          - mimicryMovieId: 2
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump3/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump3/thumbnails/mimicry_trump3_90p.0000000.jpg
+            regionCode: 0
+            title: '002 We need more hotels #DonaldTrump'
+            hashTags:
+              - hashTagId: 0
+                hashTagName: DonaldTrump
+            likedCount: 0
+            commentCount: 0
+            sharedCount: 0
+            isPublished: true
+            publishedAt: '2017-08-25T10:00:28Z'
+            liked: true
+            movieTranscodeState: 0
+          - mimicryMovieId: 1
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump2/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump2/thumbnails/mimicry_trump2_90p.0000000.jpg
+            regionCode: 0
+            title: '001 Greatest #President of america, #DonaldTrump'
+            hashTags:
+              - hashTagId: 0
+                hashTagName: DonaldTrump
+              - hashTagId: 2
+                hashTagName: President
+            likedCount: 12333
+            commentCount: 0
+            sharedCount: 0
+            ranking: 2
+            isPublished: true
+            publishedAt: '2017-08-21T10:00:28Z'
+            liked: true
+            movieTranscodeState: 0
+          - mimicryMovieId: 0
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump/thumbnails/mimicry_trump_90p.0000000.jpg
+            regionCode: 0
+            title: '000 Make great america again! #DonaldTrump #GreatAmerica'
+            hashTags:
+              - hashTagId: 0
+                hashTagName: DonaldTrump
+              - hashTagId: 1
+                hashTagName: GreatAmerica
+            likedCount: 12222
+            commentCount: 10
+            sharedCount: 234
+            ranking: 1
+            isPublished: true
+            publishedAt: '2017-07-21T17:32:28Z'
+            liked: false
+            movieTranscodeState: 0
+        nextToken: zXXagkdwW
+    list_mimicry2:
+      value:
+        movies:
+          - mimicryMovieId: 6
+            author:
+              userId: 3
+              nickname: 麻生太郎(aso)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_aso.jpg
+              followerCount: 126800000
+              followCount: 220
+              followed: true
+              likedCount: 500000
+              subjectCount: 1235
+              mimicryCount: 4566
+              likedMovieCount: 7892
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_aso/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_aso/thumbnails/mimicry_aso_90p.0000000.jpg
+            regionCode: 1
+            title: '財務大臣 #麻生太郎'
+            hashTags:
+              - hashTagId: 8
+                hashTagName: 麻生太郎
+            likedCount: 100
+            commentCount: 10
+            sharedCount: 30
+            isPublished: true
+            publishedAt: '2018-10-25T09:00:28Z'
+            liked: true
+            movieTranscodeState: 0
+          - mimicryMovieId: 5
+            author:
+              userId: 2
+              nickname: 金正恩(jong-un)
+              languageCode: 1
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_jong-un.jpg
+              followerCount: 25490000
+              followCount: 130
+              followed: false
+              subjectCount: 2123
+              mimicryCount: 356
+              likedMovieCount: 4789
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_jong-un/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_jong-un/thumbnails/mimicry_jong-un_90p.0000000.jpg
+            regionCode: 1
+            title: '#공격전이다 !!'
+            hashTags:
+              - hashTagId: 7
+                hashTagName: 공격전이다
+            likedCount: 0
+            commentCount: 10
+            sharedCount: 5
+            isPublished: true
+            publishedAt: '2017-10-25T10:00:28Z'
+            liked: false
+            movieTranscodeState: 0
+          - mimicryMovieId: 4
+            author:
+              userId: 1
+              nickname: Путин(Putin)
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_putin.jpg
+              followerCount: 144500000
+              followCount: 130
+              followed: true
+              likedCount: 35
+              subjectCount: 4123
+              mimicryCount: 4456
+              likedMovieCount: 2789
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_putin/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_putin/thumbnails/mimicry_putin_90p.0000000.jpg
+            regionCode: 0
+            title: 'Владимир Владимирович #Путин #Russia'
+            hashTags:
+              - hashTagId: 5
+                hashTagName: Путин
+              - hashTagId: 6
+                hashTagName: Russia
+            likedCount: 10000
+            commentCount: 0
+            sharedCount: 0
+            isPublished: true
+            publishedAt: '2017-09-25T10:00:28Z'
+            liked: true
+            movieTranscodeState: 0
+          - mimicryMovieId: 1
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump2/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump2/thumbnails/mimicry_trump2_90p.0000000.jpg
+            regionCode: 0
+            title: '001 Greatest #President of america, #DonaldTrump'
+            hashTags:
+              - hashTagId: 0
+                hashTagName: DonaldTrump
+              - hashTagId: 2
+                hashTagName: President
+            likedCount: 12333
+            commentCount: 0
+            sharedCount: 0
+            ranking: 2
+            isPublished: true
+            publishedAt: '2017-08-21T10:00:28Z'
+            liked: true
+            movieTranscodeState: 0
+          - mimicryMovieId: 0
+            author:
+              userId: 0
+              nickname: Donald trump
+              languageCode: 0
+              iconUrl: >-
+                https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/icon/icon_trump.jpg
+              followerCount: 325700000
+              followCount: 500
+              followed: false
+              likedCount: 500
+              subjectCount: 1123
+              mimicryCount: 6456
+              likedMovieCount: 8789
+              emailAddress: realdnaldtrump@xpression.jp
+            movieUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump/media.m3u8
+            thumbnailUrl: >-
+              https://s3.amazonaws.com/api-development.xpression.jp/testdata/v2/mimicry/mimicry_trump/thumbnails/mimicry_trump_90p.0000000.jpg
+            regionCode: 0
+            title: '000 Make great america again! #DonaldTrump #GreatAmerica'
+            hashTags:
+              - hashTagId: 0
+                hashTagName: DonaldTrump
+              - hashTagId: 1
+                hashTagName: GreatAmerica
+            likedCount: 12222
+            commentCount: 10
+            sharedCount: 234
+            ranking: 1
+            isPublished: true
+            publishedAt: '2017-07-21T17:32:28Z'
+            liked: false
+            movieTranscodeState: 0
+        nextToken: aAggOwsS

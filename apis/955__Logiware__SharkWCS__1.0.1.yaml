@@ -1,0 +1,400 @@
+penapi: "3.0.0"
+info:
+  version: "1.0.1"
+  title: SHARK WCS REST API
+  description: |
+    The SHARK WCS REST API is a protocol that provides low-level access to
+    the devices controlled by SHARK WCS. It is defined in a way, that makes
+    it easy to implement in most programming languages and thereby
+    supporting a simple integration into a Host System.
+
+    Most commands are generic and hides as much as possible, the actually
+    physical device. This means that different types of vertical lifts and
+    similar automats can be controlled with the same set of commands. 
+
+    The interface can be tested from a standard Web Browser, thereby the
+    functionality of the SHARK WCS can be tested and explored before the
+    final integration is ready. A simulation mode is also available to test
+    the software before the actually hardware is installed.
+
+    As an alternative to use a Web Browser, the public domain tool "curl"
+    can be used from a command line, in a scripting languages for testing or
+    even in a final implementation.
+
+    The Host does not have to maintain the physical position of the trays,
+    this is handled by SHARK WCS, it also knows what trays are the opening
+    and it will automatically return trays or boxes if needed, this
+    minimize the risk of crashes due to errors in the Host programming and
+    means that the Host does not have to keep any state information of the
+    machine. 
+  termsOfService: http://swagger.io/terms/
+  contact:
+    name: Logiware ApS
+    email: support@logiware.dk
+    url: http://sharkwms.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: http://localhost:8095
+paths:
+  /wcs/device/automat/{module}/fetch:
+    get:
+      tags:
+      - Automat
+      description: |
+        Get a tray or tote from an automat.
+        
+        It is important to understand the concept of the command to get the
+        optimal performance of the system. The carrier \<number\> is the one
+        that the operator is supposed to pick from. If the device is equipped
+        with picking light, this will be turned on for the specified carrier.
+        \<next\> is the following carriers, sorted in the expected picking
+        order.
+
+        The Host is expected to make this call for every pick/store transaction,
+        in much cases it will not result in any physical movement, just change
+        the pick-by-light indicator to the right box. If there are more picks
+        from the same box, it is completely legal to repeat the same call, it
+        will just be ignored.
+
+        The "next" list is used for automats, that supply turbo functionality
+        (prefetch of trays).
+
+        The four “text” parameters can be used to display textual information on
+        the screen if available. If the text is formatted like
+        \<label\>:\<text\>, it will change the name of the text label to
+        \<label\> and display \<text\>. An example could be:
+
+         text1=Article:011202\&text2=Pick:5
+
+        Examples for a vertical lift:
+
+        To get tray 3 in a vertical lift:
+
+        ```
+            http://localhost:8095/wcs/device/automat/a1/fetch?carrier=3
+        ```
+
+        To get tray 3 from opening
+            2:
+        ```
+            http://localhost:8095/wcs/device/automat/a1/fetch?carrier=3&opening=2
+        ```
+
+        **Pointers**
+
+        If the vertical lift support pointers, this can be specified for the
+        fetch command. The pointer value is given as an X and a Y value. Both
+        are decimal numbers from 0 to 1. 
+
+        0,0 is the lower left corner.
+
+        1,1 is the upper right corner.
+
+        0.5,0.5 is the center of the tray.
+      operationId: fetch
+      parameters:
+        - name: module
+          in: path
+          description: ID of pet to fetch
+          required: true
+          schema:
+            type: string
+        - name: carrier
+          in: query
+          description: Carrier number
+          required: true
+          schema:
+            type: integer
+        - name: next
+          in: query
+          description: Optional list of the next carriers to fetch. Used for equipment that supports turbu/dual functionality or multiple carriers in the opening.
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: opening
+          in: query
+          description: Opening number. If not specified, the default opening 1 is used.
+          required: false
+          schema:
+            type: integer
+            format: int32
+        - name: pointer_x
+          in: query
+          description: If a pointer or light bar is supported, this is the X coordinates.
+          required: false
+          schema:
+            type: number
+        - name: pointer_y
+          in: query
+          description: If a pointer or light bar is supported, this is the Y coordinates.
+          required: false
+          schema:
+            type: number
+        - name: text1
+          in: query
+          description: In combination with displays, this can be used to display text fields.
+          required: false
+          schema:
+            type: string
+        - name: text2
+          in: query
+          description: In combination with displays, this can be used to display text fields.
+          required: false
+          schema:
+            type: string
+        - name: text3
+          in: query
+          description: In combination with displays, this can be used to display text fields.
+          required: false
+          schema:
+            type: string
+        - name: text4
+          in: query
+          description: In combination with displays, this can be used to display text fields.
+          required: false
+          schema:
+            type: string
+        - name: tilt
+          in: query
+          description: If the supports tilting of the tray.
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successfully reponse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+  /wcs/device/automat/{module}/store:
+    get:
+      tags:
+      - Automat
+      description: |
+        Return all carriers in the opening. Can be used to cleanup the opening,
+        when the order is finished or if new carriers have been installed in the
+        opening. If there are more than one opening, the opening number must be
+        specified, else the default opening is 1 and no parameters are
+        needed.
+      parameters:
+        - name: module
+          in: path
+          description: ID of pet to fetch
+          required: true
+          schema:
+            type: string
+        - name: opening
+          in: query
+          description: 2|3|4 (Opening number) (defalt is 1)
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully reponse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+  /wcs/device/automat/{module}/install:
+    get:
+      tags:
+      - Automat
+      description: |
+        Place a carrier in a position in the opening. It will not start any
+        physical movement, only register the box is in the opening.
+
+        >Note:
+        >
+        >If the specified carrier already is registered in another physical
+        >location, *it will be removed from the other location*. This is a smart
+        >way to clean up after, for example, mechanical problems, but it is very
+        >important that the box actually is in the opening and the number is not
+        >for some reason dublicated, because the previous location will be
+        >regarded empty and reused for other carriers. Due to this it is also
+        >highly recommended, that the box numbers are scanned and not entered
+        >manually to prevent any typing errors.
+        
+      parameters:
+        - name: module
+          in: path
+          description: ID of pet to fetch
+          required: true
+          schema:
+            type: string
+        - name: opening
+          in: query
+          description: 2|3|4 (Opening number) (defalt is 1)
+          required: false
+          schema:
+            type: integer
+        - name: carrier
+          in: query
+          description: Carrier number
+          required: true
+          schema:
+            type: integer
+        - name: position
+          in: query
+          description: Position in the opening
+          required: true
+          schema:
+            type: integer
+        - name: height
+          in: query
+          description: Height of the box in mm 
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully reponse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+  /wcs/device/automat/{module}/returntray:
+    get:
+      tags:
+      - Automat
+      description: |
+        Return the current tray/boxes/carrier from the opening. 
+        It is recommended to use the *store* command instead.
+      parameters:
+        - name: module
+          in: path
+          description: ID of pet to fetch
+          required: true
+          schema:
+            type: string
+        - name: opening
+          in: query
+          description: 2|3|4 (Opening number) (defalt is 1)
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully reponse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+  /wcs/device/automat/{module}/getstate:
+    get:
+      tags:
+      - Automat
+      description: |
+        Returns information about the specified opening and the positions of the
+        carrier(s). 
+      parameters:
+        - name: module
+          in: path
+          description: ID of pet to fetch
+          required: true
+          schema:
+            type: string
+        - name: opening
+          in: query
+          description: 2|3|4 (Opening number) (defalt is 1)
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully reponse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+  /wcs/device/automat/{module}/getconfig:
+    get:
+      tags:
+      - Automat
+      description: |
+        Returns information about all trays  installed in the machine and where
+        they are placed.
+      parameters:
+        - name: module
+          in: path
+          description: ID of pet to fetch
+          required: true
+          schema:
+            type: string        
+      responses:
+        '200':
+          description: Successfully reponse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+  /wcs/picklist/order:
+    post:
+      tags:
+      - PickLists
+      description: Send a pick list.
+      requestBody:
+        description: Order to be picked.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+      responses:
+        '200':
+          description: Successfully reponse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusMessage'
+components:
+  schemas:
+    StatusMessage:
+      required:
+        - errorcode
+        - status
+        - message
+      properties:
+        errorcode:
+          type: integer
+          format: int32
+        status:
+          type: string
+        message:
+          type: string
+    Order:
+      properties:
+        ordernumber:
+          type: string
+        ordertype:
+          type: integer
+        orderlines:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderLine"
+    OrderLine:
+      properties:
+        articleNumber:
+          type: string
+        qty:
+          type: number
+    Error:
+      required:
+        - errorcode
+        - status
+        - message
+      properties:
+        errorcode:
+          type: integer
+          format: int32
+        status:
+          type: string
+        message:
+          type: string

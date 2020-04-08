@@ -1,0 +1,1307 @@
+openapi: 3.0.0
+info:
+  description: |+
+    Manage organizations and contacts in a many to one relation. Attributes can be assigned freely in the form of JSON objects.
+    
+    External IDs can be used; if supplied the external ID will be saved with the object and can be used to reference it later.
+    
+    Both contacts and organizations accept custom field values (see the "Contact Fields" and "Organization Fields" sections for more information).
+    
+    For contacts, the email is mandatory and must be unique, because it is used to identify the contact in a unique manner in the entire system.
+
+    Authentication is performed using OAuth. Please see the UM3.0 documentation for the appropriate calls.
+    
+    
+  version: "CRM3.1"
+  title: Azavista CRM
+  termsOfService: 'http://www.azavista.com'
+  contact:
+    email: support@azavista.com
+externalDocs:
+  description: UM3.0
+  url: 'https://app.swaggerhub.com/apis/Azavista4/Azavista/UM3.0#/Session/post_oauth_token'
+tags:
+  - name: Contacts
+    description: 
+      Manage contacts.
+  - name: Organizations
+    description: Manage organizations.
+  - name: Contact Fields
+    description: Manage contact fields.
+  - name: Organization Fields
+    description: Manage organization fields.
+  - name: Contacts Bulk
+    description: 
+      Manage contacts via bulk endpoints.
+  - name: Organizations Bulk
+    description: 
+      Manage organizations via bulk endpoints.
+servers:
+  - url: 'https://app.azavista.com/3.1'
+paths:
+  /contact:
+    parameters:
+    - $ref: "#/components/parameters/FieldMode"
+    get:
+      tags:
+        - Contacts
+      summary: List contacts.
+      parameters:
+      - $ref: "#/components/parameters/Limit"
+      - $ref: "#/components/parameters/Offset"
+      responses:
+        '200':
+          description: Contacts retrieved successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ContactList"
+
+    post:
+      tags:
+        - Contacts
+      summary: Create new contact.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewContact"
+      responses:
+        '200':
+          description: Contact created successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Contact'
+  /contact/{contactID}:
+    parameters:
+    - $ref: "#/components/parameters/ContactID"
+    - $ref: "#/components/parameters/IDType"
+
+    get:
+      tags:
+        - Contacts
+      summary: Get all details of a contact.
+      parameters:
+      - $ref: "#/components/parameters/FieldMode"
+      responses:
+        '200':
+          description: Contact details retrieved successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Contact'
+    patch:
+      tags:
+        - Contacts
+      summary: Update a contact.
+      parameters:
+      - $ref: "#/components/parameters/FieldMode"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewContact"
+      responses:
+        '200':
+          description: Contact updated successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Contact'
+    delete:
+      tags:
+        - Contacts
+      summary: Delete a contact
+      responses:
+        '204':
+          description: Contact deleted successfully.
+  /contact/{contactID}/organization:
+    parameters:
+    - $ref: "#/components/parameters/ContactID"
+    - $ref: "#/components/parameters/IDType"
+    - $ref: "#/components/parameters/FieldMode"
+
+    get:
+      tags:
+        - Contacts
+      summary: Get the organization to which a contact belongs.
+      responses:
+        '200':
+          description: Organization retrieved successfully.
+          content:
+            'application/json':
+              schema:
+                  $ref: '#/components/schemas/Event'
+        '400':
+          description: This contact does not belong to an organization.
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/HttpError"
+  /contact/{contactID}/events/search:
+    post:
+      tags:
+        - Contacts
+      summary: "Search for events this contact attended. This endpoint only finds events to which this contact belongs this means the event_filter is appended to these events. The event filter is mainly used for the quick search in the interface"
+      parameters:
+      - $ref: "#/components/parameters/ContactID"
+      - $ref: "#/components/parameters/Limit"
+      - $ref: "#/components/parameters/Offset"
+      - $ref: "#/components/parameters/FieldMode"
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sort_field:
+                  $ref: "#/components/schemas/SortSearchField"
+                event_filter:
+                  type: object
+
+      responses:
+        '200':
+          description: Contacts found. Call `GET /contact/{contactID}` to get more information about a specific contact.
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/EventList"
+  /contact/{contactID}/email:
+    post:
+      tags:
+        - Contacts
+      summary: Search for emails of this contact.
+      parameters:
+      - $ref: "#/components/parameters/ContactID"
+      - $ref: "#/components/parameters/IDType"
+      - $ref: "#/components/parameters/FieldMode"
+      - $ref: "#/components/parameters/Limit"
+      - $ref: "#/components/parameters/Offset"
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sort_field:
+                  $ref: "#/components/schemas/SortSearchField"
+                event_filter:
+                  type: object
+                  description: Find events matching this filter for this contact.
+            example: {
+              sort_field: {
+                field_name: 'email',
+                direction: 'desc'
+              },
+              event_filter: {
+                or: [
+                  {last_name: { like: "e" }},
+                  {id: {
+                    in: ['5d1deff58b761f000fab1363']
+                  }},
+                  {external_id: 123}
+                ]
+              }
+            }
+      responses:
+        '200':
+          description: Contacts found. Call `GET /contact/{contactID}` to get more information about a specific contact.
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ContactList"
+  /contact/search:
+    post:
+      tags:
+        - Contacts
+      summary: Search for contacts.
+      parameters:
+      - $ref: "#/components/parameters/FieldMode"
+      - $ref: "#/components/parameters/Limit"
+      - $ref: "#/components/parameters/Offset"
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sort_field:
+                  $ref: "#/components/schemas/SortSearchField"
+                contact_filter:
+                  type: object
+                  description: Find contacts matching this filter.
+                organization_filter:
+                  type: object
+                  description: Find contacts belonging to at an organization that matches this filter.
+            example: {
+              sort_field: {
+                field_name: 'email',
+                direction: 'desc'
+              },
+              contact_filter: {
+                or: [
+                  {last_name: { like: "e" }},
+                  {id: {
+                    in: ['5d1deff58b761f000fab1363']
+                  }},
+                  {external_id: 123}
+                ]
+              }
+            }
+      responses:
+        '200':
+          description: Contacts found. Call `GET /contact/{contactID}` to get more information about a specific contact.
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ContactList"
+  /contact/add_to_event:
+    post:
+      tags:
+        - Contacts Bulk
+      summary: Bulk update to add contacts to an event.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contact_filter:
+                  type: object
+                event_id:
+                  description: The event_id to add the contact too.
+                  example: "A string to set the field to"
+      responses:
+        '202':
+          description: Field update now in progress; check status using the returned job ID.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Job'
+  /contact/bulk_set/{field}:
+    parameters:
+    - name: field
+      schema:
+        type: string
+      in: path
+      required: true
+      description: The field name or ID, depending on what field mode is set.
+    - $ref: "#/components/parameters/FieldMode"
+    post:
+      tags:
+        - Contacts Bulk
+      summary: Bulk update participants' field values using a participant search filter.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contact_filter:
+                  type: object
+                value:
+                  description: The value to set the field to. Must match the field schema.
+                  example: "A string to set the field to"
+      responses:
+        '202':
+          description: Field update now in progress; check status using the returned job ID.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Job'
+
+  /contact/export:
+    parameters:
+    - $ref: "#/components/parameters/FieldMode"
+    post:
+      tags:
+        - Contacts Bulk
+      summary: Bulk update participants' field values using a participant search filter.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contact_filter:
+                  type: object
+                export_fields:
+                  type: array
+                  items:
+                    type: string
+                    example: [
+                      "first_name",
+                      "last_name",
+                      "email"
+                    ]
+                sort_field:
+                  type: object
+                  properties:
+                    field_name:
+                      type: string
+                    direction:
+                      type: string
+                name:
+                  type: string
+                save_as_template:
+                  type: boolean
+                save_as_checkpoint:
+                  type: boolean
+                  
+                  
+      responses:
+        '202':
+          description: Field update now in progress; check status using the returned job ID.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Job'
+  /contact/email:
+    parameters:
+    - $ref: "#/components/parameters/FieldMode"
+    post:
+      tags:
+        - Contacts Bulk
+      summary: Send email to selected contacts.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contact_filter:
+                  type: object
+                email_template_id:
+                  type: string
+      responses:
+        '202':
+          description: Email sending now in progress; check status using the returned job ID.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Job'
+                
+  /organization:
+    parameters:
+    - $ref: "#/components/parameters/FieldMode"
+
+    get:
+      tags:
+        - Organizations
+      summary: List organizations.
+      parameters:
+      - $ref: "#/components/parameters/Limit"
+      - $ref: "#/components/parameters/Offset"
+      responses:
+        '200':
+          description: Organizations retrieved successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/OrganizationList"
+    post:
+      tags:
+        - Organizations
+      summary: Create a new organization.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewOrganization"
+
+      responses:
+        '201':
+          description: Organization was created successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/Organization"
+  /organization/{organizationID}:
+    parameters:
+    - $ref: "#/components/parameters/OrgID"
+    - $ref: "#/components/parameters/IDType"
+    get:
+      tags:
+        - Organizations
+      summary: Get an organization's details.
+      parameters:
+      - $ref: "#/components/parameters/FieldMode"
+      responses:
+        '200':
+          description: Organization retrieved successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Organization'
+    patch:
+      tags:
+        - Organizations
+      summary: Update an organization.
+      parameters:
+      - $ref: "#/components/parameters/FieldMode"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewOrganization"
+      responses:
+        '200':
+          description: Organization updated successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Organization'
+
+    delete:
+      tags:
+        - Organizations
+      summary: Delete an organization.
+      responses:
+        '204':
+          description: Organization deleted successfully.
+
+  /organization/field:
+    get:
+      tags:
+        - Organization Fields
+      summary: Get fields that apply to organizations.
+      parameters:
+      - $ref: "#/components/parameters/Offset"
+      - $ref: "#/components/parameters/Limit"
+      responses:
+        '200':
+          description: Fields retrieved successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/FieldList'
+    post:
+      tags:
+        - Organization Fields
+      summary: Create a new field that applies to organizations.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewField"
+      responses:
+        '201':
+          description: Field created successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Field'
+  /organization/field/{fieldID}:
+    parameters:
+    - $ref: "#/components/parameters/FieldID"
+
+    get:
+      tags:
+        - Organization Fields
+      summary: Get details about an organization field.
+      responses:
+        '200':
+          description: Field retrieved successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Field'
+    patch:
+      tags:
+        - Organization Fields
+      summary: Update an organization field.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewField"
+      responses:
+        '200':
+          description: Field updated successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Field'
+    delete:
+      tags:
+        - Organization Fields
+      summary: Archive an organization field.
+      responses:
+        '204':
+          description: Field archived successfully.
+
+  /organization/field/search:
+    post:
+      tags:
+        - Organization Fields
+      summary: Search for organization fields.
+      parameters:
+      - $ref: "#/components/parameters/Offset"
+      - $ref: "#/components/parameters/Limit"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FieldSearch'
+      responses:
+        '200':
+          description: Fields found.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/FieldList'
+  /organization/search:
+    post:
+      tags:
+        - Organizations
+      summary: Search for organizations.
+      parameters:
+      - $ref: "#/components/parameters/Offset"
+      - $ref: "#/components/parameters/Limit"
+      - $ref: "#/components/parameters/FieldMode"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sort_field:
+                  $ref: "#/components/schemas/SortSearchField"
+                organization_filter:
+                  type: object
+                  description: Find organizations matching this filter.
+                contact_filter:
+                  type: object
+                  description: Find organizations with at least one contact that matches this filter.
+            example: {
+              sort_field: {
+                field_name: 'name',
+                direction: 'desc'
+              },
+              organization_filter: {
+                or: {
+                  name: {
+                    like: e
+                  },
+                  id: {
+                    in: ['5d1deff58b761f000fab1363']
+                  },
+                  external_id: 123
+                }
+              }
+            }
+      responses:
+        '200':
+          description: Organizations found.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/OrganizationList'
+  /organization/export:
+    parameters:
+    - $ref: "#/components/parameters/FieldMode"
+    post:
+      tags:
+        - Organizations Bulk
+      summary: Export organizations using an organization search filter.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization_filter:
+                  type: object
+      responses:
+        '202':
+          description: Organization export now in progress; check status using the returned job ID.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Job'
+  /organization/bulk_set/{field}:
+    parameters:
+    - name: field
+      schema:
+        type: string
+      in: path
+      required: true
+      description: The field name or ID, depending on what field mode is set.
+    - $ref: "#/components/parameters/FieldMode"
+    post:
+      tags:
+        - Organizations Bulk
+      summary: Bulk update organiztion' field values using a organization search filter.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization_filter:
+                  type: object
+                value:
+                  description: The value to set the field to. Must match the field schema.
+                  example: "A string to set the field to"
+      responses:
+        '202':
+          description: Field update now in progress; check status using the returned job ID.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Job'
+
+  /contact/field:
+    get:
+      tags:
+        - Contact Fields
+      summary: Get fields that apply to contacts.
+      parameters:
+      - $ref: "#/components/parameters/Offset"
+      - $ref: "#/components/parameters/Limit"
+      responses:
+        '200':
+          description: Fields retrieved successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/FieldList'
+    post:
+      tags:
+        - Contact Fields
+      summary: Create a new field that applies to contacts.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewField"
+      responses:
+        '201':
+          description: Field created successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Field'
+  /contact/field/{fieldID}:
+    parameters:
+    - $ref: "#/components/parameters/FieldID"
+    get:
+      tags:
+        - Contact Fields
+      summary: Get details about a contact field.
+      responses:
+        '200':
+          description: Field retrieved successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Field'
+    patch:
+      tags:
+        - Contact Fields
+      summary: Update a contact field.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewField"
+      responses:
+        '200':
+          description: Field updated successfully.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Field'
+    delete:
+      tags:
+        - Contact Fields
+      summary: Archive a contact field.
+      responses:
+        '204':
+          description: Field archived successfully.
+
+  /contact/field/search:
+    post:
+      tags:
+        - Contact Fields
+      summary: Search for fields.
+      parameters:
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Limit"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FieldSearch'
+
+      responses:
+        '200':
+          description: Fields found.
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/FieldList'
+components:
+  parameters:
+    FieldMode:
+      name: field_mode
+      in: query
+      required: false
+      description: Controls whether custom fields in the payload will be represented using their `name` attribute or their ID.
+      schema:
+        type: string
+        example: 
+        enum: [id, name]
+        default: name
+    IDType:
+      name: id_type
+      in: query
+      required: false
+      description: "Use an entity's internal or external ID to refer to it."
+      schema:
+        type: string
+        example: 
+        enum: [
+          internal,
+          external
+        ]
+    OrgID:
+      in: path
+      name: organizationID
+      required: true
+      description: Organization ID
+      schema:
+        type: string
+    ContactID:
+      in: path
+      name: contactID
+      required: true
+      description: The ID of the contact.
+      schema:
+        type: string
+    FieldID:
+      in: path
+      name: fieldID
+      required: true
+      description: The ID of the field.
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        example: 50
+        minimum: 1
+        maximum: 50
+    Offset:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        example: 50
+        minimum: 0
+
+
+  schemas:
+    ContactList:
+      type: object
+      properties:
+        object_count:
+          type: integer
+          example: 1
+        offset:
+          type: integer
+          example: 0
+        limit:
+          type: integer
+          example: 50
+        contacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Contact"
+    NewContact:
+      type: object
+      properties:
+        external_id:
+          type: string
+          example: "GHF67M"
+        organization_id:
+          type: string
+          example: '507f1f77bcf86cd799439333'
+        email:
+          type: string
+          example: "peter@email.com"
+        first_name:
+          type: string
+          example: Peter
+        last_name:
+          type: string
+          example: Johnson
+        full_name:
+          type: string
+          example: Mr. Peter Johnson
+        attribute_string:
+          example: "some string"
+          type: string
+          description: An arbitrary string attribute.
+        attribute_number:
+          example: 5.0754
+          description: An arbitrary numerical attribute.
+        attribute_object:
+          type: object
+          description: An arbitrary object attribute.
+          properties:
+            item1:
+              type: string
+              example: "item1value"
+            item2:
+              type: string
+              example: "item2value"
+        attribute_array:
+          type: array
+          items:
+            type: string
+          example: ["red","blue","green"]
+          description: An arbitrary array attribute.
+    Contact:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        external_id:
+          type: string
+          example: "GHF67M"
+        organization_id:
+          type: string
+          example: '507f1f77bcf86cd799439033'
+        email:
+          type: string
+          example: "peter@email.com"
+        first_name:
+          type: string
+          example: Peter
+        last_name:
+          type: string
+          example: Johnson
+        full_name:
+          type: string
+          example: Mr. Peter Johnson
+        attribute_string:
+          example: "some string"
+          type: string
+          description: An arbitrary string attribute.
+        attribute_number:
+          example: 5.0754
+          description: An arbitrary numerical attribute.
+        attribute_object:
+          type: object
+          description: An arbitrary object attribute.
+          properties:
+            item1:
+              type: string
+              example: "item1value"
+            item2:
+              type: string
+              example: "item2value"
+        attribute_array:
+          type: array
+          items:
+            type: string
+          example: ["red","blue","green"]
+          description: An arbitrary array attribute.
+        created_at:
+          type: string
+          example: "2019-06-27T10:16:23.044Z"
+        updated_at:
+          type: string
+          example: "2019-06-28T12:17:55.133Z"
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        external_id:
+          type: string
+          example: "GHF67M"
+        name:
+          type: string
+          example: "Wayne Enterprises"
+          description: Required for new organizations.
+        attribute_string:
+          example: "some string"
+          type: string
+        attribute_number:
+          example: 5.0754
+        attribute_object:
+          type: object
+          properties:
+            item1:
+              type: string
+              example: "item1value"
+            item2:
+              type: string
+              example: "item2value"
+        attribute_array:
+          type: array
+          items:
+            type: string
+          example: ["red","blue","green"]
+        created_at:
+          type: string
+          example: "2019-06-27T10:16:23.044Z"
+        updated_at:
+          type: string
+          example: "2019-06-28T12:17:55.133Z"
+    OrganizationList:
+      type: object
+      properties:
+        object_count:
+          type: integer
+          example: 1
+        offset:
+          type: integer
+          example: 0
+        limit:
+          type: integer
+          example: 50
+        organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Organization"
+    NewOrganization:
+      type: object
+      properties:
+        external_id:
+          type: string
+          example: "GHF67M"
+          description: If provided, this external ID will be mapped to the organization.
+        name:
+          type: string
+          example: "Wayne Enterprises"
+          description: Required for new organizations.
+        attribute_string:
+          example: "some string"
+          type: string
+        attribute_number:
+          example: 5.0754
+        attribute_object:
+          type: object
+          properties:
+            item1:
+              type: string
+              example: "item1value"
+            item2:
+              type: string
+              example: "item2value"
+        attribute_array:
+          type: array
+          items:
+            type: string
+          example: ["red","blue","green"]
+    Field:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507d1f77bcf86cd79943aaaa"
+        name:
+          type: string
+          description: "The field's machine-friendly name (used by the API)."
+          example: "contact_card"
+        type:
+          type: string
+          default: text
+          description: "The field type. Used for search purposes, but NOT connected to the schema."
+          example: "text"
+        label:
+          type: string
+          description: "The field's human-friendly name (used by the frontend)."
+          example: "Contact card"
+        category:
+          type: string
+          description: "The category of the field"
+          example: "Travel Fields"
+        component:
+          type: string
+          description: "The component type used to display the field. Only used in certain cases."
+          enum: ["default", "relation", "textarea"]
+          default: "default"
+        archived:
+          type: boolean
+          default: false
+          description: "Determines whether the field has been archived and is shown in the default lists."
+        mandatory_for_planners: 
+          type: boolean
+          default: false
+          description: "Defines whether planner users are required to fill in a field in the Web UI. Does not prevent the field from being set blank through the API."
+        locked_for_editing:
+          type: boolean
+          default: true
+          description: "Determines whether planner users are allowed to edit the field's definition through the Web UI. Does not block changes made via the API."
+        builtin:
+          type: boolean
+          description: Whether the field is a built-in or custom field.
+          example: false
+        schema:
+          type: object
+          description: "A JSON schema object describing the field's allowed values and structure. Advanced constructs (e.g. `oneOf`, `anyOf`, `if`, etc.) are not accepted. Object types will always have `additionalProperties` set to false and `patternProperties` set empty, and overriding this is not possible."
+          example: {
+            type: "object",
+            required: [
+              "name",
+              "email"
+            ],
+            properties: {
+              name: {
+                type: "string"
+              },
+              email: {
+                type: "string",
+                format: "email"
+              },
+              company: {
+                type: "string"
+              }
+            }
+          }
+        created_at:
+          type: string
+          example: "2019-06-28T12:17:55.133Z"
+        updated_at:
+          type: string
+          example: "2019-06-28T12:17:55.133Z"
+    NewField:
+      type: object
+      properties:
+        name:
+          type: string
+          description: "The field's machine-friendly name (used by the API)."
+          example: "contact_card"
+        type:
+          type: string
+          default: text
+          description: "The field type. Used for search purposes, but NOT connected to the schema."
+          example: "text"
+        label:
+          type: string
+          description: "The field's human-friendly name (used by the frontend)."
+          example: "Contact card"
+        category:
+          type: string
+          description: "The category of the field."
+          example: "Travel Fields"
+        component:
+          type: string
+          description: "The component type used to display the field. Only used in certain cases."
+          enum: ["default", "textarea"]
+          default: "default"
+        archived:
+          type: boolean
+          default: false
+          description: "Determines whether the field has been archived and is shown in the default lists."
+        mandatory_for_planners:
+          type: boolean
+          default: false
+          description: "Determines whether planner users are required to fill in the field."
+        locked_for_editing:
+          type: boolean
+          description: "Determines whether planner users are allowed to edit the field's definition."
+          default: true
+        schema:
+          type: object
+          description: "A JSON schema object describing the field's allowed values and structure. Advanced constructs (e.g. `oneOf`, `anyOf`, `if`, etc.) are not accepted. Object types will always have `additionalProperties` set to false and `patternProperties` set empty, and overriding this is not possible."
+          example: {
+            type: "object",
+            required: [
+              "name",
+              "email"
+            ],
+            properties: {
+              name: {
+                type: "string"
+              },
+              email: {
+                type: "string",
+                format: "email"
+              },
+              company: {
+                type: "string"
+              }
+            }
+          }
+    FieldSearch:
+      type: object
+      properties:
+        sort_field:
+          $ref: "#/components/schemas/SortSearchField"
+        field_filter:
+          type: object
+          description: Find fields matching this filter.
+      example: {
+        sort_field: {
+          field_name: 'label',
+          direction: 'desc'
+        },
+        field_filter: {
+          or: [
+            name: {
+              like: e
+            },
+            id: {
+              in: ['5d1deff58b761f000fab1363']
+            }
+          ]
+        }
+      }
+    SortSearchField:
+      type: object
+      properties:
+        field_name:
+          type: string
+          example: internal
+          enum: [
+            name
+          ]
+          default: name
+        direction:
+          type: string
+          example: 'asc'
+          enum: [
+            'asc',
+            'desc'
+          ]
+    FieldList:
+      type: object
+      properties:
+        object_count:
+          type: integer
+          example: 130
+        limit:
+          type: integer
+          example: 50
+        offset:
+          type: integer
+          example: 150
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/Field'
+    Job:
+      type: object
+      properties:
+        job_id:
+          type: string
+          example: "507d1f77bcf86cd79943ffff"
+    EventList:
+      type: object
+      properties:
+        object_count:
+          type: integer
+          example: 1
+        offset:
+          type: integer
+          example: 0
+        limit:
+          type: integer
+          example: 50
+        contacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+          description: Azavista ID
+        external_id:
+          type: string
+          example: "GHF67M"
+          description: External ID
+        type:
+          type: string
+          enum: [
+            "event",
+            "template"
+          ]
+        name:
+          type: string
+          example: "Annual meeting 2023"
+        start:
+          type: string
+          example: "2019-06-27T10:16:23.044Z"
+          description: ISO 8601 datetime.
+        end:
+          type: string
+          example: "2019-06-27T10:16:23.044Z"
+          description: ISO 8601 datetime.
+        team_ids:
+          type: array
+          items:
+            type: integer
+          example: [5, 6, 42]
+          description: The list of teams that have access to this event.
+        timezone:
+          type: string
+          example: "Europe/Amsterdam"
+          description: Any timezone in the [tz database](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).
+        custom_string:
+          type: string
+          example: Johnson
+          description: custom string
+        custom_number:
+          type: number
+          example: 332.34
+          description: Custom number
+        custom_integer:
+          example: 512
+          type: integer
+          description: A custom integer.
+        custom_object:
+          type: object
+          properties:
+            a:
+              type: string
+          description: An arbitrary object
+        custom_array:
+          type: array
+          items:
+            type: string
+          example: ["red","blue","green"]
+          description: An arbitrary array attribute.
+        created_at:
+          type: string
+          example: "2019-06-27T10:16:23.044Z"
+        updated_at:
+          type: string
+          example: "2019-06-28T12:17:55.133Z"
+
+    HttpError:
+      type: object
+      description: Generic HTTP response object for errors. Azavista supports 400, 401, 403, 404, 500.
+      required:
+      - message
+      - code
+      properties:
+        message:
+          type: string
+          example: "Parameter 'name' cannot be empty"
+          description: "Human-readable reason for failure. Not guaranteed to have a consistent format or be stable."
+        code:
+          type: string
+          example: "ValidationFailed"
+          description: "Short, machine-readable reason for failure. Guaranteed to be stable."
+        data:
+          type: object
+          example: {}
+          description: "Additional information about the error. May or may not be present."

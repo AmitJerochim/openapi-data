@@ -1,0 +1,1445 @@
+openapi: 3.0.0
+info:
+  title: Engage BFF
+  description: Backend-for-Frontend (BFF) that offers endpoints for the Engage JavaScript
+  version: "4.2.6"
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+servers:
+  - description: production
+    url: 'https://engage.dfp.ai/api'
+  - description: production 2
+    url: 'http://riskatlas.dfp.ai/'
+  - description: staging
+    url: 'http://engage.staging.dfp.ai/api'
+  - description: staging 2
+    url: 'http://riskatlas.dfp.ai/'
+security:
+- cookieAuth: []
+paths:
+  /business:
+    get:
+      summary: Search for businesses
+      description: Search for a business to help with autocompleting user input.
+      operationId: getBusinesses
+      tags:
+        - autocomplete
+      parameters:
+        - in: query
+          name: name
+          description: Name of the business we are searching for
+          schema:
+            type: string
+            example: Acme
+          required: true
+        - in: query
+          name: postcode
+          description: Postcode of the business we are searching for
+          schema:
+            type: string
+            example: SE1 9NT
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BasicBusiness'
+                description: List of businesses
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          description: External service unavailable or reporting problems
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /list:
+    get:
+      summary: Retrieve all user's saved business lists
+      operationId: getLists
+      tags:
+        - list
+      parameters:
+        - in: query
+          name: type
+          description: Filter by type of the list
+          schema:
+            type: string
+            enum: [batch, custom]
+        - in: query
+          name: list_business_id
+          description: Filter and show only lists with the given (or similar) business ID
+          schema:
+            type: integer
+            format: int32
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/List'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Create a new saved business list
+      operationId: createList
+      tags:
+        - list
+      parameters:
+        - in: header
+          name: X-XSRF-TOKEN
+          schema:
+            type: string
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product:
+                  type: string
+                label:
+                  type: string
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                csv:
+                  type: string
+                  format: base64
+      responses:
+        200:
+          description: "successfully created, possibly processing"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/List'
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/ServerError'
+  /list/{id}:
+    get:
+      summary: Retrieve a saved business list
+      operationId: getList
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/List'
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+    put:
+      summary: Update a saved business list
+      description: Will update a list of saved businesses, and undelete it if has been trashed before.
+      operationId: updateList
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+        - in: header
+          name: X-XSRF-TOKEN
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/List'
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Delete a saved business list
+      operationId: deleteList
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+        - in: header
+          name: X-XSRF-TOKEN
+          schema:
+            type: string
+          required: true
+      responses:
+        200:
+          description: "success"
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+  /list/{id}/conflict:
+    get:
+      summary: Retrieve unresolved conflicts for a list
+      operationId: getListConflicts
+      tags:
+        - list
+        - autocomplete
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+        - in: query
+          name: page
+          description: Page number to display
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          description: Amount of items to display per page
+          schema:
+            type: integer
+            default: 10
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Conflict'
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: Resolve conflicts for a list
+      description: This will take in autocompletion data selected by the user for each conflict, adding new businesses to the list. Alternatively, if selection is null, it will remove the conflict from the list.
+      operationId: resolveListConflicts
+      tags:
+        - list
+        - autocomplete
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    format: int32
+                  selection:
+                    allOf:
+                      - $ref: '#/components/schemas/BasicBusiness'
+                    nullable: true
+      responses:
+        200:
+          description: "all conflicts successfully resolved"
+        204:
+          description: "no conflicts resolved"
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+  /list/{id}/business:
+    get:
+      summary: Retrieve all businesses in a list
+      operationId: getListBusinesses
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+        - in: query
+          name: filter
+          description: String to filter by (currently only supports the company name)
+          schema:
+            type: string
+        - in: query
+          name: page
+          description: Page number to display
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          description: Amount of items to display per page
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: ordering
+          description: Business field and direction to order by, seperated with a dot. Can be multiple when seperated with a comma.
+          schema:
+            type: string
+            example: viewed.desc,created_at.desc
+            pattern: '^([a-z_(->)]+\.(asc|desc),?)+$'
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Business'
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Purge all businesses from a list
+      operationId: purgeListBusinesses
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+      responses:
+        200:
+          description: "success"
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+  /list/{id}/business/{businessIds}:
+    put:
+      summary: Add business(es) to list or update the relationship
+      description: Will add an existing business to another list if it isnt on there already. It will also update the relationship and undelete a trashed business.
+      operationId: addBusinessToList
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+        - in: path
+          name: businessIds
+          description: ID(s) of the business, multiple IDs seperated with commas
+          schema:
+            type: integer
+            format: int32
+          required: true
+        - in: header
+          name: X-XSRF-TOKEN
+          schema:
+            type: string
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                viewed:
+                  type: boolean
+      responses:
+        200:
+          description: "successfully updated"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Business'
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+    delete:
+      summary: Remove a business (or similar) from a list
+      operationId: removeBusinessFromList
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+        - in: path
+          name: businessIds
+          description: ID(s) of the business, multiple IDs seperated with commas
+          schema:
+            type: integer
+            format: int32
+          required: true
+        - in: header
+          name: X-XSRF-TOKEN
+          schema:
+            type: string
+          required: true
+      responses:
+        200:
+          description: "success"
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+  /list/business:
+    get:
+      summary: Retrieve businesses across all lists
+      operationId: getBusinessesFromLists
+      tags:
+        - list
+      parameters:
+        - in: query
+          name: filter
+          description: String to filter by (currently only supports the company name)
+          schema:
+            type: string
+        - in: query
+          name: page
+          description: Page number to display
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          description: Amount of items to display per page
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: ordering
+          description: Business field and direction to order by, seperated with a dot. Can be multiple when seperated with a comma.
+          schema:
+            type: string
+            example: viewed.desc,created_at.desc
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                  - $ref: '#/components/schemas/Business'
+                  properties:
+                    list:
+                      $ref: '#/components/schemas/List'
+                        
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/ServerError'
+  /list/{id}/notification:
+    put:
+      summary: Set notification settings for a list
+      description: This will take notification settings and update a list with them.
+      operationId: notificationListSettings
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationConfig'
+      responses:
+        200:
+          description: "notification settings successfully updated"
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+    get:
+      summary: Get notification settings for a list
+      description: This will take a list id and retrieve the notifications settings for it.
+      operationId: getNotificationListSettings
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationConfig'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+  /list/{id}/user-access-levels:
+    get:
+      summary: Retrieve a user access levels for a list
+      operationId: getUserAccessLevels
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserAccessLevel'
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+    post:
+      summary: update user access levels for a list
+      operationId: updateUserAccessLevels
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserAccessLevelInput'
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAccessLevel'
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+  /list/{id}/renew:
+    get:
+      summary: Check renewals of businesses on a Renew list
+      operationId: checkRenewals
+      tags:
+        - list
+      parameters:
+        - in: path
+          name: id
+          description: ID of the list
+          schema:
+            type: integer
+            format: int32
+          required: true
+      responses:
+        200:
+          description: "success"
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+  /query:
+    post:
+      summary: Start a new query for business data
+      description: Will start a new query for business data, and return business ID as well as query ID to poll.
+      operationId: startBusinessQuery
+      tags:
+        - query
+      parameters:
+        - in: header
+          name: X-XSRF-TOKEN
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: legacy_id
+          description: DFP Search ID of the business we are looking for
+          schema:
+            type: string
+            example: G_ChIJ1wT0gKgEdkgRXiqJv-KYNxQ
+          deprecated: true
+        - in: query
+          name: entity_id
+          description: DFP Business ID of the business we are looking for
+          schema:
+            type: string
+            format: uuid
+            example: "424de44d-1067-4bcd-8755-13df4b136c7b"
+        - in: query
+          name: name
+          description: Company name
+          schema:
+            type: string
+            example: Digital Fineprint
+        - in: query
+          name: postcode
+          description: Postcode
+          schema:
+            type: string
+            example: SE1 0HS
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Query'
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          description: External service unavailable or reporting problems
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /query/{id}:
+    get:
+      summary: Poll query for business data
+      description: Polls the current state of a running or timed-out query for business data. Can be called repeatedly.
+      operationId: pollBusinessQuery
+      tags:
+        - query
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        200:
+          description: "success"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Query'
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          description: External service unavailable or reporting problems
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /auth:
+    post:
+      summary: GET/POST/PUT/DELETE proxy to the Auth API
+      operationId: postProxy
+      security: []
+      tags:
+        - auth
+      parameters:
+        - in: query
+          name: url
+          description: the url on the Auth API you want to map on to
+          schema:
+            type: string
+            example: user
+        - in: header
+          name: X-XSRF-TOKEN
+          schema:
+            type: string
+          required: true
+      responses:
+        200:
+          description: for Auth API response, see Auth API definition (https://app.swaggerhub.com/apis/Digital-Fineprint/Auth/)
+        4XX:
+          description: Auth API client errors
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/ServiceError'
+        5XX:
+          description: Auth API server error
+  /auth/login:
+    post:
+      summary: Login a user
+      operationId: login
+      security: []
+      tags:
+        - auth
+      parameters:
+        - in: header
+          name: X-XSRF-TOKEN
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        200:
+          description: success
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/ServiceError'
+  /auth/logout:
+    get:
+      summary: Logout a user
+      operationId: logout
+      tags:
+        - auth
+      responses:
+        200:
+          description: success
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/ServiceError'
+  /auth/bearer:
+    get:
+      summary: Get logged-in user
+      operationId: getBearer
+      tags:
+        - auth
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/ServerError'
+        503:
+          $ref: '#/components/responses/ServiceError'
+  /auth/reset-password:
+    post:
+      summary: Reset password based on emailed token
+      operationId: resetPassword
+      tags:
+        - auth
+      parameters:
+        - in: header
+          name: X-XSRF-TOKEN
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                password_confirmation:
+                  type: string
+                token:
+                  type: string
+              required:
+                - password
+                - password_confirmation
+                - token
+      responses:
+        200:
+          description: success
+        400:
+          $ref: '#/components/responses/InvalidInput'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        500:
+          $ref: '#/components/responses/ServerError'
+  /options/maintenance:
+    get:
+      tags:
+        - options
+      description: get the maintenance option of the system
+      security: []
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  is_maintenance:
+                    type: string
+                    example: 1
+                  banner_text:
+                    type: string
+                    example: New releases have been scheduled for today at 18:30 and may cause some brief downtime. We're sorry for any inconvenience cause.
+        500:
+          $ref: '#/components/responses/ServerError'
+  /status:
+    get:
+      summary: Server heartbeat operation
+      tags:
+        - maintenance
+      description: Execute a status check on the API
+      security: []
+      parameters:
+        - in: query
+          name: health_check
+          description: check health of external services if set to 1
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  release:
+                    type: string
+                    example: build-999
+                    description: The version or build number of this deployment
+        500:
+          $ref: '#/components/responses/ServerError'
+components:         
+  schemas:
+    UserAccessLevel:
+      type: object
+      description: An object representing a user access level
+      properties:
+        user_id: 
+          type: integer
+          example: 1
+        list_id:
+          type: integer
+          example: 1
+        access_level:
+          type: string
+          enum: [owner, edit, read]
+    UserAccessLevelInput:
+      type: object
+      description: An object representing representing a user access level input
+      properties:
+        user_id: 
+          type: integer
+          example: 1
+        access_level:
+          type: string
+          enum: [owner, edit, read]
+    User:
+      type: object
+      description: An object representing a user
+      properties:
+        id:
+          type: integer
+          format: int32
+        email:
+          type: string
+          format: email
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+        favourite_list:
+          $ref: '#/components/schemas/List'
+        history_list:
+          $ref: '#/components/schemas/List'
+        created_at:
+          type: string
+        updated_at:
+          type: string
+        deleted_at:
+          type: string
+          nullable: true
+    Permission:
+      type: object
+      description: An object representing permissions
+      properties:
+        resource: 
+          type: string
+          example: "user"
+        privilege:
+          type: string
+          example: "view"
+        service:
+          type: string
+          example: "auth"
+    # CreatedUser:
+    #   allOf:
+    #   - $ref: '#/components/schemas/User'
+    #   description: An object representing a created user
+    #   properties:
+    #     favourite_list:
+    #       $ref: '#/components/schemas/List'
+    #     history_list:
+    #       $ref: '#/components/schemas/List'
+    #     created_at:
+    #       type: string
+    #     updated_at:
+    #       type: string
+    #     deleted_at:
+    #       type: string
+          # nullable: true
+    BasicBusiness:
+      type: object
+      description: A basic business that we can find more data about. Either legacy_id or name+postcode will be provided to ensure a query is possible with this model.
+      properties:
+        legacy_id:
+          type: string
+          example: G_ChIJ1wT0gKgEdkgRXiqJv-KYNxQ
+          deprecated: true
+          nullable: true
+        name:
+          type: string
+          example: Digital Fineprint Ltd
+        postcode:
+          type: string
+          example: SE1 0HS
+          nullable: true
+        address:
+          type: string
+          example: 305-308 Metal Box Factory, 30 Great Guildford Street, London SE1 0HS
+          nullable: true
+        entity_id:
+          type: string
+          format: uuid
+          example: "7d125afd-cafc-415b-b20b-316cce773346"
+          description: DFP Business ID of the business
+    Business:
+      type: object
+      description: A business that we hold information about
+      properties:
+        id:
+          type: integer
+          format: int32
+          # type: string
+          # format: uuid
+          # example: bff149a0b87f5b0e00d9dd364e9ddaa0
+        viewed:
+          type: boolean
+        query_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          example: "2014-06-26 04:07:31"
+        updated_at:
+          type: string
+          example: "2014-06-26 04:07:31"
+        renewal_date:
+          type: string
+          nullable: true
+          example: "2014-06-26"
+        premium_amount:
+          type: integer
+          nullable: true
+        data:
+          type: object
+          properties:
+            address:
+              type: string
+              example: 305-308 Metal Box Factory, 30 Great Guildford Street, London SE1 0HS
+            directors:
+              type: array
+              description: Directors of the business
+              items:
+                type: object
+                properties:
+                  name: 
+                    type: string
+                    example: Bo-Erik Abrahamsson
+                  linkedin:
+                    type: string
+                    example: https://www.linkedin.com/boerik
+            email:
+              type: string
+              example: info@digitalfineprint.com
+            employees:
+              type: string
+              example: "5-20"
+            homepage:
+              type: string
+              example: https://www.digitalfineprint.com
+            indicators:
+              type: array
+              items:
+                type: object
+                description: An indicator that might lead to an insurance policy
+                required:
+                - text
+                - title
+                - type
+                properties:
+                  title:
+                    type: string
+                    description: The title of the risk indicator
+                    example: Burglaries threshold
+                  type:
+                    type: string
+                    description: The type or category of the risk
+                    example: Crime
+                  text:
+                    type: string
+                    description: The text describing the risk indicator
+                    example: Over 10 Burglaries have occurred within 1 mile of the postcode
+            incorporation_date:
+              type: string
+              format: date
+              example: "2008-12-15"
+            industry:
+              type: string
+              example: "Media/News Company"
+            latitude:
+              type: string
+              example: "51.5045788"
+            longitude:
+              type: string
+              example: "-0.0970637"
+            name:
+              type: string
+              example: Digital Fineprint Ltd
+            phone:
+              type: string
+              example: 0190 422 422
+            postcode:
+              type: string
+              example: SE1 0HS
+            registered_address:
+              type: string
+              description: The business' registered address
+              example: "6 Osborn Street, London, E1 6TD"
+            registration_number:
+              type: string
+              example: "01577145"
+            facebook:
+              type: string
+              example: https://facebook.com/digitalfineprint
+            linkedin:
+              type: string
+              example: https://linkedin.com/digitalfineprint
+            twitter:
+              type: string
+              example: https://twitter.com/digitalfineprint
+            creditors:
+              type: string
+              example: "300723"
+            debtors:
+              type: string
+              example: "687471"
+            fixedAssets:
+              type: string
+              example: "1289719"
+            net_current_assets_liabilities:
+              type: string
+              example: "163692"
+            total_assets_less_current_liabilities:
+              type: string
+              example: "1126027"
+            turnover:
+              type: string
+              example: "18420515"
+            turnover_delta:
+              type: string
+              example: "582401"
+            finance_history:
+              type: array
+              items:
+                type: object
+                properties:
+                  year:
+                    type: string
+                    example: 2016
+                  turnover:
+                    type: string
+                    example: 18420000
+            sics:
+              type: array
+              items:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  description:
+                    type: string
+    List:
+      type: object
+      description: A list that holds businesses
+      properties:
+        id:
+          type: integer
+          format: int32
+        type:
+          type: string
+          enum: [batch, custom, favourite, history]
+        label:
+          type: string
+        businesses_count:
+          type: integer
+          minimum: 0
+        conflicts_count:
+          type: integer
+          minimum: 0
+        processing_count:
+          type: integer
+          minimum: 0
+          nullable: true
+        current_user_access_level:
+          type: string
+          enum: [owner, edit, read]
+        notification_config:
+          allOf:
+            - $ref: '#/components/schemas/NotificationConfig'
+            - nullable: true
+        created_at:
+          type: string
+          example: "2014-06-26 04:07:31"
+        updated_at:
+          type: string
+          example: "2014-06-26 04:07:31"
+    # Account:
+    #   type: object
+    #   description: An account id
+    #   properties:
+    #     id:
+    #       type: integer
+    #       example: 1
+    # Address:
+    #   type: object
+    #   properties:
+    #     street:
+    #       type: string
+    #       example: 'Unit 305-308, 30 Great Guildford Street'
+    #     city:
+    #       type: string
+    #       example: 'London'
+    #     state:
+    #       type: string
+    #       example: "Greater London"
+    #     postcode:
+    #       type: string
+    #       example: "SE1 0HS"
+    #     country:
+    #       type: string
+    #       description: "2-letter ISO code for a country"
+    #       example: "GB"
+    #     lat_long:
+    #       type: object
+    #       properties:
+    #         lat:
+    #           type: number
+    #           format: float
+    #           example: 0.111223
+    #         long: 
+    #           type: number
+    #           format: float
+    #           example: 0.121241
+    #     crime_statistics:
+    #       type: array
+    #       items:
+    #         type: object
+    #         description: "TODO - write a description!"
+    Query:
+      type: object
+      description: A query for a specific business
+      properties:
+        id:
+          type: string
+          format: uuid
+        input_name:
+          type: string
+          example: Digital Fineprint
+        input_postcode:
+          type: string
+          example: SE1 0HS
+        business:
+          $ref: '#/components/schemas/Business'
+        state:
+          type: string
+          enum: [WAITING, COMPLETE, TIMEOUT, OVERRUN]
+          description: Current state of the business query
+          example: COMPLETE
+    Conflict:
+      type: object
+      description: An unresolved business
+      properties:
+        id:
+          type: integer
+          format: int32
+        input_name:
+          type: string
+          example: Digital Fineprint
+        input_postcode:
+          type: string
+          example: SE1 0HS
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/BasicBusiness'
+        renewal_date:
+          type: string
+          nullable: true
+          example: "2019/12/30"
+        premium_amount:
+          type: integer
+          nullable: true
+    Error:
+      type: object
+      description: An error that occured
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: integer
+        message:
+          type: string
+    ExtendedError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          additionalProperties:
+            type: string
+    NotificationConfig:
+      type: object
+      properties:
+        alert_interval:
+          type: integer
+          format: int32
+          description: Interval of notifications
+        rules:
+          type: array
+          description: A list of notification rules
+          items:
+            $ref: '#/components/schemas/NotificationRule'
+        user_ids:
+          type: array
+          description: A list of user ids of users to notify
+          items:
+            type: integer
+    NotificationRule:
+      type: object
+      description: An object representing a notification rule
+      properties:
+        parameter:
+          type: string
+          example: "net_asset_liabilities"
+        operator:
+          type: string
+          example: "increase"
+        threshold:
+          type: integer
+          description: minimum change
+          example: 20
+          nullable: true
+  responses:
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Not logged in or not authorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: Server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServiceError:
+      description: Service error in underlying APIs
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InvalidInput:
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ExtendedError'
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: laravel_session

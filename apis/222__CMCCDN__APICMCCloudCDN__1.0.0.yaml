@@ -1,0 +1,2498 @@
+openapi: 3.0.1
+info:
+  version: "1.0.0"
+  title: 'API CMC Cloud CDN'
+  description: |
+    # Development Status
+    * API Người dùng
+    * API website
+
+    # Overview
+    API cung cấp để tương tác với hệ thông Cloud CDN.
+
+    Để truy cập vào hệ thông bạn cần tên đăng nhập và mật khẩu để đổi lấy API token. Mỗi API token chỉ dùng được cho 1 tài khoản và truy cập đến tài nguyên của riêng tài khoản đó.
+    
+    Tạo tài khoản để sử dụng API với tên đăng nhập và mật khẩu.
+    
+    Sau khi đăng nhập vào tài khoản bạn có thể tương tác với các API liên quan sau:
+    * API người dùng
+    * API website
+    * API stream
+    * API báo cáo
+
+    &nbsp;
+    # Định dạng dữ liệu
+    Các trường và cấu trúc đối tượng của API được mô tả bên dưới.
+
+    &nbsp;
+    # Processing Rules
+    * API trả về kết quả lỗi hoặc thành công.
+    * Các kết quả lỗi sẽ trả vể header code khác 200 và có kèm trường báo lỗi.
+    * Dữ liệu được đẩy lên API với phương thức tạo mới (POST) và cập nhật (PUT) sẽ được kiểm tra tính hợp lệ. Examples include but are not limited to:
+        * username must be unique
+        * date must be in date format outlined
+        * emails format must be valid
+        * domain must be valid
+        * url must be valid
+    * Request cập nhật (PUT) chỉ cập nhật các trường được gửi kèm trong form.
+    * Các request trả về mã lỗi 401 là do token không hợp lệ, vui lòng kiểm tra header Authorization có được gửi hoặc token đã hết hạn không.
+
+    &nbsp;
+    # API Rate Limit
+    There are limits to the number of API requests that can be made against your Lucidity Software instance.
+    * Minute Limit: 60 calls in a rolling 60 second window
+    * Daily Limit: 20,000 calls in a rolling 24 hour window
+    
+    
+    &nbsp;
+    # Mock
+    * Assumption with the mock server is that there are 2 users total: User 1 and User 2
+    
+    &nbsp;
+    ____
+
+    __Change Log__
+
+    _1.0.0_ 1 Mar 2020
+    * Thêm mới tài liệu
+
+servers:
+  - url: https://{site}/api
+    description: CMC Cloud CDN Server
+    variables:
+      site:
+        enum:
+          - 'cdn.cloud.cmctelecom.vn'
+          - 'portal.cacheplus.net'
+        default: cdn.cloud.cmctelecom.vn
+        description: Client's sub-domain
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/CMCCDN/APICMCCloudCDN/1.0.0
+paths:
+  '/register':
+    post:
+      tags:
+        - Xác thực
+      summary: Đăng ký tài khoản.
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Đăng ký thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterSuccessResponse'
+        '422':
+          description: Đăng ký thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/active':
+    put:
+      tags:
+        - Xác thực
+      summary: Kích hoạt tài khoản.
+      operationId: active
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ActiveRequest'
+      responses:
+        '200':
+          description: Kích hoạt thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '422':
+          description: Kích hoạt thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/reset/password':
+    get:
+      tags:
+        - Xác thực
+      summary: Cấp lại mật khẩu.
+      operationId: reset_password
+      parameters:
+        - name: email
+          description: Thư điện tử.
+          in: query
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: Cấp lại mật khẩu thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '422':
+          description: Cấp lại mật khẩu thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    put:
+      tags:
+        - Xác thực
+      summary: Cập nhật mật khẩu.
+      operationId: set_reset_password
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  description: Mã token đã gửi đến email.
+                password:
+                  type: string
+                  format: password
+                  description: Mật khẩu.
+              required:
+                - token
+                - password
+      responses:
+        '200':
+          description: Cập nhật mật khẩu thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '422':
+          description: Cập nhật mật khẩu thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/login':
+    post:
+      tags:
+        - Xác thực
+      summary: Đăng nhập tài khoản.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Thư điện tử.
+                password:
+                  type: string
+                  format: password
+                  description: Mật khẩu.
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
+        '422':
+          description: Đăng nhập thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/refresh':
+    get:
+      tags:
+        - Xác thực
+      summary: Làm mới token.
+      operationId: refresh
+      responses:
+        '200':
+          description: Làm mới thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
+        '401':
+          description: Lỗi xác thực
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Làm mới token thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/logout':
+    get:
+      tags:
+        - Xác thực
+      summary: Đăng xuất tài khoản.
+      operationId: logout
+      responses:
+        '200':
+          description: Đăng xuất thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+  '/password':
+    put:
+      tags:
+        - Xác thực
+      summary: Đổi mật khẩu.
+      operationId: password
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                old_password:
+                  type: string
+                  format: password
+                  description: Mật khẩu cũ.
+                new_password:
+                  type: string
+                  format: password
+                  description: Mật khẩu mới.
+                confirm_password:
+                  type: string
+                  format: password
+                  description: Mật khẩu mới xác nhận.
+              required:
+                - old_password
+                - new_password
+                - confirm_password
+      responses:
+        '200':
+          description: Đổi mật khẩu thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
+
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Đổi mật khẩu thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/user':
+    get:
+      tags:
+        - Tài khoản
+      summary: Thông tin tài khoản.
+      operationId: user
+      responses:
+        '200':
+          description: Lấy thông tin tài khoản thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfoResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin tài khoản thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    put:
+      tags:
+        - Tài khoản
+      summary: Cập nhật thông tin tài khoản.
+      operationId: update_user
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Tên.
+                phone:
+                  type: string
+                  description: Số điện thoại.
+      responses:
+        '200':
+          description: Cập nhật thông tin tài khoản thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfoResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Cập nhật thông tin tài khoản thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/profile':
+    get:
+      tags:
+        - Tài khoản
+      summary: Thông tin tài khoản website.
+      operationId: profile
+      responses:
+        '200':
+          description: Lấy thông tin tài khoản site thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin tài khoản site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/user-site':
+    get:
+      tags:
+        - Site
+      summary: Danh sách site.
+      operationId: user-site
+      responses:
+        '200':
+          description: Lấy danh sách tài khoản site thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SitesResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy danh sách tài khoản site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    post:
+      tags:
+        - Site
+      summary: Tạo site.
+      operationId: create-user-site
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of new site, required.
+                multi_origin:
+                  type: string
+                  description: origin type json, required.
+                zone:
+                  type: string
+                  description: Zone of  site.
+              required:
+                - name
+                - multi_origin
+      responses:
+        '200':
+          description: Tạo site thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy danh sách tài khoản site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/user-site/{id}':
+    get:
+      tags:
+        - Site
+      summary: Lấy thông tin chi tiết của site
+      operationId: get-user-site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      responses:
+        '200':
+          description: Lấy thông tin chi tiết của site thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteDetailResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    put:
+      tags: 
+        - Site
+      summary: Cập nhật edge_setting thumb_setting token_secure referrer_security extra_config zone_setting header_config site_info
+      operationId: update-site-setting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      requestBody:
+        description: Thông tin site cần cập nhật
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UpdateSiteRequest'
+      responses:
+        '200':
+          description: Lấy thông tin chi tiết của site thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateSiteResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/user-site/delete/{id}':
+    delete:
+      tags:
+        - Site
+      summary: Request xóa site
+      operationId: request-delete-site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      responses:
+        '200':
+          description: Request xóa thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/user-site/delete':
+    post:
+      tags:
+        - Site
+      summary: Xác nhận xóa site dựa trên token lấy được từ email
+      operationId: confirm-delete-site
+      requestBody:
+        description: Xác nhận xóa site
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConfirmDeleteSiteRequest'
+      responses:
+        '200':
+          description: Xóa site thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/user-site/config/{id}':
+    get:
+      tags:
+        - Site
+      summary: Lấy cấu hình của site
+      operationId: get-site-config
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ['site_info', 'edge_setting', 'thumb_setting', 'token_secure', 'referrer_security', 'extra_config', 'zone_setting', 'header_config', 'contry_config', 'dev_setting', 'addon_domain']
+            example: 'site_info'
+            description: Required| [site_info,edge_setting,thumb_setting,token_secure,referrer_security,extra_config,zone_setting,header_config,contry_config,dev_setting,addon_domain]
+      responses:
+        '200':
+          description: Lấy cấu hình của site thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteConfigRespone'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/user-ssl':
+    get:
+      tags:
+        - Site SSL
+      summary: Danh sách site SSL
+      operationId: list-site-ssl
+      responses:
+        '200':
+          description: Lấy danh sách site SLL thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSSLsResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    post:
+      tags:
+        - Site SSL
+      summary: Tạo site SSL
+      operationId: create-site-ssl
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                domain:
+                  type: string
+                  description: Domain to add new ssl / required.
+                ssl_key:
+                  type: string
+                  description: SSL key to add new ssl / required.
+                ssl_crt:
+                  type: string
+                  description: SSL crt to add new ssl / required.
+              required:
+                - domain
+                - ssl_key
+                - ssl_crt
+      responses:
+        '200':
+          description: Tạo site SLL thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/user-ssl/{id}':
+    get:
+      tags:
+        - Site SSL
+      summary: Lấy thông tin chi tiết của site SSL
+      operationId: get-site-ssl
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      responses:
+        '200':
+          description: Lấy thông tin chi tiết của site SSL thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSSLDetailResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    put:
+      tags:
+        - Site SSL
+      summary: Cập nhật chi tiết của site SSL
+      operationId: update-site-ssl
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                domain:
+                  type: string
+                  description: Domain to add new ssl / required.
+                ssl_key:
+                  type: string
+                  description: SSL key to add new ssl / required.
+                ssl_crt:
+                  type: string
+                  description: SSL crt to add new ssl / required.
+              required:
+                - domain
+                - ssl_key
+                - ssl_crt
+      responses:
+        '200':
+          description: Cập nhật chi tiết của site SSL thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSSLDetailResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    delete:
+      tags:
+        - Site SSL
+      summary: Xóa SSL của site
+      operationId: delete-site-ssl
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      responses:
+        '200':
+          description: Xóa SSL của site thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/user-ssl/gen':
+    post:
+      tags:
+        - Site SSL
+      summary: Tạo SSL cho site
+      operationId: gen-site-ssl
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: number
+                  description: Id of site to gen ssl
+              required:
+                - id
+      responses:
+        '200':
+          description: Tạo SSL cho site thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/app':
+    get:
+      tags:
+        - Site Streaming App
+      summary: Danh sách Streaming App
+      operationId: list-app
+      responses:
+        '200':
+          description: Lấy danh sách Streaming App thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamingAppsResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của Streaming App thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    post:
+      tags:
+        - Site Streaming App
+      summary: Tạo site Streaming App
+      operationId: create-app
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                appname:
+                  type: string
+                  description: Name of application stream, required, regex:/(^([a-zA-Z_]+)(\d+))/u.
+                abr:
+                  type: number
+                  enum: [0, 1]
+                  description: Required, integer, in [1:0].
+                record:
+                  type: number
+                  enum: [0, 1]
+                  description: Required, integer, in [1:0].
+                abr_quality:
+                  type: array
+                  items:
+                    type: string
+                  description: Required if abr is 1.
+              required:
+                - appname
+                - abr
+                - record
+                - abr_quality
+      responses:
+        '200':
+          description: Tạo Streaming App thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/app/{id}':
+    get:
+      tags:
+        - Site Streaming App
+      summary: Lấy thông tin chi tiết của Streaming App
+      operationId: get-app
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      responses:
+        '200':
+          description: Lấy thông tin chi tiết của Streaming App thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamingAppDetailResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    put:
+      tags:
+        - Site Streaming App
+      summary: Cập nhật chi tiết của Streaming App
+      operationId: update-app
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                abr:
+                  type: number
+                  enum: [0, 1]
+                  description: Required, integer, in [1:0].
+                abr_quality:
+                  type: array
+                  items:
+                    type: string
+                  description: Required if abr is 1.
+              required:
+                - abr
+                - abr_quality
+      responses:
+        '200':
+          description: Cập nhật chi tiết của Streaming App thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamingAppDetailResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    delete:
+      tags:
+        - Site Streaming App
+      summary: Xóa Streaming App
+      operationId: delete-app
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      responses:
+        '200':
+          description: Xóa Streaming App thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/stream':
+    get:
+      tags:
+        - Streaming
+      summary: Danh sách Streaming
+      operationId: list-streaming
+      parameters:
+        - name: id_app
+          in: query
+          required: true
+          schema:
+            type: number
+            example: 1
+      responses:
+        '200':
+          description: Lấy danh sách Streaming thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamingsResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    post:
+      tags:
+        - Streaming
+      summary: Tạo Streaming
+      operationId: create-streaming
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                app_id:
+                  type: number
+                  description: Required, integer.
+                streamname:
+                  type: string
+                  description: Name of application stream, required, regex:/(^([a-zA-Z_]+)(\d+))/u.
+                record:
+                  type: number
+                  enum: [0, 1]
+                  description: Required, integer, in [1:0].
+                exist:
+                  type: array
+                  items:
+                    type: string
+                  description: Required if abr is 1.
+                abr:
+                  type: number
+                  enum: [0, 1]
+                  description: Required, integer, in [1:0].
+              required:
+                - app_id
+                - streamname
+                - record
+                - exist
+                - abr
+      responses:
+        '200':
+          description: Tạo Streaming thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+                
+  '/stream/{id}':
+    get:
+      tags:
+        - Streaming
+      summary: Chi tiết Streaming
+      operationId: detail-streaming
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      responses:
+        '200':
+          description: Lấy chi tiết Streaming thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamingDetailResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    put:
+      tags:
+        - Streaming
+      summary: Cập nhật Streaming
+      operationId: update-streaming
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      responses:
+        '200':
+          description: Cập nhật Streaming thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreamingDetailResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+    delete:
+      tags:
+        - Streaming
+      summary: Xóa Streaming
+      operationId: delete-streaming
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      responses:
+        '200':
+          description: Xóa Streaming thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+
+  '/domain/site/{id}':
+    post:
+      tags:
+        - Site Addon
+      summary: Thêm mới addon domain cho site
+      operationId: add-domain-site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+            example: 1
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AddonDomainRequest'
+      responses:
+        '200':
+          description: Thêm mới addon domain cho site thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddonDomainSuccessResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/report/logs':
+    get:
+      tags:
+        - Báo cáo
+      summary: Báo cáo log
+      operationId: report-log
+      parameters:
+        - name: time
+          in: path
+          description: Required, in:today,week,month,year
+          required: true
+          schema:
+            type: string
+            enum: ['today', 'week', 'month', 'year']
+            example: 'today'
+      responses:
+        '200':
+          description: Lấy chi tiết Streaming thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportLogResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+  '/report/transaction':
+    get:
+      tags:
+        - Báo cáo
+      summary: Báo cáo giao dịch
+      operationId: report-transaction
+      parameters:
+        - name: action
+          in: path
+          description: Required, in:Add,Pay
+          required: true
+          schema:
+            type: string
+            enum: ['Add', 'Pay']
+            example: 'Add'
+      responses:
+        '200':
+          description: Lấy chi tiết Streaming thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportTransactionResponse'
+        '401':
+            description: Lỗi xác thực
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/UnauthorizedResponse'
+        '422':
+          description: Lấy thông tin của site thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    FailedResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'failed'
+        message:
+          type: string
+          example: 'Input name'
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'Thông báo.'
+    UnauthorizedResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Lỗi token'
+    LoginSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        token:
+          type: string
+          example: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOjYsImlzcyI6Imh0dHA6Ly8xMjcuMC4wLjE6ODAwMC9hcGkvbG9naW4iLCJpYXQiOjE1MzUzNDMwMTksImV4cCI6MTUzNTM0NjYxOSwibmJmIjoxNTM1MzQzMDE5LCJqdGkiOiJodnFiQXQ4OEM1MlYzdWo3In0.g49UEe9qNMY6OLpobgYMhdVCczzVneti1abWznlDZVk'
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Thư điện tử.
+        password:
+          type: string
+          format: password
+          description: Mật khẩu.
+        name:
+          type: string
+          description: Tên.
+        phone:
+          type: string
+          description: Số điện thoại.
+      required:
+        - email
+        - password
+        - name
+        - phone
+    RegisterSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'Register new user success'
+        data: 
+          type: object
+          properties:
+            name:
+              type: string
+              example: 'Demo Name'
+            email:
+              type: string
+              format: email
+            phone:
+              type: string
+              example: '0909090909'
+    ActiveRequest:
+      type: object
+      properties:
+        active_code:
+          type: string
+          description: Mã kích hoạt được gửi qua email.
+      required:
+        - active_code
+    UserInfoResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: object
+          properties:
+            name:
+              type: string
+              example: 'Demo Name'
+            email:
+              type: string
+              format: email
+            phone:
+              type: string
+              example: '0909090909'
+            balance:
+              type: number
+              example: 90000
+            vip:
+              type: boolean
+              example: true
+            join:
+              type: string
+              format: date-time
+              example: '09:55:11 15/12/2019'
+            status:
+              type: string
+              example: 'Active'
+    UserProfileResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: object
+          properties:
+            name:
+              type: string
+              example: 'Demo Name'
+            email:
+              type: string
+              format: email
+            balance:
+              type: number
+              example: 90000
+            sites:
+              type: number
+              example: 0
+            bandwidth_total:
+              type: number
+              example: 0
+            estimated_amount:
+              type: number
+              example: 0
+    SitesResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteResponse'
+    SiteResponse:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        name:
+          type: string
+          example: 'site_demo_1'
+        origin_server_url:
+          type: string
+          example: 'https://www.xxx.xxx'
+        cdn_url:
+          type: string
+          example: 'xxxxxxxxxxxx.xxx.xx'
+        created_at:
+          type: string
+          format: date-time
+          example: '10:00:01 20/07/2018'
+        updated_at:
+          type: string
+          format: date-time
+          example: '10:00:01 20/07/2018'
+        multi_origin:
+          type: string
+          example: '[]'
+    SiteDetailResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'Success'
+        data: 
+          type: object
+          properties:
+            id:
+              type: number
+              example: 1
+            name:
+              type: string
+              example: 'site_demo_1'
+            origin_server_url:
+              type: string
+              example: 'https://www.xxx.xxx'
+            cdn_url:
+              type: string
+              example: 'xxxxxxxxxxxx.xxx.xx'
+            created_at:
+              type: string
+              format: date-time
+              example: '10:00:01 20/07/2018'
+            updated_at:
+              type: string
+              format: date-time
+              example: '10:00:01 20/07/2018'
+            multi_origin:
+              type: string
+              example: '[]'
+            gzip:
+              type: number
+              example: 1
+            gzip_comp_level:
+              type: number
+              example: 5
+            Content-Disposition:
+              type: number
+              example: 0
+            cache_time:
+              type: string
+              example: '2592000s'
+            X-Forwarded-For:
+              type: number
+              example: 0
+            Access-Control-Allow-Origin:
+              type: number
+              example: 0
+            Cache-Query-String:
+              type: number
+              example: 0
+            key_api:
+              type: string
+            group_zone:
+              type: string
+              example: isp
+    UpdateSiteRequest:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/UpdateEdgeSettingRequest'
+        - $ref: '#/components/schemas/UpdateThumbSettingRequest'
+        - $ref: '#/components/schemas/UpdateTokenSecureRequest'
+        - $ref: '#/components/schemas/UpdateReferrerSecurityRequest'
+        - $ref: '#/components/schemas/UpdateExtraConfigRequest'
+        - $ref: '#/components/schemas/UpdateZoneSettingRequest'
+        - $ref: '#/components/schemas/UpdateHeaderConfigRequest'
+        - $ref: '#/components/schemas/UpdateSiteInfoRequest'
+        
+    UpdateSiteResponse:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/UpdateEdgeSettingResponse'
+        - $ref: '#/components/schemas/UpdateThumbSettingReponse'
+        - $ref: '#/components/schemas/UpdateTokenSecureReponse'
+        - $ref: '#/components/schemas/UpdateReferrerSecurityReponse'
+        - $ref: '#/components/schemas/UpdateExtraConfigReponse'
+        - $ref: '#/components/schemas/UpdateZoneSettingReponse'
+        - $ref: '#/components/schemas/UpdateHeaderConfigReponse'
+        - $ref: '#/components/schemas/UpdateSiteInfoReponse'
+    UpdateEdgeSettingRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          default: edge_setting
+          description: Loại cập nhật.
+        gzip_comp_level:
+          type: number
+          enum: [1, 2, 3, 4, 5, 6, 7]
+          default: 1
+          description: required|integer|between:1,7.
+        cache_time:
+          type: number
+          minimum: 10
+          maximum: 15552000
+          description: required|integer|min:10|max:15552000.
+        max-age:
+          type: string
+          description: required|1 or [1-315360000] or off or max.
+        content_disposition:
+          type: number
+          enum: [0, 1]
+          default: 0
+          description: Required | [0-1].
+        x_forwarded_for:
+          type: number
+          enum: [0, 1]
+          default: 0
+          description: Required | [0-1].
+        query_string:
+          type: number
+          enum: [0, 1]
+          default: 0
+          description: Required | [0-1].
+        cors:
+          type: number
+          enum: [0, 1]
+          default: 0
+          description: Required | [0-1].
+        gzip:
+          type: number
+          enum: [0, 1]
+          default: 0
+          description: Required | [0-1].
+    UpdateEdgeSettingResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'Success'
+        data: 
+          type: object
+          properties:
+            Content-Disposition:
+              type: number
+              example: 1
+            Cache-Query-String:
+              type: number
+              example: 1
+            cache_time:
+              type: string
+              example: '11552000s'
+            max-age:
+              type: number
+              example: 2
+    UpdateThumbSettingRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          default: thumb_setting
+          description: Loại cập nhật.
+        thumb:
+          type: number
+          enum: [0, 1]
+          default: 0
+          example: 0
+          description: Required | [0-1].
+    UpdateThumbSettingReponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'Success'
+        data: 
+          type: object
+          properties:
+            thumb:
+              type: number
+              example: 1
+    UpdateTokenSecureRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          default: token_secure
+          description: Loại cập nhật.
+        secure_ip:
+          type: number
+          enum: [0, 1]
+          default: 0
+          example: 0
+          description: Required | [0-1].
+        token:
+          type: string
+          description: Khóa bảo mật .
+        token_check:
+          type: number
+          enum: [0, 1]
+          default: 0
+          example: 0
+          description: Yes/ No (1:0).
+    UpdateTokenSecureReponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'Success'
+        data: 
+          type: object
+          properties:
+            thumb:
+              type: number
+              example: 1
+    UpdateReferrerSecurityRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          default: referrer_security
+          description: Loại cập nhật.
+        referrer:
+          type: string
+          enum: ['off', 'allow', 'block']
+          default: 'off'
+          example: 'off'
+          description: Required|in:off,allow, block
+        list_domain_refer:
+          type: string
+          example: '123.com, 456.net'
+          description: List domain.
+    UpdateReferrerSecurityReponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'Update referrer success'
+        data: 
+          type: object
+          properties:
+            referer_access:
+              type: string
+              example: 'off'
+            referer_access_list:
+              type: string
+              example: '123.com, 456.net'
+    UpdateExtraConfigRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          default: extra_config
+          description: Loại cập nhật.
+        extra_config1:
+          type: string
+        extra_config2:
+          type: string
+    UpdateExtraConfigReponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'Update extra config success'
+        data: 
+          type: object
+          properties:
+            extra_config1:
+              type: string
+            extra_config2:
+              type: string
+    UpdateZoneSettingRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          default: zone_setting
+          description: Loại cập nhật.
+        group:
+          type: string
+          enum: ['isp', 'geo']
+          default: 'isp'
+          example: 'isp'
+          description: required|in:isp,geo
+        ipv6:
+          type: number
+          enum: [0, 1]
+          default: 0
+          description: 0|1.
+    UpdateZoneSettingReponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'Cập nhật thành công'
+        data: 
+          type: object
+          properties:
+            group:
+              type: string
+              enum: ['isp', 'geo']
+              default: 'isp'
+              example: 'isp'
+              description: required|in:isp,geo
+    UpdateHeaderConfigRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          default: header_config
+          description: Loại cập nhật.
+        header_custom:
+          type: string
+          description: data type json/ Nullable
+        header_custom_rm:
+          type: string
+          description: data type json/ Nullable
+    UpdateHeaderConfigReponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'Update header success'
+        data: 
+          type: object
+          properties:
+            type:
+              type: string
+              example: 'header_config' 
+            header_custom:
+              type: array
+              items:
+                type: object
+                properties:
+                  header:
+                    type: string
+                    example: 'https://xxxxx.xx'
+                  value:
+                    type: number
+                    example: 1
+    UpdateSiteInfoRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          default: site_info
+          description: Loại cập nhật.
+        multi_origin:
+          type: string
+          description: data type json/ Nullable
+        host_header:
+          type: string
+          example: 'xxxx.xxx'
+          description: domain
+    UpdateSiteInfoReponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: 'Update site info success'
+        data: 
+          type: object
+          properties:
+            type:
+              type: string
+              example: 'site_info' 
+            multi_origin:
+              type: array
+              items:
+                type: object
+                properties:
+                  origin:
+                    type: string
+                    example: 'https://xxxxx.xx'
+                  priority:
+                    type: number
+                    example: 4
+            host_header:
+              type: string
+              example: 'xxxx.xxx'
+    ConfirmDeleteSiteRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          example: 'xxxxxxxxxxxxxxxxxxxx'
+          description: token get from email confirm delete site
+    SiteConfigRespone:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data:
+          type: object
+          
+    SiteSSLsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: array
+          items:
+            $ref: '#/components/schemas/SiteSSLResponse'
+    SiteSSLResponse:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        custom_domain:
+          type: string
+          example: 'https://www.xxx.xxx'
+        free:
+          type: number
+          enum: [0, 1]
+          default: 0
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: '10:00:01 20/07/2018'
+    SiteSSLDetailResponse:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        custom_domain:
+          type: string
+          example: 'https://www.xxx.xxx'
+        ssl_key:
+          type: string
+          example: '-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCv1vuA7w56fxxv\nND+/jN5pDx0BckwsjsI3cYmthQXTqLAdrxn/RAM7nv1oV5zGeEhwPlPzmWrPWhHd\niRw9gZIxZ26GS8JbYrGMREpfWsoo+YwvrmUv/mbyFjCcxsRHrS8MR2+560gSpuuJ\n94iZ7mUtYXxdyl7kFOWqSVNUN4Sw2MVaCLRYli4aV2NfplDeoDhmRA3gmYgGXwey\n75OfNq9Q72UUkoZ5H/T/fZ8r9IW44LXRIaX9rGC1ti1Y5sKfZi3YXRbTo//79b5I\nBmBcZE3dldeics9lgCdKaPnVzED07zRijZJKK+0V76veHeeonICa15vq2K+fQ3Mr\nkuI+1BPBAgMBAAECgf8KsloVM31wkqvtUMTlVJXTYvhMs49cnX6O4itePgtz+FD8\ncFw8axNdQDLv/pL1lyFsHy1k8nTHv6F5f/wieU+HL0Q6cYlz+hQcnQW4EPVBysra\nvpsDEbLqYvRagHm0w3+Uqk93m7ENLjBI0rC97RyEPiDgO9OIo7UJ7qD+OV00Njmy\ns3jGL7Ds18PM6HtqWTofI0oGQuRNWYazB1U3bf7StntIDbVFZlJuJd2wpWqCrisZ\nLx440MRIzYHB4vNLQPqsi2nRTsBy+So0Q4GKXyiTFZwR6YFeF339bpw+H4hSmuZv\no7QYPn0tgf1km5qORyXCVnLVaOmZsMsznvD73/0CgYEA3JFT/5Txu+qknGqMmY1e\nWbx+Pf2W7DBeI0GaXwgVbROzaPLyECfnt0Su7EzS6EC2GU2wpQaKWIwG425RUlLh\nHO0IvpJ7z3i8qQt3rIc95KATM7RoHHPQE7VX1O16zp68uGl5l61ibGFS9QeRDw+P\nR3FmprKhbwuzvwtDCr/fNp0CgYEAzBZBFjmNGzbnJ3t+QvS7ReTSnHFlCeCP8Ivp\niQ/t1FravRY3EiCfhuLyAwmFvW6ckUo3RhdRNXheU+2qJFBNmZkz8P+MVjf1P3vV\nLds6YtFS8kGJW3LaG/PLymedKhWAo+Tqqez6BhQu3ECAMoUpg3BrgnKK4MRtXvkT\nasIHNnUCgYEAhlzVcaVXGOVYf5x8p/GxXzLvKG45qQnR3uJQ2sE+5CKTMUSF5weY\nJVFmybYG6Mq643ErQWxZjJVIgPUr/t1UGt3ebNEpMPrY2pWMwoHkV0iYSfAFWAfI\n4qiep6w/Gm0ig6hlFNvfUCx9b5y7ZhRRcPEI2lWI9++GAMQog/zcShUCgYEAtFn6\nPKSxMNqM3ZRBWPQixrpW8E85BciACwfpYelEuANuB+ko04km0LGfQtXYbTXhgHeA\nbx1N852iZjLBx4N7gAAmKZP7NXoP7YEGO5bfetIWpeUKeFj/q/H/Jqf3+Ge2HZ+/\nTFkR/es6GgOaBossy22+ZDHKzqRnLqWX5iD+9L0CgYANHhX8E0rPysR4AX7iA6Yx\nzD+992FGS0qTBfB8ww9M/QRVuAVFOAcLupx07AL8fbSKUA0TGud4TYaNzPWHqYDf\nWlXqNPua8mLc1MTxAUe7Rs8sKmdLBcYNR4Y16bsRTOiY8sYnX/KctzJL0sVrzyUm\nYfx1Ew/yulGg/jnB+jzavQ==\n-----END PRIVATE KEY-----'
+        ssl_crt:
+          type: string
+          example: '-----BEGIN CERTIFICATE-----\nMIIFBzCCA++gAwIBAgISA0op0q2+TcypawO1MuO5Tu3PMA0GCSqGSIb3DQEBCwUA\nMEoxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MSMwIQYDVQQD\nExpMZXQncyBFbmNyeXB0IEF1dGhvcml0eSBYMzAeFw0xNzEyMTQwNDUyMzNaFw0x\nODAzMTQwNDUyMzNaMB0xGzAZBgNVBAMTEnNvbmNkbjMua2RhdGEuYXNpYTCCASIw\nDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAK/W+4DvDnp/HG80P7+M3mkPHQFy\nTCyOwjdxia2FBdOosB2vGf9EAzue/WhXnMZ4SHA+U/OZas9aEd2JHD2BkjFnboZL\nwltisYxESl9ayij5jC+uZS/+ZvIWMJzGxEetLwxHb7nrSBKm64n3iJnuZS1hfF3K\nXuQU5apJU1Q3hLDYxVoItFiWLhpXY1+mUN6gOGZEDeCZiAZfB7Lvk582r1DvZRSS\nhnkf9P99nyv0hbjgtdEhpf2sYLW2LVjmwp9mLdhdFtOj//v1vkgGYFxkTd2V16Jy\nz2WAJ0po+dXMQPTvNGKNkkor7RXvq94d56icgJrXm+rYr59DcyuS4j7UE8ECAwEA\nAaOCAhIwggIOMA4GA1UdDwEB/wQEAwIFoDAdBgNVHSUEFjAUBggrBgEFBQcDAQYI\nKwYBBQUHAwIwDAYDVR0TAQH/BAIwADAdBgNVHQ4EFgQUg+bt8EGiK39Lh5jh/NO/\n25qnJoEwHwYDVR0jBBgwFoAUqEpqYwR93brm0Tm3pkVl7/Oo7KEwbwYIKwYBBQUH\nAQEEYzBhMC4GCCsGAQUFBzABhiJodHRwOi8vb2NzcC5pbnQteDMubGV0c2VuY3J5\ncHQub3JnMC8GCCsGAQUFBzAChiNodHRwOi8vY2VydC5pbnQteDMubGV0c2VuY3J5\ncHQub3JnLzAdBgNVHREEFjAUghJzb25jZG4zLmtkYXRhLmFzaWEwgf4GA1UdIASB\n9jCB8zAIBgZngQwBAgEwgeYGCysGAQQBgt8TAQEBMIHWMCYGCCsGAQUFBwIBFhpo\ndHRwOi8vY3BzLmxldHNlbmNyeXB0Lm9yZzCBqwYIKwYBBQUHAgIwgZ4MgZtUaGlz\nIENlcnRpZmljYXRlIG1heSBvbmx5IGJlIHJlbGllZCB1cG9uIGJ5IFJlbHlpbmcg\nUGFydGllcyBhbmQgb25seSBpbiBhY2NvcmRhbmNlIHdpdGggdGhlIENlcnRpZmlj\nYXRlIFBvbGljeSBmb3VuZCBhdCBodHRwczovL2xldHNlbmNyeXB0Lm9yZy9yZXBv\nc2l0b3J5LzANBgkqhkiG9w0BAQsFAAOCAQEAG8UdctbmgXvlwNITw1R4vW1kwTmU\nOWS8q7D2ONFlPV9qFgI5GMgFW2qsbpHdMOq7m+7M5rogkbjmux+8VdX1s3A9poPw\nGMCDufBcido0OO3vfP3jKxYZOZOs51G3xFn7nXd8duDA1c1HUnlIDBAF9io5MWNi\n488QSOOGuAPdHdfYQvG1S3rIEpDZ0a/8yOftQGsBWlNkTnT008r/rJWGRMPGanvC\nNl6OJl9AmXrTVFWhYUVNcJON9UF/VATavsHr+0canocDm3NFiQlwwfYOlNg1AqUr\nftbINUbW5zDk48plvBVtOxa7/Pwz+N5F1wuRVUqRfwo3U12ubczFDd6uQQ==\n-----END CERTIFICATE-----\n-----BEGIN CERTIFICATE-----\nMIIEkjCCA3qgAwIBAgIQCgFBQgAAAVOFc2oLheynCDANBgkqhkiG9w0BAQsFADA/\nMSQwIgYDVQQKExtEaWdpdGFsIFNpZ25hdHVyZSBUcnVzdCBDby4xFzAVBgNVBAMT\nDkRTVCBSb290IENBIFgzMB4XDTE2MDMxNzE2NDA0NloXDTIxMDMxNzE2NDA0Nlow\nSjELMAkGA1UEBhMCVVMxFjAUBgNVBAoTDUxldCdzIEVuY3J5cHQxIzAhBgNVBAMT\nGkxldCdzIEVuY3J5cHQgQXV0aG9yaXR5IFgzMIIBIjANBgkqhkiG9w0BAQEFAAOC\nAQ8AMIIBCgKCAQEAnNMM8FrlLke3cl03g7NoYzDq1zUmGSXhvb418XCSL7e4S0EF\nq6meNQhY7LEqxGiHC6PjdeTm86dicbp5gWAf15Gan/PQeGdxyGkOlZHP/uaZ6WA8\nSMx+yk13EiSdRxta67nsHjcAHJyse6cF6s5K671B5TaYucv9bTyWaN8jKkKQDIZ0\nZ8h/pZq4UmEUEz9l6YKHy9v6Dlb2honzhT+Xhq+w3Brvaw2VFn3EK6BlspkENnWA\na6xK8xuQSXgvopZPKiAlKQTGdMDQMc2PMTiVFrqoM7hD8bEfwzB/onkxEz0tNvjj\n/PIzark5McWvxI0NHWQWM6r6hCm21AvA2H3DkwIDAQABo4IBfTCCAXkwEgYDVR0T\nAQH/BAgwBgEB/wIBADAOBgNVHQ8BAf8EBAMCAYYwfwYIKwYBBQUHAQEEczBxMDIG\nCCsGAQUFBzABhiZodHRwOi8vaXNyZy50cnVzdGlkLm9jc3AuaWRlbnRydXN0LmNv\nbTA7BggrBgEFBQcwAoYvaHR0cDovL2FwcHMuaWRlbnRydXN0LmNvbS9yb290cy9k\nc3Ryb290Y2F4My5wN2MwHwYDVR0jBBgwFoAUxKexpHsscfrb4UuQdf/EFWCFiRAw\nVAYDVR0gBE0wSzAIBgZngQwBAgEwPwYLKwYBBAGC3xMBAQEwMDAuBggrBgEFBQcC\nARYiaHR0cDovL2Nwcy5yb290LXgxLmxldHNlbmNyeXB0Lm9yZzA8BgNVHR8ENTAz\nMDGgL6AthitodHRwOi8vY3JsLmlkZW50cnVzdC5jb20vRFNUUk9PVENBWDNDUkwu\nY3JsMB0GA1UdDgQWBBSoSmpjBH3duubRObemRWXv86jsoTANBgkqhkiG9w0BAQsF\nAAOCAQEA3TPXEfNjWDjdGBX7CVW+dla5cEilaUcne8IkCJLxWh9KEik3JHRRHGJo\nuM2VcGfl96S8TihRzZvoroed6ti6WqEBmtzw3Wodatg+VyOeph4EYpr/1wXKtx8/\nwApIvJSwtmVi4MFU5aMqrSDE6ea73Mj2tcMyo5jMd6jmeWUHK8so/joWUoHOUgwu\nX4Po1QYz+3dszkDqMp4fklxBwXRsW10KXzPMTZ+sOPAveyxindmjkW8lGy+QsRlG\nPfZ+G6Z6h7mjem0Y+iWlkYcV4PIWL1iwBi8saCbGS5jN2p8M+X+Q7UNKEkROb3N6\nKOqkqm57TH2H3eDJAkSnh6/DNFu0Qg==\n-----END CERTIFICATE-----'
+        ssl_bundle:
+          type: string
+        domain_free:
+          type: string
+        free:
+          type: number
+          enum: [0, 1]
+          default: 0
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: '10:00:01 20/07/2018'
+    StreamingAppsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: array
+          items:
+            $ref: '#/components/schemas/StreamingAppResponse'
+    StreamingAppResponse:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        name:
+          type: string
+          example: 'app_stream2'
+        abr:
+          type: string
+          example: 'No'
+        abr_quality:
+          type: array
+          items:
+            type: string
+        record:
+          type: string
+          example: 'Yes'
+        live:
+          type: string
+          example: 'Yes'
+        created_at:
+          type: string
+          format: date-time
+          example: '10:00:01 20/07/2018'
+    StreamingAppDetailResponse:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        cdn_url:
+          type: string
+          example: '43d05b3432ca537.xxxxx.xx'
+        name:
+          type: string
+          example: app_stream2
+        app_name:
+          type: string
+          example: app_stream2
+        custom_domain:
+          type: array
+          items:
+            type: string
+        referrer_security:
+          type: object
+          properties:
+            referer_access:
+              type: string
+              default: off
+            referer_access_list:
+              type: string
+        ssl:
+          type: array
+          items:
+            type: object
+            properties:
+              custom_domain:
+                type: string
+                example: 'abc.com'
+        group_zone:
+          type: string
+          example: isp
+        list_zone:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: number
+                example: 1
+              zone:
+                type: string
+                default: zone5-ipv6
+              group_zone:
+                type: string
+                default: isp
+              ipv6:
+                type: number
+                enum: [0, 1]
+                default: 1
+              default:
+                type: number
+                default: 3
+              created_at:
+                type: string
+                format: date-time
+                example: '10:00:01 20/07/2018'
+              updated_at:
+                type: string
+                format: date-time
+                example: '10:00:01 20/07/2018'
+        abr:
+          type: number
+          example: 0
+        app_id:
+          type: number
+          example: 0
+        abr_quality:
+          type: array
+          items:
+            type: string
+    StreamingsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: array
+          items:
+            $ref: '#/components/schemas/StreamingResponse'
+    StreamingResponse:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        stream_name:
+          type: string
+          example: 'stream_app_001'
+        record:
+          type: string
+          example: 'No'
+        status:
+          type: number
+          default: 0
+        link:
+          type: string
+          example: 'rtmp://live.kcdn.vn:1935/fqOUrvzgLhoBRBScpmJ4'
+        live_url:
+          type: string
+          example: 'http://xxxxxxxxxxxx.xxxx/app_001/stream_app_001.m3u8'
+        start:
+          type: string
+          format: date-time
+          example: '10:00:01 20/07/2018'
+        end:
+          type: string
+          format: date-time
+          example: '10:00:01 20/07/2018'
+    StreamingDetailResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: object
+          properties:
+            id:
+              type: number
+              example: 1
+            name_app:
+              type: string
+              example: 'app_001'
+            name_stream:
+              type: string
+              example: 'stream_app_001'
+            link_stream:
+              type: string
+              example: 'rtmp://live.kcdn.vn:1935/fqOUrvzgLhoBRBScpmJ4'
+            key_stream:
+              type: string
+              example: 'stream_app_001?token=62325d49d483bb7fe56780'
+            live_url:
+              type: string
+              example: 'http://xxxxxxxxxxxx.xxxx/app_001/stream_app_001.m3u8'
+            status:
+              type: string
+              example: 'wait'
+            custom_domains:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: number
+                    example: 1
+                  user_site:
+                    type: number
+                    example: 1
+                  domain:
+                    type: string
+                    default: 'xxxxxxx.xx'
+                  ssl:
+                    type: string
+                    enum: ['on', 'off']
+                    default: 'on'
+                  path_ssl:
+                    type: string
+                    default: 'xxxxxxx.xx'
+                  free:
+                    type: number
+                    example: 0
+                  created_at:
+                    type: string
+                    format: date-time
+                    example: '10:00:01 20/07/2018'
+                  updated_at:
+                    type: string
+                    format: date-time
+                    example: '10:00:01 20/07/2018'
+    AddonDomainRequest:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/AddAddonDomainRequest'
+        - $ref: '#/components/schemas/DetailAddonDomainRequest'
+        - $ref: '#/components/schemas/UpdateAddonDomainRequest'
+        - $ref: '#/components/schemas/DeleteAddonDomainRequest'
+    AddonDomainSuccessResponse:
+      type: object
+      oneOf:
+        - $ref: '#/components/schemas/AddAddonDomainResponse'
+        - $ref: '#/components/schemas/DetailAddonDomainResponse'
+        - $ref: '#/components/schemas/UpdateAddonDomainResponse'
+        - $ref: '#/components/schemas/DeleteAddonDomainResponse'
+    AddAddonDomainRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          example: 'add'
+          description: Required, in:add,detail,update,delete
+        ssl:
+          type: string
+          enum: ['on', 'off']
+          description: Required | [on or off]
+        path_ssl:
+          type: string
+          description: Is a domain exists in ssls table
+        custom_domain:
+          type: string
+          description: Required
+    DetailAddonDomainRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          example: 'detail'
+          description: Required, in:add,detail,update,delete
+    UpdateAddonDomainRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          example: 'update'
+          description: Required, in:add,detail,update,delete
+        ssl:
+          type: string
+          enum: ['on', 'off']
+          description: Required | [on or off]
+        path_ssl:
+          type: string
+          description: Is a domain exists in ssls table
+    DeleteAddonDomainRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          example: 'delete'
+          description: Required, in:add,detail,update,delete
+        id_domain:
+          type: number
+          description: Required
+    AddAddonDomainResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: object
+          properties:
+            id:
+              type: number
+              example: 1
+            user_site:
+              type: number
+              example: 1
+            domain:
+              type: string
+              example: 'mp3.com'
+            ssl:
+              type: string
+              example: 'on'
+            path_ssl:
+              type: string
+              example: 'abc.com'
+            updated_at:
+              type: string
+              example: '23:59:59 - 02/01/2020'
+            created_at:
+              type: string
+              example: '23:59:59 - 02/01/2020'
+    DetailAddonDomainResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: object
+          properties:
+            domain:
+              type: object
+              properties:
+                id:
+                  type: number
+                  example: 1
+                free:
+                  type: number
+                  example: 1
+                domain:
+                  type: string
+                  example: 'mp3.com'
+                ssl:
+                  type: string
+                  example: 'on'
+                path_ssl:
+                  type: string
+                  example: 'abc.com'
+            list_ssl:
+              type: array
+              items:
+                type: object
+                properties:
+                  custom_domain:
+                    type: string
+                    example: 'abc.com'
+    UpdateAddonDomainResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: object
+          properties:
+            site:
+              type: array
+              items: 
+                type: object
+                properties:
+                  id:
+                    type: number
+                    example: 1
+                  name:
+                    type: string
+                    example: 'site-mp3'
+                  origin_server_url:
+                    type: string
+                    example: 'https://mp3.zing.vn/'
+                  cdn_url:
+                    type: string
+                    example: 'b5a54d2e2b462a5.xxxxxx.xx'
+                  multi_origin:
+                    type: string
+                    example: '[{\"origin\":\"https:\\/\\/mp3.zing.vn\\/\",\"priority\":\"4\"}]'
+            ssl:
+              type: array
+              items: 
+                type: object
+                properties:
+                  domain:
+                    type: string
+                    example: 'mp3.com'
+                  ssl:
+                    type: string
+                    example: 'on'
+                  path_ssl:
+                    type: string
+                    example: 'abc.com'
+            domain:
+              type: array
+              items: 
+                type: object
+                properties:
+                  id:
+                    type: number
+                    example: 1
+                  free:
+                    type: number
+                    example: 1
+                  domain:
+                    type: string
+                    example: 'mp3.com'
+                  ssl:
+                    type: string
+                    example: 'on'
+                  path_ssl:
+                    type: string
+                    example: 'abc.com'
+    DeleteAddonDomainResponse:
+      $ref: '#/components/schemas/UpdateAddonDomainResponse'
+      
+    ReportLogResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: object
+          properties:
+            sites:
+              type: number
+              example: 1
+            bandwidth_total:
+              type: string
+              example: '0 B'
+            estimated_amount:
+              type: string
+              example: '0 VND'
+            from:
+              type: string
+              example: '00:00:00 - 01/01/2020'
+            to:
+              type: string
+              example: '23:59:59 - 02/01/2020'
+    ReportTransactionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: 'success'
+        message:
+          type: string
+          example: ''
+        data: 
+          type: object
+          properties:
+            total_success:
+              type: string
+              example: '0 VND'
+            count_success:
+              type: number
+              example: 0
+            total_fail:
+              type: string
+              example: '0 VND'
+            count_fail:
+              type: number
+              example: 0
+            min:
+              type: string
+              example: '0 VND'
+            max:
+              type: string
+              example: '0 VND'
+            from:
+              type: string
+              example: '00:00:00 - 01/01/2020'
+            to:
+              type: string
+              example: '23:59:59 - 02/01/2020'
+security:
+  - bearerAuth: []

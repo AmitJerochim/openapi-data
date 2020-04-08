@@ -1,0 +1,2012 @@
+openapi: 3.0.0
+info:
+  description: Polar Accesslink API documentation
+  version: 3.40.0
+  title: Polar Accesslink API
+  contact:
+    name: Support
+    url: 'https://www.polar.com/accesslink'
+    email: b2bhelpdesk@polar.com
+  license:
+    name: Polar Electro AccessLink Limited License Agreement
+    url: 'https://www.polar.com/sites/default/files/static/ACL_Ltd_License_Agreement.pdf'
+tags:
+  - name: Users
+    description: This resource provides all the necessary functions to manage users.
+  - name: Pull notifications
+    description: >-
+      This resource allows partners to check if their users have available data
+      for downloading. Use client credentials authentication. Returns object
+      holding list of available data objects.
+  - name: Daily activity
+    description: >-
+      This resource allows partners to access their users' daily activity data.
+      During the transfer, the activity data is copied also into the AccessLink
+      database so the end-users cannot change the data that is accessible via
+      AccessLink afterwards. Begin and end of day are determined by the time set
+      on the device used. No timezone information is available. Each transaction
+      will consist of at most 50 activity summaries. Available data presented in
+      section [Data Models](#data-models).
+  - name: Training data
+    description: >-
+      This resource allows partners to access their users' training data. All
+      time values are UTC except start-time. Start-time is the time set on the
+      training computer, no timezone information is available. Each transaction
+      will consist of at most 50 training sessions. Available data presented in
+      section [Data Models](#data-models).
+  - name: Physical info
+    description: >-
+      This resource allows partners to access their users' physical information.
+      Whenever some user's physical information changes, new entry containing
+      full physical info is stored to AccessLink. Pull notifications can be used
+      to check if user have new physical information available. Available data
+      presented in section [Data Models](#data-models).
+  - name: Webhooks
+    description: Webhook resources provides endpoints for creating, modifying and deleting webhooks.
+  - name: Exercises
+    description: >-
+      Resources for getting information about exercise. These endpoints does not require active transaction, but they
+      uses hashed id.
+
+
+
+paths:
+  /v3/exercises:
+    get:
+      tags:
+        - Exercises
+      summary: List exercises
+      description: >-
+        List users exercises available in Accesslink.
+      operationId: listExercisesWithoutTransaction
+      responses:
+        '200':
+          description: List of users exercises.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/exercisesHashId'
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  /v3/exercises/{exerciseId}:
+    get:
+      tags:
+        - Exercises
+      summary: Get exercise
+      description: >-
+        Get users exercise using hashed id.
+      operationId: getExerciseWithoutTransaction
+      parameters:
+        - name: exerciseId
+          in: path
+          description: Hashed exercise id.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Exercise information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/exerciseHashId'
+        '404':
+          description: Exercise not found
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  /v3/exercises/{exerciseId}/fit:
+    get:
+      tags:
+        - Exercises
+      summary: Get exercise FIT
+      description: >-
+        FIT file for users exercise.
+      parameters:
+        - name: exerciseId
+          in: path
+          description: Hashed exercise id.
+          required: true
+          schema:
+            type: string
+      operationId: getExerciseFitWithoutTransaction
+      responses:
+        '200':
+          description: Return FIT file
+          content:
+            '*/*':
+              schema:
+                type: string
+        '404':
+          description: Exercise not found
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  /v3/users:
+    post:
+      tags:
+        - Users
+      summary: Register user
+      description: >-
+        Once partner has been authorized by user, partner must register user
+        before being able to access her data.
+      operationId: registerUser
+      responses:
+        '200':
+          description: User's base information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/user'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/user'
+        '204':
+          description: No content when user with given userId is not found
+      security:
+        - OAuth2:
+            - accesslink.read_all
+      requestBody:
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/register'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/register'
+        required: true
+  '/v3/users/{user-id}':
+    get:
+      tags:
+        - Users
+      summary: Get user information
+      description: >-
+        List user basic information.
+
+        Note: Although it is possible to get users weight and height from this
+        resource, the [get physical info](#get-physical-info) should be used
+        instead.
+      operationId: getUserInformation
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          example: 475
+          schema:
+            type: integer
+            format: int64
+            pattern: '[0-9]+'
+      responses:
+        '200':
+          description: User's base information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/user'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/user'
+        '204':
+          description: No content when user with given userId is not found
+      security:
+        - OAuth2:
+            - accesslink.read_all
+    delete:
+      tags:
+        - Users
+      summary: Delete user
+      description: >-
+        When partner wishes no longer to receive user data, user can be
+        de-registered.This will revoke the access token authorized by user.
+      operationId: deleteUser
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+            format: int64
+            pattern: '[0-9]+'
+      responses:
+        '204':
+          description: will be returned when user is successfully de-registered
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  /v3/notifications:
+    get:
+      tags:
+        - Pull notifications
+      summary: List
+      description: Get list of available exercises and activities for users
+      operationId: list
+      responses:
+        '200':
+          description: List of available data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/available-user-datas'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/available-user-datas'
+        '204':
+          description: No content when no available data found
+      security:
+        - Basic: []
+  '/v3/users/{user-id}/exercise-transactions':
+    post:
+      tags:
+        - Training data
+      summary: Create transaction
+      description: Check for new training data and create a new transaction if found.
+      operationId: createExerciseTransaction
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+            pattern: '[0-9]+'
+      responses:
+        '201':
+          description: >-
+            Return link to created transaction containing new training session
+            data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/transaction-location'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/transaction-location'
+        '204':
+          description: No content when there is no new training session data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/exercise-transactions/{transaction-id}':
+    get:
+      tags:
+        - Training data
+      summary: List exercises
+      description: >-
+        After successfully initiating a transaction, training sessions included
+        within it can be retrieved with the provided transactionId.
+      operationId: listExercises
+      parameters:
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+            format: int64
+            pattern: '[0-9]+'
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+            pattern: '[0-9]+'
+      responses:
+        '200':
+          description: >-
+            Return list of hyperlinks to training sessions contained within the
+            transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/exercises'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/exercises'
+              example:
+                exercises:
+                  exercise:
+                    - https://www.polaraccesslink.com/v3/users/12/exercise-transactions/34/exercises/56
+                    - https://www.polaraccesslink.com/v3/users/12/exercise-transactions/34/exercises/120
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+    put:
+      tags:
+        - Training data
+      summary: Commit transaction
+      description: >-
+        After successfully retrieving training session data within a
+        transaction, partners are expected to commit the transaction.
+      operationId: commitExerciseTransaction
+      parameters:
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+            format: int64
+            pattern: '[0-9]+'
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+            pattern: '[0-9]+'
+      responses:
+        '200':
+          description: Transaction has been committed and data deleted
+        '204':
+          description: No content when there is no data available
+        '404':
+          description: No transaction was found with given transaction id
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/exercise-transactions/{transaction-id}/exercises/{exercise-id}':
+    get:
+      tags:
+        - Training data
+      summary: Get exercise summary
+      description: Retrieve training session summary data
+      operationId: getExerciseSummary
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+        - name: exercise-id
+          in: path
+          description: Exercise identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Exercise summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/exercise'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/exercise'
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/exercise-transactions/{transaction-id}/exercises/{exercise-id}/fit':
+    get:
+      tags:
+        - Training data
+      summary: Get FIT (beta)
+      description: >-
+        Retrieve exercise in FIT format. **Note!** This interface is in beta phase.
+        If there is anything we can help you with or you want to give us
+        feedback, please contact [Support](#support).
+      operationId: getFit
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+        - name: exercise-id
+          in: path
+          description: Exercise identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Return FIT file
+          content:
+            '*/*':
+              schema:
+                type: string
+        '204':
+          description: No FIT available for exercise
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/exercise-transactions/{transaction-id}/exercises/{exercise-id}/gpx':
+    get:
+      tags:
+        - Training data
+      summary: Get GPX
+      description: Retrieve training session summary data in GPX format
+      operationId: getGpx
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+        - name: exercise-id
+          in: path
+          description: Exercise identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Return training session in GPX (GPS Exchange format)
+          content:
+            application/gpx+xml:
+              schema:
+                type: string
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/exercise-transactions/{transaction-id}/exercises/{exercise-id}/heart-rate-zones':
+    get:
+      tags:
+        - Training data
+      summary: Get heart rate zones
+      description: Retrieve heart rate zones in training session
+      operationId: getHeartRateZones
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+        - name: exercise-id
+          in: path
+          description: Exercise identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Return heart rate zones in training session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/zones'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/zones'
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/exercise-transactions/{transaction-id}/exercises/{exercise-id}/samples':
+    get:
+      tags:
+        - Training data
+      summary: Get available samples
+      description: Retrieve list of links to available samples in training session
+      operationId: getAvailableSamples
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+        - name: exercise-id
+          in: path
+          description: Exercise identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Return list of hyperlinks to available samples in training session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/samples'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/samples'
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/exercise-transactions/{transaction-id}/exercises/{exercise-id}/samples/{type-id}':
+    get:
+      tags:
+        - Training data
+      summary: Get samples
+      description: Retrieve sample data of given type
+      operationId: getSamples
+      parameters:
+        - name: type-id
+          in: path
+          description: Sample type id
+          required: true
+          schema:
+            type: string
+            format: byte
+            pattern: '[0-9]+'
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+        - name: exercise-id
+          in: path
+          description: Exercise identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Return sample data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/sample'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/sample'
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/exercise-transactions/{transaction-id}/exercises/{exercise-id}/tcx':
+    get:
+      tags:
+        - Training data
+      summary: Get TCX
+      description: Retrieve exercise in TCX format
+      operationId: getTcx
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+        - name: exercise-id
+          in: path
+          description: Exercise identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Return gzipped TCX
+          content:
+            application/vnd.garmin.tcx+xml:
+              schema:
+                type: string
+        '204':
+          description: No TCX available for exercise
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/activity-transactions':
+    post:
+      tags:
+        - Daily activity
+      summary: Create transaction
+      description: |-
+        Initiate activity transaction.
+        Check for new activity summaries and create a new transaction if found.
+      operationId: createActivityTransaction
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+            pattern: '[0-9]+'
+      responses:
+        '201':
+          description: Return link to created transaction containing new activity data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/transaction-location'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/transaction-location'
+        '204':
+          description: No content when there is no new activity data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/activity-transactions/{transaction-id}':
+    get:
+      tags:
+        - Daily activity
+      summary: List activities
+      description: >-
+        List new activity data.
+
+        After successfully initiating a transaction, activity summaries included
+        within it can be retrieved with the provided transactionId.
+      operationId: listActivities
+      parameters:
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+            format: int64
+            pattern: '[0-9]+'
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+            pattern: '[0-9]+'
+      responses:
+        '200':
+          description: >-
+            Return list of hyperlinks to activity summaries contained within the
+            transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/activity-log'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/activity-log'
+        '204':
+          description: No content when there is no data available
+        '404':
+          description: No transaction was found with given transaction id
+      security:
+        - OAuth2:
+            - accesslink.read_all
+    put:
+      tags:
+        - Daily activity
+      summary: Commit transaction
+      description: >-
+        After successfully retrieving activity summary data within a
+        transaction, partners are expected to commit the transaction.
+      operationId: commitActivityTransaction
+      parameters:
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+            format: int64
+            pattern: '[0-9]+'
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+            pattern: '[0-9]+'
+      responses:
+        '200':
+          description: Transaction has been committed and data deleted
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/activity-transactions/{transaction-id}/activities/{activity-id}':
+    get:
+      tags:
+        - Daily activity
+      summary: Get activity summary
+      description: ''
+      operationId: getActivitySummary
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+        - name: activity-id
+          in: path
+          description: Activity summary identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Return activity summary contained within the transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/activity'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/activity'
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/activity-transactions/{transaction-id}/activities/{activity-id}/step-samples':
+    get:
+      tags:
+        - Daily activity
+      summary: Get step samples
+      description: >-
+        Get activity step samples. Example data can be seen from
+        [appendix](#activity-step-time-series).
+      operationId: getStepSamples
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+        - name: activity-id
+          in: path
+          description: Activity summary identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Return activity step samples
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/activity-step-samples'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/activity-step-samples'
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/activity-transactions/{transaction-id}/activities/{activity-id}/zone-samples':
+    get:
+      tags:
+        - Daily activity
+      summary: Get zone samples
+      description: >-
+        Get activity zone samples. Example data can be seen from
+        [appendix](#activity-zone-time-series).
+      operationId: getZoneSamples
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+        - name: activity-id
+          in: path
+          description: Activity summary identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Return activity zone samples
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/activity-zone-samples'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/activity-zone-samples'
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/physical-information-transactions':
+    post:
+      tags:
+        - Physical info
+      summary: Create transaction
+      description: |-
+        Initiate physical info transaction.
+        Check for new physical info and create a new transaction if found.
+      operationId: createPhysicalInfoTransaction
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Return link to created transaction containing new physical info data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/transaction-location'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/transaction-location'
+        '204':
+          description: No content when there is no new physical info data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/physical-information-transactions/{transaction-id}':
+    get:
+      tags:
+        - Physical info
+      summary: List physical infos
+      description: >-
+        List new physical info data.
+
+        After successfully initiating a transaction, physical infos included
+        within it can be retrieved with the provided transactionId.
+      operationId: listPhysicalInfos
+      parameters:
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: >-
+            Return list of hyperlinks to physical information contained within
+            the transaction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/physical-informations'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/physical-informations'
+              example:
+                physical-informations:
+                  physical-information:
+                    - https://www.polaraccesslink.com/v3/users/12/physical-information-transactions/12/physical-informations/56
+                    - https://www.polaraccesslink.com/v3/users/12/physical-information-transactions/12/physical-informations/120
+
+        '204':
+          description: No content when there is no data available
+        '404':
+          description: No transaction was found with given transaction id
+      security:
+        - OAuth2:
+            - accesslink.read_all
+    put:
+      tags:
+        - Physical info
+      summary: Commit transaction
+      description: >-
+        After successfully retrieving physical information within a transaction,
+        partners are expected to commit the transaction.
+      operationId: commitPhysicalInfoTransaction
+      parameters:
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Transaction has been committed and data deleted
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/users/{user-id}/physical-information-transactions/{transaction-id}/physical-informations/{physical-info-id}':
+    get:
+      tags:
+        - Physical info
+      summary: Get physical info
+      description: Get physical info entity data
+      operationId: getPhysicalInfo
+      parameters:
+        - name: user-id
+          in: path
+          description: User identifier
+          required: true
+          schema:
+            type: integer
+        - name: transaction-id
+          in: path
+          description: Transaction identifier
+          required: true
+          schema:
+            type: integer
+        - name: physical-info-id
+          in: path
+          description: Physical information identifier
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Physical information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/physical-information'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/physical-information'
+        '204':
+          description: No content when there is no data available
+      security:
+        - OAuth2:
+            - accesslink.read_all
+  '/v3/webhooks':
+    post:
+      tags:
+        - Webhooks
+      summary: Create webhook
+      description: >-
+        Create new webhook.
+
+
+        When creating webhook the Accesslink sends a ping message to the url in request body.
+        The ping message must be answered with 200 OK or otherwise the webhook is not created.
+
+
+        **Note!** Save the *signature_secret_key* from response since this is the only chance to get it.
+      operationId: createWebhook
+      responses:
+        '201':
+          description: Created webhook.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/createdWebhook'
+        '400':
+          description: Webhook cannot be created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+        '409':
+          description: Webhook already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+      security:
+        - Basic: []
+      requestBody:
+        description: Webhook to create.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/webhookRequest'
+        required: true
+    get:
+      tags:
+        - Webhooks
+      summary: Get webhook
+      description: >-
+        Returns created webhook if exists.
+      operationId: getWebhook
+      responses:
+        '200':
+          description: Existing webhook
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/webhookInfo'
+      security:
+        - Basic: []
+  '/v3/webhooks/{webhook-id}':
+    patch:
+      tags:
+        - Webhooks
+      summary: Update webhook
+      description: >-
+        Edit webhook event types and/or url.
+
+
+        When updating webhook url the Accesslink sends a ping message to the new address. The ping message must be
+        answered with 200 OK or otherwise the webhook is not updated.
+      operationId: updateWebhook
+      parameters:
+        - name: webhook-id
+          in: path
+          description: Webhook id to update
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: New value(s) for events and/or url.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/webhookPatch'
+        required: true
+      responses:
+        '200':
+          description: Webhook updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/webhookInfo'
+        '400':
+          description: Webhook cannot be updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+      security:
+        - Basic: []
+    delete:
+      tags:
+        - Webhooks
+      summary: Delete webhook
+      description: >-
+        Delete webhook by id.
+      operationId: deleteWebhook
+      parameters:
+        - name: webhook-id
+          in: path
+          description: Webhook id to delete
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Webhook deleted successfully
+        '404':
+          description: Webhook not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+      security:
+        - Basic: []
+servers:
+  - url: 'https://www.polaraccesslink.com/'
+components:
+  securitySchemes:
+    Basic:
+      type: http
+      scheme: basic
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: 'https://flow.polar.com/oauth2/authorization'
+          tokenUrl: 'https://polarremote.com/v2/oauth2/token'
+          scopes:
+            accesslink.read_all: Allows read access to user's data
+  schemas:
+    AvailableUserData:
+      type: object
+      properties:
+        user-id:
+          type: integer
+          format: int64
+          example: 475
+          description: User identifier who has available data.
+        data-type:
+          type: string
+          example: ACTIVITY_SUMMARY
+          description: Type of available data.
+          enum:
+            - EXERCISE
+            - ACTIVITY_LOG
+            - ACTIVITY_SUMMARY
+            - PHYSICAL_INFORMATION
+        url:
+          type: string
+          example: 'https://www.polaraccesslink.com/v3/users/475/activity-transactions'
+          description: URI pointing to transaction initiation endpoint for user
+      description: Model contains information of the data available.
+    DurationZone:
+      type: object
+      properties:
+        index:
+          type: integer
+          format: int32
+          example: 1
+          xml:
+            attribute: true
+          description: Activity zone index
+        inzone:
+          type: string
+          example: PT51M5S
+          description: Time duration spent in the zone ISO 8601
+      description: Model contains the time spent in certain activity zone.
+    HeartRate:
+      type: object
+      properties:
+        average:
+          type: integer
+          format: int32
+          example: 129
+          description: Average heart-rate
+        maximum:
+          type: integer
+          format: int32
+          example: 147
+          description: Maximum heart-rate
+      description: Heart-rate statistics information
+    UserExtraInfo:
+      type: object
+      properties:
+        value:
+          type: string
+          example: '2'
+          description: Value provided by the customer
+        index:
+          type: integer
+          format: int32
+          example: 0
+          xml:
+            attribute: true
+          description: Item index
+        name:
+          type: string
+          example: number-of-children
+          xml:
+            attribute: true
+          description: Name of the extra info asked from customer
+      description: User's answers to the custom extra-info fields requested by partners
+    activity:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1234
+          xml:
+            attribute: true
+          description: Activity summary id
+        polar-user:
+          type: string
+          example: 'https://www.polaraccesslink/v3/users/1'
+          xml:
+            attribute: true
+          description: Absolute link to user owning the activity
+        transaction-id:
+          type: integer
+          format: int64
+          example: 179879
+          xml:
+            attribute: true
+          description: Id of the activity-transaction this training was transferred in
+        date:
+          type: string
+          example: '2010-12-31'
+          description: 'Date when activity summary was recorded, in format YYYY-MM-DD'
+        created:
+          type: string
+          example: '2016-04-27T20:11:33.000Z'
+          description: >-
+            The time activity summary was created in Accesslink, in format
+            YYYY-MM-DDTHH:mm:ss.SSS
+        calories:
+          type: integer
+          format: int32
+          example: 2329
+          description: Total daily calories in kilo calories including BMR
+        active-calories:
+          type: integer
+          format: int32
+          example: 428
+          description: >-
+            Total daily calories not including BMR. Precise calculation requires
+            that user's physical data is entered into Polar Flow
+        duration:
+          type: string
+          example: PT2H44M
+          description: The time interval as specified in ISO 8601
+        active-steps:
+          type: integer
+          format: int32
+          example: 250
+          description: >-
+            You could consider this as a kind of activity unit. If you take one
+            step the active-steps should increase by one and any activity
+            comparable to one physical step would also increase the number by
+            one
+      description: Summary of user's daily activity
+      xml:
+        name: activity
+    activity-log:
+      type: object
+      properties:
+        activity-log:
+          type: array
+          description: >-
+            Absolute links to individual activity summaries within the
+            transaction
+          items:
+            type: string
+          example:
+            - https://www.polaraccesslink.com/v3/users/12/activity-transactions/34/activities/56
+            - https://www.polaraccesslink.com/v3/users/12/activity-transactions/34/activities/120
+      description: Activity transaction container
+      xml:
+        name: activity-logs
+    activity-step-sample:
+      type: object
+      properties:
+        steps:
+          type: integer
+          format: int32
+          description: >-
+            Number of steps in sample segment. If element is null, step samples
+            are not available for current segment.
+        time:
+          type: string
+          example: '12:37:33.000'
+          description: Start time of sample segment.
+      description: Model contains number of steps in certain time period.
+      xml:
+        name: sample
+    activity-step-samples:
+      type: object
+      properties:
+        interval:
+          type: integer
+          format: int32
+          description: Sample interval in minutes.
+        samples:
+          type: array
+          xml:
+            wrapped: true
+          description: List of individual step sample objects.
+          items:
+            xml:
+              name: samples
+            $ref: '#/components/schemas/activity-step-sample'
+      description: Wrapper model for partner step samples.
+      xml:
+        name: activity-step-samples
+    activity-zone-sample:
+      type: object
+      properties:
+        activity-zones:
+          type: array
+          description: List of heart rate zones with duration.
+          items:
+            xml:
+              name: activity-zones
+            $ref: '#/components/schemas/DurationZone'
+        time:
+          type: string
+          description: Start time of sample segment.
+      description: Model contains number of steps in certain time period.
+      xml:
+        name: sample
+    activity-zone-samples:
+      type: object
+      properties:
+        interval:
+          type: integer
+          format: int32
+          description: Sample interval in minutes.
+        samples:
+          type: array
+          xml:
+            wrapped: true
+          description: List of individual zone sample objects.
+          items:
+            xml:
+              name: samples
+            $ref: '#/components/schemas/activity-zone-sample'
+      description: >-
+        List containing the times (in zone) in different heart rate zones (i.e.
+        Heart rate between lower and upper values). Zone is null if no zone
+        information available.
+      xml:
+        name: activity-zone-samples
+    available-user-datas:
+      type: object
+      properties:
+        available-user-data:
+          type: array
+          description: List of available user datas.
+          items:
+            xml:
+              name: available-user-data
+            $ref: '#/components/schemas/AvailableUserData'
+      description: 'AvailableUserDatas is a container model for AvailableUserData. '
+      xml:
+        name: available-user-datas
+    error:
+      type: object
+      description: Error model which contains useful info about the error occured.
+      properties:
+        timestamp:
+          type: timestamp
+          format: date-time
+          description: Timestamp of the error.
+        status:
+          type: integer
+          description: Http status code
+        errorType:
+          type: string
+          description: Error type.
+        message:
+          type: string
+          description: Human readable error message.
+        corrId:
+          type: string
+          description: Correlation id of the response for problem solving and debugging use.
+    exercise:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1937529874
+          xml:
+            attribute: true
+          description: Id of the trainining session
+        upload-time:
+          type: string
+          example: '2008-10-13T10:40:02.000Z'
+          xml:
+            attribute: true
+          description: Time of the transfer from wrist unit to Polar database
+        polar-user:
+          type: string
+          example: 'https://www.polaraccesslink/v3/users/1'
+          xml:
+            attribute: true
+          description: Absolute link to Polar user owning the training
+        transaction-id:
+          type: integer
+          format: int64
+          example: 179879
+          xml:
+            attribute: true
+          description: Id of the exercise-transaction this training was transferred in
+        device:
+          type: string
+          example: Polar M400
+          description: Polar product used in training
+        start-time:
+          type: string
+          example: '2008-10-13T10:40:02.000Z'
+          description: Start time of the training session in local time
+        duration:
+          type: string
+          example: PT2H44M
+          description: The duration of the training session as specified in ISO8601
+        calories:
+          type: integer
+          format: int32
+          example: 530
+          description: Expended calories during training in kilocalories
+        distance:
+          type: number
+          format: float
+          example: 1600
+          description: Distance in meters travelled during training
+        heart-rate:
+          description: Statistical heart rate date from exercise.
+          $ref: '#/components/schemas/HeartRate'
+        training-load:
+          type: number
+          format: float
+          example: 143.22
+          description: Training load effect to user
+        sport:
+          type: string
+          example: OTHER
+          description: Sport name
+        has-route:
+          type: boolean
+          example: true
+          description: Boolean indicating if the exercise has route data
+        club-id:
+          type: integer
+          format: int64
+          example: 999
+          description: >-
+            Has value if the exercise is from "Flow For Club", otherwise not
+            printed. Value -1 indicates that there were errors finding the club
+        club-name:
+          type: string
+          example: Polar Club
+          description: >-
+            Has value if the exercise is from "Flow For Club", otherwise not
+            printed. Value "Ambiguous club location. Please contact support." is
+            printed in case of error (and the club-id is -1).
+        detailed-sport-info:
+          type: string
+          example: WATERSPORTS_WATERSKI
+          description: >-
+            String containing the name of a Polar Flow-compatible sport, if one
+            is set for the exercise.
+      description: Training session summary data
+      xml:
+        name: exercise
+    exerciseHashId:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 2AC312F
+          xml:
+            attribute: true
+          description: Hashed id of the trainining session
+        upload-time:
+          type: string
+          example: '2008-10-13T10:40:02.000Z'
+          xml:
+            attribute: true
+          description: Time of the transfer from wrist unit to Polar database
+        polar-user:
+          type: string
+          example: 'https://www.polaraccesslink/v3/users/1'
+          xml:
+            attribute: true
+          description: Absolute link to Polar user owning the training
+        device:
+          type: string
+          example: Polar M400
+          description: Polar product used in training
+        start-time:
+          type: string
+          example: '2008-10-13T10:40:02.000Z'
+          description: Start time of the training session in local time
+        duration:
+          type: string
+          example: PT2H44M
+          description: The duration of the training session as specified in ISO8601
+        calories:
+          type: integer
+          format: int32
+          example: 530
+          description: Expended calories during training in kilocalories
+        distance:
+          type: number
+          format: float
+          example: 1600
+          description: Distance in meters travelled during training
+        heart-rate:
+          description: Statistical heart rate date from exercise.
+          $ref: '#/components/schemas/HeartRate'
+        training-load:
+          type: number
+          format: float
+          example: 143.22
+          description: Training load effect to user
+        sport:
+          type: string
+          example: OTHER
+          description: Sport name
+        has-route:
+          type: boolean
+          example: true
+          description: Boolean indicating if the exercise has route data
+        club-id:
+          type: integer
+          format: int64
+          example: 999
+          description: >-
+            Has value if the exercise is from "Flow For Club", otherwise not
+            printed. Value -1 indicates that there were errors finding the club
+        club-name:
+          type: string
+          example: Polar Club
+          description: >-
+            Has value if the exercise is from "Flow For Club", otherwise not
+            printed. Value "Ambiguous club location. Please contact support." is
+            printed in case of error (and the club-id is -1).
+        detailed-sport-info:
+          type: string
+          example: WATERSPORTS_WATERSKI
+          description: >-
+            String containing the name of a Polar Flow-compatible sport, if one
+            is set for the exercise.
+      description: Training session summary data
+    exercisesHashId:
+      type: array
+      description: List of exercises.
+      items:
+        $ref: '#/components/schemas/exerciseHashId'
+    exercises:
+      type: object
+      properties:
+        exercises:
+          type: array
+          description: Absolute links to individual exercises within the transaction
+          items:
+            type: string
+          example:
+            - https://www.polaraccesslink.com/v3/users/12/exercise-transactions/34/exercises/56
+            - https://www.polaraccesslink.com/v3/users/12/exercise-transactions/34/exercises/120
+      description: Exercise transaction container
+      xml:
+        name: exercises
+    physical-information:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 123
+          xml:
+            attribute: true
+          description: Physical information id
+        transaction-id:
+          type: integer
+          format: int64
+          example: 179879
+          xml:
+            attribute: true
+          description: >-
+            Id of the physical-information-transaction this training was
+            transferred in
+        created:
+          type: string
+          example: '2016-04-27T20:11:33.000Z'
+          description: >-
+            The time physical information was created in Accesslink, in format
+            YYYY-MM-DDTHH:mm:ss.SSS
+        polar-user:
+          type: string
+          example: 'https://www.polaraccesslink/v3/users/1'
+          xml:
+            attribute: true
+          description: Absolute link to user owning the activity
+        weight:
+          type: number
+          format: float
+          example: 80
+          description: Height
+        height:
+          type: number
+          format: float
+          example: 180
+          description: Height
+        maximum-heart-rate:
+          type: integer
+          format: int32
+          example: 160
+          description: Maximum heart rate
+        resting-heart-rate:
+          type: integer
+          format: int32
+          example: 60
+          description: Resting hear rate
+        aerobic-threshold:
+          type: integer
+          format: int32
+          example: 123
+          description: Aerobic threshold
+        anaerobic-threshold:
+          type: integer
+          format: int32
+          example: 123
+          description: Anaerobic threshold
+        vo2-max:
+          type: integer
+          format: int32
+          example: 12
+          description: VO2 max
+        weight-source:
+          type: string
+          example: SOURCE_MEASURED
+          description: Weight source
+          enum:
+            - SOURCE_MEASURED
+            - SOURCE_USER
+      description: User's physical information
+      xml:
+        name: physical-information
+    physical-informations:
+      type: object
+      properties:
+        physical-informations:
+          type: array
+          description: >-
+            Absolute links to individual physical informations within the
+            transaction
+          items:
+            type: string
+          example:
+            - https://www.polaraccesslink.com/v3/users/12/physical-information-transactions/12/physical-informations/56
+            - https://www.polaraccesslink.com/v3/users/12/physical-information-transactions/12/physical-informations/120
+      description: Physical information transaction container
+      xml:
+        name: physical-informations
+    register:
+      type: object
+      required:
+        - member-id
+      properties:
+        member-id:
+          type: string
+          example: User_id_999
+          description: Partner's custom identifier for user.
+      description: Model for registering user to partner.
+      xml:
+        name: register
+    sample:
+      type: object
+      properties:
+        recording-rate:
+          type: integer
+          format: int32
+          example: 5
+          description: >-
+            Sample recording rate in seconds. Null when recording rate is not
+            applicable - currently only with RR-data.
+        sample-type:
+          type: string
+          format: byte
+          example: '1'
+          description: Sample type
+        data:
+          type: string
+          example: >-
+            0,100,102,97,97,101,103,106,96,89,88,87,98,108,113,112,114,115,118,121,121,121,121,123,117,119,122
+          description: >-
+            Sample values as a comma-separated list of strings. Can contain null
+            -values which indicate a situtation where sensor was offline.
+      description: Training session sample data
+      xml:
+        name: sample
+    samples:
+      type: object
+      properties:
+        sample:
+          type: array
+          description: List of URIs pointing to single sample type data.
+          items:
+            type: string
+            xml:
+              name: sample
+          example:
+            - https://www.polaraccesslink.com/v3/users/12/exercise-transactions/34/exercises/56/samples/0
+            - https://www.polaraccesslink.com/v3/users/12/exercise-transactions/34/exercises/56/samples/3
+      description: List of URIs pointing to single sample type data.
+      xml:
+        name: samples
+    transaction-location:
+      type: object
+      properties:
+        transaction-id:
+          type: integer
+          format: int64
+          example: 122
+          description: Id of the created transaction
+        resource-uri:
+          type: string
+          format: uri
+          example: >-
+            https://polaraccesslink.com/v3/users/21/physical-information-transactions/32
+          description: Absolute links to the created transaction
+      description: Contains absolute link to the created transaction.
+      xml:
+        name: transaction-location
+    user:
+      type: object
+      properties:
+        polar-user-id:
+          type: integer
+          format: int64
+          example: 2278512
+          xml:
+            attribute: true
+          description: User's id in Polar database
+        member-id:
+          type: string
+          example: i09u9ujj
+          description: User's identifier in partner's database
+        registration-date:
+          type: string
+          format: date-time
+          example: '2011-10-14T12:50:37.000Z'
+          description: Timestamp marked when ACCEPTED
+        first-name:
+          type: string
+          example: Eka
+          description: User's first name
+        last-name:
+          type: string
+          example: Toka
+          description: User's surname
+        birthdate:
+          type: string
+          example: '1985-09-06T00:00:00.000Z'
+          description: User's birthdate as YYYY-MM-DD
+        gender:
+          type: string
+          example: MALE
+          description: User's sex
+          enum:
+            - MALE
+            - FEMALE
+        weight:
+          type: number
+          format: float
+          example: 66
+          description: User's weight in kg
+        height:
+          type: number
+          format: float
+          example: 170
+          description: Users height in centimeters
+        field:
+          type: array
+          xml:
+            name: extra-info
+            wrapped: true
+          description: >-
+            List containing answers given by the user to a number of
+            partner-specific questions. Extra-info is null if there are no
+            required fields defined by the partner.
+          items:
+            xml:
+              name: field
+            $ref: '#/components/schemas/UserExtraInfo'
+      description: User's basic information
+      xml:
+        name: user
+    createdWebhook:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              example: abdf33
+              description: Id of the new webhook.
+            events:
+              $ref: '#/components/schemas/webhookType'
+              description: Subscribed event types.
+              example: [EXERCISE, ACTIVITY_SUMMARY]
+            url:
+              type: string
+              format: uri
+              example: https://myapp.example.com/acl_webhook
+              description: Url where the webhook notification is sent.
+            signature_secret_key:
+              type: string
+              example: abe1f3ae-fd33-11e8-8eb2-f2801f1b9fd1
+              description: Security key for verifying that sender is actually Polar.
+    webhookInfo:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              example: abdf33
+              description: Id of the webhook.
+            events:
+              $ref: '#/components/schemas/webhookType'
+              description: Subscribed event types.
+              example: [EXERCISE, ACTIVITY_SUMMARY]
+            url:
+              type: string
+              format: uri
+              example: https://myapp.example.com/acl_webhook
+              description: Url where the webhook notification is sent.
+    webhookPatch:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/webhookType'
+          description: Type of events to subscribe.
+          example: [EXERCISE, ACTIVITY_SUMMARY]
+        url:
+          type: string
+          format: uri
+          example: https://myapp.example.com/acl_webhook
+          description: Url where the webhook notification is sent.
+    webhookPayload:
+      type: object
+      properties:
+        event:
+          $ref: '#/components/schemas/webhookType'
+          example: EXERCISE
+          description: Type of available data.
+        user_id:
+          type: integer
+          format: int64
+          example: 475
+          description: Id of the user who has new data.
+        entity_id:
+          type: string
+          example: 'aQlC83'
+          description: Id of the available data.
+        timestamp:
+          type: string
+          format: date-time
+          example: '2018-05-15T14:22:24Z'
+          description: Time when webhook notification is sent.
+        url:
+          type: string
+          format: uri
+          example: https://www.polaraccesslink.com/v3/exercises/aQlC83
+          description: Url to the new available data.
+    webhookPing:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: '2018-05-15T14:22:24Z'
+          description: Time when webhook ping is sent.
+        event:
+          type: string
+          enum:
+            - PING
+          description: Only possible value is PING for ping message.
+      description: >-
+        Accesslink sends ping message as HTTP POST to callback URL being registered when creating new or modifying
+        webhook. Ping message is sent to verify webhook URL. Receiving service must response to ping message with 200 OK
+        or the webhook is not created/modified.
+
+    webhookRequest:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/webhookType'
+          description: Type of events to subscribe.
+          example: [EXERCISE, ACTIVITY_SUMMARY]
+        url:
+          type: string
+          format: uri
+          example: https://myapp.example.com/acl_webhook
+          description: Url where the webhook notification is sent.
+      required:
+        - events
+        - url
+    webhookType:
+      type: string
+      enum:
+        - EXERCISE
+        - ACTIVITY_SUMMARY
+        - PHYSICAL_INFORMATION
+      description: Event type to subscribe. Currently only EXERCISE supported.
+    zone:
+      type: object
+      properties:
+        index:
+          type: integer
+          format: int32
+          example: 1
+          description: Zone list index
+        lower-limit:
+          type: integer
+          format: int32
+          example: 110
+          description: Lower heart-rate boundary of the zone
+        upper-limit:
+          type: integer
+          format: int32
+          example: 130
+          description: Upper heart-rate boundary of the zone
+        in-zone:
+          type: string
+          example: PT4S
+          description: Time duration spent in the zone ISO 8601
+      description: Heart-rate zone information
+      xml:
+        name: zone
+    zones:
+      type: object
+      properties:
+        zone:
+          type: array
+          description: List of heart rate zones.
+          items:
+            xml:
+              name: zone
+            $ref: '#/components/schemas/zone'
+      description: >-
+        List containing the times (in zone) in different heart rate zones (i.e.
+        Heart rate between lower and upper values). Zone is null if no zone
+        information available.
+      xml:
+        name: zones

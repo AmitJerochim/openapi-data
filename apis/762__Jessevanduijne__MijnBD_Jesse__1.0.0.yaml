@@ -1,0 +1,1044 @@
+openapi: 3.0.0
+servers:
+  - description: Azure Functions API
+    url: 'https://mijnbdjesse.azurewebsites.net/api'
+  - description: SwaggerHub API Auto Mocking
+    url: >-
+      https://virtserver.swaggerhub.com/Jessevanduijne/MijnBD_Jesse/1.0.0
+info:
+  description: Edited MijnBD-API by Jesse for the SSP-course.
+  version: "1.0.0"
+  title: MijnBD_Jesse
+  
+  
+paths:
+  /register:
+    post:
+      security: []
+      tags:
+        - authentication
+      summary: Register a Deliverer
+      operationId: registerDeliverer
+      parameters:
+        - in: query
+          name: code
+          required: true
+          schema:
+            type: string
+          allowReserved: true
+          description: Function key with which you can access this authorized endpoint
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                emailAddress:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: correcthorsebatterystaple
+                firstName:
+                  type: string
+                  example: John
+                lastName:
+                  type: string
+                  example: Doe
+                dateOfBirth:
+                  type: string
+                  format: date
+                fare:
+                  type: number
+                  example: 16.75
+                home:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                      example: Dam 1
+                    postalCode:
+                      type: string
+                      example: 1012JS
+                    place:
+                      type: string
+                      example: Amsterdam
+                phoneNumber:
+                  type: string
+                  example: 0612345678
+                range:
+                  type: integer
+                  example: 10
+                vehicle:
+                  $ref: '#/components/schemas/Vehicle'
+      responses:
+        '200':
+          description: Token of registered Deliverer
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 34eb1bc2abe84f0aa6ca98b170808894
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /login:
+    post:
+      security: []
+      tags:
+        - authentication
+      summary: Login as a Deliverer
+      operationId: loginDeliverer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emailAddress:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: correcthorsebatterystaple
+      responses:
+        '200':
+          description: Deliverer logged in with token in body
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 34eb1bc2abe84f0aa6ca98b170808894
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /logout:
+    post:
+      tags:
+        - authentication
+      summary: Logout the authenticated Deliverer
+      operationId: logoutDeliverer
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /availabilities:
+    post:
+      tags:
+        - availabilities
+      summary: Add availabilities for authenticated Deliverer
+      operationId: postAvailabilities
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                  startTime:
+                    type: string
+                    example: '09:00'
+                  endTime:
+                    type: string
+                    example: '17:00'
+                  remark:
+                    type: string
+                    example: 'might have to stop 10 mins earlier'
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '424':
+          $ref: '#/components/responses/FailedDependency'
+    get:
+      tags:
+        - availabilities
+      summary: Get all Availabilities of authenticated Deliverer
+      operationId: getAvailabilities
+      parameters:
+        - in: query
+          name: startdate
+          required: false
+          example: '03-02-2020'
+          schema:
+            type: string
+          description: 'choose after which availabilities will be given'
+        - in: query
+          name: enddate
+          required: false
+          example: '07-02-2020'
+          schema:
+            type: string
+          description: 'choose after which availabilities will be given'
+      responses:
+        '200':
+          description: List of Availabilities of authenticated Deliverer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Availability'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '424':
+          $ref: '#/components/responses/FailedDependency'
+    put:
+      tags:
+        - availabilities
+      summary: Update Availabilities of authenticated Deliverer
+      operationId: updateAvailabilities
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Availability'
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '424':
+          $ref: '#/components/responses/FailedDependency'
+  '/availabilities/{Id}':
+    delete:
+      tags:
+        - availabilities
+      summary: 'Delete Availability with {Id} of authenticated Deliverer'
+      operationId: deleteAvailability
+      parameters:
+        - in: path
+          name: Id
+          schema:
+            $ref: '#/components/schemas/Id'
+          required: true
+          description: Id of Availability to Delete
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '424':
+          $ref: '#/components/responses/FailedDependency'
+  /me:
+    get:
+      tags:
+        - deliverers
+      summary: Read authenticated Deliverer
+      operationId: readDeliverer
+      responses:
+        '200':
+          description: Authenticated Deliverer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deliverer'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags:
+        - deliverers
+      summary: Update authenticated Deliverer
+      operationId: updateDeliverer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Deliverer'
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '424':
+          $ref: '#/components/responses/FailedDependency'
+  /me/earnings:
+    get:
+      tags:
+        - deliverers
+      summary: Get total earnings of authenticated Deliverer
+      operationId: getEarningsDeliverer
+      parameters:
+        - in: query
+          name: timeframe
+          required: true
+          schema:
+            type: string
+          description: 'choose day, week or month'
+      responses:
+        '200':
+          description: >-
+            Total earnings of authenticated Deliverer based on the query
+            parameter
+          content:
+            application/json:
+              schema:
+                type: number
+                example: 123.4
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /notifications:
+    get:
+      tags:
+        - notifications
+      summary: Read Notification of authenticated Deliverer
+      operationId: getNotification
+      responses:
+        '200':
+          description: Notification of Deliverer to accept/refuse
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  '/notifications/{Id}':
+    patch:
+      tags:
+        - notifications
+      summary: Update Notification of authenticated Deliverer
+      operationId: updateNotification
+      parameters:
+        - in: path
+          name: Id
+          schema:
+            $ref: '#/components/schemas/Id'
+          required: true
+          description: Id of the Notificaton to update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                accepted:
+                  type: boolean
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /locations/warehouses:
+    get:
+      tags:
+        - locations
+      summary: Get list of all w  arehouses
+      operationId: getAllWarehouses
+      responses:
+        '200':
+          description: List of all warehouses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Location'
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /delivery:
+    get:
+      tags:
+        - deliveries
+      summary: Read Delivery of authenticated Deliverer
+      operationId: readDeliveryDeliverer
+      responses:
+        '200':
+          description: Delivery of authenticated Deliverer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Delivery'
+                properties:
+                  Warehouse:
+                    description: Warehouse Location
+                    $ref: '#/components/schemas/Location'
+                  Customer:
+                    description: Customer Location
+                    $ref: '#/components/schemas/Location'
+                  Current:
+                    description: Current Location
+                    $ref: '#/components/schemas/Location'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  '/deliveries/{Id}/location':
+    patch:
+      tags:
+        - deliveries
+      summary: 'Update current Location of Delivery with {Id}'
+      operationId: updateCurrentLocationDelivery
+      parameters:
+        - in: path
+          name: Id
+          schema:
+            $ref: '#/components/schemas/Id'
+          required: true
+          description: Id of the Delivery to patch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                latitude:
+                  type: number
+                  example: 52.51552
+                longitude:
+                  type: number
+                  example: 4.15156
+      responses:
+        '200':
+          description: Delivery of authenticated Deliverer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Delivery'
+                properties:
+                  Warehouse:
+                    description: Warehouse Location
+                    $ref: '#/components/schemas/Location'
+                  Customer:
+                    description: Customer Location
+                    $ref: '#/components/schemas/Location'
+                  Current:
+                    description: Current Location
+                    $ref: '#/components/schemas/Location'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  '/deliveries/{Id}/status':
+    patch:
+      tags:
+        - deliveries
+      summary: 'Update status of Delivery with {Id}'
+      operationId: updateStatusDelivery
+      parameters:
+        - in: path
+          name: Id
+          schema:
+            $ref: '#/components/schemas/Id'
+          required: true
+          description: Id of the Delivery to patch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                status:
+                  $ref: '#/components/schemas/DeliveryStatus'
+                latitude:
+                  type: number
+                  example: 52.51552
+                longitude:
+                  type: number
+                  example: 4.15156
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /deliverers:
+    get:
+      tags:
+        - admin
+      summary: List all Deliverers
+      operationId: getAllDeliverers
+      responses:
+        '200':
+          description: List of all Deliverers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Deliverer'
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /deliveries:
+    get:
+      tags:
+        - deliveries
+      summary: List of Deliveries of authenticated Deliverer
+      operationId: getAllDeliveriesByDeliverer
+      responses:
+        '200':
+          description: List of Deliveries of authenticated Deliverer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Delivery'
+                  properties:
+                    Warehouse:
+                      description: Warehouse Location
+                      $ref: '#/components/schemas/Location'
+                    Customer:
+                      description: Customer Location
+                      $ref: '#/components/schemas/Location'
+                    Current:
+                      description: Current Location
+                      $ref: '#/components/schemas/Location'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - admin
+      summary: Add Delivery
+      operationId: addDelivery
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                dueDate:
+                  type: string
+                  format: date-time
+                customerAddress:
+                  description: Customer Address (query) string
+                  type: string
+                  example: 'Dam 1, 1012 JS, Amsterdam'
+                customerPhoneNumber:
+                  type: string
+                  example: 0612345678
+                warehouseAddress:
+                  description: Warehouse address (query) string
+                  type: string
+                  example: 'Dam 1, 1012 JS, Amsterdam'
+                price:
+                  type: number
+                  example: 26.75
+                vehicle:
+                  $ref: '#/components/schemas/Vehicle'
+      responses:
+        '200':
+          description: Delivery created with Id in body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '424':
+          $ref: '#/components/responses/FailedDependency'
+    put:
+      tags:
+        - admin
+      summary: Update Delivery
+      operationId: updateDelivery
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Delivery'
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /deliveries/admin:
+    get:
+      tags:
+        - admin
+      summary: List of all Deliveries
+      operationId: getAllDeliveries
+      responses:
+        '200':
+          description: List of all Deliveries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Delivery'
+                  properties:
+                    Warehouse:
+                      description: Warehouse Location
+                      $ref: '#/components/schemas/Location'
+                    Customer:
+                      description: Customer Location
+                      $ref: '#/components/schemas/Location'
+                    Current:
+                      description: Current Location
+                      $ref: '#/components/schemas/Location'
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /deliveries/current:
+    get:
+      tags:
+        - deliveries
+      summary: Get current open Delivery of authenticated Deliverer
+      operationId: getCurrentDeliveries
+      responses:
+        '200':
+          description: Current Delivery of authenticated Deliverer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Delivery'
+                properties:
+                  Warehouse:
+                    description: Warehouse Location
+                    $ref: '#/components/schemas/Location'
+                  Customer:
+                    description: Customer Location
+                    $ref: '#/components/schemas/Location'
+                  Current:
+                    description: Current Location
+                    $ref: '#/components/schemas/Location'
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  '/deliveries/{Id}':
+    get:
+      tags:
+        - deliveries
+      summary: 'Get a Delivery with {Id}'
+      operationId: getDelivery
+      parameters:
+        - in: path
+          name: Id
+          schema:
+            $ref: '#/components/schemas/Id'
+          required: true
+          description: Id of the Delivery to get
+      responses:
+        '200':
+          description: Delivery
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Delivery'
+                properties:
+                  Warehouse:
+                    description: Warehouse Location
+                    $ref: '#/components/schemas/Location'
+                  Customer:
+                    description: Customer Location
+                    $ref: '#/components/schemas/Location'
+                  Current:
+                    description: Current Location
+                    $ref: '#/components/schemas/Location'
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags:
+        - admin
+      summary: 'Delete Delivery with {Id}'
+      operationId: deleteDelivery
+      parameters:
+        - in: path
+          name: Id
+          schema:
+            type: integer
+          required: true
+          description: ID of the Delivery to delete
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  '/deliveries/{Id}/feedback':
+    get:
+      tags:
+        - admin
+      summary: Read Review for Delivery
+      operationId: readReviewDelivery
+      parameters:
+        - in: path
+          name: Id
+          schema:
+            $ref: '#/components/schemas/Id'
+          required: true
+          description: Id of Delivery to read Review for
+      responses:
+        '200':
+          description: Retrieved review
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - admin
+      summary: Add Review for Delivery
+      operationId: addReviewDelivery
+      parameters:
+        - in: path
+          name: Id
+          schema:
+            $ref: '#/components/schemas/Id'
+          required: true
+          description: Id of Delivery to create Review for
+      requestBody:
+        content:
+          application/json:
+            schema:
+              example:
+                - deliveryId: 173e5bca-427b-4ee5-b41c-8f0ed5a1dae4
+                  delivererId: 173e5bca-427b-4ee5-b41c-8f0ed5a1dae4
+                  category: 0
+                  rating: 5
+                - deliveryId: 173e5bca-427b-4ee5-b41c-8f0ed5a1dae4
+                  delivererId: 173e5bca-427b-4ee5-b41c-8f0ed5a1dae4
+                  category: 1
+                  rating: 4
+                - deliveryId: 173e5bca-427b-4ee5-b41c-8f0ed5a1dae4
+                  delivererId: 173e5bca-427b-4ee5-b41c-8f0ed5a1dae4
+                  category: 2
+                  rating: 5
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags:
+        - admin
+      summary: Delete Review
+      operationId: deleteReview
+      parameters:
+        - in: path
+          name: Id
+          schema:
+            $ref: '#/components/schemas/Id'
+          required: true
+          description: Id of Delivery to delete Review for
+      responses:
+        '200':
+          $ref: '#/components/responses/Ok'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  schemas:
+    Availability:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        delivererId:
+          $ref: '#/components/schemas/Id'
+        date:
+          type: string
+          format: date
+        startTime:
+          type: string
+          example: '08:00'
+        endTime:
+          type: string
+          example: '17:00'
+        remark:
+          type: string
+          example: 'might have car troubles'
+    Deliverer:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: Doe
+        emailAddress:
+          type: string
+          example: user@example.com
+        token:
+          $ref: '#/components/schemas/Token'
+        phoneNumber:
+          type: string
+          example: 0612345678
+        home:
+          description: Deliverer home Location
+          $ref: '#/components/schemas/Location'
+        dateOfBirth:
+          type: string
+          format: date
+        range:
+          type: number
+          description: Distance in kilometers from home location user is willing to deliver
+          example: 10
+        vehicle:
+          $ref: '#/components/schemas/Vehicle'
+        fare:
+          type: number
+          description: Hourly rate user is willing to work for
+          example: 10
+        totalEarnings:
+          type: number
+          nullable: true
+          example: 15
+    Delivery:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        delivererId:
+          $ref: '#/components/schemas/Id'
+        customerPhoneNumber:
+          type: string
+          example: 0612345678
+        dueDate:
+          type: string
+          format: date-time
+        vehicle:
+          $ref: '#/components/schemas/Vehicle'
+        startedAtId:
+          $ref: '#/components/schemas/Id'
+        warehouseDistanceInKilometers:
+          type: number
+          example: 7.5
+          nullable: true
+        warehouseETA:
+          type: string
+          format: date-time
+          description: Date and time when Deliverer is estimated to arrive at the Warehouse
+          nullable: true
+        wareHouseId:
+          $ref: '#/components/schemas/Id'
+        warehousePickUpAt:
+          type: string
+          format: date-time
+          description: >-
+            Date and time when the Deliverer picked up the order at the
+            warehouse
+          nullable: true
+        customerDistanceInKilometers:
+          type: number
+          example: 7.5
+          nullable: true
+        customerETA:
+          type: string
+          format: date-time
+          description: >-
+            Date and time when Deliverer is estimated to arrive at the Customer
+            Location
+          nullable: true
+        customerId:
+          description: Customer Location Id
+          $ref: '#/components/schemas/Id'
+        currentId:
+          description: Current Location Id
+          $ref: '#/components/schemas/Id'
+          nullable: true
+        deliveredAt:
+          type: string
+          format: date-time
+          nullable: true
+        price:
+          type: number
+          example: 50
+        tip:
+          type: number
+          example: 5
+          nullable: true
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethods'
+        status:
+          $ref: '#/components/schemas/DeliveryStatus'
+    Feedback:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        delivererId:
+          $ref: '#/components/schemas/Id'
+        deliveryId:
+          $ref: '#/components/schemas/Id'
+        category:
+          $ref: '#/components/schemas/FeedbackCategory'
+        rating:
+          type: integer
+          example: 5
+          description: Rating in stars (1-5)
+    Location:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        latitude:
+          type: number
+          example: 52.373291
+        longitude:
+          type: number
+          example: 4.89372
+        address:
+          description: Address (query) string
+          type: string
+          example: 'Dam 1, 1012JS, Amsterdam'
+          nullable: true
+        postalCode:
+          type: string
+          example: 1012JS
+          nullable: true
+        place:
+          type: string
+          example: Amsterdam
+          nullable: true
+        isWareHouse:
+          type: boolean
+          example: false
+    Notification:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        delivererId:
+          $ref: '#/components/schemas/Id'
+        deliveryId:
+          $ref: '#/components/schemas/Id'
+        createdAt:
+          type: string
+          format: date-time
+        acceptedAt:
+          type: string
+          format: date-time
+          nullable: true
+        refusedAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiredAt:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/NotificationStatus'
+    Review:
+      type: array
+      items:
+        $ref: '#/components/schemas/Feedback'
+        minItems: 3
+        maxItems: 3
+      example:
+        - id: fc02c7bf-ab3a-461e-bc24-00d09d96324d
+          category: 0
+          rating: 5
+          reviewId: c0a25a56-c221-47ad-bd76-f2d1e5933520
+        - id: f1bf0c1e-717f-4a5c-96f7-4ebcec8eb373
+          category: 1
+          rating: 4
+          reviewId: c0a25a56-c221-47ad-bd76-f2d1e5933520
+        - id: 783b44bb-17cf-4efd-af37-6187d7c1f28b
+          category: 2
+          rating: 5
+          reviewId: c0a25a56-c221-47ad-bd76-f2d1e5933520
+    Id:
+      type: string
+      example: 7d8a4be5-52b9-4be2-943c-8f5826483730
+      description: GUID
+    Token:
+      type: string
+      example: 345679d1bd3b45b296c0c8d9e8bfd48f
+      description: Bearer token for API
+    Vehicle:
+      type: integer
+      enum:
+        - 0
+        - 1
+        - 2
+        - 3
+      example: 0
+      description: |
+        Vehicle types: * 0 - bicycle * 1 - scooter * 2 - motor * 3 - car
+    DeliveryStatus:
+      type: integer
+      enum:
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+      example: 0
+      description: >
+        Statuses: * 0 - revoked * 1 - announced * 2 - confirmed * 3 - transit *
+        4 - delivered
+    FeedbackCategory:
+      type: integer
+      enum:
+        - 0
+        - 1
+        - 2
+      example: 2
+      description: |
+        Vehicle types: * 0 - deliverer * 1 - products * 2 - time
+    PaymentMethods:
+      type: integer
+      enum:
+        - 0
+        - 1
+      example: 0
+      description: |
+        Payment methods: * 0 - none * 1 - PIN
+    NotificationStatus:
+      type: integer
+      enum:
+        - 0
+        - 1
+        - 2
+        - 3
+      example: 0
+      description: >
+        Notification statuses: * 0 - sent * 1 - accepted * 2 - rejected * 3 -
+        expired
+  responses:
+    Ok:
+      description: OK
+    Unauthorized:
+      description: Unauthorized
+    BadRequest:
+      description: Bad request
+    NotFound:
+      description: Not found
+    NoContent:
+      description: No content
+    FailedDependency:
+      description: Failed dependency
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+security:
+  - bearer: []

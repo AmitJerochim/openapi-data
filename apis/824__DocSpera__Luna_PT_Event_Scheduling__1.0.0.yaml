@@ -1,0 +1,263 @@
+penapi: 3.0.0
+info:
+  version: "1.0.0"
+  title: Event Scheduling for Luna
+  description: Scheduling information shared between DocSpera and Luna PT.
+security:
+  - UserSecurity: []
+paths:
+  /referral:
+    post:
+      description: Ships all the necessary scheduling information from DocSpera to Luna.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventSchedulingReq"
+      responses:
+        "200":
+          description: Luna successfully accepted the new case.
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {
+                  "appointment_id": 94544,
+                  "luna_id": 28934756,
+                  "status": "pending"
+                }
+                properties:
+                  appointment_id:
+                    type: string
+                    description: The DocSpera appointment (event) ID.
+                  luna_id:
+                    type: string
+                    description: The partner ID for the patient, either newly assigned or existing.
+                  status:
+                    type: string
+                    description: >
+                      The patient status. Legal values:
+                       - serviceable: No active care plan; partner has determined that therapy is available. Valid response for message_type = 0 only.
+                      
+                      - unserviceable: No active care plan; partner has determined that therapy is not available. Valid response for message_type = 0 only.
+                      
+                      - unprocessable_address: No active care plan; partner could not determine availability due to invalid details in the Patient's address. Valid response for message_type = 0 only.
+                      
+                      - unprocessable_insurance: No active care plan; partner could not determine availability due to invalid details in the Patient's insurance. Valid response for message_type = 0 only.
+                      
+                      - pending: Active care plan; the referral is pending. Valid response for message_type = 0, 1, 2, or 3. This is the success response for a post with message_type = 1.
+            
+                      - booked: Active care plan; the referral has been booked for therapy. Valid response for message_type = 0, 1, 2, or 3.
+            
+                      - unable_to_book: No active care plan; partner was unable to book the referral for another reason. Valid response for message_type = 1 only.
+
+                      - removed: Booking removed. This is a success response for a post with message_type = 4 or 5.
+
+        "400":
+          $ref: "#/components/responses/400Error"
+          
+servers:
+  - description: Luna Production API
+    url: https://mkt.getluna.com/api/v1
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/DocSpera/Luna_PT_Event_Scheduling/1.0.0
+    
+components:
+  responses:
+    400Error:
+      description: Invalid request
+      content:
+        "*/*":
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: Error
+  securitySchemes:
+    UserSecurity:
+      type: http
+      scheme: basic
+  schemas:
+    EventSchedulingReq:
+      type: object
+      properties:
+        client_id:
+          type: string
+          description: set to "docspera"
+        event:
+          type: object
+          properties:
+            appointment_id:
+              type: string
+              example: '14083'
+              description: DocSpera event ID.
+            luna_id:
+              type: string
+              example: '26B21A'
+              description: The ID Luna uses to identify the case. Included only for message_type 2 and above.
+            start:
+              type: integer
+              example: 20150527070000
+              description: ISO date of when the event will start.
+            end:
+              type: integer
+              example: 20150527093000
+              description: ISO date of when the event will end.
+            type:
+              type: string
+              example: 'Surgery'
+              description: The type of appointment.
+            surgery:
+              type: string
+              example: 'Total Knee Arthroscopy'
+              description: >
+                The title of the surgery.
+                
+                
+                (For Surgery event types only. Not required for Clinical cases.)
+            diagnosis:
+              type: string
+              example: 'Meniscus Non-Surgical Treatment'
+              description: >
+                The diagnosis of the patient.
+              
+              
+                (For Clinical event types only. Not required for Surgery cases.)
+            message_type:
+              type: integer
+              example: 1
+              description: >
+                Legal values:
+                
+                * 0 = Checking for availability.
+
+                * 1 = New referral.
+                
+                * 2 = Rescheduled appointment.
+                
+                * 3 = Updated appointment.
+                
+                * 4 = Cancelled appointment.
+                
+                * 5 = There is an existing booking but appointment details have changed making the patient not available.
+            precautions:
+              type: string
+              example: 'No weight on right leg for 2 weeks'
+              description: Free form text field for physical therapy precautions.
+            notes:
+              type: string
+              example: 'Right leg'
+              description: Free form text field for physical therapy notes.
+            location:
+              type: object
+              properties:
+                facility:
+                  type: string
+                  example: 'X3RB0223'
+                  description: Facility ID.
+                organization:
+                  type: string
+                  example: 'Webster Orthopedics'
+                  description: The sending facility.
+                locale:
+                  type: string
+                  example: 'Valley Care'
+                  description: Surgical location.
+            physician:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: '1628B'
+                  description: Attending physician ID.
+                first:
+                  type: string
+                  example: 'Andrew'
+                  description: Given name of attending physician.
+                last:
+                  type: string
+                  example: 'Miller'
+                  description: Family name of attending physician.
+                npi:
+                  type: string
+                  example: '1005300087'
+                  description: NPI is a unique 10-digit identification number issued by CMS.
+            patient:
+              type: object
+              properties:
+                mrn:
+                  type: string
+                  example: '48214XZ3'
+                  description: Medical record number of the patient.
+                first:
+                  type: string
+                  example: 'Bruce'
+                  description: Patient's first name.
+                last:
+                  type: string
+                  example: 'Banner'
+                  description: Patient's last name.
+                email:
+                  type: string
+                  example: 'bruce@docspera.com'
+                  description: Patient's email address.
+                phone:
+                  type: string
+                  example: '555-555-5555'
+                  description: Patient's phone number.
+                gender:
+                  type: string
+                  example: 'Male'
+                  description: >
+                    Patient's natural gender. Legal values:
+                    
+                    - Male
+                    
+                    - Female
+                    
+                    - Unknown: Gender not known or specified
+                dob:
+                  type: integer
+                  example: 19870530
+                  description: Date of birth, in ISO format (YYYYMMDD).
+                address:
+                  type: object
+                  description: Object containing Patient's residential address details.
+                  properties:
+                    street_address:
+                      type: string
+                      example: "150 W Iowa Ave"
+                      description: Line 1 of Patient's address (house number & street name).
+                    street_address_2:
+                      type: string
+                      example: "Ste 102"
+                      description: Line 2 of Patient's address (Apt/Unit number).
+                    city:
+                      type: string
+                      example: "Sunnyvale"
+                      description: Patient's city.
+                    state:
+                      type: string
+                      example: "CA"
+                      description: Two-letter abbreviation for Patient's state of residence.
+                    zip_code:
+                      type: integer
+                      example: 94086
+                      description: Patient's zip code.
+                insurance:
+                  type: object
+                  properties:
+                    provider:
+                      type: string
+                      example: 'Aetna'
+                      description: Primary insurance provider name.
+                    policy_id:
+                      type: string
+                      example: 'H239CS5756'
+                      description: Primary insurance policy ID.
+                    group_id:
+                      type: string
+                      example: '74529235A'
+                      description: Primary insurance group ID.

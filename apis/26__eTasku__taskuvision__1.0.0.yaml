@@ -1,0 +1,236 @@
+penapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+  - description: TaskuVision Server
+    url: https://taskuvision.io/api/v1
+info:
+  description: TaskuVision API enables you to get important data (price, VATs, date, etc.) out of receipt images.
+  version: "1.0.0"
+  title: TaskuVision API
+  contact:
+    email: miika@etasku.fi
+tags:
+  - name: Receipts
+
+paths:
+  /receipts/images:
+    post:
+      tags:
+        - Receipts
+      summary: Create a receipt image
+      description: |
+        Returns an uuid for the image. Use this uuid later in `/receipts/results` endpoint to get results for this image.  
+        Make sure that content matches to mimeType. Max request size 10 MB. Image size should be at least 1024 x 768.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiptImageRequest'
+      responses:
+        '200':
+          description: Receipt image created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptImageResponse'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized, apikey missing
+        '403':
+          description: Forbidden, invalid apikey
+  /receipts/results:
+    post:
+      tags:
+        - Receipts
+      summary: Get OCR results for the receipt images
+      description: |
+        Runs OCR logic for the requested receipt images and returns extracted data from these images.  
+        
+        **Request**  
+        If `imageIds` field contains multiple ids, images are considered as a single receipt and combined in the same order as they appear in the array. 
+        
+        `Meta` field can be used to improve the results of the OCR logic.
+        
+        **Response**  
+        All fields have the same structure (field->candidates->value). Currently candidates include max one candidate. In future there might be multiple candidates with different confidence values.
+        
+        
+      
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiptResultsRequest'
+      responses:
+        '200':
+          description: Extracted data from receipt images.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptResultsResponse'
+        '400':
+          description: Bad request
+        '401':
+          description: Unauthorized, apikey missing
+        '403':
+          description: Forbidden, invalid apikey
+        '404':
+          description: Not Found, image was not found with provided id
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+  schemas:
+    ReceiptImageRequest:
+      type: object
+      required:
+        - content
+        - mimeType
+      properties:
+        content:
+          type: string
+          format: byte    
+          example: base64-encoded-image-or-pdf
+        mimeType:
+          type: string
+          enum: [image/jpeg, image/png, application/pdf]
+          example: image/jpeg
+    ReceiptImageResponse:
+      type: object
+      properties:
+        imageId:
+          type: string
+          format: uuid    
+          example: bd06726d-87ba-4d16-b85c-51d227d7c1c4
+    ReceiptResultsRequest:
+      type: object
+      required:
+        - imageIds
+      properties:
+        imageIds:
+          type: array
+          description: Images are combined in the same order as they appear in this array.
+          minItems: 1
+          items:
+            type: string
+            example: bd06726d-87ba-4d16-b85c-51d227d7c1c4
+        meta:
+          type: object
+          properties:
+            country:
+              type: string
+              enum: [FIN, SWE, NOR, DNK, EST]
+              example: FIN
+            minDate:
+              type: string
+              format: date
+              example: "2018-01-01"
+            maxDate:
+              type: string
+              format: date
+              example: "2020-12-31"
+    ReceiptResultsResponse:
+      type: object
+      properties:
+        businessId:
+          $ref: '#/components/schemas/BusinessId'
+        businessName:
+          $ref: '#/components/schemas/BusinessName'
+        date:
+          $ref: '#/components/schemas/Date'
+        paymethod:
+          $ref: '#/components/schemas/Paymethod'
+        cardNumber:
+          $ref: '#/components/schemas/CardNumber'
+        priceRows:
+          $ref: '#/components/schemas/PriceRows'
+          
+
+    Paymethod:
+      type: object
+      properties:
+        candidates:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+                enum: [credit, debit, cash]
+                example: credit
+    BusinessId:
+      type: object
+      properties:
+        candidates:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+                example: "12345678"
+    BusinessName:
+      type: object
+      properties:
+        candidates:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+                example: "Business name"
+    Date:
+      type: object
+      properties:
+        candidates:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+                format: date
+                example: "2018-01-01"
+    CardNumber:
+      type: object
+      properties:
+        candidates:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+                example: "1234"
+    PriceRows:
+      type: object
+      properties:
+        candidates:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PriceRow'
+    PriceRow:
+      type: object
+      properties:
+        vatIncludedPrice:
+          type: number
+          example: 15.99
+        taxrate:
+          type: number
+          example: 24.00

@@ -1,0 +1,4169 @@
+openapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+# Added by API Auto Mocking Plugin
+  - description: Development server API
+    url: https://nifidevbackend.massiveww.cloud
+  - description: Production server API
+    url: https://nifidevbackend.massiveww.com
+security:
+  - bearerAuth: []
+info:
+  version: "0.0.27"
+  title: Massive Core API v2
+  description: Massive Core API v2 is the API to manage Massive categories data.
+  contact:
+    email: paolo.coletta@massivedh.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+    
+tags:
+  - name: Categories
+    description: Subset of the API dealing with categories, i.e., the top-level partitioning of the data. Examples of categories are Televisions, Computers, Mobile Phones, New-Jersey Sports & Entertainment Venues, Cigars, Helmets, Face Cleansers, etc.
+  - name: Brands
+    description: Subset of the API dealing with Brands
+  - name: Product Categories
+    description: Subset of the API dealing with Product Categories, i.e., the second-level partitioning of data inside a category. Example of possible Product Categories inside the Televisions category are Led TVs, OLED TVs, LCD TVs, Plasma TVs, etc.
+  - name: Features
+    description: Subset of the API dealing with Features (a.k.a. topics)
+  - name: Commons
+    description: Subset of the API dealing with the common elements for each category. Example are Websites, Items, Items Aggregators Items Tags, Reviews etc.
+      
+paths:
+
+  /core/v2/categories/{categoryId}/commons/items:
+    get:
+      tags:
+        - Commons
+      summary: List all available items for this category
+      operationId: listCategoryItems
+      description: |
+        List the items available in this category
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: offset
+          description: 0-based index of the starting item for pagination, if not specified 0 will be used
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - in: query
+          name: pageSize
+          description: page size, if not specified 10 will be used (maximum 100)
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: sortField
+          required: false
+          description: >
+            Sort field (default REVIEW_DATE):
+             * `ITEM_NAME` - The name of the item
+             * `BUCKET_NAME` - The name of the bucket related to the item
+             * `NUMBER_OF_REVIEWS` - The number of reviews of the item
+             * `BRAND_NAME` - The name of the brand to the item
+             * `WEBSITE_NAME` - The name of the website related to the item
+             * `CREATION_DATE` - The creation date the item on the database
+          schema:
+            type: string
+            enum: [ITEM_NAME, BUCKET_NAME, NUMBER_OF_REVIEWS, BRAND_NAME, WEBSITE_NAME, CREATION_DATE]
+        - in: query
+          name: hidden
+          required: false
+          description: >
+            Filters:
+             * `true`
+             * `false`
+          schema:
+            type: string
+            enum: [true, false]
+        - in: query
+          name: bucket_id
+          required: false
+          description: id of an item bucket
+          schema:
+            type: number
+            example: 8001
+        - in: query
+          name: item_name
+          required: false
+          description: name of the item
+          schema:
+            type: string
+            example: Samsung S 10
+        - in: query
+          name: website_name
+          required: false
+          description: name of the source website
+          schema:
+            type: string
+            example: amazon
+        - in: query
+          name: bucket_name
+          required: false
+          description: name of the bucket
+          schema:
+            type: string
+            example: Samsung
+        - in: query
+          name: sortOrder
+          required: false
+          description: >
+            Sort order (default DESC):
+             * `ASC` - Ascending
+             * `DESC` - Descending
+          schema:
+            type: string
+            enum: [ASC, DESC]
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/items/count:
+    get:
+      tags:
+        - Commons
+      summary: Count the items respecting the filters values
+      operationId: countCategoryItems
+      description: |
+        the number of items matching crieria
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: hidden
+          required: false
+          description: >
+            Filters:
+             * `true`
+             * `false`
+          schema:
+            type: string
+            enum: [true, false]
+        - in: query
+          name: bucket_id
+          required: false
+          description: id of an item bucket
+          schema:
+            type: number
+            example: 8001
+        - in: query
+          name: item_name
+          required: false
+          description: name of the item
+          schema:
+            type: string
+            example: Samsung S 10
+        - in: query
+          name: website_name
+          required: false
+          description: name of the source website
+          schema:
+            type: string
+            example: amazon
+        - in: query
+          name: bucket_name
+          required: false
+          description: name of the bucket
+          schema:
+            type: string
+            example: Samsung
+      responses:
+        '200':
+          description: returns the count of items 
+          content:
+            text/plain:
+              schema:
+                type: number
+                example: 42
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+
+  
+  /core/v2/categories/{categoryId}/commons/items/{itemId}:
+    get:
+      tags:
+        - Commons
+      summary: Return a single item
+      operationId: getItem
+      description: |
+        Return the specified item
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: itemId
+          description: Identifier of the item 
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: the specified item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+    put:
+      tags:
+        - Commons
+      summary: Update an existing item 
+      operationId: updateItem
+      description: |
+        Updates an item
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+        - in: path
+          name: itemId
+          description: Identifier of the item 
+          required: true
+          example: 10862
+          schema:
+            type: number
+      requestBody:
+        description: The bucket fields to be updated.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemValueChange'
+      responses:
+        '200': 
+          description: the update item
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/Item'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+
+
+  /core/v2/categories/{categoryId}/commons/items/{itemId}/categories:
+    get:
+      tags:
+        - Commons
+      summary: List all the categories of an item
+      operationId: listItemCategories
+      description: |
+        List all the categories of an item
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+        - in: path
+          name: itemId
+          description: Identifier of the item 
+          required: true
+          example: 3062584
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryNameItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/commons/subcategories:
+    get:
+      tags:
+        - Commons
+      summary: List all the subcategories
+      operationId: listSubcategories
+      description: |
+        List all the available subcategories. Subcategories are used-defined fields that can be associated withto items_buckets
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubcategoryItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+    post:
+      tags:
+        - Commons
+      summary: Add a new subcategory
+      operationId: addSubcategory
+      description: |
+        Adds a new subcategory
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+      requestBody:
+        description: The subcategory to be added. Adding always happens at the last position
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcategoryItemNew'
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubcategoryItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  
+  /core/v2/categories/{categoryId}/commons/subcategories/{subcategoryId}: 
+  
+    put:
+      tags:
+        - Commons
+      summary: Modify a subcategory
+      operationId: modifySubcategory
+      description: |
+        Modify a subcategory
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+        - in: path
+          name: subcategoryId
+          description: Identifier of the subcategory to modify
+          required: true
+          example: 21
+          schema:
+            type: number
+      requestBody:
+        description: The subcategory to be modified. 
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcategoryItemNew'
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubcategoryItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+    delete:
+      tags:
+        - Commons
+      summary: Delete a subcategory
+      operationId: deleteSubcategory
+      description: |
+        Delete the specified subcategory. When deleting a subcategory all values associated with this subcategories are deleted. Moreover, all assignments of such values to itemsBuckets are lost too. So, user should be warned before performing such action. It might be useful to show the number of values (/vaues/count) and assignments (/assignments) that will be deleted.
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+        - in: path
+          name: subcategoryId
+          description: Identifier of the subcategory to delete
+          required: true
+          example: 21
+          schema:
+            type: number
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: DELETED
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/subcategories/types:
+    get:
+      tags:
+        - Commons
+      summary: List all the subcategories types
+      operationId: listSubcategoriesTypes
+      description: |
+        List all the available subcategories types. Subcategories types are used-defined fields that describe 
+        the value datatype (numeric, date,  string etc) of the subcategories values 
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubcategoryTypeItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/subcategories/sort_requests:
+    post:
+      tags:
+        - Commons
+      summary: Change order of subcategories
+      operationId: moveSubcategory
+      description: |
+        Change the order of subcategories by inserting the specified subcategory at the given position.
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+      requestBody:
+        description: The subcategory to move and the position where to inser it 
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcategoryIdIndexPair'
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: SORT REQUEST COMPLETED
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+          
+  /core/v2/categories/{categoryId}/commons/subcategories/{subcategoryId}/values: 
+    get:
+      tags:
+        - Commons
+      summary: List all the values for a specific subcategory
+      operationId: listSubcategoryValues
+      description: |
+        List all the available subcategories. Subcategories are used-defined fields that can be associated withto items_buckets
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+        - in: path
+          name: subcategoryId
+          description: Identifier of the subcategory
+          required: true
+          example: 21
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubcategoryValueItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+    post:
+      tags:
+        - Commons
+      summary: Add a new subcategory value
+      operationId: addSubcategoryValue
+      description: |
+        Adds a new subcategory value if not exists
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+        - in: path
+          name: subcategoryId
+          description: Identifier of the subcategory
+          required: true
+          example: 3
+          schema:
+            type: number
+      requestBody:
+        description: The subcategory to be added. Adding always happens at the last position
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcategoryItemValueNew'
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubcategoryValueItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+  
+  /core/v2/categories/{categoryId}/commons/subcategories/{subcategoryId}/values/{valueId}: 
+    delete:
+      tags:
+        - Commons
+      summary: deletes the subcategory value
+      operationId: deleteSubcategoryValues
+      description: |
+        deletes the subcategory value with the given id
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+        - in: path
+          name: subcategoryId
+          description: Identifier of the subcategory
+          required: true
+          example: 3
+          schema:
+            type: number
+        - in: path
+          name: valueId
+          description: Identifier of the subcategory value
+          required: true
+          example: 178
+          schema:
+            type: number
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: DELETED
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+    put:
+      tags:
+        - Commons
+      summary: Modify a subcategory value
+      operationId: modifySubcategoryValue
+      description: |
+        Modify a subcategory value
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+        - in: path
+          name: subcategoryId
+          description: Identifier of the subcategory to modify
+          required: true
+          example: 3
+          schema:
+            type: number
+        - in: path
+          name: valueId
+          description: Identifier of the subcategory value to modify
+          required: true
+          example: 180
+          schema:
+            type: number
+      requestBody:
+        description: The subcategory value to be modified. 
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubcategoryItemValueUpdate'
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubcategoryValueItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+  
+  /core/v2/categories/{categoryId}/commons/subcategories/{subcategoryId}/assignments: 
+    get:
+      tags:
+        - Commons
+      summary: counts the total number of assigments for a specific subcategory
+      operationId: countSubcategoryAssigments
+      description: |
+        counts the number of assigments specific subcategory  
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+        - in: path
+          name: subcategoryId
+          description: Identifier of the subcategory
+          required: true
+          example: 3
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            text/plain:
+              schema:
+                type: number
+                example: 42
+           
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/subcategories/{subcategoryId}/values/{valueId}/assignments: 
+    get:
+      tags:
+        - Commons
+      summary: counts the total number of assigments for a specific subcategory value
+      operationId: countSubcategoryValueAssigments
+      description: |
+        counts the number of assigments specific subcategory value
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+        - in: path
+          name: subcategoryId
+          description: Identifier of the subcategory
+          required: true
+          example: 3
+          schema:
+            type: number
+        - in: path
+          name: valueId
+          description: Identifier of the subcategory value
+          required: true
+          example: 180
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            text/plain:
+              schema:
+                type: number
+                example: 42
+           
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+          
+  /core/v2/categories/{categoryId}/commons/subcategories/{subcategoryId}/values/count: 
+    get:
+      tags:
+        - Commons
+      summary: count the values for a specific subcategory
+      operationId: countSubcategoryValues
+      description: |
+        Count the number of values available for a specific subcategory 
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+        - in: path
+          name: subcategoryId
+          description: Identifier of the subcategory
+          required: true
+          example: 3
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            text/plain:
+              schema:
+                type: number
+                example: 42
+           
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+  
+  /core/v2/categories/{categoryId}/commons/items/{itemId}/reviews:
+    get:
+      tags:
+        - Commons
+      summary: List all the reviews of an item
+      operationId: listItemReviews
+      description: |
+        List all the reviews of an item
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+        - in: path
+          name: itemId
+          description: Identifier of the item 
+          required: true
+          example: 3062584
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReviewItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/items/{itemId}/tags:
+    get:
+      tags:
+        - Commons
+      summary: List all the tags of an item
+      operationId: listItemTags
+      description: |
+        List all the tags of an item
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+        - in: path
+          name: itemId
+          description: Identifier of the item 
+          required: true
+          example: 3062584
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TagItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/items/{itemId}/prices:
+    get:
+      tags:
+        - Commons
+      summary: List all the prices of an item that have been recorded over time
+      operationId: listItemPrices
+      description: |
+        List all the prices of an item that have been recorded over time
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+        - in: path
+          name: itemId
+          description: Identifier of the item 
+          required: true
+          example: 3062584
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PriceItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/items/{itemId}/images:
+    get:
+      tags:
+        - Commons
+      summary: List all available images for an item
+      operationId: listItemImages
+      description: |
+        List the image urls available for an item
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+        - in: path
+          name: itemId
+          description: Identifier of the item 
+          required: true
+          example: 3062584
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImageItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/items_aggregators:
+    get:
+      tags:
+        - Commons
+      summary: List all available items aggregators for this category
+      operationId: listCategoryItemsAggregators
+      description: |
+        List the items aggregators available in this category
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AggregatorItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/commons/brands:
+    get:
+      tags:
+        - Commons
+      summary: List all available brands for this category
+      operationId: listCategoryBrands
+      description: |
+        List the brands available in this category
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BrandItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+  
+  /core/v2/categories/{categoryId}/commons/items_buckets:
+    get:
+      tags:
+        - Commons
+      summary: List all available item buckets
+      operationId: listCategoryItemBuckets
+      description: List the buckets available in this category
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: offset
+          description: 0-based index of the starting item for pagination, if not specified 0 will be used
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - in: query
+          name: pageSize
+          description: page size, if not specified 10 will be used (maximum 100)
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: sortField
+          required: false
+          description: >
+            Specifies by which filed to sort the results. If not specified the default is BUCKET_NAME; possible values are:
+             * `BUCKET_NAME` - The name of the bucket
+             * `NUMBER_OF_ITEMS` - The total number of items related to the bucket
+             * `NUMBER_OF_REVIEWS` - The total number of reviews related to the bucket
+             * `SUBCATEGORY_<<ID>>` - Sort by the value of the subcategory identified by id <<ID>>, e.g.: 
+             * `SUBCATEGORY_13` - Sort by the value of the subcategory with identifier 13. 
+             * `SUBCATEGORY_17` - Sort by the value of the subcategory with identifier 17. 
+             * `SUBCATEGORY_18` - Sort by the value of the subcategory with identifier 18. 
+          schema:
+            type: string
+        - in: query
+          name: hidden
+          required: false
+          description: >
+            Filters:
+             * `true`
+             * `false`
+          schema:
+            type: boolean
+        - in: query
+          name: processed
+          required: false
+          description: >
+            Filters:
+             * `true`
+             * `false`
+          schema:
+            type: boolean
+        - in: query
+          name: bucket_name
+          required: false
+          description: >
+          schema:
+            type: string
+            example: LG
+        - in: query
+          name: subcategory.
+          required: false
+          schema:
+            type: object
+            additionalProperties: true
+            example:
+              subcategory.13: 1.0
+              subcategory.17: Bar
+              subcategory.18: Subcat
+        - in: query
+          name: filterOperator.subcategory.
+          required: false
+          schema:
+            type: object
+            additionalProperties: 
+              type: string
+              enum: ['=','<','<=','!=','>=','>']  
+            description: >
+              Sort field (default empty):
+               * `=`
+               * `<` 
+               * `<=` 
+               * `>`
+               * `>=` 
+               * `!=`
+            example:
+              filterOperator.subcategory.13: ">"
+        - in: query
+          name: sortOrder
+          required: false
+          description: >
+            Sort order (default ASC):
+             * `ASC` - Ascending
+             * `DESC` - Descending
+          schema:
+            type: string
+            enum: [ASC, DESC]
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BucketItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+    post:
+        tags:
+          - Commons
+        summary: Create a new bucket 
+        operationId: createItemsBucket
+        description: |
+          Adds a new bucket
+        parameters:
+          - in: path
+            name: categoryId
+            description: Identifier of the category 
+            required: true
+            example: 42
+            schema:
+              type: number
+        requestBody:
+          description: The bucket to be added.
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BucketItemValueNew'
+        responses:
+          '200': 
+            description: id of the new bucket
+            content:
+              application/json:
+                schema:
+                  items:
+                    $ref: '#/components/schemas/BucketItem'
+          '206': 
+            description: The bucket was correctly created, but some errors were found while updating the subcategories values
+            content:
+              application/json:
+                schema:
+                  items:
+                    $ref: '#/components/schemas/BucketItem'
+          '400':
+            description: bad input parameter
+          '401':
+            description: 'unauthenticated'
+          '403':
+            description: 'unauthorized'
+          '500':
+            description: internal server Error
+  
+  /core/v2/categories/{categoryId}/commons/items_buckets/merge_requests:
+    post:
+      tags:
+        - Commons
+      summary: Merge the specified item buckets into a new one, then delete them
+      operationId: mergeItemBuckets
+      description: |
+        Merges the specified buckets into a new one, then deletes the original buckets
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+      requestBody:
+        description: The list of item buckets ids to merge
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemBucketsMergeRequest'
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/BucketItem'
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error 
+ 
+  /core/v2/categories/{categoryId}/commons/items_buckets/change_requests:
+    post:
+      tags:
+        - Commons
+      summary: Modifies the hidden property of specified buckets
+      operationId: updateItemsBuckets
+      description: |
+        Modifies the hidden property of specified buckets
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+      requestBody:
+        description: The list of items to modify and the values of the properties to change
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemsBucketsChangeRequest'
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: UPDATED
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/commons/items_buckets/delete_requests:
+    post:
+      tags:
+        - Commons
+      summary: Deletes the specified buckets
+      operationId: deleteItemsBuckets
+      description: |
+        Deletes the specified buckets. Items belonging to the deleted buckets will be moved to the unassigned bucket
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+      requestBody:
+        description: The list of buckets to delete
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemsBucketsDeleteRequest'
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: DELETED
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/commons/items_buckets/unassigned/id:
+    get:
+      tags:
+        - Commons
+      summary: Return the identifier of the UNASSIGNED bucket
+      operationId: getUnassignedBucketId
+      description: |
+        Get the identifier of the unassigned bucket. All delete/change operations should be disabled on the unassigned bucket
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+      responses:
+        '200': 
+          description: the identifier of the unassigned item
+          content:
+            text/plain:
+              schema:
+                type: number
+                example: 42
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/items_buckets/{bucketId}:
+    get:
+      tags:
+        - Commons
+      summary: Return an existing bucket 
+      operationId: getItemsBucket
+      description: |
+        Get a bucket
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+        - in: path
+          name: bucketId
+          description: Identifier of the bucket 
+          required: true
+          example: 230
+          schema:
+            type: number
+      responses:
+        '200': 
+          description: the required item bucket 
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/BucketItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+    
+    delete:
+      tags:
+        - Commons
+      summary: Delete the bucket with the specified id 
+      operationId: deleteItemsBucket
+      description: |
+        Deletes a specific bucket. All items of this bucket will be moved to the ***UNASSIGNED*** bucket
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 15
+          schema:
+            type: number
+        - in: path
+          name: bucketId
+          description: Identifier of the bucket 
+          required: true
+          example: 3062584
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+    put:
+      tags:
+        - Commons
+      summary: Update an existing bucket 
+      operationId: updateItemsBucket
+      description: |
+        Updates a bucket
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+        - in: path
+          name: bucketId
+          description: Identifier of the bucket 
+          required: true
+          example: 10862
+          schema:
+            type: number
+      requestBody:
+        description: The bucket fields to be updated.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BucketItemValueNew'
+      responses:
+        '200': 
+          description: the bucket was correctly updated
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/BucketItem'
+        '206': 
+          description: The bucket was correctly updated, but some errors were found while updating the subcategories values
+          content:
+            application/json:
+              schema:
+               items:
+                $ref: '#/components/schemas/BucketItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+  
+  /core/v2/categories/{categoryId}/commons/items_buckets/{bucketId}/items:
+    get:
+      tags:
+        - Commons
+      summary: Return an the items contained into the specified bucket 
+      operationId: getBucketItems
+      description: |
+        Get the items of a bucket
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: bucketId
+          description: Identifier of the bucket 
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: offset
+          description: 0-based index of the starting item for pagination, if not specified 0 will be used
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - in: query
+          name: pageSize
+          description: page size, if not specified 10 will be used (maximum 100)
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: sortField
+          required: false
+          description: >
+            Sort field (default REVIEW_DATE):
+             * `ITEM_NAME` - The name of the item
+             * `BUCKET_NAME` - The name of the bucket related to the item
+             * `NUMBER_OF_REVIEWS` - The number of reviews of the item
+             * `BRAND_NAME` - The name of the brand to the item
+             * `WEBSITE_NAME` - The name of the website related to the item
+             * `CREATION_DATE` - The creation date the item on the database
+          schema:
+            type: string
+            enum: [ITEM_NAME, BUCKET_NAME, NUMBER_OF_REVIEWS, BRAND_NAME, WEBSITE_NAME, CREATION_DATE]
+        - in: query
+          name: hidden
+          required: false
+          description: >
+            Filters:
+             * `true`
+             * `false`
+          schema:
+            type: string
+            enum: [true, false]
+        - in: query
+          name: item_name
+          required: false
+          description: name of the item
+          schema:
+            type: string
+            example: Samsung S 10
+        - in: query
+          name: website_name
+          required: false
+          description: name of the source website
+          schema:
+            type: string
+            example: amazon
+        - in: query
+          name: bucket_name
+          required: false
+          description: name of the bucket
+          schema:
+            type: string
+            example: Samsung
+        - in: query
+          name: sortOrder
+          required: false
+          description: >
+            Sort order (default DESC):
+             * `ASC` - Ascending
+             * `DESC` - Descending
+          schema:
+            type: string
+            enum: [ASC, DESC]
+      
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/items_buckets/{bucketId}/items/count: 
+    get:
+      tags:
+        - Commons
+      summary: count the buckets for a this category
+      operationId: countItemsInBucket
+      description: |
+        Count the number of values available for a specific subcategory 
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+        - in: path
+          name: bucketId
+          description: Identifier of the bucket 
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: hidden
+          required: false
+          description: >
+            Filters:
+             * `true`
+             * `false`
+          schema:
+            type: string
+            enum: [true, false]
+        - in: query
+          name: item_name
+          required: false
+          description: name of the item
+          schema:
+            type: string
+            example: Samsung S 10
+        - in: query
+          name: website_name
+          required: false
+          description: name of the source website
+          schema:
+            type: string
+            example: amazon
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            text/plain:
+              schema:
+                type: number
+                example: 42
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/items_buckets/count: 
+    get:
+      tags:
+        - Commons
+      summary: count the buckets for a this category
+      operationId: countItemsBuckets
+      description: |
+        Count the number of values available for a specific subcategory 
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          example: 42
+          schema:
+            type: number
+        - in: query
+          name: hidden
+          required: false
+          description: >
+            Filters:
+             * `true`
+             * `false`
+          schema:
+            type: boolean
+        - in: query
+          name: processed
+          required: false
+          description: >
+            Filters:
+             * `true`
+             * `false`
+          schema:
+            type: boolean
+        - in: query
+          name: bucket_name
+          required: false
+          description: >
+          schema:
+            type: string
+            example: LG
+        - in: query
+          name: subcategory.
+          required: false
+          schema:
+            type: object
+            additionalProperties: true
+            example:
+              subcategory.13: 1.0
+              subcategory.17: Bar
+              subcategory.18: Subcat
+        - in: query
+          name: filterOperator.subcategory.
+          required: false
+          schema:
+            type: object
+            additionalProperties: 
+              type: string
+              enum: ['=','<','<=','!=','>=','>']  
+            description: >
+              Sort field (default empty):
+               * `=`
+               * `<` 
+               * `<=` 
+               * `>`
+               * `>=` 
+               * `!=`
+            example:
+              filterOperator.subcategory.13: ">"
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            text/plain:
+              schema:
+                type: number
+                example: 42
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+
+  /core/v2/categories/{categoryId}/commons/websites:
+    get:
+      tags:
+        - Commons
+      summary: List all available websites for this category
+      operationId: listCategoryWebsites
+      description: |
+        List the websites available in this category
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebsiteItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+  
+  /core/v2/categories/{categoryId}/product_categories:
+    get:
+      tags:
+        - Product Categories
+      summary: List all available product categories
+      operationId: listProductCategories
+      description: |
+        List the product categories available in this category
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+          
+  /core/v2/categories/{categoryId}/product_categories/{productCategoryId}:
+    get:
+      tags:
+        - Product Categories
+      summary: Returns the specified product category
+      operationId: getProductCategory
+      description: |
+        Returns the specified product category
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: productCategoryId
+          description: Identifier of the product category 
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: returns the specified product category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+    put:
+      tags:
+        - Product Categories
+      summary: Update the product category
+      operationId: updateProductCategory
+      description: |
+        Update the status of the product category identified by productCategoryId
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: productCategoryId
+          description: Identifier of the product category 
+          required: true
+          schema:
+            type: number
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categoryStatus:
+                  $ref: '#/components/schemas/CategoryStatus'
+      responses:
+        '200':
+          description: status successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryItem'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/words_clusters_sets:
+    get:
+      tags:
+        - Features
+      summary: Returns the list of words clusters sets
+      operationId: getWordsClustersSets
+      description: |
+        Returns the list of available wordsClustersSets. A wordsClustersSet is a clustering, i.e., a set of clusters and, for each cluster, a set of keywords
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: record_format
+          schema:
+            $ref: '#/components/schemas/RecordFormat'
+          required: false
+      responses:
+        '200':
+          description: returns the list of WordsClustersSet, or WordsClustersSetFormatArray if the record_format query parameter equals RECORD_FORMAT_ARRAY
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/WordsClustersSet'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/WordsClustersSetFormatArray'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}:
+    get:
+      tags:
+        - Features
+      summary: Returns the specified words clusters sets
+      operationId: getWordsClustersSet
+      description: |
+        Returns the specified wordsClustersSets
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the words clusters set 
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: returns the specified wordsCLustersSet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WordsClustersSet'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+    put:
+      tags:
+        - Features
+      summary: Updates the specified WordsClustersSet
+      operationId: updateWordsClustersSet
+      description: |
+        Updates the specified WordsClustersSets
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet
+          required: true
+          schema:
+            type: number
+      requestBody:
+        description: The field to be updates
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WordsClustersSetChanges'
+      responses:
+        '200':
+          description: the WordsClustersSet has been updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WordsClustersSet'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters:
+    get:
+      tags:
+        - Features
+      summary: Returns the list of words cluster (topics) of this clusters sets
+      operationId: getWordsClusters
+      description: |
+        Returns the list of words cluster
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the words clusters set 
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: record_format
+          schema:
+            $ref: '#/components/schemas/RecordFormat'
+          required: false
+      responses:
+        '200':
+          description: returns the list of WordsCluster, or WordsClusterFormatArray if the record_format query parameter equals RECORD_FORMAT_ARRAY
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/WordsCluster'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/WordsClusterFormatArray'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+    post:
+      tags:
+        - Features
+      summary: Creates a new WordsCluster (topic) owned by the specified WordsClustersSet
+      operationId: createWordsCluster
+      description: |
+        Creates a new wordsCluster and return it
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the words clusters set 
+          required: true
+          schema:
+            type: number
+      requestBody:
+        description: The fields to be updated
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WordsClusterChanges'
+      responses:
+        '200':
+          description: returns the created WordsCluster
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WordsCluster'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '409':
+          description: conflict - words cluster already exists
+        '500':
+          description: internal server Error
+  
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/{wordsClusterId}/word_vectors:
+    get:
+      tags:
+        - Features
+      summary: Returns the list of words belonging to the specified WordsClsuter
+      operationId: getWords
+      description: |
+        Returns the list of words of a WordsCluster. Words can also be named as word_vectors as they bring info about the semantic vector space
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClusterId
+          description: Identifier of the WordsCluster
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: record_format
+          schema:
+            $ref: '#/components/schemas/RecordFormat'
+          required: false
+      responses:
+        '200':
+          description: returns the list of WordsCluster, or WordsClusterFormatArray if the record_format query parameter equals RECORD_FORMAT_ARRAY
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/WordVector'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/WordVectorFormatArray'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/{wordsClusterId}:
+    get:
+      tags:
+        - Features
+      summary: Returns the specified WordsCluster
+      operationId: getWordsCluster
+      description: |
+        Returns the details of the specified WordsCluster.
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClusterId
+          description: Identifier of the WordsCluster
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: returns the details of the specified WordsCluster
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WordsCluster'
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+    delete:
+      tags:
+        - Features
+      summary: Delete the specified WordsCluster
+      operationId: deleteWordsCluster
+      description: |
+        Delete the specified WordsCluster moving all its word to the trash WordsCluster.
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClusterId
+          description: Identifier of the WordsCluster
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: DELETED
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+    put:
+      tags:
+        - Features
+      summary: Updates the specified WordsCluster
+      operationId: updateWordsCluster
+      description: |
+        Updates the given WordsCluster and returns it.
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClusterId
+          description: Identifier of the WordsCluster
+          required: true
+          schema:
+            type: number
+      requestBody:
+        description: The destination cluster and the WordVectors to be moved
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WordsClusterChanges'
+      responses:
+        '200':
+          description: the modified WordsCluster
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WordsCluster'
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+  
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/{wordsClusterId}/move_requests:
+    post:
+      tags:
+        - Features
+      summary: Move wordVectors from this WordsCluster to another one
+      operationId: moveWordVectors
+      description: |
+        Request to move wordVectors from this WordsCluster to another one (in the same WordsClustersSet)
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClusterId
+          description: Identifier of the WordsCluster
+          required: true
+          schema:
+            type: number
+      requestBody:
+        description: The destination cluster and the WordVectors to be moved
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WordVectorMoveRequest'
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: MOVED
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+  
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/trash/move_requests:
+    post:
+      tags:
+        - Features
+      summary: Move wordVectors from trash WordsCluster to another one
+      operationId: moveDeletedWordVectors
+      description: |
+        Request to move wordVectors from the trash WordsCluster to another one (in the same WordsClustersSet)
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+      requestBody:
+        description: The destination cluster and the WordVectors to be moved
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WordVectorMoveRequest'
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: MOVED
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/{wordsClusterId}/delete_requests:
+    post:
+      tags:
+        - Features
+      summary: Move wordVectors from this WordsCluster to the trash 
+      operationId: deleteWordVectors
+      description: |
+        Request to delete wordVectors from this WordsCluster and move them to the trash
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClusterId
+          description: Identifier of the WordsCluster
+          required: true
+          schema:
+            type: number
+      requestBody:
+        description: The list of WordVectors to be deleted
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WordVectorDeleteRequest'
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: DELETED
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/{wordsClusterId}/merge_requests:
+    post:
+      tags:
+        - Features
+      summary: Merge the specified WordsClusters into this one, then delete them
+      operationId: mergeWordsClusters
+      description: |
+        Merge the specified WordsClusters into this one, then delete them
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClusterId
+          description: Identifier of the WordsCluster
+          required: true
+          schema:
+            type: number
+      requestBody:
+        description: The list of WordsClusters to merge into this one
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WordsClustersMergeRequest'
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: MERGED
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+  
+          
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/{wordsClusterId}/word_vectors/count:
+    get:
+      tags:
+        - Features
+      summary: Returns the count of words belonging to the specified WordsClsuter
+      operationId: getWordsCount
+      description: |
+        Returns the count of words of a WordsCluster.
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClusterId
+          description: Identifier of the WordsCluster
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: returns the count of WordsCluster
+          content:
+            text/plain:
+              schema:
+                type: number
+                example: 42
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/trash/word_vectors:
+    get:
+      tags:
+        - Features
+      summary: Returns the list of words put into the trash
+      operationId: getDiscardedWords
+      description: |
+        Returns the list of words of a WordsCluster. Words can also be named as word_vectors as they bring info about the semantic vector space
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: record_format
+          schema:
+            $ref: '#/components/schemas/RecordFormat'
+          required: false
+      responses:
+        '200':
+          description: returns the list of WordsVector, or WordsVectorFormatArray if the record_format query parameter equals RECORD_FORMAT_ARRAY
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/WordVector'
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/WordVectorFormatArray'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/{wordsClusterId}/word_vectors/{wordVectorId}:
+    delete:
+      tags:
+        - Features
+      summary: Delete the specified WordVector from a WordsCluster
+      operationId: deleteWordVector
+      description: |
+        Delete the specified WordVector from a WordsCluster moving it word to the trash WordsCluster.
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClusterId
+          description: Identifier of the WordsCluster
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordVectorId
+          description: Identifier of the WordVector
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: DELETED
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/trash/word_vectors/count:
+    get:
+      tags:
+        - Features
+      summary: Returns the count of words belonging to the specified WordsClsuter
+      operationId: getDiscardedWordsCount
+      description: |
+        Returns the count of words of a WordsCluster.
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: returns the count of WordsCluster
+          content:
+            text/plain:
+              schema:
+                type: number
+                example: 42
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+  
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/{wordsClusterId}/word_vectors/{wordVectorId}/reviews:
+    get:
+      tags:
+        - Features
+      summary: Returns the list of reviews referring the given word
+      operationId: getWordVectorReviews
+      description: |
+        returns the list of reviews referring the given word vector.
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClusterId
+          description: Identifier of the WordsCluster
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordVectorId
+          description: Identifier of the Wordvector 
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: offset
+          description: 0-based index of the starting item for pagination, if not specified 0 will be used
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - in: query
+          name: pageSize
+          description: page size, if not specified 10 will be used (maximum 100)
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: sortField
+          required: false
+          description: >
+            Sort field (default REVIEW_DATE):
+             * `PRODUCT_NAME` - The name of the product
+             * `REVIEW_TITLE` - The title of the review
+             * `REVIEW_RATING` - The review rating
+             * `REVIEW_DATE` - The review date
+             * `WEBSITE_NAME` - The name of the website (source)
+          schema:
+            type: string
+            enum: [PRODUCT_NAME, REVIEW_TITLE, REVIEW_RATING, REVIEW_DATE]
+        - in: query
+          name: sortOrder
+          required: false
+          description: >
+            Sort order (default DESC):
+             * `ASC` - Ascending
+             * `DESC` - Descending
+          schema:
+            type: string
+            enum: [ASC, DESC]
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WordVectorReview'
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+  
+  /core/v2/categories/{categoryId}/words_clusters_sets/{wordsClustersSetId}/words_clusters/{wordsClusterId}/word_vectors/{wordVectorId}/reviews/count:
+    get:
+      tags:
+        - Features
+      summary: Returns the count of reviews referring the given word
+      operationId: getWordVectorReviewsCount
+      description: |
+        Returns the count of reviews referring the given word.
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClustersSetId
+          description: Identifier of the WordsClustersSet 
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordsClusterId
+          description: Identifier of the WordsCluster
+          required: true
+          schema:
+            type: number
+        - in: path
+          name: wordVectorId
+          description: Identifier of the Wordvector 
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: returns the count of reviews
+          content:
+            text/plain:
+              schema:
+                type: number
+                example: 42
+        '400':
+          description: bad input parameter
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+  /core/v2/categories/{categoryId}/commons/items/change_requests:
+    post:
+      tags:
+        - Commons
+      summary: Modifies the hidden or bucketId properties of specified items
+      operationId: updateItems
+      description: |
+        Modifies the hidden or bucketId properties of specified items
+      parameters:
+        - in: path
+          name: categoryId
+          description: Identifier of the category 
+          required: true
+          schema:
+            type: number
+      requestBody:
+        description: The list of items to modify and the values of the properties to change
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemsChangeRequest'
+      responses:
+        '200':
+          description: returns a 200 success code
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - code
+                  - message
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: UPDATED
+        '400':
+          description: bad input parameter
+        '404':
+          description: the specified WordsCluster was not found
+        '409':
+          description: multiple items found
+        '401':
+          description: 'unauthenticated'
+        '403':
+          description: 'unauthorized'
+        '500':
+          description: internal server Error
+          
+components:
+  schemas:
+  
+    CategoryNameItem:
+      type: object
+      required: 
+        - itemCategoryName
+      properties:
+        itemCategoryName:
+          type: string
+          example: Cell Phones.Refurbished Phones
+  
+    SubcategoryItemType:
+      type: string
+      description: Specifies the type of the subcategory
+      enum:
+        - ALPHANUMERIC
+        - NUMBER
+        - DATE
+        - YEAR
+    
+    SubcategoryItem:
+      type: object
+      required: 
+        - subcategoryId
+        - subcategoryName
+        - subcategoryIndex
+        - subcategoryType
+        - hidden
+      properties:
+        subcategoryId:
+          type: integer
+          example: 15
+        subcategoryName:
+          type: string
+          example: OperatingSystem
+          description: the name of the subcategory. Since this name correspond to colum names when exporting (e.g., for Tableau), some constraint mght be applied on the accepted characters
+        subcategoryDescription:
+          type: string
+          example: The operating system installed on the mobile phones
+        subcategoryNotes:
+          type: string
+        subcategoryPlaceHolder:
+          type: string
+          description: a message explaining the user which type of value to insert
+          example: Insert the Operting System (e.g., Android, Windows, Symbian)
+        subcategoryIndex:
+          type: integer
+          description: an index to sort subcategories. The absolute value is not important, only relative value is important to define an ordering among subcategories. There cannot exist two subcategories with the same subcategoryIndex
+          example: 3
+        subcategoryType:
+          $ref: '#/components/schemas/SubcategoryItemType'
+        hidden:
+          type: boolean
+          description: whether the corresponding column is visible or not
+          example: true
+
+    SubcategoryIdIndexPair:
+      type: object
+      required: 
+        - subcategoryId
+        - subcategoryIndex
+      properties:
+        subcategoryId:
+          type: integer
+          example: 15
+        subcategoryIndex:
+          type: integer
+          description: an index to sort subcategories. The absolute value is not important, only relative value is important to define an ordering among subcategories. There cannot exist two subcategories with the same subcategoryIndex
+          example: 3
+    
+    SubcategoryValueItem:
+      type: object
+      required: 
+        - subcategoryValueId
+        - subcategoryId
+        - subcategoryValue
+        - subcategoryValueIndex
+      properties:
+        subcategoryId:
+          type: integer
+          example: 15
+        subcategoryValueId:
+          type: integer
+          example: 16
+        subcategoryValue:
+          type: string
+          example: Android
+          description: a value for this subcategory
+        subcategoryValueIndex:
+          type: integer
+          description: an index to sort subcategories. The absolute value is not important, only relative value is important to define an ordering among subcategories. There cannot exist two subcategories with the same subcategoryIndex
+          example: 3
+    
+    SubcategoryTypeItem:
+      type: object
+      required: 
+        - subcategoryTypeId
+        - subcategoryTypeName
+        - databaseType
+      properties:
+        subcategoryId:
+          type: integer
+          example: 15
+        subcategoryTypeName:
+          type: string
+          example: Year
+          description: name of the subcategory type
+        subcategoryTypeDescription:
+          type: string
+          example: year types of data in the format yyyy-MM-dd
+        databaseType:
+          type: string
+          example: INT
+        numericRangeMax:
+          type: number
+          example: 2020
+          description: maximum allowed value that defines the upper limit of the range for this numeric type
+        numericRangeMin:
+          type: number
+          example: 1930
+          description: minimum allowed value that defines the bottom limit of the range for this numeric type
+        dateRangeMax:
+          type: string
+          example: '2020-02-07'
+          description: maximum allowed date 
+        dateRangeMin:
+          type: string
+          example: '1990-02-07'
+          description: minimum allowed date
+        maxLength:
+          type: string
+          example: 20
+          description: maximun number of characthers allowed for the subcateogry values of this type
+        datePattern:
+          type: string
+          example: yyyy-MM-dd
+      
+    BucketItemValueNew:
+      type: object
+      description: the bucket to be created
+      required: 
+        - bucketName
+      properties:
+        bucketName:
+          type: string
+          example: Samsung S9
+          description: the name of the items bucket. Bucket names are unique in the category.
+        bucketName_english:
+          type: string
+          example: Samsung S9
+          description: the name of the items bucket.
+        bucketNotes:
+          type: string
+          example: Some notes
+          description: some notes assigned to the bucket.
+        processed:
+          type: boolean
+          example: false
+          description: true if the this bucket has been completed false otheriwse
+        hidden:
+          type: boolean
+          example: false
+          description: true if the bucket should appear in the backend false otherwise
+        subcategories:
+          type: array
+          items:
+            type: object
+            required:
+              - subcategoryId
+            properties:
+              subcategoryId:
+                type: integer
+                example: 17
+              subcategoryValueId:
+                description: if specified, it will be used to assign the subcategory value, if 'null', the subcategoryValue should be specified
+                type: string
+                example: 184
+              subcategoryValue:
+                description: in case the subcateogry id is not specified this value will be used. If different from 'null', the specified value must be compatible with the type of category (e.g., if this subcategory has type NUMERIC, this value should be for example 10)
+                type: string
+                example: 100
+
+    ItemsBucketsChangeRequest:
+      type: object
+      description: the properties of the BucketsItem that can be changed by the user and the list of BucketsItems to change. Only the specified properties will be changed
+      
+      properties:
+        hidden:
+          type: boolean
+          example: false
+          description: specifies whether the item bucket is visible or not (muted/unmuted)
+        processed:
+          type: boolean
+          example: true
+          description: specifies whether the item bucket has been processed or not
+        bucketItemIds:
+          type: array
+          description: list of the identifiers of the BucketsItems to change
+          items:
+            type: integer
+            example: 2739
+        subcategories:
+          type: array
+          items:
+            type: object
+            required:
+              - subcategoryId
+            properties:
+              subcategoryId:
+                type: integer
+                example: 1
+              subcategoryValueId:
+                type: string
+                example: 3
+
+    ItemsBucketsDeleteRequest:
+      type: array
+      description: list of the identifiers of the BucketsItems to delete
+      items:
+        type: integer
+        example: 2739
+            
+    SubcategoryItemValueNew:
+      type: object
+      description: the subset of the SubcategoryValueItem fields that must be specified when adding a new one
+      required: 
+        - subcategoryValue
+      properties:
+        subcategoryValue:
+          type: string
+          example: Android
+          description: a value of the subcategory.
+    
+    SubcategoryItemValueUpdate:
+      type: object
+      description: the subset of the SubcategoryValueItem fields that must be specified when adding a new one
+      required: 
+        - subcategoryValue
+      properties:
+        subcategoryValue:
+          type: string
+          example: MacOS
+          description: an update name for the subcategory value.
+        subcategoryValueIndex:
+          type: number
+          example: 11
+          description: the updated index for the subcategoryValue.
+    
+    SubcategoryItemNew:
+      type: object
+      description: the subset of the SubcategoryItem fields that must be specified when adding a new one
+      required: 
+        - subcategoryName
+      properties:
+        subcategoryName:
+          type: string
+          example: OperatingSystem
+          description: the name of the subcategory. Since this name correspond to colum names when exporting (e.g., for Tableau), some constraint mght be applied on the accepted characters
+        subcategoryDescription:
+          type: string
+          example: The operating system installed on the mobile phones
+        subcategoryNotes:
+          type: string
+          example: Notes
+        subcategoryPlaceHolder:
+          type: string
+          description: a message explaining the user which type of value to insert
+          example: Insert the Operting System (e.g., Android, Windows, Symbian)
+        subcategoryTypeId:
+          type: number
+          example: 2
+        hidden:
+          type: boolean
+          description: |
+            whether the corresponding column is visible or not (default: false)
+          example: true
+    
+    TagItem:
+      type: object
+      required: 
+        - itemTagName
+        - itemTagValue
+      properties:
+        itemTagName:
+          type: string
+          example: Screen Size
+        itemTagValue:
+          type: string
+          example: "6.1\""
+    
+    PriceItem:
+      type: object
+      required: 
+        - date
+        - itemPrice
+        - currency
+      properties:
+        date:
+          type: string
+          example: "2018-12-06"
+        itemPrice:
+          type: number
+          example: 199.99
+        currency:
+          type: string
+          example: $
+    
+    ImageItem:
+      type: object
+      required: 
+        - itemImageURL
+        - itemImageIndex
+      properties:
+        itemImageIndex:
+          type: integer
+          example: 10
+        itemImageURL:
+          type: string
+          example: Samsung  
+
+    ReviewItem:
+      type: object
+      required: 
+        - reviewId
+        - text
+        - title
+        - vote
+        - code
+        - url
+        - dateCreated
+        - dateModified
+        - dateSeen
+      properties:
+        reviewId:
+          type: integer
+          example: 20636385
+        text:
+          type: string
+          example: Very happy with my purchase
+        title:
+          type: string
+          example: Great Product
+        vote:
+          type: integer
+          example: 2
+        code:
+          type: string
+          example: "1be3d773cb0c069c3200c6601e23478c"
+        url:
+          type: string
+          example: https://www.amazon.com/gp/customer-reviews/R1Y5DVUYFX1S8Z
+        dateCreated:
+          type: string
+          example: "2019-12-06"
+        dateModified:
+          type: string
+          example: "2019-12-06"
+        dateSeen:
+          type: string
+          example: "2018-12-05"        
+
+    Item:
+      type: object
+      required: 
+        - itemId
+        - itemAggregatorId
+        - brandId
+        - websiteId
+        - bucketId
+        - bucketName
+        - itemName
+        - itemSKU
+        - itemURL
+        - itemPrice
+        - itemDescription
+        - itemModelNumber
+        - reviewCount
+        - minReviewDate
+        - maxReviewDate
+        - dateCreated
+        - dateModified
+        - dateSeen
+        - hidden
+      properties:
+        itemId:
+          type: integer
+          example: 3004824
+        itemAggregatorId:
+          type: integer
+          example: 1924137
+        brandId:
+          type: integer
+          example: 91525
+        websiteId:
+          type: integer
+          example: 71
+        bucketId:
+          type: integer
+          example: 9656
+        bucketName:
+          type: string
+          example: Galaxy S9
+        itemName:
+          type: string
+          example: Samsung Galaxy S9+
+        itemSKU:
+          type: string
+          example: B07DFMJ6PD
+        itemURL:
+          type: string
+          example: https://www.amazon.com/dp/B07DFMJ6PD
+        itemPrice:
+          type: number
+          example: 199.99 
+        itemDescription:
+          type: string
+          example: Samsung mobile phone
+        itemModelNumber:
+          type: string
+          example: SM-G965UZKAXAA
+        numReviews:
+          type: integer
+          example: 200
+        minReviewDate:
+          type: string
+          example: "2018-12-06"
+        maxReviewDate:
+          type: string
+          example: "2018-11-06"
+        dateCreated:
+          type: string
+          example: "2019-12-06"
+        dateModified:
+          type: string
+          example: "2019-12-06"
+        dateSeen:
+          type: string
+          example: "2018-12-05"  
+        hidden:
+          type: boolean
+          example: false
+          description: specifies whether the item is visible or not (muted/unmuted)
+    
+    ItemValueChange:
+      type: object
+      description: the properties of the item that can be changed by the user. At least on between bucketId and hidden should be specified
+      properties:
+        bucketId:
+          type: integer
+          example: 9656 
+          description: identifier of the bucket this item belongs to
+        hidden:
+          type: boolean
+          example: false
+          description: specifies whether the item is visible or not (muted/unmuted)
+    
+    ItemsChangeRequest:
+      type: object
+      description: the properties of the item that can be changed by the user and the list of items to change. Only the specified properties will be changed. At least on between bucketId and hidden should be specified
+      properties:
+        bucketId:
+          type: integer
+          example: 9656 
+          description: identifier of the bucket this item belongs to
+        hidden:
+          type: boolean
+          example: false
+          description: specifies whether the item is visible or not (muted/unmuted)
+        itemIds:
+          type: array
+          description: list of the items to change
+          items:
+            type: integer
+            example: 2739
+    
+    AggregatorItem:
+      type: object
+      required: 
+        - aggragatorId
+        - aggregatorLabel
+        - numItems
+        - numReviews
+      properties:
+        aggragatorId:
+          type: integer
+          example: 1933868
+        aggregatorLabel:
+          type: string
+          example: https://www.amazon.com/dp/B00IRS48EG
+        numItems:
+          type: integer
+          example: 834 
+        numReviews:
+          type: integer
+          example: 1081
+    
+    BrandItem:
+      type: object
+      required: 
+        - brandId
+        - brandName
+      properties:
+        brandId:
+          type: integer
+          example: 10
+        brandName:
+          type: string
+          example: Samsung
+          
+    CountItems:
+      type: object
+      required: 
+        - itemCounts
+      properties:
+        itemCounts:
+          type: integer
+          example: 10
+    
+    ItemBucketsMergeRequest:
+      type: object
+      description: the bucket to be created
+      required: 
+        - bucketName
+        - sourceBucketsIds
+      properties:
+        sourceBucketsIds:
+          type: array
+          items:
+            type: integer
+            example: 2739
+        bucketName:
+          type: string
+          example: Samsung S9
+          description: the name of the items bucket. Bucket names are unique in the category.
+        bucketName_english:
+          type: string
+          example: Samsung S9
+          description: the name of the items bucket.
+        processed:
+          type: boolean
+          example: false
+          description: true if the this bucket has been completed false otheriwse
+        hidden:
+          type: boolean
+          example: false
+          description: true if the bucket should appear in the backend false otherwise
+        subcategories:
+          type: array
+          items:
+            type: object
+            required:
+              - subcategoryId
+            properties:
+              subcategoryId:
+                type: integer
+                example: 1
+              subcategoryValueId:
+                type: string
+                example: 3
+    
+    BucketItem:
+      type: object
+      required: 
+        - bucketId
+        - bucketName
+        - bucketName_english
+        - bucketNotes
+        - numReviews
+        - numItems
+        - processed
+        - hidden
+      properties:
+        bucketId:
+          type: integer
+          example: 14163
+        bucketName:
+          type: string
+          example: 可哆
+        bucketName_english:
+          type: string
+          example: KooDoo
+        bucketNotes:
+          type: string
+          example: some notes
+        numItems:
+          type: integer
+          example: 100  
+        numReviews:
+          type: integer
+          example: 20
+        processed:
+          type: boolean
+          example: true  
+        hidden:
+          type: boolean
+          example: false
+        subcategories:
+          type: array
+          items:
+            type: object
+            required:
+              - subcategoryId
+            properties:
+              subcategoryId:
+                type: integer
+                example: 1118
+              subcategoryIndex:
+                type: integer
+                example: 2
+              subcategoryValue:
+                type: string
+                example: 5.5
+              subcategoryName:
+                type: string
+                example: ScreenSize
+
+    WebsiteItem:
+      type: object
+      required: 
+        - websiteId
+        - websiteName
+        - websiteURL
+      properties:
+        websiteId:
+          type: integer
+          example: 10
+        websiteName:
+          type: string
+          example: amazon
+        websiteURL:
+          type: string
+          example: www.amazon.com
+          
+    CategoryItem:
+      type: object
+      required:
+        - categoryId
+        - categoryName
+        - categoryStatus
+      properties:
+        categoryId:
+          type: integer
+          example: 10
+        categoryName:
+          type: string
+          example: Cell Phones & Accessories.Cell Phones
+        categoryStatus:
+          $ref: '#/components/schemas/CategoryStatus'
+          
+    CategoryStatus:
+      type: string
+      description: |
+        a value specifying whether the variations assigned to this category should be
+        included or excluded from the category:
+          
+        value | definition
+        ------|-----------
+         -1   | productCategory to be excluded
+          0   | unimportant productCategory
+          1   | productCategory to be included
+          
+    WordsClustersSet:
+      type: object
+      required:
+        - wordsClustersSetId
+        - label
+        - completed
+      properties:
+        wordsClustersSetId:
+          type: integer
+          example: 11
+          description: a unique identifier for this clusters set
+        label:
+          type: string
+          example: kmeans_80
+          description: the label shown to the user to identify this clusters set
+        description:
+          type: string
+          example: Kmeans algorithm with 80 clusters
+          description: a description of the clusters set. Might contain info about the algorithm used to generate this clusters set, or about the parameters of the algorithm
+        completed:
+          type: boolean
+          example: false
+          description: true when the clusters set is published (all clusters have been edited), false if the editing is still in progress
+          
+    WordsClustersSetChanges:
+      type: object
+      description: the fields of the words clusters set that can be updated by a PUT operation. No field is mandatory, but at least one should be specified
+      properties:
+        label:
+          type: string
+          example: kmeans_80
+          description: the label shown to the user to identify this clusters set
+        description:
+          type: string
+          example: Kmeans algorithm with 80 clusters
+          description: a description of the clusters set. Might contain info about the algorithm used to generate this clusters set, or about the parameters of the algorithm
+        completed:
+          type: boolean
+          example: false
+          description: true when the clusters set is published (all clusters have been edited), false if the editing is still in progress
+          
+    WordsClustersSetFormatArray:
+      type: array 
+      items: {}
+      description: |
+        a compact version of WordsClustersSet, suited to minimized bandwidth usage. The fields
+        in the array are ordered as it follows:
+        
+        index | field              
+        ------|--------------------
+          0   | wordsClustersSetId 
+          1   | label              
+          2   | description            
+          3   | completed    
+      
+    WordsCluster:
+      type: object
+      description: a words cluster (aka TOPIC or FEATURE) is a set of keywords
+      required:
+        - wordsClusterId
+        - label
+        - processed
+      properties:
+        wordsClusterId:
+          type: integer
+          example: 12
+          description: a unique identifier for this cluster
+        label:
+          type: string
+          example: Apps (Gaming)
+          description: the visible name of this words cluster
+        label_english:
+          type: string
+          example: Apps (Gaming)
+          description: in the case that the label field is not english, this field may contain the English translation of label. Not used if label is already in English
+        minSimilarity:
+          type: number
+          example: 0.8
+          description: The upeer thershold to the similarity value for this topic. keywords with a validi similarity below this value will be hidden
+        description:
+          type: string
+          example: Games and related apps
+          description: A user-defined comment/description of the topic, aimed to be exported to the customer
+        notes:
+          type: string
+          example: Games and related apps
+          description: A user-defined note about the topic, not exported to the customer.
+        processed:
+          type: boolean
+          example: false
+          description: true if the clusters has been already edited (identified), false otherwise (todo)
+          
+    WordsClusterFormatArray:
+      type: array 
+      items: {}
+      description: |
+        same as WordsCluster, but in a more compact format to save bandwidth:
+
+        index | field              
+        ------|--------------------
+          0   | wordsClusterId 
+          1   | label              
+          2   | minSimilarity            
+          3   | description              
+          4   | notes             
+          5   | processed    
+    
+    WordsClusterChanges:
+      type: object
+      description: the field of a WordsCluster (aka TOPIC or FEATURE) passed to the server in a PUT or POST operation. No field is mandatory, but at least one should be provided
+      properties:
+        label:
+          type: string
+          example: Apps (Gaming)
+          description: the visible name of this words cluster
+        label_english:
+          type: string
+          example: Apps (Gaming)
+          description: the English translation of label, if label is not in English
+        minSimilarity:
+          type: number
+          example: 0.8
+          description: The upper thershold to the similarity value for this topic. keywords with a valid similarity below this value will be hidden
+        description:
+          type: string
+          example: Games and related apps
+          description: A user-defined comment/description of the topic, aimed to be exported to the customer
+        notes:
+          type: string
+          example: Games and related apps
+          description: A user-defined note about the topic, not exported to the customer.
+        processed:
+          type: boolean
+          example: false
+          description: true if the clusters has been already edited (identified), false otherwise (todo)
+    
+    WordVectorReview:
+      type: object
+      description: a WordVectorReview object merges together info about a wordVector (i.e., a keyword), a review, and the occurences of the WordVector inside the review
+      required:
+        - reviewId
+        
+      properties:
+        productName:
+          type: string
+          example: Citation Helmet
+          description: the name of the item related to the review
+          
+        reviewId:
+          type: integer
+          example: 526845
+          description: the review identifier
+          
+        reviewTitle:
+          type: string
+          example: Nice product
+          description: the title of the review
+          
+        reviewRating:
+          type: number
+          example: 3
+          minimum: 1.0
+          maximum: 5.0
+          description: the rating of the review, usually expressed in stars, ranging from 1 to 5. Reviews with a different range are scaled to the range 1, 5
+          
+        reviewDate:
+          type: string
+          example: 2019-12-31
+          description: the date of the review in the format YYYY-MM-DD
+        
+        reviewText:
+          type: string
+          example: Sound quality is the best I've heard on a speaker of this size!
+          description: the text of the review
+        
+        websiteId:
+          type: number
+          example: 101
+          description: identifier of the website (Source) from which the review originates
+          
+        websiteName:
+          type: string
+          example: amazon
+          description: name of the website (Source) from which the review originates
+          
+        websiteURL:
+          type: string
+          format: uri
+          example: https://www.amazon.com
+          description: name of the website (Source) from which the review originates
+      
+        sentences:
+          type: array
+          items:
+            type: object
+            required:
+              - beginPosition
+              - endPosition
+              
+            properties:
+              beginPosition:
+                type: integer
+                example: 1118
+                description: the 0-based starting position, in number of characters, of this sentence inside the full review text
+              endPosition:
+                type: integer
+                example: 1197
+                description: the 0-based ending position, in number of characters, of this sentence inside the full review text
+              sentiment:
+                type: string
+                enum: [Positive, Negative, Neutral]
+                example: Positive
+                description: the sentiment of this sentence
+              keywords:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - wordVectorId
+                    - word
+                    - beginPosition
+                    - endPosition
+                    
+                  properties:
+                    wordVectorId:
+                      type: integer
+                      example: 2624
+                      description: the WordVector identifier
+                      
+                    word:
+                      type: string
+                      example: player
+                      description: the values of this word. Note that this value could be slightly different from the one appearing in the text, as word is usually normalized (i.e., lowercase, singular for nouns, infinite form for verbs, etc), wheras the review text is not
+                    beginPosition:
+                      type: integer
+                      example: 1131
+                      description: the 0-based starting position, in number of characters, of this word inside the full review text
+                    endPosition:
+                      type: integer
+                      example: 1138
+                      description: the 0-based ending position, in number of characters, of this word inside the full review text
+                
+    WordVectorMoveRequest:
+      type: object
+      description: a WordVectoreMoveRequest is the request to move e list of WordVectors to another WordsCluster
+      required:
+        - destinationWordsClusterId
+        - wordVectors
+      properties:
+        destinationWordsClusterId:
+          type: integer
+          example: 58
+          description: the identifier of the destination WordsCluster
+        wordVectors:
+          type: array
+          items:
+            type: integer
+            example: 2739
+    
+    WordsClustersMergeRequest:
+      description: a WordsClustersMergeRequest is the request to merge a list of WordsClusters into another one
+      type: array
+      items:
+        type: integer
+        example: 2739
+    
+    WordVectorDeleteRequest:
+      description: a WordVectorDeleteRequest is the request to move a list of WordVectors to the trash
+      type: array
+      items:
+        type: integer
+        example: 2739
+      
+    WordVector:
+      type: object
+      description: a WordVector is a keyword with some additional info such as statistics and vectorspace-ralated info
+      required:
+        - wordVectorId
+        - wordsClusterId
+        - word
+      properties:
+        wordVectorId:
+          type: integer
+          example: 2624
+          description: the WordVector identifier
+          
+        wordsClusterId:
+          type: integer
+          example: 12
+          description: a unique identifier the owning cluster
+          
+        word:
+          type: string
+          example: player
+          description: the values of this word
+          
+        similarity:
+          type: number
+          example: 0.8
+          minimum: -1.0
+          maximum: 1.0
+          description: The distance between center and each point. Similarity may be null when a word is assigned to a WordsCluster different from the original one. This is due to the cat that centrality is computed as distance from the WordsCluster barycenter; when the word is assigned to a different cluster distance from the original barycenter does not make any sense
+        centrality:
+          type: number
+          example: 0.7
+          description: How important is the word in the contexts were it is used
+          
+        numReviews:
+          type: integer
+          minimum: 0
+          description: number of reviews containing this word
+          
+        numOpinions:
+          type: integer
+          minimum: 0
+          description: number of opinions containing this word
+          
+        numFiveStarsReviews:
+          type: integer
+          minimum: 0
+          description: number of five-stars reviews containing this word
+          
+        numFourStarsReviews:
+          type: integer
+          minimum: 0
+          description: number of four-stars reviews containing this word
+          
+        numThreeStarsReviews:
+          type: integer
+          minimum: 0
+          description: number of three-stars reviews containing this word
+          
+        numTwoStarsReviews:
+          type: integer
+          minimum: 0
+          description: number of two-stars reviews containing this word
+          
+        numOneStarReviews:
+          type: integer
+          minimum: 0
+          description: number of one-star reviews containing this word
+          
+        numPositiveOpinions:
+          type: integer
+          minimum: 0
+          description: number of positive opinions containing this word
+          
+        numNegativeOpinions:
+          type: integer
+          minimum: 0
+          description: number of positive opinions containing this word
+          
+        numNeutralOpinions:
+          type: integer
+          minimum: 0
+          description: number of positive opinions containing this word
+          
+        numNullOpinions:
+          type: integer
+          minimum: 0
+          description: number of positive opinions containing this word
+          
+        locked:
+          type: boolean
+          description: locked words are always visible inside a cluster, independently of the setting of the similarity cut. This might happen, for instance, when a word is moved to a different cluster with respect to the original one, and its similarit is not valid anymore
+          
+    WordVectorFormatArray:
+      type: array 
+      items: {}
+      description: |
+        same as WordVector, but in a more compact format to save bandwidth:
+
+        index | field              
+        ------|--------------------
+          0   | wordsClusterId 
+          1   | wordVectorId 
+          2   | word 
+          3   | similarity 
+          4   | centrality 
+          5   | numReviews 
+          6   | numOpinions 
+          7   | numFiveStarsReviews 
+          8   | numFourStarsReviews 
+          9   | numThreeStarsReviews 
+         10   | numTwoStarsReviews 
+         11   | numOneStarReviews 
+         12   | numPositiveOpinions 
+         13   | numNegativeOpinions 
+         14   | numNeutralOpinions 
+         15   | numNullOpinions 
+         16   | locked    
+          
+    RecordFormat:
+      type: string
+      description: Specifies whether the response is an array of objects (default - when this parameter is not specified or its value is RECORD_FORMAT_RECORD), or an array of objects formatted as array (when this parameter equals RECORD_FORMAT_ARRAY)
+      enum:
+        - RECORD_FORMAT_ARRAY
+        - RECORD_FORMAT_RECORD
+          
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

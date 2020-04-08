@@ -1,0 +1,410 @@
+penapi: 3.0.0
+
+info:
+  description: "**AFarCloud. T3.3. API for DSS Framework**
+
+
+    TBC
+
+    \t"
+  version: "1.0.0-oas3"
+  title: DSS FrameWork API
+  contact:
+    email: diego@encore-lab.com
+    name: Diego Polo (ENCORE LAB)
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: admins
+    description: Operations only devoted to admins and developers.
+  - name: users
+    description: Operations available to user who can use to control algorithms
+  - name: entry point
+    description: Operations that all algorithms must implement. Theses call will be made by DSS Framework to the algorithms and algorithm must reply with responses according to these especifications.
+    
+paths:
+  /register:
+    post:
+      tags:
+        - admins
+      summary: register an algorithm
+      operationId: registerAlgorithm
+      description: |
+        Register an algorithm in the framework. URL of the resource must be provided. Authorization header is needed to submit, but any user and password will be valid as security is not implemented yet
+     
+      security:
+        - adminAuth: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                algorithm_name:
+                  type: string
+                url:
+                  type: string
+            example: {"algorithm_name":"unique name","url":"url for the algorithm"}
+                
+      responses:
+        200:
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Registration sucessful
+        500:
+          description: Internal Server Error
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Failure in registration
+  
+  /delete/{algorithm_name}:
+    get:
+      tags:
+        - admins
+      summary: delete an algorithm
+      operationId: deleteAlgorithm
+      description: |
+        Delete an algorithm in the framework. Authorization header is needed to submit, but any user and password will be valid as security is not implemented yet
+
+      security:
+        - basicAuth: []
+        
+      parameters:
+        - in: path
+          name: algorithm_name
+          required: true
+          schema:
+            type: string
+            example: Algorithm_name1
+
+      responses:
+        200:
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Deletion sucessful
+        500:
+          description: Internal Server Error
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Failure in deletion
+                
+  /list:
+    get:
+      tags:
+        - users
+      summary: list all registered algorithms
+      operationId: list
+      description: |
+        List all registered algorithms. Authorization header is needed to submit, but any user and password will be valid as security is not implemented yet
+      
+      security:
+        - userAuth: []
+      
+      responses:
+        200:
+          description: OK
+          content:
+            aplication/json:
+              schema:
+                type: array
+                items:
+                  oneOf:
+                  - type: object
+                    properties:
+                      algorithm_name_1:
+                        type: string
+                        example: URL to algorithm 1
+                  - type: object
+                    properties:
+                      algorithm_name_...:
+                        type: string
+                        example: ...
+                  - type: object
+                    properties:
+                      algorithm_name_n:
+                        type: string
+                        example: URL to algorithm n
+        500:
+          description: Internal Server Error
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Failure
+
+  /start/{algorithm_name}:
+    get:
+      tags:
+        - users
+      summary: Start an algorithm
+      operationId: start
+      description: Start an algorithm in partner's premises given a defined configuration (optional). Frame will convey JSON in "configuration" to route /run_alg in entry point
+      
+      security:
+        - userAuth: []
+        
+      parameters:
+        - in: path
+          name: algorithm_name
+          required: true
+          schema:
+            type: string
+            example: algorithm_name
+
+        - in: query
+          name: configuration
+          required: false
+          schema:
+            type: object
+            properties:
+              config:
+                type: object
+                example: "JSON with configuration (defined by the developer)"
+      
+      responses:
+        200:
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Algorithm started
+        500:
+          description: Internal Server Error
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Failure in DSS to start algorithm
+        502:
+          description: Bad Gateway
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Command sent but algorithm reply "ERROR"
+  
+  /stop/{algorithm_name}:
+    get:
+      tags:
+        - users
+      summary: Stop an algorithm
+      operationId: stop
+      description: Stop an algorithm in partner's premises
+      
+      security:
+        - userAuth: []
+        
+      parameters:
+        - in: path
+          name: algorithm_name
+          required: true
+          schema:
+            type: string
+
+      responses:
+        200:
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Algorithm stopped
+        500:
+          description: Internal Server Error
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Failure in DSS to stop algorithm
+        502:
+          description: Bad Gateway
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Command sent but algorithm reply "ERROR"
+  
+  /status/{algorithm_name}:
+    get:
+      tags:
+        - users
+      summary: Get the status of an algorithm
+      operationId: status
+      description: Get the status of an algorithm given by algorithm name
+      
+      security:
+        - userAuth: []
+        
+      parameters:
+        - in: path
+          name: algorithm_name
+          required: true
+          schema:
+            type: string
+      
+      responses:
+        200:
+          description: Status of algorithm
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    algorithm_name:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                        - STARTED
+                        - STOPPED
+              example: [{"algorithm_name":"name of the algorithm", "status":"STOPPED"}]
+        400:
+          description: Algorithm not reached or not exist in the framework
+  
+  /run_alg:
+    post:
+      tags:
+        - entry point
+      summary: Run an algorithm
+      operationId: run_alg
+      description: Commands an algorithm to start. Configuration JSON will be sent to the algorithm if user sent using /start
+      
+      security:
+        - entrypoint: []
+        
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                config:
+                  type: object
+              example: {"config" : "JSON with configuration (defined by the developer)"}
+      responses:
+        200:
+          description: Output of the algorithm. Algorithm should reply with schema "output_algorithm_run"
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum:
+                  - Algorithm started
+                  - Algorithm starting error
+        400:
+          description: Algorithm not reachable
+
+  /stop_alg:
+    get:
+      tags:
+        - entry point
+      summary: Stop an algorithm
+      operationId: stop_alg 
+      description: Commands an algorithm to stop.
+      responses:
+        200:
+          description: Output of the algorithm. Algorithm should reply with schema "output_algorithm_stop"
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum:
+                  - Algorithm stopped
+                  - Algorithm stopping error
+        400:
+          description: Algorithm not reachable
+
+  /status_alg:
+    get:
+      tags:
+        - entry point
+      summary: Status of an algorithm
+      operationId: status_alg 
+      description: Get the status of an algorithm.
+      
+      security:
+        - entrypointAuth: []
+      
+      responses:
+        200:
+          description: Output of the algorithm. Algorithm should reply with schema "output_algorithm_status_started" or "output_algorithm_stopped"
+        400:
+          description: Algorithm not reachable
+
+servers:
+  - url: 'https://virtserver.swaggerhub.com/dpolob/api_afc_dss/1.0.0'
+
+components:
+  schemas:
+    output_algorithm_run:
+      description: Output an algorithm should provide if DSS Framework send /run_alg command example 
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - "STARTED"
+            - "ERROR"
+        msg:
+          type: object
+          description: json (defined by developer) from the algortithm with info (for debug, will be not show)
+
+    output_algorithm_stop:
+      description: Output an algorithm should provide if DSS Framework send /run_alg command example 
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - "STOPPED"
+            - "ERROR"
+        msg:
+          type: object
+          description: json (defined by developer) from the algortithm with info (for debug, will be not show)
+      
+          
+    output_algorithm_status:
+      description: Output an algorithm should provide if DSS Framework send /status_alg command
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - STARTED
+            - STOPPED
+            - ERROR
+          
+        msg:
+          type: object
+          description: json (defined by developer) from the algortithm with info (for debug, will be not show)
+
+  securitySchemes:
+    adminAuth:     
+      type: http
+      scheme: basic
+    userAuth:
+      type: http
+      scheme: basic
+    entrypointAuth:
+      type: http
+      scheme: basic
+externalDocs:
+  description: Interface schema
+  url: https://studentmdh.sharepoint.com/:i:/r/sites/AFarCould/Delade%20dokument/WP3/T3.3/DSS%20API%20Definition/interfaces_definition.jpg?csf=1&e=FrAIu3

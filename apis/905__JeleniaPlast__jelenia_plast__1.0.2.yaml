@@ -1,0 +1,2136 @@
+openapi: 3.0.0
+info:
+  version: "1.0.2"
+  title: API for External Companies
+  description: > 
+    **Enables integration with Jelenia Plast sp z o.o.** database. Firstly, you must get you credentials data (email, password) thanks to which you will be able to generate a token. Your application requested below endpoints, in our system will be called **API Consumer**. It is worth a mention rest of the key-words which occurs in this documentation
+      * **(external) company symbol** - when to your API account is assigned many external companies, you will be forced to add to almost every request body one extra key (`companySymbol`) which will specified currently identified company. 
+      * **control data** - it's a type of security check.
+      * **worker** - otherwise user, it's employe of your company. 
+      * **contract** - determines the period of employment of worker. 
+  contact:
+    email: "r.czaja@jeleniaplast.com"
+servers:
+  - url: https://sandbox.jeleniaplast.com/api
+    description: Testing server
+# --------------------------------------- PATHES --------------------------------------
+paths:
+# --------------------------------------- LOGIN ---------------------------------------
+  /login_check:
+    post:
+      tags:
+        - config
+      summary: Provides token (valid for 10 minutes)
+      requestBody:  
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string 
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Returns token valid for 1h
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: 
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJSUzI1NiJ9.eyJyb2xlcyI6W10sImVtYWlsIjoicm9iZXJ0MTIzQG1haWwuY29tIiwiaWF0IjoxNTYyMDYzNTY3LCJleHAiOjE1NjIxNDk5Njd9.p0V8vx9Hot4X6PnES3d1NR-k1m1lPbvsAGVANwpaEc6LaGT5_R7GG_pt_PHgk4i00EVbaWGzZ2y0nGc6HQ5BV67IDrO4AaE4T1I1hKFHtKx9KQ7jFaeZt7hFhi_tXfmVJ0IKzqdEcD5DKJg2ViXPKwMTvF1XNBX3lumc9sOMq-15mVgjfWsnY8Ut56XecOAYJx1yh080yBrru1h5HoR5iyAHEwNOAJ76KxjDe4TVTivOyYT7quO6RABlhuoLFYn0taO7hj0i5DvqwLhPRMhtlRtj_rwXY_t0xJT2AQf8AI3Scf8ybOgR1Ci3gcG6bvELFSm7Ciil9A2LlDxc6pIqqA"
+        '401':
+          description: Bad credentials 
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: object
+                    properties:
+                      code:
+                        type: integer
+                        example: 401
+                      message:  
+                        type: string 
+                        example: Bad credentials
+  /config/change-password:
+    put:
+      tags: 
+        - config
+      summary: Changes password
+      description: Changes password
+      requestBody: 
+        content:
+          application\json:
+            schema:
+              type: object
+              properties:
+                oldPassword:
+                  type: string 
+                newPassword: 
+                  type: string 
+                  minimum: 6
+                  maximum: 15
+      responses:
+        '200':
+          description: When password has been changed.
+          content:
+            application\json:
+              schema: 
+                type: object
+                properties:
+                  message: 
+                    type: string 
+                    example: 'password has been changed successfully'
+        '400':
+          $ref: '#/components/responses/StandardErrorObject'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'    
+# -------------------------------|                        |-------------------------------
+# -------------------------------|       ENDPOINTS        |-------------------------------
+# -------------------------------|        SCHEDULE        |-------------------------------    
+  /timesheet/monthly:
+    get: 
+      tags:
+        - schedule 
+      summary: Worker timesheet in requested month 
+      description: >
+        Returns worker timesheet in requested month of year.
+      requestBody:
+        content:
+          application\json:
+            schema:
+              $ref: '#/components/schemas/WorkerMonth'
+      responses:
+        '200':
+          $ref: '#/components/responses/MonthlyTimesheetList'
+        '400':
+          $ref: '#/components/responses/StandardErrorObject'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'  
+        '404':
+          $ref: '#/components/responses/WorkerNotFound'
+  /free-day/list:
+    get:
+      tags:
+        - schedule
+      summary: Free day of worker in requested month
+      description: > 
+        Returns free days of the worker in requested month of year. 
+      requestBody: 
+        content:
+          application\json:
+            schema:
+              $ref: '#/components/schemas/WorkerMonth'
+      responses:  
+        '200':
+          $ref: '#/components/responses/FreeDayListSuccess'
+        '400':
+          $ref: '#/components/responses/StandardErrorObject'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'  
+        '404':
+          $ref: '#/components/responses/WorkerNotFound'
+# -------------------------------|                        |-------------------------------
+# -------------------------------|       ENDPOINTS        |-------------------------------
+# -------------------------------|         SHIFTS         |-------------------------------
+  /shift/list:
+    get:
+      tags:
+        - shift
+      summary: Show all available shifts types 
+      description: >
+        Returns list of all available shift types as one JSON object where property name is a type symbol and assigned value is description. 
+      responses:
+        '200':
+          description: > 
+            List of shift type with symbol as property name and description as property value.
+          content:
+            application\json:
+              schema: 
+                type: object
+                additionalProperties:
+                  type: string 
+                  nullable: true 
+                example:
+                  '0': null 
+                  '1.6.8': "symbol description"
+                  '1.6.9': "symbol description"
+                  '1.6.10': "symbol description"
+                  '1.6.11': "symbol description"
+                  '1.6.12': "symbol description"
+        '401':
+          description:  On authorization failure
+  /shift/monthly:
+    get:
+      tags:
+        - shift
+      summary: Returns shifts of worker in given month of year
+      description: Returns shifts of worker in given month of year.  
+      requestBody:
+        description: You need to specified month of the year and worker 
+        content:
+          application\json:
+            schema: 
+              type: object 
+              required: 
+                - userId
+                - year
+                - month
+              properties:
+                companySymbol: 
+                  $ref: '#/components/schemas/ExternalCompanySymbolField'
+                userId:
+                  type: integer
+                  description: Worker ID 
+                  minimum: 1
+                  example: 6667
+                year: 
+                  type: integer 
+                  example: 2020
+                  minimum: 2015
+                  maximum: 2021
+                month:
+                  type: integer 
+                  example: 5
+                  minimum: 1
+                  maximum: 12
+      responses:
+        '200':
+          $ref: '#/components/responses/ShiftMonthlySuccess'
+        '400': 
+          $ref: '#/components/responses/StandardErrorObject'
+        '401':  
+          $ref: '#/components/responses/InvalidTokenError'
+  /shift/edit:
+    patch: 
+      tags:
+        - shift
+      summary: Worker day-shift edition  
+      description: >
+        Worker day-shift edition. You can choose specific days to edition where as a field value you must use values from endpoint [`/shift/list`](#/shift/get_shift_list).
+      requestBody:
+        description: >
+          - In `shift` field you must declare days which you want edit.
+        content:
+          application\json:
+            schema:
+              type: object
+              required: 
+                - shifts
+                - controlData
+              properties:
+                controlData: 
+                  $ref: '#/components/schemas/RequestControlData'
+                companySymbol: 
+                  $ref: '#/components/schemas/ExternalCompanySymbolField'
+                shifts:
+                  type: object
+                  additionalProperties:
+                    description: 'values available in this endpoint [`/shift/list`](#/shift/get_shift_list)'
+                    type: string
+                    minProperties: 1
+                    maxProperties: 31
+                    nullable: true
+                  example: {
+                    "2019-10-20": "2.14.8",
+                    "2019-10-19": "2.14.8",
+                    "2019-10-18": "2.14.8",
+                    "2019-11-05": "2.14.8"
+                  }  
+      responses:
+        '200':
+          $ref: '#/components/responses/ShiftEditionSuccess'
+        '400':
+          $ref: '#/components/responses/StandardErrorObject'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'  
+        '409':
+          $ref: '#/components/responses/OutdatedWorkerDataError'
+  /shift/brigades:
+    get:
+      tags:
+        - shift
+        - brigade
+      summary: Shows monthly shift-brigades relations
+      description: >
+        Based on given `year`, `month` and `shiftBrigadeId` returns list of *brigades* - *shifts* for each day of requested month of year. `null` as a brigade value means day off. **Available shift/brigades Ids**
+          * `0` - shift 3/brigade 4,
+          * `1` - shift 2/brigade 4,
+          * `2` - shift 2/brigade 2 (monday to friday), 
+          * `3` - shift 2/brigade 2 (monday to thursday),
+          * `4` - shift 2/brigade 2 (tuesday to saturday),
+          * `5` - brigade 5 & 6,
+          * `6` - brigade 5 & 7,
+          * `7` - brigade 5 & 8,
+          * `8` - brigade 5 & 9,
+          * `9` - brigade 5 & 10,
+          * `10` - office 
+          * `11` - shift 2/brigade 8
+          * `12` - shift 2/brigade 11
+      requestBody:
+        description: >
+          Month in a specific year & shift/brigade ID
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                year: 
+                  $ref: '#/components/schemas/YearField'
+                month: 
+                  $ref: '#/components/schemas/MonthField'
+                shiftBrigadeId:
+                  type: integer 
+                  nullable: false
+                  example: 8
+              required:
+                - year
+                - month
+                - shiftBrigadeId
+      responses:
+        '200':
+          $ref: '#/components/responses/ShiftBrigadesSuccess'
+        '400':
+          $ref: '#/components/responses/StandardErrorObject'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'
+# -------------------------------|                        |-------------------------------
+# -------------------------------|       ENDPOINTS        |-------------------------------
+# -------------------------------|         USER           |-------------------------------
+  /user/update:
+    patch:
+      tags:
+        - user 
+      summary: Worker basic data edition 
+      description: > 
+        You must provide `controlData` object to use this endpoint. Main use cases
+          * change worker **avatar**,
+          * add, update or remove **address** or **contanct data**, 
+          * add new, remove, update **cars** registered by worker,
+      requestBody:
+        description: > 
+          Worker basic data edition object. Some field are removable so if you want to do that, set `null` as field value.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerEdition'
+      responses:
+        '200': 
+          $ref: '#/components/responses/WorkersNamesEditionSuccess'
+        '400':  
+          $ref: '#/components/responses/UserBasicDataEditionError'
+        '401':  
+          $ref: '#/components/responses/InvalidTokenError'
+        '409':
+          $ref: '#/components/responses/OutdatedWorkerDataError'
+        
+  /user/update-name:
+    patch:
+      tags:
+        - user
+      summary: Worker first or/and last name edition
+      description: >
+        To edit first name or/and last name of worker you need to use this special endpoint. Worker names changing is a sensitive operation and also is errorprone so that's why this operation were delegated to separate endpoint.  
+        
+        Successfuly updated worker name/names will change controlData 
+          * `firstName` or/and `lastName`
+          * `lastUpdated` time stamp
+        
+        > You can change first name or last name at once or provide only one of them. **If you don't provide any name at all you will get an error**.
+      requestBody:
+        description: Worker names edition object
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerNamesEdition'
+      responses: 
+        '200':
+          $ref: '#/components/responses/WorkersNamesEditionSuccess'
+        '400':
+          description: >
+            On invalid value type or lack of required properties 
+          content:
+            application\json:
+              schema:
+                type: object
+                properties:
+                  invalidKeys:
+                    type: object 
+                    properties:
+                      firstName:
+                        type: object 
+                        properties:
+                          clientData:
+                            type: string 
+                            nullable: true
+                            example: null
+                          expectedType: 
+                            type: string 
+                            example: String 
+        '401':
+          description: On authorization failure
+        '404':
+          description: > 
+            Requested worker not found 
+          content: 
+            application\json:
+              schema:
+                type: object 
+                properties:
+                  controlData:
+                    type: object 
+                    properties:
+                      invalidKeys:
+                        type: object
+                        properties:
+                          userId:
+                            type: string 
+                            example: User doesnt exists
+            
+        '409':
+          description: > 
+            On outdated `controlData` properties
+          content:
+            application\json:
+              schema:
+                type: object
+                properties:
+                  controlData: 
+                    type: object 
+                    properties: 
+                      outdatedValue:
+                        type: array 
+                        items: 
+                          type: string
+                        example: ["firstName", "lastUpdated"]
+                  
+            
+  /user/create:
+    post:
+      tags: 
+        - user
+      summary: Adds new external user (worker)
+      description: > 
+        You can add new user (worker) to the JP database via this endpoint. If our database already contains user with exactly the same first and last name unfortunetly you will recieve response with status code 409 but our administrator will be informed about this situation.
+      requestBody:
+        description: User (worker) object that needs to be added to the database
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+            example:
+              firstName: Jan
+              lastName: Kowalski
+              employmentFrom: '2020-12-01'
+              employmentTo: '2021-12-31'
+              avatarUrl: http://externalcompany.com/worker-images/sample_image_name.jpg
+              email: sample@mail.com
+              pesel: '90080517455'
+              cars:
+                - name: Opel Astra 
+                  registration: DJA2004
+                - name: Polonez Caro 
+                  registration: DJA2005
+              city: Warszawa
+              zipCode: '00-001'
+              street: Szkolna
+              noHome: '12'
+              noFlat: '5'
+              phone: '+48 100 200 300'
+              userCard: '1234567'
+      responses:
+        '201':
+          description: Id of just created worker and creation datetime.
+          content: 
+            application/json:
+              schema:
+                properties:
+                  userId: 
+                    type: integer  
+                    example: 9362
+                  lastUpdated: 
+                    type: string   
+                    format: date-time
+                    pattern: YYYY-MM-DD HH-MM-SS
+                    description: expected format Y-m-d H:i:s, for example '2020-06-13 12:15:22'
+                    example: "2020-06-13 12:15:22"
+        '400':
+          $ref: '#/components/responses/UserCreateErrorMessage'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'
+        '409':
+          description: User with the same first and last name already exists in database, system administrator has been informed about everything in detail
+  /user/{id}/show:
+    get:
+      description: >
+        Useful to get current `controlData`. 
+      tags:
+        - user 
+      summary: Shows worker details
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer 
+            minimum: 1
+          required: true
+          description: Numeric ID of the worker. Minimal value 1.
+      requestBody:
+        required: false
+        description: Is required if API consumer account has assigned more than one external company. 
+        content:
+          apllication/json:
+            schema:
+              $ref: '#/components/schemas/ExternalCompanySymbol'
+      responses:
+        '200':
+          $ref: '#/components/responses/WorkerDetails'
+        '400':
+          $ref: '#/components/responses/WorkerDetailsInvalidParamId'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'
+  /user/list/all:
+    get:
+      tags: 
+        - user
+      summary: Shows all company workers 
+      requestBody:
+        required: false
+        description: Is required if API consumer account has assigned more than one external company. 
+        content:
+          apllication/json:
+            schema:
+              $ref: '#/components/schemas/ExternalCompanySymbol'
+      responses:
+        '200': 
+          description: JSON with all workers assigned to external company. List contains active and inactive workes. Workers are sorted by thier ID's. Each property name in main object is worker ID.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: 
+                  type: object
+                  properties:
+                    firstName:
+                      type: string 
+                    lastName: 
+                      type: string 
+                example:
+                  '667': {firstName: 'Michał',  lastName: 'Testowy'}
+                  '679': {firstName: 'Jan',     lastName: 'Kowalski'}
+                  '1002': {firstName: 'Grażyna', lastName: 'Kwiatkowska'}
+        '400':
+          $ref: '#/components/responses/UserListAllError'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'
+# --------------------------------|                 |-----------------------------------
+# --------------------------------|    BRIGADE      |-----------------------------------
+# --------------------------------|    ENDPOINTS    |-----------------------------------
+  /brigades:
+    get:
+      description: Gets all brigades list (id-name)
+      summary: Gets all brigades
+      tags:
+        - brigade
+      responses:
+        '200':
+          description: list of all available brigades 
+          content:
+            application/json:
+              schema: 
+                title: Brigades list
+                type: object 
+                additionalProperties:
+                  type: string
+              example: {
+                "0": "3 Zmiany - 4 Brygady",
+                "1": "2 Zmiany - 4 Brygady",
+                "2": "2 Zmiany - 2 Brygady (Od poniedziałku do piątku)"
+              }    
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'
+# --------------------------------|                 |-----------------------------------
+# --------------------------------|    CONTRACT     |-----------------------------------
+# --------------------------------|    ENDPOINTS    |-----------------------------------
+  /contract/list:
+    get:
+      description: Shows all worker contracts - active and unactive
+      tags:
+        - contract
+      summary: Shows all user's contracts.
+      requestBody: 
+        required: true
+        description: >
+          here you specify `userId` (and if is required - `companySymbol`).
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListContractsRequestObject'
+      responses:
+        '200':
+          $ref: '#/components/responses/ContractListSuccess'
+        '400':
+          $ref: '#/components/responses/ContractListError'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'
+  /contract/update:
+    patch:
+      tags:
+        - contract
+      summary: Changes contract's begin/end dates
+      description: >
+        Endpoint to change contract from & to dates. When you can modify a contract? 
+          * when the contract did not start (dateFrom & dateTo),
+          * when contract is active bu it started in current month (dateFrom & dateTo),
+          * when contract is active and starting month already passed (dateTo),
+          * **YOU CANNOT CHANGE ENDED CONTRACT**,
+      requestBody:
+        required: true
+        description: >
+          You must provide 
+            * `controlData` (to specifiy worker),
+            * assigend to worker `contractId`,
+            * both or one field
+              * `dateFrom` 
+              * `dateTo`
+        content:
+          application\json:
+            schema:
+              $ref: '#/components/schemas/UpdateContractRequestObject'
+      responses:
+        '200':
+          $ref: '#/components/responses/SuccesfulEditionControlData'
+        '400':
+          $ref: '#/components/responses/ContractEditionError'
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'
+        '404':
+          $ref: '#/components/responses/NotFoundContractEdition'
+        '409':
+          $ref: '#/components/responses/OutdatedWorkerDataError'
+  /contract/add:
+    post: 
+      tags:
+        - contract
+      summary: Adds new contract for worker 
+      description: > 
+        Adds new contract for specific worker
+          * new contract cannot collide with other contracts of the worker,
+          * `dateTo` must be greater than `dateFrom`,
+          * `dateFrom` cannot be date form the past, or at least must be in current month
+      requestBody: 
+        required: true
+        description: > 
+          You must add `controlData` (to specified worker), `dateFrom` and `dateTo` of the new contract.
+        content:
+          application\json:
+            schema:
+              $ref: '#/components/schemas/AddContractRequestObject'
+      responses:
+        '201':
+          $ref: '#/components/responses/SuccesfulEditionControlData'
+        '400':
+          $ref: '#/components/responses/ContractEditionError' # __________TODO__________
+        '401':
+          $ref: '#/components/responses/InvalidTokenError'
+        '404':
+          $ref: '#/components/responses/NotFoundContractEdition'
+        '409':
+          $ref: '#/components/responses/OutdatedWorkerDataError'
+# --------------------------------|                 |-----------------------------------
+# --------------------------------|    COMPONENTS   |-----------------------------------
+# --------------------------------|                 |----------------------------------- 
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+# -------------------------        schema_Common         -------------------------  
+    WorkerMonth:
+      title: Worker-Month (request object)
+      type: object 
+      required: 
+        - userId
+        - year
+        - month
+      properties:
+        companySymbol: 
+          $ref: '#/components/schemas/ExternalCompanySymbolField'
+        userId:
+          type: integer
+          description: Worker ID 
+          minimum: 1
+          example: 6667
+        year: 
+          type: integer 
+          example: 2020
+          minimum: 2015
+          maximum: 2021
+        month:
+          type: integer 
+          example: 5
+          minimum: 1
+          maximum: 12
+    DatesRangeField:
+      type: object
+      properties:
+        from: 
+          type: string 
+          example: "2020-01-01"
+          format: date
+          pattern: YYYY-MM-DD
+        to:
+          type: string 
+          example: "2020-01-01"
+          format: date
+          pattern: YYYY-MM-DD
+# ------------------------- schema_ExternalCompanySymbol -------------------------        
+    ExternalCompanySymbol:
+      title:  Company Symbol (object) 
+      type: object 
+      description: Stand alone object to set current company of API Consumer
+      properties:
+        companySymbol:
+          description: Required only if api-consumer account has assigned more than one companies. Company symbol is usually three letter uppercase word for example "XYZ"
+          type: string 
+          example: XYZ
+    ExternalCompanySymbolField:
+      title: Company Symbol (field)
+      description: Required only if api-consumer account has assigned more than one companies. Company symbol is usually three letter uppercase word for example "XYZ"
+      type: string 
+      example: XYZ
+# -------------------------        schema__Shift         -------------------------
+    ShiftBrigadesDayObject:
+      description: > 
+        As properties - all days of the month (date in format YYYY-MM-DD). As property value object where properties are brigades number and related value contains shift number (`null` means day off).
+      type: object
+      additionalProperties:
+        type: string
+        description: > 
+          It's shift number (1/2/3) or null when current day for this brigade is day off
+        nullable: true
+# -------------------------       schema_Schedule       -------------------------         
+    FreeDayList:    
+      type: object
+      properties:
+        range: 
+          type: object
+          properties:
+            from:
+              type: string 
+              format: date
+              pattern: YYYY-MM-DD
+              example: "2019-09-01"
+            to:
+              type: string 
+              format: date
+              pattern: YYYY-MM-DD
+              example: "2019-09-30"
+        worker: 
+          type: object
+          properties:
+            id:
+              type: integer 
+              example: 367
+        freeDays:
+          type: object
+          description: >
+            Keys of the object are dates in format `YYYY-MM-DD`  
+          additionalProperties:
+            type: string
+            nullable: true
+          example: {
+            "2019-09-01": null,
+            "2019-09-02": null,
+            "2019-09-03": null,
+            "2019-09-04": null,
+            "2019-09-05": null,
+            "2019-09-06": null,
+            "2019-09-07": null,
+            "2019-09-08": null,
+            "2019-09-09": null,
+            "2019-09-10": null,
+            "2019-09-11": null,
+            "2019-09-12": null,
+            "2019-09-13": null,
+            "2019-09-14": null,
+            "2019-09-15": null,
+            "2019-09-16": null,
+            "2019-09-17": "uwyp",
+            "2019-09-18": "uwyp",
+            "2019-09-19": "uwyp",
+            "2019-09-20": null,
+            "2019-09-21": "uwyp",
+            "2019-09-22": "uwyp",
+            "2019-09-23": "uwyp",
+            "2019-09-24": "uwyp",
+            "2019-09-25": null,
+            "2019-09-26": "uwyp",
+            "2019-09-27": "uwyp",
+            "2019-09-28": "uwyp",
+            "2019-09-29": "uwyp",
+            "2019-09-30": null
+          }  
+# -------------------------    schema_WorkerAvatarUrl   ------------------------- 
+    WorkerAvatarField:
+      type: string 
+      format: uri
+      description: >
+        It must be valid URL to worker photo. 
+          * width between `160px` - `546px` 
+          * height between `200px` - `651px` 
+          * max size `5MB`
+      example: http://yourcompanyserver.com/worker/3523532/images/photo.jpg
+# ------------------------------ schema__ControlData -------------------------------
+    RequestControlData: 
+      title: Control data (request)
+      type: object 
+      properties:
+        firstName:
+          type: string 
+          example: Jan 
+          description: Introduced to verification if API Consumer made an informed choice of an employee for editing.
+        lastName:
+          type: string 
+          example: Kowalski 
+          description: Introduced to verification if API Consumer made an informed choice of an employee for editing.
+        userId: 
+          type: integer
+          description: ID of specific worker
+          example: 1204
+        lastUpdated:
+          $ref: '#/components/schemas/DateTimeFieldSchema'
+    ResponseControlData:
+      title: Control data (response)
+      type: object
+      properties:
+        lastUpdated:
+          $ref: '#/components/schemas/DateTimeFieldSchema'
+        userId: 
+          type: integer
+          description: ID of requested worker
+          example: 1204
+    ControlDataUnexistedUser:
+      description: returned if user id given in request object control data doesnt exists
+      type: object
+      properties:
+        invalidKeys: 
+          type: object
+          properties:
+            userId:
+              type: string
+              example: "User doesnt exists"
+    ControlDataOutdatedObject:
+      title: Outdated Control data
+      description: Case where only one field from while object is outdated (lastUpdated)
+      type: object
+      properties: 
+        message:
+          type: string
+          #example: {"message": {"outdatedValue": ["lastUpdated"]}}
+# --------------------------- schema__ManagerBasicData -------------------------   
+    ManagerBasicData:
+      title: Manager (Overman) basic data object 
+      type: object
+      properties:
+        id: 
+          type: integer 
+          example: 669
+        firstName:
+          type: string 
+          example: Michał
+        lastName:
+          type: string 
+          example: Testowy 
+# ---------------------   schema__WorkerEdition        ---------------------          
+    WorkerEdition:
+      title: Worker basic data edition
+      type: object
+      required:
+        - controlData
+      properties:
+        controlData:
+          $ref: '#/components/schemas/RequestControlData'
+        companySymbol:
+          $ref: '#/components/schemas/ExternalCompanySymbolField'
+        cars:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items: 
+            $ref: '#/components/schemas/UserArrayOfCars'
+          example: 
+            - name: "golf 3 czarny"
+              registration: "DJ20004"
+            - name: "opel astra"
+              registration: "DJ20005" 
+        avatarUrl:
+          $ref: '#/components/schemas/WorkerAvatarField'
+        email:
+          type: string 
+          format: email
+          example: sample@mail.com  
+          nullable: true
+        city:
+          type: string 
+          nullable: true 
+          example: Jelenia Góra
+          minLength: 3
+          maxLength: 40
+        zipCode:
+          type: string 
+          example: 58-560
+          nullable: true 
+          minLength: 3
+          maxLength: 10
+        street:
+          type: string 
+          example: Wolności
+          nullable: true 
+          minLength: 3
+          maxLength: 40
+        noHome:
+          type: string
+          example: 4A
+          nullable: true
+          minLength: 1
+          maxLength: 10
+        noFlat:
+          type: string 
+          example: 15
+          nullable: true 
+          minLength: 1
+          maxLength: 10
+        phone:
+          type: string 
+          example: '+48 100 200 300'
+          nullable: true
+        userCard: 
+          type: string
+          nullable: false
+          minLength: 5
+          maxLength: 10 
+          example: '123456789'
+# ---------------------   schema__WorkerNamesEdition   ---------------------
+    WorkerNamesEdition: 
+      title: Worker names edition object
+      type: object 
+      required: 
+        - controlData
+      properties:
+        controlData:
+          $ref: '#/components/schemas/RequestControlData'
+        firstName: 
+          type: string 
+          example: Zygmunt 
+          minLength: 3
+          maxLength: 30
+          description: > 
+            **New** first name. Required if `lastName` is not provided
+        lastName: 
+          type: string 
+          example: Chajzer 
+          minLength: 3 
+          maxLength: 30
+          description: > 
+            **New** last name. Required if `firstName` is not provided
+        companySymbol:
+          $ref: '#/components/schemas/ExternalCompanySymbolField'
+# --------------------------     schema__User     -------------------------- 
+    User:
+      title: User (external company worker)
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 3
+          maxLength: 40
+        lastName:
+          type: string
+          minLength: 3
+          maxLength: 40
+        employmentFrom:
+          type: string
+          format: date
+          pattern: YYYY-MM-DD
+          description: >
+            expected format Y-m-d, for example '2019-07-01'. Must be smaller than employmentTo. Must be in the future or at least in current month. 
+        employmentTo:
+          type: string
+          format: date
+          pattern: YYYY-MM-DD
+          description: >
+            expected format Y-m-d, for example '2019-12-31'. Must be greater than employmentFrom.
+        avatarUrl:
+          $ref: '#/components/schemas/WorkerAvatarField'
+        companySymbol:
+          $ref: '#/components/schemas/ExternalCompanySymbolField'
+        userCard:
+          type: string
+          minLength: 5
+          maxLength: 10
+        email:
+          type: string
+          format: email
+          description: valid email address
+        phone: 
+          type: string
+        pesel: 
+          type: string
+          description: Must be valid pesel number. Optional, but if provide 'passport' property you cannot use it.
+        passport:
+          type: string
+          description: Optional, but if provide 'pesel' property you cannot use it. 
+        cars:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items: 
+            $ref: '#/components/schemas/UserArrayOfCars'
+        city:
+          type: string
+          minLength: 3
+          maxLength: 40
+          example: Jelenia Góra
+        zipCode:
+          type: string 
+          minLength: 3
+          maxLength: 10
+          example: 58-560
+        street:
+          type: string 
+          minLength: 3
+          maxLength: 40
+          example: Wolności 
+        noHome:
+          type: string 
+          minLength: 1
+          maxLength: 10
+          example: 5
+        noFlat:
+          type: string
+          example: 2
+          minLength: 1
+          maxLength: 10
+      required:
+        - firstName
+        - lastName
+        - employmentFrom
+        - employmentTo
+        - isActive
+        - avatarUrl
+# ----------------------------- field_schema__DateTime -----------------------------
+    DateTimeFieldSchema:
+      title: DateTime field 
+      type: string 
+      format: datetime
+      pattern: YYYY-MM-DD HH:MM:SS
+      example: '2019-09-02 09:01:06'
+      description: expected format Y-m-d H:i:s for example '2019-07-01 09:07:04'. It's a time stamp of last update worker/worker-related entities. With leading zero.
+# ------------------------------ field_schema__Dates --------------------------------
+    YearField:
+      title: Year (field)
+      type: integer 
+      minimum: 2015
+      example: 2020
+    MonthField:
+      title: Month (field)
+      type: integer
+      minimum: 1
+      maximum: 12
+      example: 6
+# ----------------------- schema__WorkerContract__arrayItem ------------------------
+    WorkerContractArrayItem:
+      title: Worker contract
+      type: object 
+      properties:
+        dateFrom:
+          type: string 
+          format: date
+          pattern: YYYY-MM-DD
+          description: expected format Y-m-d, for example '2019-07-01'
+        dateTo:
+          type: string 
+          format: date
+          pattern: YYYY-MM-DD
+          description: expected format Y-m-d, for example '2019-07-01'
+      
+# ------------------------------- schema__WorkerCar -------------------------------
+    UserArrayOfCars:
+      title: Worker car
+      type: object
+      properties:
+        name:
+          type: string 
+          description: Preferable full car name (brand + model)
+        registration: 
+          type: string
+          description: Alphanumeric string (Must contain only uppercase letters)
+      required:
+        - name
+        - registration
+# ------------------------- schema__WorkerCar__arrayItem --------------------------
+    WorkerCarArrayItem:
+      title: Car assigned to worker 
+      type: object
+      properties:
+        name:
+          type: string
+          example: 'Audi 80 - zielone'
+        registration:
+          type: string
+          example: 'DJ 2050KD'
+# --------------------- schema__SimpleWorkerContract__arrayItem ---------------------  
+    SimpleWorkerContract:
+      title: Worker contract
+      type: object
+      properties:
+        id:
+          type: integer
+          description: contract ID
+          example: 6040
+        isActive:
+          type: boolean
+          description: can be only one active worker contract
+          example: true
+        range:
+          type: object
+          properties:
+            from: 
+              type: string 
+              format: date
+              pattern: YYYY-MM-DD
+              example: '2019-09-02'
+              nullable: false
+            to:
+              type: string 
+              format: date
+              pattern: YYYY-MM-DD
+              example: null
+              nullable: true
+# ------------------------ schema__ListContractsRequestObject ------------------------
+    ListContractsRequestObject:
+      title: List Contracts (request)
+      type: object
+      required: 
+        - userId
+      properties:
+        userId:
+          description: worker ID
+          type: integer
+          minimum: 1
+          example: 678
+        companySymbol:
+          $ref: '#/components/schemas/ExternalCompanySymbolField'
+    
+    UpdateContractRequestObject:
+      title: Choosing an employee contract
+      type: object
+      required: 
+        - controlData
+      properties:
+        controlData: 
+          $ref: '#/components/schemas/RequestControlData'
+        companySymbol: 
+          $ref: '#/components/schemas/ExternalCompanySymbolField'
+        contractId:
+          type: integer 
+          minimum: 1
+          example: 6667
+          description: > 
+            Contract Id assigned to worker from 'controlData'
+        dateFrom:
+          type: string 
+          format: date
+          description: > 
+            required if `dateTo` is not provided
+          pattern: YYYY-MM-DD
+          example: '2020-09-01'
+          nullable: false 
+        dateTo: 
+          type: string 
+          description: > 
+            required if `dateFrom` is not provided
+          format: date
+          pattern: YYYY-MM-DD
+          example: '2022-12-31'
+          nullable: false 
+          
+    AddContractRequestObject:
+      title: Worker contract (new)
+      type: object
+      required:
+        - controlData
+        - dateFrom
+        - dateTo
+      properties:
+        controlData: 
+          $ref: '#/components/schemas/RequestControlData'
+        companySymbol: 
+          $ref: '#/components/schemas/ExternalCompanySymbolField'
+        dateFrom:
+          type: string 
+          format: date
+          pattern: YYYY-MM-DD
+          example: '2020-09-01'
+          nullable: false 
+        dateTo: 
+          type: string 
+          format: date
+          pattern: YYYY-MM-DD
+          example: '2022-12-31'
+          nullable: false 
+# --------------------- schema__Response Invalid/Missing Keys ---------------------        
+    ResponseInvalidKeys:
+      title: Invalid keys object
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/ResponseInvalidKeysField'
+    ResponseInvalidKeysField:
+      type: object
+      properties:
+        clientValue:
+          type: integer
+          example: 345
+        expectedType: 
+          type: string 
+          example: "String"
+        message:
+          type: string 
+          example: "not found"
+        restriction:
+          type: array
+          items: 
+            type: string 
+          example: ["minimal value is 0"]
+# -----------------------------------|               |--------------------------------
+# -----------------------------------|   Responses   |--------------------------------
+# -----------------------------------|               |--------------------------------
+  responses:
+    ShiftMonthlySuccess:
+      description: Shifts of the worker for each day of requested month.
+      content:
+        application\json:
+          schema:
+            type: object
+            properties:
+              shitfs:
+                type: object
+                additionalProperties:
+                  type: string 
+                  description: >
+                    **Explanation of the field value** - is a string divided by dots into three parts eg. '3.22.8' (null is just a day off)
+                      * first - shift number
+                      * second - work start hour 
+                      * third - number of hours to work
+                  nullable: true
+                example: {
+                    "2020-12-01": "3.22.8",
+                    "2020-12-02": "3.22.8",
+                    "2020-12-03": "3.22.8",
+                    "2020-12-04": "3.22.8",
+                    "2020-12-05": null,
+                    "2020-12-06": null,
+                    "2020-12-07": "2.14.8",
+                    "2020-12-08": "2.14.8",
+                    "2020-12-09": "2.14.8",
+                    "2020-12-10": "2.14.8",
+                    "2020-12-11": null,
+                    "2020-12-12": "1.6.8",
+                    "2020-12-13": "1.6.8",
+                    "2020-12-14": "1.6.8",
+                    "2020-12-15": "1.6.8",
+                    "2020-12-16": null,
+                    "2020-12-17": "3.22.8",
+                    "2020-12-18": "3.22.8",
+                    "2020-12-19": "3.22.8",
+                    "2020-12-20": "3.22.8",
+                    "2020-12-21": null,
+                    "2020-12-22": null,
+                    "2020-12-23": "2.14.8",
+                    "2020-12-24": "2.14.8",
+                    "2020-12-25": "2.14.8",
+                    "2020-12-26": "2.14.8",
+                    "2020-12-27": null,
+                    "2020-12-28": "1.6.8",
+                    "2020-12-29": "1.6.8",
+                    "2020-12-30": "1.6.8",
+                    "2020-12-31": "1.6.8"
+                }
+              worker:
+                type: object
+                properties: 
+                  id: 
+                    type: integer
+                    example: 666
+              range:
+                type: object
+                properties: 
+                  from: 
+                    example: "2020-12-01"
+                    type: string 
+                    format: YYYY-MM-DD
+                  to:
+                    example: "2020-12-31"
+                    type: string
+                    format: YYYY-MM-DD
+    StandardErrorObject:
+      description: On invalid fields value types/when you doesn't provide required fields.
+      content:
+        application\json:
+          schema:
+            type: object
+            properties:
+              invalidKeys:
+                $ref: '#/components/schemas/ResponseInvalidKeys'
+              missingKeys:
+                type: array 
+                items: 
+                  type: string 
+                example: ['requiredPropertyName1','requiredPropertyName2']
+                  
+    ContractEditionError:
+      description: On invalid fields values type. 
+      content:
+        application\json:
+          schema:
+            type: object
+            properties:
+              invalidKeys: 
+                  $ref: '#/components/schemas/ResponseInvalidKeys'
+            example: {"invalidKeys": {
+              "dateFrom": {
+                "clientValue": 123,
+                "expectedType": "Invalid value, given integer. Expected date string - format Y-m-d"
+              }
+            }}      
+    NotFoundContractEdition:
+      description: When contract Id or user Id doesnt exists.
+      content:
+        application\json:
+          schema:
+            type: object
+            properties:
+              invalidKeys:
+                $ref: '#/components/schemas/ResponseInvalidKeys' 
+              controlData:
+                $ref: '#/components/schemas/ControlDataUnexistedUser'
+            # -------------------- control data --------------------
+            example: {"invalidKeys": {"contractId": {"message": "not found", "clientValue": 674}}}
+                
+    SuccesfulEditionControlData:
+      description: Successful action. Control data has been updated and returned.
+      content:
+        application/json:
+          schema: 
+            type: object
+            properties:
+              controlData:
+                 $ref: '#/components/schemas/ResponseControlData'
+    WorkersNamesEditionSuccess: 
+      description: Successful edition. Control data has been updated and returned.
+      content:
+        application/json:
+          schema:
+            type: object 
+            properties: 
+              controlData:
+                $ref: '#/components/schemas/ResponseControlData'
+    WorkerDetailsInvalidParamId:
+      description: > 
+        Invalid param error message. In following example query param `id` has been set to string value.
+      content:
+        application/json:
+          schema:
+            title: Error message
+            example: {"invalidParams": {"id": {"clientValue": "abcd", "expectedType": "Integer"}}}
+    WorkerDetails:
+      description: Worker details - success structure
+      content:
+        application/json:
+          schema: 
+            title: Worker details 
+            type: object 
+            properties:
+              subject:
+                type: object
+                properties: 
+                  firstName:
+                    type: string 
+                    example: Jan
+                  lastName:
+                    type: string
+                    example: Kowalski
+                  userName:
+                    type: string 
+                    example: j.kowalski
+                  manager:
+                    $ref: '#/components/schemas/ManagerBasicData'
+                  isActive: 
+                    type: boolean
+                    example: true
+                  contracts:
+                    type: array
+                    nullable: true
+                    items: 
+                      $ref: '#/components/schemas/WorkerContractArrayItem'
+                  userCard:
+                    type: string 
+                    example: '123456789'
+                    nullable: true 
+                  email:
+                    type: string 
+                    example: example@email.com
+                    nullable: true
+                  phone:
+                    type: string 
+                    example: '+48 123 123 123'
+                    nullable: true
+                  city:
+                    type: string 
+                    example: 'Jelenia Góra'
+                    nullable: true
+                  zipCode:
+                    type: string 
+                    example: '58-560'
+                    nullable: true
+                  street:
+                    type: string 
+                    example: 'Wolności'
+                    nullable: true
+                  noHome:
+                    type: string
+                    example: '5'
+                    nullable: true 
+                  noFlat:
+                    type: string
+                    example: '2'
+                    nullable: true
+                  cars:
+                    type: array 
+                    nullable: true
+                    items:
+                      $ref: '#/components/schemas/WorkerCarArrayItem'
+              controlData: 
+                $ref: '#/components/schemas/ResponseControlData'  
+    
+    UserListAllError:
+      description: >
+        Could occure when you don't provide `companySymbol` or if it will be invalid.
+      content:
+        application\json:
+          schema:
+            type: object
+            example: {"missingKeys": ["companySymbol"]}
+              
+    UserCreateErrorMessage:
+      description: >
+        Bad request - invalid object structure (missing required fields, or values with invalid types), invalid avatar or wrong employment dates. 
+      content:
+        application\json:
+          schema:
+            type: object
+            properties:
+              missingKeys:
+                description: listed all missing required keys
+                type: array
+                items: 
+                  type: string
+                  example: ['employmentFrom', 'employmentTo'] 
+              invalidKeys::
+                description: contains all required/optionals invalid keys
+                type: object
+                properties: 
+                  pesel: 
+                    type: string
+                    example: [
+                      {"clientValue": "9008517455", "expectedType": "Invalid Pesel number."}
+                      ]
+    UserBasicDataEditionError:
+      description: > 
+        Occurres when request payload will contain 
+          * invalid property values types,
+          * invalid avata,
+          * invalid card number, 
+      content: 
+        application\json:
+          schema:
+            type: object
+            example: {"invalidKeys": {"userCard": {"clientValue": "66", "restriction": {"minLength": 5}}}}
+    
+    ShiftBrigadesSuccess:
+      description: > 
+        Shows monthly shift-brigades relations. 
+      content:
+        application\json:
+          schema:
+            type: object
+            properties:
+              days:
+                type: object
+                additionalProperties: 
+                  $ref: '#/components/schemas/ShiftBrigadesDayObject'
+              range:
+                type: object 
+                properties:
+                  begin: 
+                    type: string 
+                    format: date
+                    pattern: YYYY-MM-DD
+                  end:
+                    type: string 
+                    format: date
+                    pattern: YYYY-MM-DD
+            example: {
+            "days": {
+                "2019-01-01": {
+                    "1": 1,
+                    "2": 2,
+                    "3": 2,
+                    "4": null
+                },
+                "2019-01-02": {
+                    "1": 1,
+                    "2": 2,
+                    "3": 2,
+                    "4": null
+                },
+                "2019-01-03": {
+                    "1": 1,
+                    "2": null,
+                    "3": 2,
+                    "4": 2
+                },
+                "2019-01-04": {
+                    "1": null,
+                    "2": 1,
+                    "3": 2,
+                    "4": 2
+                },
+                "2019-01-05": {
+                    "1": 2,
+                    "2": 1,
+                    "3": null,
+                    "4": 2
+                },
+                "2019-01-06": {
+                    "1": 2,
+                    "2": 1,
+                    "3": null,
+                    "4": 2
+                },
+                "2019-01-07": {
+                    "1": 2,
+                    "2": 1,
+                    "3": 2,
+                    "4": null
+                },
+                "2019-01-08": {
+                    "1": 2,
+                    "2": null,
+                    "3": 2,
+                    "4": 1
+                },
+                "2019-01-09": {
+                    "1": null,
+                    "2": 1,
+                    "3": 2,
+                    "4": 1
+                },
+                "2019-01-10": {
+                    "1": null,
+                    "2": 1,
+                    "3": 2,
+                    "4": 1
+                },
+                "2019-01-11": {
+                    "1": 2,
+                    "2": 1,
+                    "3": null,
+                    "4": 1
+                },
+                "2019-01-12": {
+                    "1": 2,
+                    "2": 1,
+                    "3": 1,
+                    "4": null
+                },
+                "2019-01-13": {
+                    "1": 2,
+                    "2": null,
+                    "3": 1,
+                    "4": 1
+                },
+                "2019-01-14": {
+                    "1": 2,
+                    "2": null,
+                    "3": 1,
+                    "4": 1
+                },
+                "2019-01-15": {
+                    "1": null,
+                    "2": 2,
+                    "3": 1,
+                    "4": 1
+                },
+                "2019-01-16": {
+                    "1": 1,
+                    "2": 2,
+                    "3": null,
+                    "4": 1
+                },
+                "2019-01-17": {
+                    "1": 1,
+                    "2": 2,
+                    "3": 1,
+                    "4": null
+                },
+                "2019-01-18": {
+                    "1": 1,
+                    "2": 2,
+                    "3": 1,
+                    "4": null
+                },
+                "2019-01-19": {
+                    "1": 1,
+                    "2": null,
+                    "3": 1,
+                    "4": 2
+                },
+                "2019-01-20": {
+                    "1": null,
+                    "2": 1,
+                    "3": 1,
+                    "4": 2
+                },
+                "2019-01-21": {
+                    "1": 1,
+                    "2": 1,
+                    "3": null,
+                    "4": 2
+                },
+                "2019-01-22": {
+                    "1": 1,
+                    "2": 1,
+                    "3": null,
+                    "4": 2
+                },
+                "2019-01-23": {
+                    "1": 1,
+                    "2": 1,
+                    "3": 2,
+                    "4": null
+                },
+                "2019-01-24": {
+                    "1": 1,
+                    "2": null,
+                    "3": 2,
+                    "4": 1
+                },
+                "2019-01-25": {
+                    "1": null,
+                    "2": 2,
+                    "3": 2,
+                    "4": 1
+                },
+                "2019-01-26": {
+                    "1": null,
+                    "2": 2,
+                    "3": 2,
+                    "4": 1
+                },
+                "2019-01-27": {
+                    "1": 2,
+                    "2": 2,
+                    "3": null,
+                    "4": 1
+                },
+                "2019-01-28": {
+                    "1": 2,
+                    "2": 2,
+                    "3": 1,
+                    "4": null
+                },
+                "2019-01-29": {
+                    "1": 2,
+                    "2": null,
+                    "3": 1,
+                    "4": 2
+                },
+                "2019-01-30": {
+                    "1": 2,
+                    "2": null,
+                    "3": 1,
+                    "4": 2
+                },
+                "2019-01-31": {
+                    "1": null,
+                    "2": 2,
+                    "3": 1,
+                    "4": 2
+                }
+            },
+            "range": {
+                "begin": "2019-01-01",
+                "end": "2019-01-31"
+            }
+        }
+    ShiftBrigadesError:
+      description: >
+        When you provide invalid values/types in required field.
+      content:
+        application\json:
+          schema:
+            $ref: '#/components/responses/StandardErrorObject'
+    ShiftEditionSuccess:        
+      description: >
+        Returned updated dates. 
+      content:
+        application\json:
+          schema:
+            type: object
+            properties:
+              modified:
+                type: array
+                items: 
+                  type: string
+            example: {"modified": ["2020-01-20", "2020-01-21", "2020-01-22"]}
+    InvalidTokenError:
+      description: Access token is missing or invalid
+      content:
+        application/json:
+          schema:
+            type: object
+            properties: 
+              message:
+                type: string
+                example: "Invalid Token"
+    WorkerNotFound:
+      description: >
+        Requested worker not found.
+      content:
+        application\json:
+          schema:
+            type: object
+            example: {
+              "invalidKeys": {
+                "userId": {
+                  "clientValue": 30600,
+                  "message": "not found"
+                }  
+              }
+            }
+    OutdatedWorkerDataError:
+      description: >
+        When API Client (you) provides outdated Control Data object. In this case only `lastUpdated` date-time is outdated.
+      content:
+        application\json:
+          schema: 
+            type: object
+            example: {"message": {"outdatedValue": ["lastUpdated"]}}
+    ContractListSuccess:
+      description: >
+        It's JSON array which each item represents single worker contract. Worker can have many contracts but only one can be **active**.
+      content:
+        application/json:
+          schema:
+            type: array
+            items: 
+              $ref: '#/components/schemas/SimpleWorkerContract'
+    ContractListError:
+      description: > 
+        Could occurre when 
+          * request object doesnt contains required fields,
+          * request object has fields with invalid value types,
+          * requested user doesnt exists,
+      content:
+        application/json:
+          schema: 
+            type: object
+            example: {"message": "Not found","userId": 678}
+    FreeDayListSuccess:
+      description: >
+        Returns worker list of free days of requested month of year. 
+      content:
+        application\json:
+          schema:
+            $ref: '#/components/schemas/FreeDayList'
+    MonthlyTimesheetList:
+      description: >
+        Returns worker list of timesheet of requested month of year.
+      content:
+        application\json:
+          schema:
+            type: object
+            properties: 
+              worker: 
+                type: integer 
+                example: 347
+              range:
+                $ref: '#/components/schemas/DatesRangeField'
+              timesheet:
+                type: object
+                description: >
+                  As object properties are dates in format `YYYY-MM-DD`.
+                additionalProperties:
+                  type: object
+                  properties:
+                    symbol:
+                      type: string 
+                      nullable: true
+                    supervisor:
+                      description: It's worker manager/overman
+                      type: object
+                      properties: 
+                        id: 
+                          type: integer
+                    time: 
+                      type: object 
+                      properties:
+                        entry: 
+                          type: string 
+                          format: datetime
+                          pattern: YYYY-MM-DD HH:II:SS
+                          example: "2020-01-01 09:01:01"
+                        exit: 
+                          type: string 
+                          format: datetime
+                          pattern: YYYY-MM-DD HH:II:SS
+                          example: "2020-01-01 017:06:45"     
+            example:  {
+                        "range": {
+                            "from": "2019-08-01",
+                            "to": "2019-08-31"
+                        },
+                        "worker": {
+                            "id": 1385
+                        },
+                        "timesheet": {
+                            "2019-08-01": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": 324
+                                },
+                                "time": {
+                                    "entry": "2019-08-01 06:48:14",
+                                    "exit": "2019-08-01 14:51:13"
+                                }
+                            },
+                            "2019-08-02": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": 324
+                                },
+                                "time": {
+                                    "entry": "2019-08-02 07:02:22",
+                                    "exit": "2019-08-02 15:08:13"
+                                }
+                            },
+                            "2019-08-03": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-04": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-05": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": 324
+                                },
+                                "time": {
+                                    "entry": "2019-08-05 08:48:19",
+                                    "exit": "2019-08-05 17:13:02"
+                                }
+                            },
+                            "2019-08-06": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": 324
+                                },
+                                "time": {
+                                    "entry": "2019-08-06 06:57:16",
+                                    "exit": "2019-08-06 15:16:54"
+                                }
+                            },
+                            "2019-08-07": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": 324
+                                },
+                                "time": {
+                                    "entry": "2019-08-07 06:52:11",
+                                    "exit": "2019-08-07 15:06:33"
+                                }
+                            },
+                            "2019-08-08": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": 324
+                                },
+                                "time": {
+                                    "entry": "2019-08-08 06:46:41",
+                                    "exit": "2019-08-08 14:55:34"
+                                }
+                            },
+                            "2019-08-09": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": 324
+                                },
+                                "time": {
+                                    "entry": "2019-08-09 07:08:01",
+                                    "exit": "2019-08-09 15:08:08"
+                                }
+                            },
+                            "2019-08-10": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-11": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-12": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-13": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-14": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-15": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-16": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-17": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-18": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-19": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-20": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-21": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-22": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-23": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-24": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-25": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-26": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-27": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-28": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-29": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-30": {
+                                "symbol": "uwyp",
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            },
+                            "2019-08-31": {
+                                "symbol": null,
+                                "supervisor": {
+                                    "id": null
+                                },
+                                "time": {
+                                    "entry": null,
+                                    "exit": null
+                                }
+                            }
+                        }
+                    }              
+security:
+  - bearerAuth: []

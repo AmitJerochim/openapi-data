@@ -1,0 +1,811 @@
+penapi: 3.0.0
+info:
+  title: 控制台数据 API
+  version: "1.0.0"
+  contact:
+    name: 仇道林
+    email: karoyqiu@gmail.com
+tags:
+  - name: user
+    description: 用户相关操作。
+  - name: token
+    description: 用户令牌相关操作。
+  - name: vcode
+    description: Email 验证相关操作。
+  - name: device
+    description: 设备相关操作。
+  - name: auth
+    description: 授权相关操作。
+  - name: order
+    description: 订单相关操作。
+servers:
+  - url: 'https://virtserver.swaggerhub.com/ubesthelp/console/1.0.0'
+  - url: 'http://virtserver.swaggerhub.com/ubesthelp/console/1.0.0'
+paths:
+  /user:
+    post:
+      tags:
+        - user
+      summary: 创建用户。
+      operationId: createUser
+      responses:
+        '204':
+          description: 创建成功。
+        default:
+          description: 创建失败；响应为错误消息。
+          content:
+            text/plain:
+              example: user already exists
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+        description: 创建的用户对象。
+        required: true
+  '/user/{username}':
+    parameters:
+      - name: username
+        in: path
+        description: 用户名。
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - user
+      summary: 通过用户名获取用户。
+      operationId: getUserByName
+      responses:
+        '200':
+          description: 操作成功。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: 查无此人。
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+    patch:
+      tags:
+        - user
+      summary: 更新用户密码和/或状态。
+      operationId: updateUser
+      responses:
+        '204':
+          description: 更新成功。
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                salt:
+                  type: string
+                  format: byte
+                  description: 每次创建用户或修改密码时随机生成 32 位二进制数据。
+                secret:
+                  type: string
+                  format: byte
+                  description: 密码的加盐哈希。
+                state:
+                  type: integer
+                  format: int32
+                  enum: [ 0, 1, 2 ]
+                  description: 状态：0 - 无效用户，1 - 下次登录强制修改密码，2 - 密码已确认。
+        description: 只会更新 salt、secret 和 state 三个字段。
+        required: true
+  '/email/{email}':
+    get:
+      tags:
+        - user
+      summary: 查找指定的 email 是否已注册。
+      operationId: isEmailRegistered
+      parameters:
+        - name: email
+          in: path
+          description: 要查找的 email。
+          required: true
+          schema:
+            type: string
+            format: email
+      responses:
+        '204':
+          description: 此 email 已注册。
+        '404':
+          description: 此 email 未注册。
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+  '/token/{username}/{appid}':
+    parameters:
+      - name: username
+        in: path
+        description: 用户名。
+        required: true
+        schema:
+          type: string
+      - name: appid
+        in: path
+        description: 应用 ID。
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags:
+       - token
+      summary: 查找指定用户名/应用的令牌。
+      operationId: getToken
+      responses:
+        '200':
+          description: 操作成功。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+    put:
+      tags:
+       - token
+      summary: 创建/更新用户令牌。
+      operationId: updateToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Token'
+        description: 创建的令牌对象。
+        required: true
+      responses:
+        '204':
+          description: 操作成功。
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+    delete:
+      tags:
+       - token
+      summary: 删除指定用户名/应用的令牌。
+      operationId: removeToken
+      responses:
+        '204':
+          description: 操作成功。
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+  '/vcode/{email}':
+    parameters:
+      - name: email
+        in: path
+        description: Email。
+        required: true
+        schema:
+          type: string
+          format: email
+    get:
+      tags:
+       - vcode
+      summary: 查找指定的 email 的验证码。
+      operationId: getVcode
+      responses:
+        '200':
+          description: 操作成功。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailVcode'
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+    put:
+      tags:
+        - vcode
+      summary: 创建/更新 email 验证码。
+      operationId: updateVcode
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailVcode'
+        description: 验证码对象。
+        required: true
+      responses:
+        '204':
+          description: 操作成功。
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+  '/auth/user/{username}/{appid}':
+    parameters:
+      - name: username
+        in: path
+        description: 用户名。
+        required: true
+        schema:
+          type: string
+      - name: appid
+        in: path
+        description: 应用 ID。
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags:
+       - auth
+      summary: 查找指定用户的应用授权。
+      operationId: getUserAuth
+      responses:
+        '200':
+          description: 操作成功。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedAuth'
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+    put:
+      tags:
+       - auth
+      summary: 创建/更新指定用户的应用授权。
+      operationId: updateUserAuth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnifiedAuth'
+        description: 用户应用授权。
+        required: true
+      responses:
+        '204':
+          description: 操作成功。
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+  '/auth/device/{device_id}/{appid}':
+    parameters:
+      - name: device_id
+        in: path
+        description: 设备 ID。
+        required: true
+        schema:
+          type: string
+      - name: appid
+        in: path
+        description: 应用 ID。
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags:
+       - auth
+      summary: 查找指定设备的应用授权。
+      operationId: getDeviceAuth
+      responses:
+        '200':
+          description: 操作成功。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedAuth'
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+    put:
+      tags:
+       - auth
+      summary: 创建/更新指定设备的应用授权。
+      operationId: updateDeviceAuth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnifiedAuth'
+        description: 设备应用授权。
+        required: true
+      responses:
+        '204':
+          description: 操作成功。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedAuth'
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+  /device:
+    post:
+      tags:
+       - device
+      summary: 根据设备指纹获取设备 ID。
+      operationId: getDeviceId
+      requestBody:
+        description: 设备指纹。
+        content:
+          text/plain:
+            schema:
+              type: string
+            example: '47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU='
+        required: true
+      responses:
+        '200':
+          description: 操作成功。
+          content:
+            text/plain:
+              example: 'RB00000'
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+  '/buyable-items/{appid}/{locale}':
+    get:
+      tags:
+       - order
+      summary: 获取指定应用的可购买项。
+      operationId: getBuyableItems
+      parameters:
+        - name: appid
+          in: path
+          description: 要获取的应用 ID。
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: locale
+          in: path
+          description: 区域语言。
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 操作成功。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BuyableItems'
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+  /order:
+    post:
+      tags:
+       - order
+      summary: 创建在线订单。
+      operationId: createOrder
+      requestBody:
+        description: 要创建的订单信息。
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+        required: true
+      responses:
+        '204':
+          description: 操作成功。
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+  '/order/{id}':
+    parameters:
+      - name: id
+        in: path
+        description: 订单编号。
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+       - order
+      summary: 获取订单。
+      operationId: getOrder
+      responses:
+        '200':
+          description: 操作成功。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: 无此订单。
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+    patch:
+      tags:
+       - order
+      summary: 更新订单付款信息。
+      operationId: updateOrder
+      requestBody:
+        description: 要更新的订单信息。
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payment_time:
+                  type: integer
+                  format: int64
+                  description: 付款时间。
+                payment_channel:
+                  type: string
+                  description: 付款渠道。
+                state:
+                  type: integer
+                  format: int32
+                  enum: [0, 1, 2, 3, 4, 5, 6]
+                  description: 状态：0 - 待付款，1 - 已付款，2 - 超时关闭，3 - 申请退款，4 - 待退款，5 - 已退款，6 - 拒绝退款。
+      responses:
+        '204':
+          description: 操作成功。
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+  /sn:
+    parameters:
+      - name: username
+        in: query
+        description: 用户名。
+        required: true
+        schema:
+          type: string
+      - name: appid
+        in: query
+        description: 应用 ID。
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags:
+       - order
+      summary: 获取序列号。
+      operationId: getSN
+      responses:
+        '200':
+          description: 操作成功。
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SN'
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+    patch:
+      tags:
+       - order
+      summary: 更新序列号。
+      operationId: updateSN
+      requestBody:
+        description: 要更新的序列号信息。
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                device_id:
+                  type: string
+                  description: 激活设备 ID。
+                state:
+                  type: integer
+                  format: int32
+                  enum: [0, 1, 2]
+                  description: 状态：0 - 待激活，1 - 已激活，2 - 作废。
+                activation_time:
+                  type: integer
+                  format: int64
+                  description: 激活时间。
+      responses:
+        '204':
+          description: 操作成功。
+        default:
+          description: 操作失败；响应为错误消息。
+          content:
+            text/plain:
+              example: some error
+components:
+  schemas:
+    User:
+      title: 用户
+      type: object
+      properties:
+        username:
+          type: string
+          description: 主键，可能包含汉字，后续再创建时只允许小写字母和数字。
+        agent:
+          type: string
+          description: 代理。
+        comment:
+          type: string
+          description: 备注。
+        email:
+          type: string
+          format: email
+        creation_time:
+          type: integer
+          format: int64
+          description: 用户创建时间，UNIX 时间。
+        key:
+          type: string
+          format: byte
+          description: 用于本地 SQLite 数据库加密的对称密钥，256 字节二进制数据，创建用户时随机生成。
+        salt:
+          type: string
+          format: byte
+          description: 每次创建用户或修改密码时随机生成 32 位二进制数据。
+        secret:
+          type: string
+          format: byte
+          description: 密码的加盐哈希。
+        enabled:
+          type: boolean
+          description: 用户是否启用，目前实际中未使用此字段，所有用户都是有效的。
+        wechat:
+          type: string
+          description: 微信/QQ/Line/WhatsApp。
+        state:
+          type: integer
+          format: int32
+          enum: [ 0, 1, 2 ]
+          description: 状态：0 - 无效用户，1 - 下次登录强制修改密码，2 - 密码已确认。
+    Token:
+      title: 令牌
+      type: object
+      properties:
+        expiration_time:
+          type: integer
+          format: int64
+          description: 令牌过期时间。
+        token:
+          type: string
+          format: byte
+          description: 令牌。
+    EmailVcode:
+      title: Email 验证码
+      type: object
+      properties:
+        code:
+          type: string
+          description: 邮件验证码。
+        t:
+          type: integer
+          format: int64
+          description: 验证码生成时间。
+        count:
+          type: integer
+          format: int32
+          description: 24 小时内发送次数。
+    UnifiedAuth:
+      title: 应用授权
+      description: 键为模块名称。
+      type: object
+      additionalProperties:
+        title: 模块授权
+        type: object
+        properties:
+          edition:
+            type: integer
+            format: int32
+            description: 版本。
+          count:
+            type: integer
+            format: int32
+            description: 数量。
+          time:
+            type: integer
+            format: int64
+            description: 时间。
+    BuyableModuleItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: 项 ID，在应用内不得重复。
+        name:
+          type: string
+          description: 显示名称。
+        description:
+          type: string
+          description: 显示描述。
+        original_price:
+          type: number
+          format: double
+          description: 原始价格。
+        price:
+          type: number
+          format: double
+          description: 实际价格。
+        auth:
+          $ref: '#/components/schemas/UnifiedAuth'
+    BuyableItems:
+      title: 可购买项
+      type: object
+      description: 键为模块或分组名称。
+      additionalProperties:
+        type: array
+        items:
+          $ref: '#/components/schemas/BuyableModuleItem'
+    BoughtItems:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            format: int32
+            description: 可购买项 id。
+          count:
+            type: integer
+            format: int32
+            description: 购买数量。
+      description: 线上订单有效，购买项及数量列表。
+    Order:
+      title: 订单
+      type: object
+      properties:
+        id:
+          type: string
+          description: 订单编号，32 位 HEX 数字组合。
+        locale:
+          type: string
+          enum: [ "zh_CN", "zh_TW", "en_US" ]
+          description: 区域语言。
+        username:
+          type: string
+          description: 用户名
+        device_id:
+          type: string
+          description: 设备 ID
+        creation_time:
+          type: integer
+          format: int64
+          description: 订单创建时间
+        appid:
+          type: integer
+          format: int64
+          description: 购买应用 ID
+        items:
+          $ref: '#/components/schemas/BoughtItems'
+        sn: 
+          type: array
+          items:
+            type: string
+          uniqueItems: true
+          description: 线下订单有效，序列号列表。
+        description:
+          type: string
+          description: 显示描述。
+        promotion:
+          type: string
+          description: 待定义。
+        original_amount:
+          type: number
+          format: double
+          description: 原始金额。
+        amount:
+          type: number
+          format: double
+          description: 应付金额。
+        state:
+          type: integer
+          format: int32
+          enum: [0, 1, 2, 3, 4, 5, 6]
+          description: 状态：0 - 待付款，1 - 已付款，2 - 超时关闭，3 - 申请退款，4 - 待退款，5 - 已退款，6 - 拒绝退款。
+        payment_id:
+          type: string
+          description: 支付平台订单号。
+        payment_order_id:
+          type: string
+          description: 支付平台商家订单号，显示于支付客户端（支付宝/微信等）。
+        payment_qrcode_url:
+          type: string
+          format: uri
+          description: 支付平台支付二维码。
+        payment_query_url:
+          type: string
+          format: uri
+          description: 支付平台结果查询 URL。
+        payment_time:
+          type: integer
+          format: int64
+          description: 付款时间。
+        payment_channel:
+          type: string
+          description: 付款渠道。
+        agent:
+          type: string
+          description: 上级代理。
+        refund_amount:
+          type: number
+          format: double
+          description: 退款金额。
+        refund_time:
+          type: integer
+          format: int64
+          description: 退款时间。
+    SN:
+      title: 序列号
+      type: object
+      properties:
+        sn:
+          type: string
+          description: 25 位大写字母与数字随机组合。
+        creation_time:
+          type: integer
+          format: int64
+          description: 创建时间。
+        creator:
+          type: string
+          description: 创建者。
+        username:
+          type: string
+          description: 用户名。
+        appid:
+          type: integer
+          format: int64
+          description: 应用 ID。
+        description:
+          type: string
+          description: 显示描述。
+        auth:
+          $ref: '#/components/schemas/UnifiedAuth'
+        device_id:
+          type: string
+          description: 激活设备 ID。
+        state:
+          type: integer
+          format: int32
+          enum: [0, 1, 2]
+          description: 状态：0 - 待激活，1 - 已激活，2 - 作废。
+        activation_time:
+          type: integer
+          format: int64
+          description: 激活时间。

@@ -1,0 +1,243 @@
+penapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+# Added by API Auto Mocking Plugin
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Bitmotion/DWB/1.0.0
+  - description: Production Server
+    url: https://amag.vanselect.ch/api/v1
+  - description: Test Server
+    url: https://amag.vanselect.ch.w4.bitmotion.de/api/v1
+info:
+  description: | 
+    Diese Schnittstellenbeschreibung definiert die Interaktion zwischen dem DWB und dem Konfigurator. Die eigentliche Anwendung ist unter der URL https://amag.vanselect.ch/ bzw. https://amag.vanselect.ch.w4.bitmotion.de/ erreichbar. Der URL wird der Query-Parameter "id" übergeben. Dieser beinhaltet die bekannte ID des aktuellen Vorgangs. Die ID kann über die "create" Schnittstelle erstellt werden.
+  version: "1.0.0"
+  title: VanSelect Konfigurator Schnittstelle
+  contact:
+    name: Bitmotion GmbH
+    email: team-yd@bitmotion.de
+  license:
+    name: GPL 2.0 or later
+    url: 'https://www.gnu.de/documents/gpl-2.0.de.html'
+paths:
+  /create:
+    post:
+      summary: Erzeugt einen neuen Vorgang.
+      operationId: newSession
+      description: |
+        Meldet einen neuen Vorgang im Konfigurator an.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestObject'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                    example: '8a66a38b-a522-454d-87fe-33cc38e115df'
+              
+        400:
+          description: Bad Request
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+  /configuration/{uuid}:
+    get:
+      summary: Gibt Daten einer getätigten Konfiguration zurück.
+      operationId: getConfiguration
+      description: |
+        Gibt Informationen zur angefragten Vorgangs-ID zurück. Sollte der Vorgang unbekannt sein (die ID ist also nicht vergeben), wird ein 404 Statuscode zurückgegeben. Anschließend kann ein neuer Vorgang über die "create" Anfrage erzeugt werden.
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+            description: Vorgangs ID
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseObject'
+        400:
+          description: Bad Request
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        404:
+          description: Not Found
+components:
+  schemas:
+    ResponseObject:
+      type: object
+      required:
+        - id
+        - conversion
+        - vehicle
+        - offer
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+          description: |
+            Vorgangs-ID (36-stellige GUID). Wird vom Modul vergeben. Notwendig, um bei erneutem Aufruf die im VanSelect gespeicherte Konfiguration wieder zu laden.
+        conversion:
+          $ref: '#/components/schemas/Conversion'
+        vehicle:
+          $ref: '#/components/schemas/Vehicle'
+        offer:
+          $ref: '#/components/schemas/Offer'
+    Conversion:
+      type: object
+      required:
+        - description
+        - typecode
+        - typename
+        - productname
+        - wholesale_price
+        - customer_price
+        - weight
+      properties:
+        description:
+          type: string
+          description: "Produktname des Aufbaus."
+        typecode:
+          type: string
+          example: 57
+          description: |
+            Code der Aufbauart. Kann z.B. für die Leasingberechnung verwendet werden.
+        typename:
+          type: string
+          example: "Tiefkühlkoffer"
+          description: "Beschreibung Aufbauart"
+        productname:
+          type: string
+          example: "CoolerBox 2.0"
+          description: "Name des Produkts"
+        wohlesale_price:
+          type: number
+          format: float
+          example: 15690
+          description: |
+            Händler-Einkaufspreis des Basisaufbaus in CHF mit Zubehör aus VanSelect.
+        customer_price:
+          type: number
+          format: float
+          example: 13190.85
+          description: |
+            Verkaufspreis des Basisaufbaus mit Zubehör in CHF, berechnet aus Händler-EK und Händleraufschlag (markup). Dieser Preis wird in der Oberfläche und in den Druckdokumenten angezeigt. Wenn keine markup-Werte übergeben wurden, entspricht er dem Händler-EK.
+        weight:
+          type: number
+          format: float
+          example: 1289.29
+          description: "Gewicht des Aufbaus in kg inkl. gewähltem Zubehör"
+    Vehicle:
+      type: object
+      required:
+        - salestype
+        - includeexcludecodes
+      properties:
+        salestype:
+          type: string
+          example: "SYBB4ADD"
+          description: "Sechs- bis achtstellliger Verkaufstyp des gewählten Basisfahrzeugs"
+        includeexcludecodes:
+          type: string
+          example: "+NY2; +YCA or YBP; -5BD"
+          description:  |
+            Für diesen Aufbau notwendige oder nicht zulässige Ausstattungen des Basisfahrzeugs. Mit '+' versehene Optionen sind zwingend notwendig. Mit '-' gekennzeichnete Optionen sind nicht erlaubt. Bei der nachfolgenden Konfiguration des Fahrzeuges sollten diese Optionscodes verarbeitet werden.
+    Offer:
+      type: object
+      required:
+        - customerprintout
+        - dealerprintout
+      properties:
+        customerprintout:
+          type: string
+          format: base64
+          description: | 
+            Binäres Druckdokument-PDF 'Kunde'.
+        dealerprintout:
+          type: string
+          format: base64
+          description: |
+            Binäres Druckdokument-PDF 'Autohaus/Aufbauer'.
+    RequestObject:
+      type: object
+      required:
+        - lang
+        - dealer
+        - costumer
+      properties:
+        lang:
+          type: string
+          example: DE
+          format: '^(DE|FR|IT){1}$'
+          description: |
+            Sprache der Oberfläche. Unterstützt werden DE (Deutsch), FR (Französisch) und IT (Italienisch).
+        dealer:
+          $ref: '#/components/schemas/Dealer'
+        customer:
+          $ref: '#/components/schemas/Customer'
+    Customer:
+      type: object
+      required:
+        - printline
+      properties:
+        printline:
+          type: string
+          example: "VS Transport AG"
+          description: |
+            Zeile mit Namen des Kunden, die in Ausdrucken für den Kunden verwendet wird.
+    Dealer:
+      type: object
+      required:
+        - markup_percent
+        - printline
+      properties:
+        markup_percent:
+          type: number
+          format: double
+          maximum: 100
+          minimum: 0
+          example: 15.25
+          description: |
+            Aufschlag / Marge auf den Händler-Einkaufspreis des Aufbaus aus VanSelect. Die Preise in Anzeige und Ausdruck werden um diesen Aufschlag erhöht. Wenn kein Wert übergeben wird, wird der Händler-EK angezeigt und ausgedruckt.
+        markup_min:
+          type: integer
+          format: int32
+          minimum: 0
+          default: 0
+          example: 500
+          description: |
+            Minimaler Aufschlag des Händlers. Kann gesetzt werden, damit bei kleineren Auf/-Umbauten eine Mindestmarge gewährleistet wird.
+        markup_max:
+          type: integer
+          format: int32
+          minimum: 0
+          default: 0
+          example: 3000
+          description: |
+            Maximaler Aufschlag des Händlers. Kann gesetzt werden, um eine zu große Marge bei größeren Auf-/Umbauten zu vermeiden. Wert '0' bedeutet keine Begrenzung des Aufschlags.
+        printline:
+          type: string
+          example: "Autohaus Mustermann"
+          description: |
+            Zeile mit Namen des Händlers, die in Ausdrucken für den Kunden und Aufbauer verwendet wird

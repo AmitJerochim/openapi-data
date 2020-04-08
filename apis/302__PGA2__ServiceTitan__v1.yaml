@@ -1,0 +1,627 @@
+penapi: 3.0.1
+info:
+  title: CarAdvise API Documentation
+  description: Find Shops, Find Schedules, Create Orders, Create Customers and Vehicles
+  version: "0.8.2"
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+security:
+  - ApiKeyAuth: []
+servers:
+  - url: 'https://api.development.caradvise.com'
+  - url: 'https://api.caradvise.com'
+paths:
+  /api/v4/shops:
+    get:
+      description: Search for available shops based on zip, latitude and longitude, or address
+      parameters:
+        - name: address
+          in: query
+          schema:
+            type: string
+        - name: zip
+          in: query
+          schema:
+            type: string
+          description: >
+            The zip code to use as your location. This can be used instead of `address`, or `latitude` and `longitude`.
+          example: "60661"
+        - name: latitude
+          in: query
+          schema:
+            type: string
+          description: >
+            The latitude to use for your location. You must also specify `longitude` with this parameter. These parameter can be used instead of `address` and `zip`.
+        - name: longitude
+          in: query
+          schema:
+            type: string
+          description: >
+            The longitude to use for your location. You must also specify `latitude` with this parameter. These parameter can be used instead of `address` and `zip`.
+        - name: distance
+          in: query
+          schema:
+            type: string
+          description: >
+            Optional. The distance, in miles, to use for the radius search. This will be used in conjunction with `address`, `zip`, or `latitude` and `longitude`.
+          example: '2'
+      responses:
+        '200':
+          description: Successful search 
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                example:
+                  id: 39460
+                  name: FIRESTONE STORE 345100
+                  branch_number: null
+                  main_phone_number: 312-662-1553
+                  main_email: null
+                  address_line1: 1558 S WABASH AVE
+                  city: CHICAGO
+                  state: IL
+                  zip: 60605-2809
+                  company_id: 6
+                  region_id: 5
+                  store_number: '345100'
+                  location_id: 2345
+                  owner_name: null
+                  labor_rate: 85
+                  lat: 41.8605061
+                  lng: -87.6263054
+                  status: certified
+                  is_favorite_shop: false
+                  distance: 1.754578387285195
+                  latitude: 41.8605061
+                  longitude: -87.6263054
+                  warranty_info: null
+                  shop_hours: null
+                  price_estimates: null
+                  rating: null
+                  discount: null
+                  savings: null
+                  shop_detail: null
+                  
+  /api/v4/shops/{shopId}/schedule:
+    parameters: 
+      - name: shopId
+        in: path
+        required: true
+        schema:
+          type: integer
+        example: 38205
+      - name: date
+        in: query
+        schema:
+          type: string
+          format: date
+        example: "2018-11-30"
+      - name: days
+        in: query
+        schema:
+          type: integer
+        example: 1
+    get:
+      description: Get available appointment times for a shop.
+      responses: 
+        '200':
+          description: Successful lookup
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                example:
+                  date: "2018-11-30"
+                  times: [ "07:00", "09:00" ]
+          
+  /api/v4/third_party_orders:
+    get:
+      description: Returns paginated shop orders of your affiliation and sub-affiliations. Can optionally be scoped to a Customer by :user_id, :user_email, or :user_other_id, or by a date range of shop order appointment times. An optional :requested_page param can be provided if the result set has multiple pages (50 results are returned per page).
+      parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: integer
+          description: optional- customer id
+          example: 232
+        - name: user_email
+          in: query
+          schema:
+            type: string
+          description: optional- customer email
+          example: "johnny@caradvise.com"
+        - name: user_other_id
+          in: query
+          schema:
+            type: string
+          description: optional- alternate customer identifier
+          example: "abc123"
+        - name: start_date
+          in: query
+          schema:
+            type: string
+          description: optional- start date of a date range, formatted 'YYYY-MM-DD' (MM is 01-12). If provided, must also specify :end_date.
+          example: "2019-11-01"
+        - name: end_date
+          in: query
+          schema:
+            type: string
+          description: optional- end date of a date range, formatted 'YYYY-MM-DD' (MM is 01-12). If provided, must also specify :start_date.
+          example: "2019-11-07"
+        - name: requested_page
+          in: query
+          schema:
+            type: integer
+          description: optional page of result set to return
+          example: 2
+      responses:
+        '200':
+          description: Success 
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: object
+                example:
+                  current_page: 1
+                  total_pages: 1
+                  total_records: 2
+                  orders: [
+                    {
+                      "id": 3598,
+                      "appointment_datetime": "2019-11-01T23:00:00.000Z",
+                      "total": 65.7,
+                      "status": "paid",
+                      "affiliation_name": "CARADVISE",
+                      "user_id": 3414,
+                      "user_email": "customer1@example.com",
+                      "user_other_id": "abc123",
+                      "created_at": "2019-10-17T03:30:26.578Z"
+                    },
+                    {
+                      "id": 3649,
+                      "appointment_datetime": "2019-11-06T15:00:00.000Z",
+                      "total": 147.62,
+                      "status": "paid",
+                      "affiliation_name": "CARADVISE",
+                      "user_id": 3431,
+                      "user_email": "customer2@example.com",
+                      "user_other_id": "def456",
+                      "created_at": "2019-10-17T02:30:47.598Z"
+                    }
+                  ]
+        '422': 
+          description: Error
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: object
+                example:
+                  errors: "Customer not found for params user_email: johnny@caradvise.com"
+    post:
+      description: Create order for specified user and vehicle. This will create
+        the user and vehicle if it doesn't exist. If `vin` on the vehicle is not
+        specified, then `license_plate_state` and `license_plate_number` are required.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shop_id:
+                  type: integer
+                service_description:
+                  type: string
+                name:
+                  type: string
+                other_id:
+                  type: string
+                email:
+                  type: string
+                cell_phone:
+                  type: string
+                service_date:
+                  type: string
+                  format: date-time
+                vehicle:
+                  type: object
+                  properties:
+                    vin:
+                      type: string
+                    year:
+                      type: string
+                    make:
+                      type: string
+                    model:
+                      type: string
+                    license_plate_state:
+                      type: string
+                    license_plate_number:
+                      type: string
+                    miles:
+                      type: integer
+                order_services:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      service_definition_id:
+                        type: integer
+                      position:
+                        type: string
+            example: 
+              shop_id: 39460
+              name: "Johnny Saver"
+              email: "johnny@caradvise.com"
+              cell_phone: "8449238473"
+              service_description: "Tire Install"
+              other_id: "PO12345"
+              service_date: "2018-11-30T07:00:00-06:00"
+              vehicle:
+                year: "2018"
+                make: "Ford"
+                model: "Taurus"
+                license_plate_state: "IL"
+                license_plate_number: "X554444"
+                miles: 1500
+              order_services: [
+                { service_definition_id: 169, position: '' },
+                { service_definition_id: 2391, position: 'Conventional' }
+              ]
+      responses:
+        '200':
+          description: Order was successfully created
+          
+  /api/v4/customers:
+    post:
+      description: Create a user and vehicles.  Vehicles can be defined with a :vin, or :license_plate_number and :license_plate_state, or with :year, :make, :model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                auth_token:
+                  type: string
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                cell_phone:
+                  type: string
+                zip:
+                  type: string
+                other_id:
+                  type: string
+                vehicles:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      vin:
+                        type: string
+                      miles: 
+                        type: integer
+                      year: 
+                        type: integer
+                      make: 
+                        type: string
+                      model: 
+                        type: string
+                      license_plate_number:
+                        type: string
+                      license_plate_state:
+                        type: string
+              required:
+                - auth_token
+                - email
+                - password
+            example:
+              auth_token: 'auth_token_provided_by_caradvise'
+              first_name: "Johnny"
+              last_name: "Saver"
+              email: "johnny@caradvise.com"
+              password: 'abc123Def456'
+              cell_phone: "8449238473"
+              zip: "60661"
+              other_id: "abc123"
+              vehicles: [{ vin: "1HSRKALR3RH557945", miles: 12555 }, { year: 2016, make: "Ford", model: "Explorer", miles: 27685}, { license_plate_number: "ABC123", license_plate_state: "IL", miles: 77338 }]
+      responses:
+        '200':
+          description: If customer and (optionally) vehicles were successfully created, an auto login key is returned.
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  auto_login_key: "abc123xyz456"
+
+  /api/v4/third_party_customers/token:
+    get:
+      description: Returns a customer object including authentication_token for a given email or id or other_id. Include your api_key in the request Authorization header.
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: integer
+          description: customer id
+          example: 232
+        - name: email
+          in: query
+          schema:
+            type: string
+          description: customer email
+          example: "johnny@caradvise.com"
+        - name: other_id
+          in: query
+          schema:
+            type: string
+          description: optional alternate customer identifier
+          example: "abc123"
+      responses:
+        '200':
+          description: Successful update 
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: object
+                example:
+                  first_name: "Johnny"
+                  last_name: "Saver"
+                  email: "johnny@caradvise.com"
+                  cell_phone: "5551117878"
+                  zip: "60661"
+                  other_id: "abc123"
+                  auto_login_key: "fbrmKkx4Q8Wow3tp6gzj"
+        '422': 
+          description: Error updating
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: object
+                example:
+                  errors: "Must supply either :id or :email or :other_id"
+                  
+  /api/v4/third_party_customers:
+    get:
+      description: Returns a customer object including vehicle information for a given email or id or other_id. Include your api_key in the request Authorization header.
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: integer
+          description: customer id
+          example: 232
+        - name: email
+          in: query
+          schema:
+            type: string
+          description: customer email
+          example: "johnny@caradvise.com"
+        - name: other_id
+          in: query
+          schema:
+            type: string
+          description: optional alternate customer identifier
+          example: "abc123"
+      responses:
+        '200':
+          description: Successful update 
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: object
+                example:
+                  first_name: "Johnny"
+                  last_name: "Saver"
+                  email: "johnny@caradvise.com"
+                  cell_phone: "5551117878"
+                  zip: "60661"
+                  other_id: "abc123"
+                  auto_login_key: "fbrmKkx4Q8Wow3tp6gzj"
+                  vehicles: [{
+                    id: 123,
+                    year: 2015,
+                    make: "Rolls-Royce",
+                    model: "Phantom"
+                  }]
+        '422': 
+          description: Error updating
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: object
+                example:
+                  errors: "Must supply either :id or :email or :other_id"
+                  
+    post:
+      description: Create a customer with optional vehicles. Accepted params are first_name, last_name, email, cell_phone, zip, and other_id. Vehicles can be defined with a :vin, or with :year, :make, :model. The customer object with authentication_token is returned. Include your api_key in the request Authorization header.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object 
+              properties:
+                email:
+                  type: string
+                  description: customer email
+                  example: "johnny@caradvise.com"
+                first_name:
+                  type: string
+                  description: customer first name
+                  example: "Johnny"
+                last_name:
+                  type: string
+                  description: customer last name
+                  example: "Saver"
+                cell_phone:
+                  type: string
+                  description: customer cell phone number
+                  example: "5551117878"
+                zip:
+                  type: string
+                  description: customer zip
+                  example: "60661"
+                other_id:
+                  type: string
+                  description: optional alternate customer identifier
+                  example: "abc123"
+                vehicles:
+                  type: array
+                  description: array of vehicles to create for the customer
+                  items:
+                    type: object
+                    properties:
+                      vin:
+                        type: string
+                      miles: 
+                        type: integer
+                      year: 
+                        type: integer
+                      make: 
+                        type: string
+                      model: 
+                        type: string
+                  example:
+                    [
+                      { vin: "1HSRKALR3RH557945", miles: 12555 },
+                      { year: 2016, make: "Ford", model: "Explorer", miles: 27685}
+                    ]
+      
+      responses:
+        '200':
+          description: Successful create 
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: object
+                example:
+                  first_name: "Johnny"
+                  last_name: "Saver"
+                  email: "johnny@caradvise.com"
+                  cell_phone: "5551117878"
+                  zip: "60661"
+                  other_id: "abc123"
+                  auto_login_key: "fbrmKkx4Q8Wow3tp6gzj"
+                  vehicles: [{
+                    id: 123,
+                    year: 2015,
+                    make: "Rolls-Royce",
+                    model: "Phantom"
+                  }]
+        '422': 
+          description: Error creating
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: object
+                example:
+                  errors: "Customer not found"
+    put:
+      description: Update a customer first_name, last_name, cell_phone, and zip with optional vehicles. Vehicles can be defined with a :vin or with :year, :make, :model. Customer :id or :email or :other_id must be supplied. The customer object with authentication_token is returned. Include your api_key in the request Authorization header.
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: integer
+          description: customer id
+          example: 55
+        - name: email
+          in: query
+          schema:
+            type: string
+          description: customer email
+          example: "johnny@caradvise.com"
+        - name: other_id
+          in: query
+          schema:
+            type: string
+          description: optional alternate customer identifier
+          example: "abc123"
+        - name: first_name
+          in: query
+          schema:
+            type: string
+          description: customer first name
+          example: "Johnny"
+        - name: last_name
+          in: query
+          schema:
+            type: string
+          description: customer last name
+          example: "Saver"
+        - name: cell_phone
+          in: query
+          schema:
+            type: string
+          description: customer cell phone number
+          example: "5551117878"
+        - name: zip
+          in: query
+          schema:
+            type: string
+          description: customer zip
+          example: "60661"
+      responses:
+        '200':
+          description: Successful update 
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: object
+                example:
+                  first_name: "Johnny"
+                  last_name: "Saver"
+                  email: "johnny@caradvise.com"
+                  other_id: "abc123"
+                  cell_phone: "5551117878"
+                  zip: "60661"
+                  auto_login_key: "fbrmKkx4Q8Wow3tp6gzj"
+                  vehicles: [{
+                    id: 123,
+                    year: 2015,
+                    make: "Rolls-Royce",
+                    model: "Phantom"
+                  }]
+        '422': 
+          description: Error updating
+          content:
+            application/json:
+              schema:
+                type: object
+                items:
+                  type: object
+                example:
+                  errors: "Customer not found"

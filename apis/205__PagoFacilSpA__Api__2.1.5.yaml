@@ -1,0 +1,1619 @@
+openapi: 3.0.0
+
+servers:
+  - description: PRODUCTION
+    url: https://apis.pgf.cl
+  - description: DEVELOPMENT
+    url: https://apis-dev.pgf.cl
+
+    
+info:
+  version: "2.1.5"
+  title: API Pago Facil
+  description: "API de Pago Fácil"
+    
+tags: 
+  - name: auth
+  - name: remittances
+  - name: trxs
+  - name: webhooks
+  - name: payments
+  - name: users
+#  - name: services
+#  - name: paybuttons
+#  - name: creditcards
+#  - name: billing
+#  - name: banks
+#  - name: contracts
+#  - name: tokens
+  - name: indicators
+paths:
+#################################
+# LOGIN PARA OBTENCION DE TOKEN #
+#################################
+  /users/login:
+    post:
+      tags: 
+        - auth
+      summary: Autentificación con usuario y clave.
+      description: >-
+        Retorna un token con el que se deben realizar las llamadas al resto de los endpoints del API. Sin este token no se pueden acceder a los endpoints. <br>
+        Se deben ingresar "user" y "password" válidos, creados a través del dashborad de Pago Fácil <br>
+        No requiere configuración de autorización <br>
+        Endpoints <br>
+        - Producción https://apis.pgf.cl
+        - Desarrollo https://apis-dev.pgf.cl
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref : "#/components/schemas/loginBody"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/login_response"
+        
+        '400':
+          $ref: "#/components/responses/BadRequestError"
+          
+        '500':
+          $ref: "#/components/responses/InternalError"
+
+        '401':
+          $ref: "#/components/responses/UnauthorizedLoginError"
+
+
+#####################################################
+# GET QUE RECIBE INFORMACION DE LOS ABONOS Y SALDOS #
+#####################################################          
+  /indicators/remittances:
+    get:
+      tags: 
+        - indicators
+      summary: Obtiene los datos de los abonos (remittances) realizados en una fecha específica y los futuros, además del saldo disponible
+      description:  >-
+        1.-Requiere el uso del Token rescatado en el LOGIN (autorización heredada) <br>
+        2.-Se debe configurar los parámetros como "Query Params" <br>
+        3.-Solo los usuarios Administradores pueden obtener información etregando el parámetros "IdUser". Para usuarios no Administradores este parámetro no se informa y siempre retronará información del usuario logado.
+        4.-Se debe informar alguno de los parámetros, de lo contrario la API responde con un error <br>
+            -Setear en true or false los parámetros "availableBalance" o "futureRemittances" <br>
+            -Entregar una fecha en el parámetro "remittanceByDate"<br>
+            
+      
+      security:
+        - JWTToken: []
+      parameters:
+        - in: query
+          name: idUser
+          description: ID del usuario a consultar
+          example:  123
+          schema:
+            $ref: '#/components/schemas/idUser'
+        - in: query
+          name: idTrx
+          description: ID de la transacción a consultar
+          example: 5500
+          schema:
+            $ref: '#/components/schemas/idTrx'
+        - in: query
+          name: availableBalance
+          description: Define si se desea obtener el saldo disponible del usuario
+          schema:
+            type: boolean
+        - in: query
+          name: remittanceByDate
+          description: Fecha de la que se desea obtener información del abono
+          schema:
+            $ref: '#/components/schemas/date'  
+        - in: query
+          name: futureRemittances
+          description: Define si se desea obtener los abonos futuros
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref : "#/components/schemas/responseBodyRemittances"
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+        404:
+          $ref: '#/components/responses/NotFoundError'
+
+
+###############################################################
+# GET DE GENERACION DE INFORMACION PARA EFECTUAR CONCILIACION #
+###############################################################
+  /remittances/conciliation:
+    get:
+      description: Permite obtener la conciliación de los abonos
+      tags:
+        - remittances
+      security: 
+        - JWTToken: []
+      parameters: 
+        - in: query
+          name: email
+          description: Email a consultar
+          example: marcela@pagofacil.cl
+          required: true
+          schema:
+            $ref: '#/components/schemas/email'
+        - in: query
+          name: date
+          description: "Fecha de consulta año-mes-dia <br> Ej: 2019-12-31"
+          example: 2020-01-22
+          required: true
+          schema:
+            $ref: '#/components/schemas/date'
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    $ref : "#/components/schemas/message"
+                  data:
+                    type: object
+                    properties:
+                      totalRemittances:
+                        type: integer
+                        description: Total de los abonos
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            amount:
+                              type: number
+                              example: 2314
+                            cost:
+                              type: number
+                              example: 215
+                            total:
+                              type: number
+                              example: 215
+                            idTrx:
+                              type: number
+                              example: 215
+                            order_id_tienda:
+                              type: string
+                              example: "p42_2"
+                            createdAt:
+                              $ref: '#/components/schemas/timestampUnixMilisecond'
+                            dateTimeCreatedAt:
+                              type: string
+                              format: date-time
+                            isTotalNullified:
+                              type: boolean
+                            isParcialNullified:
+                              type: boolean
+                            currency:
+                              allOf:
+                                - $ref: '#/components/schemas/currency'
+                            document:
+                              type: object
+                              nullable: true
+                              properties:
+                                id:
+                                  type: number
+                                  example: 456657
+                                type:
+                                  type: string
+                                  example: "Boleta"
+                      totalTransactions:
+                        type: integer
+                        description: Total de transacciones
+                      totalNullification:
+                        type: integer
+                        description: Total de anulaciones
+                      nullifications:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            tipo:
+                              type: string
+                              example: "Completa"
+                            montoAnulado:
+                              type: number
+                              example: 5676
+                            status:
+                              type: string
+                              example: PROCESADO
+                            timestamp:
+                              $ref: '#/components/schemas/timestampUnixSecond'
+                            dateTime:
+                              type: string
+                              format: date-time
+                            
+        400:
+          $ref: '#/components/responses/BadRequestError'
+                            
+        500:
+          $ref: '#/components/responses/InternalError'
+##################################
+# POST CREACION DE TRANSACCIONES #
+##################################
+  /trxs:
+    post:
+      description: Crea una transaccion en estado pendiente. <br> 
+        La respuesta tiene distintos métodos y URLs para pago
+      tags:
+        - trxs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/requestBodyTrx"
+                  
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  statusCode:
+                    type: number
+                    example: 200
+                  body:
+                    type: object
+                    properties:
+                      message: 
+                        $ref : "#/components/schemas/message"
+                      data:
+                        type: object
+                        properties:
+                          idTrx:
+                            $ref : "#/components/schemas/idTrx"
+                          payUrl:
+                            $ref : "#/components/schemas/payUrl"
+                      
+        
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        422:
+          $ref: '#/components/responses/BadRequestError'          
+        409:
+          $ref: '#/components/responses/Conflict'
+        
+        500:
+          $ref: '#/components/responses/InternalError'
+################################################
+# GET QUE RECIBE INFORMACION DE LA TRANSACCION #
+################################################            
+  /trxs/{id}:
+    get:
+      summary: "Obtiene la informacion de la transacción exitosa, asociada a un id"
+      description: >- 
+        Retorna información de una transacción asociada a un id, para lo que debe ingresarse en el URL el ID de la transacción a consultar. <br>
+        El token de autorización es el obtenido a través de /Login ("Inherit from parent") <br>
+        Endpoints <br>
+        - Producción https://apis.pgf.cl/trxs/{id} <br>
+        - Desarrollo https://apis-dev.pgf.cl/trxs/{id}
+      tags: 
+        - trxs
+      security: 
+        - JWTToken: []
+      parameters: 
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: number
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref : "#/components/schemas/responseBodyGetTrx"
+                
+        
+        400:
+          $ref: '#/components/responses/BadRequestError'
+
+
+##################################
+# POST QUE ANULA UNA TRANSACCIÓN #
+##################################
+  /trxs/{idTrx}/nullification:
+   post:
+      description: "Envía una transacción a anular"
+      tags: 
+        - trxs
+      security: 
+        - JWTToken: []
+      parameters: 
+        - in: path
+          name: idTrx
+          required: true
+          schema:
+            type: number
+      requestBody:
+        content:
+          application/json:
+            schema: 
+              $ref : "#/components/schemas/requestBodyNullification"
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref : "#/components/schemas/responseBodyNullification"
+        401:
+          description: "Transacción no existe o no se tienen permisos necesarios"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    $ref: '#/components/schemas/message'
+                  errors:
+                    $ref: '#/components/schemas/errors'
+        422:
+          description: "Falta token de verificación"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    $ref: '#/components/schemas/message'
+                  errors:
+                    $ref: '#/components/schemas/errors'
+        400:
+          $ref: '#/components/responses/BadRequestError'
+          
+###########################################################################
+# GET QUE ENTREGA INFORMACIÓN DE ANULACIONES ASOCIADAS A UNA TRANSACCIÓN  #
+###########################################################################
+  /trxs/{idTrx}/nullification/:
+    get:
+      description: "Obtiene las anulaciones asociadas a una transacción"
+      tags: 
+        - trxs
+      security: 
+        - JWTToken: []
+      parameters: 
+        - in: path
+          name: idTrx
+          required: true
+          schema:
+            type: number
+       
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    $ref: '#/components/schemas/message'
+                  data:
+                    type: object
+                    properties:
+                      nullifications:
+                        $ref: '#/components/schemas/nullification_get'
+        401:
+          description: "Transacción no existe o no se tienen permisos necesarios"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    $ref: '#/components/schemas/message'
+                  errors:
+                    $ref: '#/components/schemas/errors'
+        422:
+          description: "Falta token de verificación"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    $ref: '#/components/schemas/message'
+                  errors:
+                    $ref: '#/components/schemas/errors'
+        400:
+          $ref: '#/components/responses/BadRequestError'
+############################################################################
+# GET QUE ENTREGA INFORMACIÓN DE ESTADO DE LA ANULACIÓN DE UNA TRANSACCIÓN #
+############################################################################      
+  /trxs/{idTrx}/nullification/status:
+    get:
+      description: "Obtiene el estado de una anulación"
+      tags: 
+        - trxs
+      security: 
+        - JWTToken: []
+      parameters: 
+        - in: path
+          name: idTrx
+          required: true
+          schema:
+            type: number
+        - in: query
+          name: verificationToken
+          required: true
+          schema:
+            $ref: '#/components/schemas/uuid'
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    $ref: '#/components/schemas/message'
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        $ref: '#/components/schemas/nullification_status'
+        401:
+          description: "Transacción no existe o no se tienen permisos necesarios"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    $ref: '#/components/schemas/message'
+                  errors:
+                    $ref: '#/components/schemas/errors'
+        422:
+          description: "Falta token de verificación"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    $ref: '#/components/schemas/message'
+                  errors:
+                    $ref: '#/components/schemas/errors'
+        400:
+          $ref: '#/components/responses/BadRequestError'
+ 
+############################################################################
+# POST WEBHOOK #
+############################################################################  
+  /webhooks:
+    post:
+      description: "Crea un webhook para tus servicios. <br> Se enviará un POST a esta URL cuando se realicen eventos como abonos a tu cuenta."
+      tags:
+        - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/requestBodyWebhook"
+             
+                  
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Mensaje de éxito
+                  errors:
+                    type: array
+                    items: {}
+                  data:
+                    type: object  
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        500:
+          $ref: '#/components/responses/InternalError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+############################################################################
+# PUT WEBHOOK #
+############################################################################           
+  /webhooks/{idUser}/{webhook}:
+    put:
+      description: "Actualiza un webhook para tus servicios. "
+      tags:
+        - webhooks
+      parameters: 
+        - in: path
+          name: idUser
+          description: ID del usuario a consultar
+          example:  123
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: webhook
+          description: Tipo de evento del webhook
+          example:  remittances
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: 
+                - url
+                - method
+                - webhook
+                - idUser
+              properties:
+                url:
+                  type: string
+                  format: url
+                  description: La url que recibirá un POST para notificaciones
+                  example: "https://mipagina.cl/myWebhook"
+                method:
+                  type: string
+                  description: Método HTTP a ser usado durante el callback
+                  example: POST
+                  enum: 
+                    - POST
+                    - GET
+                webhook:
+                  type: string
+                  description: Tipo de evento del webhook
+                  example: remittances
+                  enum: 
+                    - remittances
+                idUser:
+                  type: string
+                  description: Id del usuario que quiere crear el webhook
+                  example: "123"
+                  
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Mensaje de éxito
+                  errors:
+                    type: array
+                    items: {}
+                  data:
+                    type: object  
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        500:
+          $ref: '#/components/responses/InternalError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+############################################################################
+# DELETE WEBHOOK #
+############################################################################           
+    delete:
+      description: "Elimina un webhook del usuario y tipo especificados"
+      tags:
+        - webhooks
+      parameters: 
+        - in: path
+          name: idUser
+          description: ID del usuario a consultar
+          example:  123
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: webhook
+          description: Tipo de evento del webhook
+          example:  remittances
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Mensaje de éxito
+                  errors:
+                    type: array
+                    items: {}
+                  data:
+                    type: object  
+        
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        500:
+          $ref: '#/components/responses/InternalError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+############################################################################
+# GET WEBHOOK #
+############################################################################           
+  /webhooks/{idUser}:
+    get:
+      description: "Obtiene la lista de webhooks de un usuario. "
+      tags:
+        - webhooks
+      parameters: 
+        - in: path
+          name: idUser
+          description: ID del usuario a consultar
+          example:  123
+          required: true
+          schema:
+            type: string
+                  
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Mensaje de éxito
+                  errors:
+                    type: array
+                    items: {}
+                  data:
+                    type: array  
+                    items: 
+                      properties:
+                        url:
+                          type: string
+                          description: Url del webhook
+                          example: https://mipagina.cl/myWebhook
+                        method: 
+                          type: string
+                          description: Método HTTP usado en el webhook
+                          example: POST
+                          enum: 
+                            - POST
+                            - GET
+                        webhook:
+                          type: string
+                          description: Tipo de webhook
+                          example: remittances
+                          enum: 
+                            - remittances
+        
+        400:
+          $ref: '#/components/responses/BadRequestError'
+        500:
+          $ref: '#/components/responses/InternalError'
+        403:
+          $ref: '#/components/responses/ForbiddenError'
+  /payments:
+    
+########################################################
+# GET PAYMENTS OBTIENE LOS METODOS DE PAGO DISPONIBLES #
+########################################################
+    get:
+      description: "Obtiene los medios de pago disponible"
+      tags: 
+        - payments
+      parameters: 
+        - in: query
+          name: Authorization
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  types: 
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        codigo:
+                          type: string
+                          example: WebPayPST
+                        nombre:
+                          type: string
+                          example: WebPayPlus PST
+                        descripcion:
+                          type: string
+                          example: Paga usando tus tarjetas de crédito o débito.
+                        url_imagen:
+                          type: string
+                          example: https://s3-us-west-2.amazonaws.com/assets.pagofacil.cl/public/images/webpay-300.png
+        
+        500:
+          $ref: '#/components/responses/InternalError'
+          
+######################################################
+# GET USER OBTIENE LA INFORMACIÓN DEL USUARIO LOGADO #
+######################################################          
+  /users:
+    get:
+      tags:
+        - users
+      security: 
+        - JWTToken: []
+      summary: Obtener informacion del usuario.
+      description: >-
+        Este endpoint retorna la informacion del usuario.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: 
+                  - id
+                  - idAuth0
+                  - username
+                  - email
+                  - status
+                  - bloqueo
+                  - createdAt
+                properties:
+                  id:
+                    type: integer
+                    description: "Identificador del usuario"
+                  idAuth0:
+                    type: string
+                    description: "Identificador del usuario"
+                  username:
+                    type: string
+                    description: "Nombre del usuario"
+                  email:
+                    type: string
+                    description: "Email del usuario"
+                  status:
+                    type: integer
+                    description: "Define el estado del usuario en inscripcion"
+                  bloqueo:
+                    type: boolean
+                    description: "Define si el usuario esta bloqueado"
+                  createdAt:
+                    type: string
+                    description: "Fecha de creacion del usuario"
+                
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'          
+
+components: 
+  schemas:
+  #Schemas sin dependencias
+    username: 
+      type: string
+      example: micorreo@pagofacil.cl
+      description : Correo con el cual create tu cuenta
+    password:
+      type: string
+      example: claveDeMentira1232
+      description: Tu clave en el portal.
+    message:
+      type: string
+      description: Mensaje de respuesta 
+      example: Se procesó la solicitud correctamente
+    url : 
+      type : string
+      example : "https://postman-echo.com/post"
+      format: uri
+      description: "Una dirección web válida"
+
+    error:
+      type: string
+      description: "Retorna la lista de errores en caso de existir alguno"
+      example: null
+
+    x_account_id:
+      description: Corresponde al <u>Token Service</u> relacionado al servicio con el que deseas generar el cobro. Es ditinto para el ambiente de desarrollo y producción.
+      type: string
+      example: "4d46656265397746362447447a75681234736f59576e4a384a416d4177444e63"
+      minLength: 36
+      maxLength: 100
+    x_amount:
+      description: Monto de la transacción. Admite decimales si la divisa utilizada los utiliza. El mínimo depende de la divis. En CLP es 500.
+      type: number
+      example: 1000
+      minimum : 500
+    x_reference:
+      description: \"Tú\" identificador de orden. Este identificador debería ser único por servicio para no tener problema de duplicidad de pagos. Rechazaremos ids duplicados para el mismo servicio.
+      type: string
+      example: "0d4ca99a-cfd7-4c85-9832-11205894ef63"
+      minLength: 1
+      maxLength: 100
+    x_customer_email:
+      $ref: "#/components/schemas/email"
+    x_url_complete:
+      $ref: "#/components/schemas/url"
+    x_url_callback:
+      $ref: "#/components/schemas/url"
+    x_url_cancel:
+      $ref: "#/components/schemas/url"      
+    x_shop_country:
+      $ref: '#/components/schemas/country_code'
+    x_session_id:
+      description: Identificador único de la sesión del usuario que realiza el pago. Se agrega como capa de seguridad para validar la transacción. Max. 61 caracteres.
+      type: string
+      maxLength: 61
+      minLength: 5
+      example: "0d4ca99a-cfd7-4c85-9832-11205894ef63" 
+    x_signature:
+      description: Mensaje Firmado. Para más información sobre la creación de la firma revisa https://developers.pagofacil.cl/docs/cómo-funciona-el-proceso-de-firmado
+      type: string
+      example: "4a8affcfe9446b07ebdc4ab6b661234743fa454d80d299daf9e28efc99bef934"
+    idTrx:
+      description: ID de la transacción en Pago Fácil
+      type: integer
+      example: 123
+    idUser:
+      description: ID del usuario a consultar
+      type: integer
+      example: 123
+    idTienda:
+     description: ID del comercio para identificar su tienda
+     type: string
+     example: c000000
+    idService:
+      description: ID del servicio
+      type: integer
+      example: 100
+    amount:
+      description: Monto de la transacción
+      type: number
+      example: 1000
+    cost:
+      description: Costo de la transacción
+      type: number
+      example: 55
+    status:
+      description: Estado de la transacción
+      type: string
+      enum:
+        - pending
+        - complete
+        - failed
+    product_name:
+      description: Nombre del producto
+      type: string
+      example: "Producto 1"
+    product_price: 
+      description: Precio de un producto
+      type: number
+      example: 5500
+    product_quantity:
+      description: Cantidad de productos
+      type: integer
+      example: 1
+    product_sku:
+      description: SKU o código del producto
+      type: string
+      example: "PROD1"
+    source:
+      description: Método de pago
+      type: string
+      example: "Khipu"
+    timestamp:
+      description: uso transbank 
+      type: string
+      example: "transbank"
+    paymentTypeCode:
+      description: Forma de pago que usa el cliente
+      type: string
+      example: "VN"
+    sharesNumber:
+      description: Cuotas de la transacción
+      type: integer
+      example: 0
+    responceCode:
+      description: uso transbank   
+      type: integer
+      example: 0
+    vci:
+      description: uso transbank 
+      type: string
+      example: 0
+    abonos:
+     description: Abonos relacionados a la transacción
+     type: array
+     items:
+        type: string
+    callbackURL:
+      description: url a la que se llama una vez la transacción es completada
+      type: string
+      example: "www.mypage.com/sss"
+    completeURL:
+      description: url a la que se redireciona al cliente una vez la transacción es completada
+      type: string
+      example: "www.mypage.com/sss"
+    cancelURL:
+      description: currently out of order
+      type: string
+      example: "www.mypage.com/sss"
+    ip:
+      description: ip adress of the device from where transaction was completed
+      type: string
+      example: "192.168.0.0"
+    browserData:
+      description: data from the browser where the transaction was completed
+      type: string
+      example: "important data from the browser"
+    createdAt:
+      description: Fecha de creación
+      type: string
+      format: date-time
+      example: "2019-11-22T01:42:33.000Z"
+    updatedAt:
+      description: Fecha de actualización
+      type: string
+      format: date-time
+      example: "2019-11-22T01:42:33.000Z"
+    uuid:
+      description: Token uuid
+      type: string
+      maximum: 36
+      example: "f9e79694-6949-4339-9513-c65f9a61498b"
+    rut:
+      type: string
+      example: "11111111-1"
+      description: Rut 
+    city:
+      description: Ciudad
+      type: string
+      example: Santiago 
+    company:
+      description: Empresa
+      type: string
+      example: Mi Empresa
+    municipality:
+      description: Municipio
+      type: string
+      example: Santiago
+    activity:
+      description: Giro de la emmpresa
+      type: string
+    address:
+      description: Dirección
+      type: string
+      example: Una calle bonita
+    contact_name:
+      description: Nombre de contacto
+      type: string
+      example: Pepito Grillo
+    phone:
+      description: Número de teléfono
+      type: string
+      example: 965874587
+    region:
+      description: Región
+      type: string
+      example: Metropolitana
+    country:
+      description: País en donde se encuentra la tienda (dos caracteres)
+      type: string
+      example: CL
+      maxLength: 2
+      minLength: 2
+    zip:
+      description: Código postal
+      type: string
+      example: 8320066
+    document_id:
+      description: ID del documento
+      type: string
+      example: "123"
+    document_type:
+      description: Tipo de documento
+      type: string
+      example: "39"
+    authCode:
+      description: Codigo de autorizacion de la compra
+      type: integer
+      example: 123
+    email:
+      description: Email
+      type: string
+      pattern: '^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$'
+      format: email
+    
+    #Schemas Complejos
+    loginBody:
+      type: object
+      description: Body con los datos para iniciar sesión.
+      required: 
+        - username
+        - password
+      properties:
+        username:
+          $ref: "#/components/schemas/username"
+        password:
+          $ref: "#/components/schemas/password"
+        
+    payUrl:
+      type: array
+      description: "Opciones diferentes de pago. <br> Para mostrar todas las opciones utilizar 'gateway'. <br> Para ir directamente a un metodo de pago, utilizar las demás disponibles"
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          url:
+            $ref: "#/components/schemas/url"
+      example:
+        - name: gateway
+          url: "https://gw-dev.pagofacil.online/payTransaction/?Authorization=fgj5i82kdsfj"
+        - name: Kiphu
+          url: "https://gw-dev.pagofacil.online/kiphu/payTransaction/?Authorization=fgj5i82kdsfj"
+        - name: mach
+          url: "https://gw-dev.pagofacil.online/mach/payTransaction/?Authorization=fgj5i82kdsfj"    
+
+    products:
+      description: Productos asociados a la transacción
+      type: array
+      items:
+        type: object
+        required:
+          - name
+          - price
+          - quantity
+        properties:
+          name: 
+            $ref: '#/components/schemas/product_name'
+          price: 
+            $ref: '#/components/schemas/product_price'
+          quantity:
+            $ref: '#/components/schemas/product_quantity'
+          sku:
+            $ref: '#/components/schemas/product_sku'
+
+
+    remittanceByDate:
+      description: Monto del abono relacionado a las transacciones que se debieron pagar el dia indicado y dichas transacciones
+      type: object
+      properties:
+        total: 
+          $ref: '#/components/schemas/amount'
+        trxs: 
+          $ref: '#/components/schemas/trxs'
+
+
+    futureRemittances:
+      description: Monto y transacciones de abonos futuros
+      type: object
+      properties:
+        total:
+          $ref: '#/components/schemas/amount'
+        remittances:
+          type: array
+          items:
+            properties:
+              date: 
+                type: object
+                properties:
+                  total:
+                    $ref: '#/components/schemas/amount'
+                  trxs: 
+                    $ref: '#/components/schemas/trxs'
+              
+    trxs: 
+      description: Objeto de transacciones
+      type: array
+      items:
+        type: object
+        properties:
+          idTrx:
+            $ref: '#/components/schemas/idTrx'
+          amount:
+            $ref: '#/components/schemas/amount'
+          remittanceDay:
+            $ref: '#/components/schemas/date'
+    billing_details:
+      description: Datos de facturación
+      type: object
+      required:
+        - rut
+        - city
+        - company
+        - municipality
+        - activity
+        - address
+        - country
+      properties:
+        rut: 
+           $ref: '#/components/schemas/rut'
+        city: 
+          $ref: '#/components/schemas/city'
+        company:
+          $ref: '#/components/schemas/company'
+        municipality:
+          $ref: '#/components/schemas/municipality'
+        activity:
+         $ref: '#/components/schemas/activity'
+        address:
+          $ref: '#/components/schemas/address' 
+        country:
+           $ref: '#/components/schemas/country'
+    shippment:
+      description: Datos de despacho
+      type: object
+      required:
+        - contact_name
+        - phone
+        - region
+        - city
+        - address
+        - municipality
+        - rut
+      properties:
+        contact_name: 
+           $ref: '#/components/schemas/contact_name'
+        phone: 
+          $ref: '#/components/schemas/phone'
+        region:
+          $ref: '#/components/schemas/region'
+        city:
+         $ref: '#/components/schemas/city'
+        address:
+          $ref: '#/components/schemas/address'  
+        municipality:
+          $ref: '#/components/schemas/municipality'
+        rut: 
+          $ref: '#/components/schemas/rut'
+        country:
+           $ref: '#/components/schemas/country'
+        zip:
+           $ref: '#/components/schemas/zip'
+    document:
+      description: Documento asociado a transacción
+      type: object
+      required:
+        - id
+        - type
+      properties:
+        id: 
+           $ref: '#/components/schemas/document_id'
+        type: 
+           $ref: '#/components/schemas/document_type'
+
+    data_login_response:
+      description: Respuesta de login
+      type: object
+      properties:
+        access_token_jwt:
+          type: string
+          description: "JWT (JSON Web Token) que se usará para las llamadas del API"
+          example: "eyJraWQiOiJ3bnF6dFN3RzNsQ3FNYVQ5T09QMlVxaG5VeU5wVmhnc203SzBKanFKcnh3PSIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiIxMWVmZmU5Ny0wMGE2LTRhODktOTgwNy05MWU0ZWFhZmFlMzYiLCJhdWQiOiI2bWl1MTkzdWw4Zzk1MHNzdDY0MjQ5djRpbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJldmVudF9pZCI6IjBiZjUwMmQwLWYzYmMtNDMzOS1iODc0LTgzNDVlMjY2NzY3ZiIsInRva2VuX3VzZSI6ImlkIiwiYXV0aF90aW1lIjoxNTc5MjkyMTI0LCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAudXMtd2VzdC0yLmFtYXpvbmF3cy5jb21cL3VzLXdlc3QtMl9KOGM3QkhLMUYiLCJjb2duaXRvOnVzZXJuYW1lIjoiMTFlZmZlOTctMDBhNi00YTg5LTk4MDctOTFlNGVhYWZhZTM2IiwiZXhwIjoxNTc5Mjk1NzI0LCJpYXQiOjE1NzkyOTIxMjQsImVtYWlsIjoibWFyY2VsYUBwYWdvZmFjaWwuY2wifQ.Yf3jHXjxQ3sS3BysTbFVqdf2_DWGSHtFq2MLcgIFvY2q81H9jobap1Jn47An4rpHeIJB_wwFUxBHifmCBGApsuTLifpvVYUB9f3HYA4341bXEjf-hwqOVJ0RncSlseY6ixdaPvJ6XYllXV491VB38y_GS1AYpiGM5ugN6CdzdLH8eU_EABXh4hbjcMKeT6o1UPZe7MFQyu709U6sMJZgOzVeMXMfAmLOlPXG_FmNZPLwFIYNwVRV8OC-rTncUiVD-mabVjUBE00MKI3ZbLLsUYueMauRwuuaBdF3wYpQnIxhWmGiQnkBWMkzmxQZ4Jo1xFTQaff-FaW6VR9jsZGYWg"
+        expires_in:
+          type: integer
+          description: "Tiempo por el cual el JWT será valido"
+          example: 1579295724
+        token_type:
+          type: string
+          description: "Tipo de Token"
+          example: "Bearer"
+
+    login_response:
+      type: object
+      required: 
+        - access_token_jwt
+        - expires_in
+        - token_type
+      properties:
+        message:
+          $ref: '#/components/schemas/message'
+        error:
+          $ref: '#/components/schemas/error'
+        data:
+          $ref: '#/components/schemas/data_login_response'
+    date:
+      description: "Fecha en formato Año - Mes - Dia <br> Ej: 2019-12-31"
+      type: string
+      format: date
+    timestampUnixSecond:
+      description: "Timestamp de unix en segundos"
+      type: integer
+      maxLength: 10
+    timestampUnixMilisecond:
+      description: "Timestamp de unix en milisegundos"
+      type: integer
+      maxLength: 13
+    currency:
+      description: "Codigo de 3 caracteres para paises. <br><br> Info:<a href='https://en.wikipedia.org/wiki/ISO_4217#Active_codes' target=_blank>ISO_4217</a>"
+      type: string
+      example: "CLP"
+      maxLength: 3
+      minLength: 3
+    country_code: 
+      description: "Codigo de 2 caracteres para paises. <br><br> Info:<a href='https://en.wikipedia.org/wiki/ISO_3166-1#Current_codes'>ISO 3166-1 Alpha2-code</a>"
+      type: string
+      example: "CL"
+      maxLength: 2
+      minLength: 2
+    nullification_status:
+      type: string
+      description: Estado de la anulación
+      example: processing
+      enum:
+        - processing
+        - failed
+        - completed
+    nullification_get:
+      description: "Anulaciones de la transacción"
+      type: array
+      items:
+        type: object
+        properties:
+          verificationToken:
+            $ref: '#/components/schemas/uuid'
+          montoAnulado:
+            $ref: '#/components/schemas/amount'
+          montoDescuento:
+            $ref: '#/components/schemas/amount'
+          date:
+            $ref: '#/components/schemas/date'
+          type:
+            $ref: '#/components/schemas/nullification_type'
+    nullification_type:
+      type: string
+      description: "Tipo de anulación"
+      example: "total"
+      enum: 
+        - "total"
+        - "parcial"
+    errors: 
+      type: array
+      items:
+        type: string
+        description: Mensajes de error
+        example: "No es posible realizar la operación"
+        
+        
+#REQUEST BODIES
+    requestBodyTrx:
+      type: object
+      required: 
+        - x_account_id
+        - x_amount
+        - x_currency
+        - x_reference
+        - x_customer_email
+        - x_url_complete
+        - x_url_cancel
+        - x_url_callback
+        - x_signature
+        - x_shop_country
+        - x_session_id
+      properties:
+        x_account_id:
+          $ref : "#/components/schemas/x_account_id"
+        x_amount:
+          $ref : "#/components/schemas/x_amount"
+        x_currency:
+          $ref: '#/components/schemas/currency'
+        x_reference:
+          $ref : "#/components/schemas/x_reference"
+        x_customer_email:
+          $ref: "#/components/schemas/x_customer_email"
+        x_url_complete:
+          $ref: "#/components/schemas/x_url_complete"
+        x_url_callback:
+          $ref: "#/components/schemas/x_url_callback"
+        x_url_cancel:
+          $ref: "#/components/schemas/x_url_cancel"
+        x_shop_country:
+          $ref: '#/components/schemas/x_shop_country'
+        x_session_id:
+          $ref: "#/components/schemas/x_session_id"
+        x_products:
+          $ref: '#/components/schemas/products'
+        x_billing_details:
+          $ref: '#/components/schemas/billing_details'
+        x_shippment:
+          $ref: '#/components/schemas/shippment'
+        x_document:
+          $ref: '#/components/schemas/document'
+        x_signature:
+          $ref: "#/components/schemas/x_signature"
+    requestBodyNullification:
+      type: object
+      required:
+        - amount
+        - type
+      properties:
+        amount:
+           $ref: "#/components/schemas/amount"
+        type:
+          $ref: "#/components/schemas/nullification_type"
+        nullifyTbk:
+          type: boolean
+          description: Identifica si se desea anular la trasacción en transbank
+          example: false
+
+    requestBodyWebhook:
+      type: object
+      required: 
+        - url
+        - method
+        - webhook
+      properties:
+        url:
+          type: string
+          format: url
+          description: La url que recibirá un POST para notificaciones
+          example: "https://mipagina.cl/myWebhook"
+        method:
+          type: string
+          description: Método HTTP a ser usado durante el callback
+          example: POST
+          enum: 
+            - POST
+            - GET
+        webhook:
+          type: string
+          description: Tipo de webhook
+          example: remittances
+          enum: 
+            - remittances
+
+#RESPONSE BODIES
+
+    responseBodyRemittances:
+      type: object
+      properties:
+        message: 
+          type: string
+          example: Se encontraron los datos
+        data:
+          type: object
+          properties:
+            availableBalance:
+              $ref: '#/components/schemas/amount'
+            remittanceByDate:
+              $ref: '#/components/schemas/remittanceByDate'
+            futureRemittances: 
+              $ref: '#/components/schemas/futureRemittances'
+
+    responseBodyGetTrx:
+      type: object
+      properties:
+        message: 
+          type: string
+          example: Se encontró trx
+        data:
+          type: object
+          properties:
+            idTrx:
+              $ref: '#/components/schemas/idTrx'
+            idService:
+              $ref: '#/components/schemas/idService'
+            orderIdTienda:
+              $ref: '#/components/schemas/idTienda'
+            amount: 
+              $ref: '#/components/schemas/amount'
+            cost: 
+              $ref: '#/components/schemas/cost'
+            email: 
+              $ref: '#/components/schemas/email'
+            authCode: 
+              $ref: '#/components/schemas/authCode'
+            createdAt:
+              $ref: '#/components/schemas/createdAt'
+            updatedAt:
+              $ref: '#/components/schemas/updatedAt'
+            callbackURL:
+              $ref: '#/components/schemas/callbackURL'
+            completeURL:
+              $ref: '#/components/schemas/completeURL'
+            cancelURL:
+              $ref: '#/components/schemas/cancelURL'
+            ip:
+              $ref: '#/components/schemas/ip'
+            browserData:
+              $ref: '#/components/schemas/browserData'
+            source:
+              $ref: '#/components/schemas/source'
+            timestamp:
+              $ref: '#/components/schemas/timestamp'
+            paymentTypeCode:
+              $ref: '#/components/schemas/paymentTypeCode'
+            sharesNumber: 
+              $ref: '#/components/schemas/sharesNumber'
+            responceCode:
+              $ref: '#/components/schemas/responceCode'
+            vci:
+              $ref: '#/components/schemas/vci'
+            abonos:
+              $ref: '#/components/schemas/abonos'
+            status: 
+              $ref: '#/components/schemas/status'
+
+    responseBodyNullification:
+      type: object
+      properties:
+        message: 
+          $ref: '#/components/schemas/message'
+        data:
+          type: object
+          properties:
+            verificationToken:
+              $ref: '#/components/schemas/uuid'
+
+#SECURITY SCHEMES        
+  securitySchemes:
+    JWTToken:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      bearerFormat: JWT    # optional, arbitrary value for documentation purposes
+    
+    Token:
+      type: apiKey
+      name: Authorization
+      in: header
+
+  
+
+
+# 2) Apply the security globally to all operations
+#security:
+#  - JWTToken: []         # use the same name as above
+  responses:
+    UnauthorizedError:
+      description: Access token is missing or invalid
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Unauthorized
+              errors:
+                type: array
+                items: {}
+              data:
+                type: object
+    UnauthorizedLoginError:
+      description: Invalid user name or password
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Invalid user name or password
+              errors:
+                type: array
+                items: {}
+              data:
+                type: object
+    BadRequestError:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Falta uno de los parametros
+              errors:
+                type: array
+                items: {}
+              data:
+                type: object  
+    ForbiddenError:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Sin permisos y/o acceso prohibido
+              errors:
+                type: array
+                items: {}
+              data:
+                type: object
+    JWTUnauthorized:
+      description: JWT Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: JWT no autorizado
+              errors:
+                type: array
+                items: {}
+              data:
+                type: object
+    NotFoundError:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Recurso no encontrado
+              errors:
+                type: array
+                items: {}
+              data:
+                type: object
+    InternalError:
+      description: Internal Error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Error interno
+              errors:
+                type: array
+                nullable: true
+                items:
+                  type: string
+              data:
+                type: object
+                nullable: true
+    Conflict:
+      description: Recurso ya existe o hay un conflicto
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Recurso ya existe o hay un conflicto
+              errors:
+                type: array
+                items: {}
+              data:
+                type: object
+x-aws-api-id: '6gkh9asu90'

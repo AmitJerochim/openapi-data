@@ -2,8 +2,9 @@
 For my bachelor thesis I am going to analyze an high amount of openAPI documents.
 This repository contains data I collected from swaggerhub running a crawler on it. 
 
-[The code for the crawler is published in the linked repository](https://gitlab.tubit.tu-berlin.de/amit88/swaggerhub-crawler)
-Notice that the data in this repository is raw data which had only a first syntax validation. 
+[The code for the crawler is published in the linked repository.](https://gitlab.tubit.tu-berlin.de/amit88/swaggerhub-crawler)
+
+### Notice that the data in this repository is raw data which had only a first syntax validation. 
 
 
 

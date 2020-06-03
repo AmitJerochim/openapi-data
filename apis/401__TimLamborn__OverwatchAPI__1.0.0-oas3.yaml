@@ -1,0 +1,143 @@
+openapi: 3.0.0
+info:
+  description: Public facing Overwatch API
+  version: "1.0.0-oas3"
+  title: Overwatch API
+  contact:
+    email: tim.lamborn@infact.co.nz
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: developers
+    description: Operations available to regular developers
+paths:
+  /dataquery:
+    get:
+      tags:
+        - developers
+      summary: Customisable query of stored data from an overwatch vessel
+      operationId: dataQuery
+      parameters:
+        - in: query
+          name: code
+          description: API authentication code
+          schema:
+            type: string
+            format: byte
+        - in: query
+          name: vessel
+          description: Vessel identifier
+          schema:
+            type: string
+            example: '00010'
+        - in: query
+          name: source
+          description: Data source to query
+          schema:
+            type: string
+            enum: ['G', 'S', '1A', '2A', '1B', '2B']
+            example: '1A'
+        - in: query
+          name: start
+          description: |
+            Inclusive time from which to begin the query.
+            Round to 10 minute blocks when possible to take advantage of file chunking.
+          schema:
+            type: string
+            format: date-time
+            example: '2019-12-10T02:00:00'
+        - in: query
+          name: end
+          description: |
+            Exclusive time at which to end the query.
+            Defaults to 10 min past the start time.
+            Round to 10 minute blocks when possible to take advantage of file chunking.
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: columns
+          description: |
+            Comma separated list of column names to include in the query. "Time" is always included for JSON and CSV output formats.
+            The available column for CAN sources may include "time", "data", "length", "id", "xid", "nil", "bin" "d0"-"d7".
+            The CAN columns may also include advanced parameterised columns which are not documented here.
+            Columns are currently ignored for text based source.
+          required: false
+          schema:
+            type: string
+            example: "id,data"
+        - in: query
+          name: aggregate
+          description: Aggregation method to apply on the returned data
+          required: false
+          schema:
+            type: string
+            enum: ["none", "first"]
+            default: "none"
+        - in: query
+          name: interval
+          description: Interval to apply the aggregation methods over. This is required if an aggregation option is supplied.
+          required: false
+          schema:
+            type: string
+            example: "00:00:10.0"
+        - in: query
+          name: format
+          description: Data format to return the data in. Few columns correctly convert directly into binary currently now.
+          required: false
+          schema:
+            type: string
+            enum: ["json", "csv", "bin", "raw"]
+            default: "json"
+        - in: query
+          name: compress
+          description: Optional compression method to apply to the returned data
+          required: false
+          schema:
+            type: string
+            enum: ["none", "zip", "7z", "gz", "rar", "bz2"]
+        - in: query
+          name: profiling
+          description: Optionally return a header with profiling information
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - in: query
+          name: opt
+          description: String of flags to modify query parameters. May include 'L' to specify legacy files, or 'U' to specify unzipped files for parsing leagacy data.
+          deprecated: true
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '204':
+          description: No data found in this time range
+        '400':
+          description: Bad input parameter
+        '401':
+          description: Authorisation invalid
+  /columninfo:
+    get:
+      tags:
+        - developers
+      summary: Returns a json document describing the available columns for use in the dataquery columns query parameter.
+      operationId: columnInfo
+      parameters:
+        - in: query
+          name: code
+          description: API authentication code
+          schema:
+            type: string
+            format: byte
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Authorisation invalid
+servers:
+  - url: 'https://overwatchfunctionsapp.azurewebsites.net/api/'

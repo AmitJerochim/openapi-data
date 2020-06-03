@@ -1,0 +1,242 @@
+openapi: 3.0.0
+servers:
+# Added by API Auto Mocking Plugin
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/stefanzueger/GalaxyGate/1.0.1
+info:
+  description: 
+    |
+    This is a proposal on how the Wanzl Galaxy Gate FMCU API could look like for the FutureStore project.<br/>Open points:
+    - This is just a suggestion and open for inputs & improvements
+    - Is there some other state/information of the gate that could be helpful for our controller that we should expose in this API?
+  version: "1.0.1"
+  title: Galaxy Gate API
+  contact:
+    email: stefan.zueger@zuehlke.com
+tags:
+  - name: Gate
+    description: Calls related to the gate
+  - name: Presence Detection
+    description: Calls related to the presence dection
+  - name: Checkout Display
+    description: Calls related to the checkout display
+paths:
+  /gate/stateIn:
+    get:
+      tags:
+        - Gate
+      operationId: getStateIn
+      summary: Gets the gate state at the entrance.
+      responses:
+        '200':
+          description: state of the gate at the entrance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GateState'
+    post:
+      tags:
+        - Gate
+      operationId: changeStateIn
+      summary: Changes the gate state at the entrance.
+      parameters:
+        - in: query
+          name: gateMode
+          schema:
+            $ref: '#/components/schemas/GateStateEnum'
+      responses:
+        '200':
+          description: state of the gate at the exit
+        '400':
+          description: 'invalid input, object invalid'
+  /gate/stateOut:
+    get:
+      tags:
+        - Gate
+      operationId: getStateOut
+      summary: Gets the gate state at the exit.
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GateState'
+    post:
+      tags:
+        - Gate
+      operationId: changeStateOut
+      summary: Changes the gate state at the exit.
+      parameters:
+        - in: query
+          name: gateState
+          schema:
+            $ref: '#/components/schemas/GateStateEnum'
+      responses:
+        '200':
+          description: state changed successfully
+        '400':
+          description: 'invalid input, object invalid'
+  /gate/operations/openIn:
+    post:
+      tags:
+        - Gate
+      operationId: openIn
+      summary: Opens the gate in entrance direction for a single person.
+      responses:
+        '200':
+          description: gate opening successfully
+  /gate/operations/openOut:
+    post:
+      tags:
+        - Gate
+      operationId: openOut
+      summary: Opens the gate in checkout direction for a single person.
+      responses:
+        '200':
+          description: gate opening successfully
+  /gate/gateLight:
+    post:
+      tags:
+        - Gate
+      operationId: changeGateLight
+      summary: Changes the lights at the entry, exit or door
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GateLight'
+            example: 
+              entryColor: '00ff00'
+              exitColor: 'ff0000'
+              doorColor: '00ff00'
+      responses:
+        '200':
+          description: color changed successfully
+  /gate/barrierposition:
+    get:
+      tags:
+        - Gate
+      operationId: getBarrierPosition
+      summary: Gets the current barrier position.
+      responses:
+        '200':
+          description: position of the barrier
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BarrierPosition'
+  /gate/alarm:
+    get:
+      tags:
+        - Gate
+      operationId: getAlarm
+      summary: Gets the current alarm if there is one.
+      responses:
+        '200':
+          description: gate opening successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GateAlarm'
+  /presencedetection:
+    get:
+      tags:
+        - Presence Detection
+      operationId: getPresenceDetection
+      summary: Gets the current information of the presence detection.
+      responses:
+        '200':
+          description: Presence detection details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresenceDetectionState'
+              example: 
+                presenceIn: false
+                presenceOut: false
+  /checkoutdisplay/show:
+    post:
+      tags:
+        - Checkout Display
+      operationId: showCheckoutDisplayLayer
+      parameters:
+        - in: query
+          name: layerName
+          schema:
+            type: string
+            example: "idle"
+      responses:
+        '200':
+          description: checkout display layer shown successfully
+  /checkoutdisplay/svg:
+    post:
+      tags:
+        - Checkout Display
+      operationId: replaceSvg
+      requestBody:
+        content:
+          image/svg+xml:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: checkout display svg file replaced successfully
+security:
+  - ApiKeyAuth: []
+components:
+  schemas:
+    GateLight:
+      type: object
+      properties:
+        entryColor:
+          type: string
+          description: RGB value of the entry light
+        exitColor:
+          type: string
+          description: RGB value of the exit light
+        doorColor:
+          type: string
+          description: RGB value of the door light
+    GateState:
+      type: object
+      properties:
+        state:
+          $ref: '#/components/schemas/GateStateEnum'
+    GateStateEnum:
+      type: string
+      enum: ["SingleEntry", "Locked", "AutoEntry", "Open"]
+    GateAlarm:
+      type: object
+      properties:
+        alarm:
+          $ref: '#/components/schemas/GateAlarmEnum'
+    GateAlarmEnum:
+      type: string
+      enum: ["NoAlarm", "General", "BMA", "CrawlProtection", "CounterDirectionIn", "CounterDirectionOut", "TailgaitingIn", "TailgatiningOut"]
+    BarrierPosition:
+      type: object
+      properties:
+        barrierPosition:
+          $ref: '#/components/schemas/BarrierPositionEnum'
+    BarrierPositionEnum:
+      type: string
+      enum: ["Closed", "Open1", "Open2", "Busy1a", "Busy1b", "Busy2a", "Busy2b", "Error1", "Error2"]
+    PresenceDetectionState:
+      type: object
+      properties:
+        presenceIn:
+          type: boolean
+          description: defines if a person is currently present at the entrance
+          example: false
+        presenceOut:
+          type: boolean
+          description: defines if a person is currently present at the exit
+          example: false
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key

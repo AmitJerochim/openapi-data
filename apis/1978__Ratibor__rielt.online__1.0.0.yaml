@@ -1,0 +1,378 @@
+openapi: 3.0.0
+info:
+  description: |
+    API for CRM [Rielt Online](http://rielt.online)
+  version: "1.0.0"
+  title: Rielt Online
+  contact:
+    email: vitaliy.mochalov@gmail.com
+servers:
+  - description: Real API
+    url: http://rielt.online/api
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Ratibor/rielt.online/1.0.0
+tags:
+  - name: General
+    description: How to get access token and other...
+  - name: Clients
+    description: Create or search clients
+  - name: Deals
+    description: Create, search or note deals
+paths:
+  /login:
+    post:
+      tags:
+        - General
+      summary: Get access token for other requests
+      operationId: login
+      parameters:
+        - name: email
+          in: query
+          description: User email for authorization in CRM
+          required: true
+          schema:
+            type: string
+        - name: password
+          in: query
+          description: User password for authorization in CRM
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessToken'
+        '403':
+          description: Invalid email or password
+        '422':
+          description: The given data was invalid
+  /clients:
+    post:
+      tags:
+        - Clients
+      summary: Create new client
+      operationId: clientsCreate
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: fio
+          in: query
+          description: Client full name
+          required: true
+          schema:
+            type: string
+        - name: phone
+          in: query
+          description: Client phone in format 7XXXXXXXXXX
+          required: true
+          schema:
+            type: string
+        - name: email
+          in: query
+          description: Client email
+          required: false
+          schema:
+            type: string
+        - name: comment
+          in: query
+          description: Free comment to client
+          required: false
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '403':
+          description: This action is unauthorized
+        '422':
+          description: The given data was invalid
+  /clients/search:
+    get:
+      tags:
+        - Clients
+      summary: Search clients by email and phone
+      description: Returns array of clients
+      operationId: clientsSearch
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: filter
+          in: query
+          description: Filter parameters to search
+          required: true
+          schema:
+            type: object
+            properties:
+              phone:
+                type: string
+                description: Client phone
+              email:
+                type: string
+                description: Client email
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Client'
+        '403':
+          description: This action is unauthorized
+        '422':
+          description: The given data was invalid
+  /deals:
+    post:
+      tags:
+        - Deals
+      summary: Create new deal
+      operationId: dealsCreate
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: deal
+          in: query
+          required: true
+          description: Deal data object
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Deal name
+        - name: client
+          in: query
+          required: true
+          description: Client data object (set ID if client exists or set name and phone (or email) if you want to create client)
+          schema:
+            type: object
+            properties:
+              id:
+                type: integer
+                description: Client ID
+              name:
+                type: string
+                description: Client name
+              phone:
+                type: string
+                description: Client phone (required without email)
+              email:
+                type: string
+                description: Client email (required without phone)
+        - name: user
+          in: query
+          description: User (deal creator) data object
+          schema:
+            type: object
+            properties:
+              id:
+                type: integer
+                description: User ID
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '403':
+          description: This action is unauthorized
+        '422':
+          description: The given data was invalid
+  /deals/search:
+    get:
+      tags:
+        - Deals
+      summary: Search deals by client email and phone
+      description: Returns array of deals
+      operationId: dealsSearch
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: filter
+          in: query
+          description: Filter parameters to search
+          required: true
+          schema:
+            type: object
+            properties:
+              client:
+                type: object
+                properties:
+                  phone:
+                    type: string
+                    description: Client phone
+                  email:
+                    type: string
+                    description: Client email
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '403':
+          description: This action is unauthorized
+        '422':
+          description: The given data was invalid
+  /deals/note:
+    post:
+      tags:
+        - Deals
+      summary: Add comment to deal
+      operationId: dealsNote
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: deal
+          in: query
+          required: true
+          description: Deal ID
+          schema:
+            type: integer
+        - name: content
+          in: query
+          required: true
+          description: Note text (min 20 characters)
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '403':
+          description: This action is unauthorized
+        '422':
+          description: The given data was invalid
+components:
+  schemas:
+    AccessToken:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+        expires_in:
+          type: integer
+    Client:
+      type: object
+      properties:
+        id:
+          type: integer
+        fio:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        comment:
+          type: string
+        user_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+        organization_id:
+          type: integer
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        pid:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        status:
+          type: string
+        avatar:
+          type: string
+        organization_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+        ping_at:
+          type: string
+          format: date-time
+        email_verified_at:
+          type: string
+          format: date-time
+        first_name:
+          type: string
+        last_name:
+          type: string
+        middle_name:
+          type: string
+    Deal:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        client_id:
+          type: integer
+        stage_id:
+          type: integer
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+        stage_reason_id:
+          type: integer
+        client:
+         $ref: '#/components/schemas/Client'
+        user:
+         $ref: '#/components/schemas/User'

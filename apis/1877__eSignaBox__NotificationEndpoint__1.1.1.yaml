@@ -1,0 +1,217 @@
+openapi: 3.0.0
+info:
+  version: "1.1.1"
+  title: 'Endpoint de notificación de eventos de eSignaBox'
+  description: 'API que debe publicar un sistema para ser notificado de los distintos eventos de eSignaBox'
+paths:
+  '/notify':
+    post:
+      operationId: notify
+      tags:
+        - Event Notification
+      summary: Notifica de un evento ocurrido en eSignaBox
+      description: >
+        Entrega un evento al endpoint publicado por el sistema que se integra con eSignaBox.
+        Permite notificar cambios de estado o sucesos ocurridos durante el ciclo de vida de los distintos recursos publicados por la plataforma: circuitos de firma, comunicaciones certificadas, etc.
+      parameters:
+        - name: X-JWS
+          in: header
+          description: >
+            Token JWS de firma de la notificación para asegurar su autenticidad. La comprobación de esta firma no es obligatoria pero si es recomendable. Las claves RSA utilizadas para firma y su comprobación rotan automáticamente de forma periódica.
+            Los pasos para realizar la comprobación son:
+              1. Comprobar el formato del token JWS (existen muchas librerías y sdk que facilitan el trabajo con JWT. https://jwt.io/)
+              2. Extraer el cuerpo del token (formato Base64).
+              3. calcular la suma SHA256 del cuerpo completo de la solicitud http (formato Base64).
+              4. Comprobar que los resultados del paso 2 y 3 coinciden.
+            
+            Por ejemplo:
+              | Elemento | Valor de ejemplo |
+              | -------- | ----- |
+              | __RequestBody__ | {"date":"2019-06-04T07:49:32.594+0000","attempts":1,<br>"service":"circuits","eventData":{"circuitId":"5467","eventType":"finalized",<br>"actor":{"name":"eSigna, Adm.","email":"support@esignabox.com",<br>"identifier":"16258742L"},"circuitData":<br>{"subject":"Documentation pourpose signature circuit","creatorId":1,<br>"createdOn":"2019-06-04T07:47:15.000+0000"}},<br>"metadata":{"groups":["A1","A2","C1"],"id":"7126","user":"652684"}}|
+              | __BASE64(SHA256(RequestBody))__ | RXDt6pvaW+ddaRtERA4nj1+FIIXc7+ZY131K+hJQ4fo= |
+              | __X-JWS Header value (JWS Token)__ |  eyJqa3UiOiJodHRwczpcL1wvZXNpZ25hYm94LmluZGVub3ZhLmV1XC9<br>cL0pXVFB1YmxpY0tleXNldD9raWQ9NjgyMzgyMjc4NjI4NjQzOC01MzBhZ<br>DI1YS05ZTkxLTQyNjEtYjFlNy01NmU3YWY4ZjFiMDgiLCJraWQiOiI2ODIz<br>ODIyNzg2Mjg2NDM4LTUzMGFkMjVhLTllOTEtNDI2MS1iMWU3LTU2ZTdh<br>ZjhmMWIwOCIsImFsZyI6IlJTMjU2In0.UlhEdDZwdmFXK2RkYVJ0RVJBN<br>G5qMStGSUlYYzcrWlkxMzFLK2hKUTRmbz0.LToM9nOXliXkAkWOWZIOJ<br>Xr4Ee6j-o0B328A6fEHzL0k2NLPAHFdQDj1EvqCYsdmn8RYIUUWOcN7l<br>G4VCd_tg0_YVIe5AGhiBeqnrwVSl8_hYUani2aRqwNhkiRcsujSjwzzpyDr<br>PIRr-OtrpzQ2jKTlDqEdODPwFkB7gH-0FALcOB5Ylw-AEE3rtyf3IwUH7Vz<br>5HMFZTIXcg9FQXXn0e4DdTe_4_HOqvj52c3Q66Wgy96VkyVY0qfQN_z4<br>zXlmzwW7nFKkF5zjNWiJLrN-suc9HTS2dqFvfKohLAMr0A9M0f0OJBJXxm<br>7ZkHFK-Hxyn-cUYD7qDYKCYj81iKmrEHQ |
+              | __JWS Token headers__ | {"jku":"https://www.esignabox.com/JWTPublicKeyset","kid":"6823822786286438-530ad25a-9e91-4261-b1e7-56e7af8f1b08","alg":"RS256"} |
+              | __JWS Token Payload__ | RXDt6pvaW+ddaRtERA4nj1+FIIXc7+ZY131K+hJQ4fo= |
+            
+              En este ejmplo puede verse que el resultado de la operación BASE64(SHA256(RequestBody)) coincide con el JWS Token Payload por lo que el token firmado se corresponde con el cuerpo recibido, es decir, no ha habido modificación del contenido del RequestBody y por tanto el mensaje es válido y ha sido enviado por eSignaBox.
+            
+              Para realizar la comprobación del token, hay que utilizar las cabeceras del propio token (JWS Token headers). 
+              |Nombre de cabecera|Descripción|
+              |------------------|-----------|
+              | jku | Indica la URL del KeyStore donde se pueden obtener las claves publicas en formato __JWK__. Dependiendo del entorno del que provenga los valores posibles son: "https://www.esignabox.com/JWTPublicKeyset" para el entorno de producción y "https://esignabox.indenova.eu/JWTPublicKeyset" para el entorno de preproducción. |
+              | kid | Es el identificador de la clave pública utilizada para firmar la notificación. La Clave puede descargarse desde la URL indicada en el parámetro "jku" enviado como parámetro el kid. Ej: https://esignabox.indenova.eu/JWTPublicKeyset?kid=6823822786286438-530ad25a-9e91-4261-b1e7-56e7af8f1b08 |
+              | alg | Algoritmo utilizado para la firma. En este momento "RS256" |
+            __IMPORTANTE:__ Una gestión equilibrada de la rotación de claves (que se realiza diariamente), sería tener un sistema de cache que permitiera no tener que descargar la clave cada vez al mismo tiempo que permitiera actualizarlas cada vez que se recibe un "kid" desconocido. 
+            En la URL apuntada por la cabecera "jku" del token JWS, pueden obtener las claves válidas en cada momento como una lista de JSON Web Keys.
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/Event"
+      responses:
+        '200':
+          description: >
+            Event received
+components:
+  schemas:
+    Event:
+      type: object
+      example: {"date":"2019-06-04T07:49:32.594+0000","attempts":1,"service":"circuits","eventData":{"circuitId":"5467","eventType":"finalized","actor":{"name":"eSigna, Adm.","email":"support@esignabox.com","identifier":"16258742L"},"circuitData":{"subject":"Documentation pourpose signature circuit","creatorId":1,"createdOn":"2019-06-04T07:47:15.000+0000"}},"metadata":{"groups":["A1","A2","C1"],"id":"7126","user":"652684"}}
+      description: Contenido de la notifiación
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: Instante en el que se produce el evento.
+        attempts: 
+          type: integer
+          description: Número de veces que se ha intentado notificar el evento.
+        service:
+          type: string
+          description: servicio del que procede el evento.
+          enum:
+            - "circuits"
+            - "useradmin"
+            - "certifiedcommunications"
+            - "notices"
+        metadata:
+          $ref:  "#/components/schemas/Metadata"
+        eventData:
+          description: Información del evento. Varia dependiendo del servicio que lo ha enviado.
+          oneOf:
+            - $ref: "#/components/schemas/CircuitEvent"
+            - $ref: "#/components/schemas/CertifiedCommunicationEvent"
+    Metadata:
+      description: >
+        Metadatos asociados al objeto del evento (circuito, comunicación certificada, etc.). Por ejemplo, cuando se crea un circuito de firmas desde el API de circuitos, se puede asociar estos metadatos al circuito. La única restricción es que no pueden superar los 256 caracteres de longitud, por lo demás, puede utilizarse el formato que se desee (JSON, XML, CSV, texto plano).<br>
+        Los nombres de campo elementId y groupId son solo ejemplos de uso de este valor que permitirían al sistema integrado identificar de forma sencilla el objeto de la notificación en sus sistema.
+      type: object
+      properties:
+        elementId:
+          type: string
+          description: Identificador del elemento en el sistema integrado.
+        groupId:
+          type: string
+          description: Identificador del grupo al que pertenece el elemento en el sistema integrado.
+      additionalProperties: true
+    
+    Actor:
+      description: >
+        si está presente, indíca quién llevó a cabo la acción que provocó el evento que se notifica. Por ejemplo, en una notificación de rechazo de firma ("eventType":"rejected") sería el firmante, mientras que en una notificación del cancelación de circuito ("eventType":"cancelled") se trataría del propietario/iniciante del circuito.
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre completo del actor.
+        email:
+          type: string
+          description: Email del actor.
+        telephone:
+          type: string
+          description: Email del actor.
+        identifier:
+          type: string
+          description: NIF del actor
+      required:
+        - email
+    CircuitEvent:
+      description: Información de los eventos del servicio de Circuitos de firma.
+      type: object
+      properties:
+        circuitId:
+          type: string
+          description: identificador del circuito de firmas en eSignaBox.
+        eventType:
+          type: string
+          enum:
+            - started
+            - signed
+            - cancelled
+            - rejected
+            - finalized
+            - sent_to_trash
+            - signer_notification_sent
+            - signer_notification_delivered
+            - signer_notification_accessed
+            - signer_notification_error
+            - signer_notification_resent
+        actor:
+          $ref: "#/components/schemas/Actor"
+        motivation:
+          type: string
+          description: >
+            Si está presente, indica el motivo que expresó el actor para llevar a cabo la acción que se notifica.
+        circuitData:
+          $ref: "#/components/schemas/CircuitData"
+      required:
+        - circuitId
+        - eventType
+        - circuitData
+    CircuitData:
+      description: Datos básicos del circuito sobre el que se notifica el evento.
+      type: object
+      properties:
+        subject:
+          type:  string
+        creatorId:
+          type: integer
+        createdOn:
+          type: string
+          format:  date-time
+          description: Fecha de creación del circuito
+      required:
+        - subject
+        - creatorId
+        - createdOn
+    CertifiedCommunicationEvent:
+      description: Información de los eventos del servicio de comunicaciones certificadas.
+      type: object
+      properties:
+        communicationId:
+          type: string
+          description: identificador de la comunicación certificada en eSignaBox.
+        eventId:
+          type: integer
+          description: identificador del evento en eSignaBox. Puede utilizarse para asegurar una ordenación correcta de los eventos en el sistema remoto. Si un evento tiene un eventId menor que otro, es seguro que se registró antes.
+        eventType:
+          type: string
+          enum:
+            - sent
+            - error_sending
+            - delivered_to_destination_server
+            - delivered_to_inbox
+            - accessed
+            - withought_delivery_information
+            - deleted
+            - communication_act_ready
+        actor:
+          $ref: "#/components/schemas/Actor"
+        motivation:
+          type: string
+          description: >
+            Si está presente, indica el motivo que expresó el actor para llevar a cabo la acción que se notifica.
+        communicationData:
+          $ref: "#/components/schemas/CommunicationData"
+      required:
+        - communicationId
+        - eventType
+        - communicationData
+    CommunicationData:
+      description: Datos básicos de la comunicación sobre la que se notifica el evento.
+      type: object
+      properties:
+        subject:
+          type:  string
+        sender:
+          type: string
+          format: email
+        sentAt:
+          type: string
+          format:  date-time
+          description: Fecha de creación del circuito
+      required:
+        - subject
+        - sender
+        - sentAt

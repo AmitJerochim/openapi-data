@@ -1,0 +1,440 @@
+openapi: 3.0.0
+info:
+  description: |
+    Описание спецификации для сохранения в КСАСК "ProfITsoft" договора добровольного страхования здоровья на случай болезни.
+  version: "1.0.0"
+  title: 'Сохранение договора добровольного страхования здоровья на случай болезни'
+  termsOfService: 'http://swagger.io/terms/'
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: health
+    description: 'Сохранение договора добровольного страхования здоровья на случай болезни'
+paths:
+  /bo/app/rest/api/contract/healthInsurance:
+    post:
+      tags:
+        - health
+      summary: Сохранение договора
+      operationId: saveContract
+      
+      requestBody:
+        description: Данные договора
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractRequest'
+              
+      responses:
+        200:
+          description: Успешное или неуспешное сохранение договора в статусе "Предложение" или "Заключен".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractCreationResponse'
+        400:
+          description: 'Некорректные параметры запроса'
+        401:
+          description: 'Неавторизирован'
+        403:
+          description: 'Доступ запрещён'
+        404:
+          description: 'Ресурс не найден'
+        500:
+          description: 'Внутрення ошибка сервера'
+          
+      security:
+        - bearerAuth: []
+        
+components:
+  schemas:
+    ContractRequest:
+      type: object
+      properties:
+        salePointId:
+          type: string
+          description: 'Код соответствия аквизитора (Используется для таблицы "Настройка кода соответвия Аквизитора" в API. При этом должна быть настройка поля "Аквизитор" со значением "Аквизитор по коду соответствия". Если соответствия не найдено, аквизитор берется из онлайн-продукта.). Также по коду аквизитора можно настраивать тарифный план и канал продаж'
+        contractNumber:
+          type: string
+          description: 'Номер договора (поле обязательно для бланкового договора)'
+        sign:
+          $ref: '#/components/schemas/ContractSign'
+        dateSign:
+          type: string
+          format: date
+          description: >-
+            Дата подписания договора (допустимые форматы: 'dd/MM/yyyy',
+            'dd.MM.yyyy'). Если дата подписания не заполнена, будет установлена текущая дата
+        dateBegin:
+          type: string
+          format: date
+          description: >-
+            Дата начала действия договора (допустимые форматы: 'dd/MM/yyyy',
+            'dd.MM.yyyy')
+        dateEnd:
+          type: string
+          format: date
+          description: >-
+            Дата окончания действия договора (допустимые форматы: 'dd/MM/yyyy',
+            'dd.MM.yyyy')
+        paymentSum:
+          type: object
+          description: 'Страховой платеж'
+          allOf:
+            - $ref: '#/components/schemas/CurrencyFieldValue'
+        objects:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractInsObjectRequestDto'
+        client:
+          $ref: '#/components/schemas/CagentRequestDto'
+      required:
+        - sign
+        - dateBegin
+        - dateEnd
+        - paymentSum
+        - objects
+        - client
+        
+    ContractSign:
+      type: string
+      enum: [PRIMARY, REISSUED, DUPLICATE, PROLONGED, CROSS_SALES]
+      description: >
+              Признак договора:
+               * `PRIMARY` - Первичный
+               * `REISSUED` - Переоформленный
+               * `DUPLICATE` - Дубликат
+               * `PROLONGED` - Пролонгированный
+               * `CROSS_SALES` - Кросс-продажи
+               
+              По умолчанию: `PRIMARY`
+        
+    CagentRequestDto:
+      type: object
+      properties:
+        personType:
+          $ref: '#/components/schemas/PersonType'
+        person:
+          $ref: '#/components/schemas/PersonRequestDto'
+        inn:
+          type: string
+          description: 'ИНН'
+        innRefused:
+          type: boolean
+          description: "Отказался от ИНН"
+          default: false
+        contact:
+          $ref: '#/components/schemas/ContactRequestDto'
+        identificationCard:
+          $ref: '#/components/schemas/IdentificationCardRequestDto'
+        address:
+          $ref: '#/components/schemas/AddressRequestDto'
+        resident:
+          type: boolean
+          default: true
+          description: 'Признак резидента. По умолчанию: true'
+      required:
+        - personType
+        
+    PersonType:
+      type: string
+      enum:
+        - NATURAL
+        - PRIVATE
+        - LEGAL
+      default: NATURAL
+      description: |
+        Тип контрагента:
+         * `NATURAL` - физическое лицо
+         * `PRIVATE` - СПД-ФЛ
+         * `LEGAL` - юридическое лицо
+         
+        По умолчанию: `NATURAL`
+        
+    PersonRequestDto:
+      description: 'Личные данные (обязательны, если контрагентом является физическое лицо)'
+      type: object
+      properties:
+        surname:
+          type: string
+          description: 'Фамилия'
+        name:
+          type: string
+          description: 'Имя'
+        patronymic:
+          type: string
+          description: 'Отчество'
+        birthDate:
+          type: string
+          format: date
+          description: 'Дата рождения (допустимые форматы: ''dd/MM/yyyy'', ''dd.MM.yyyy'')'
+      required:
+        - surname
+        - name
+        - birthDate
+        
+    ContactRequestDto:
+      description: 'Контактные данные'
+      type: object
+      properties:
+        email:
+          type: string
+          description: 'Адрес электронной почты'
+        phone:
+          $ref: '#/components/schemas/PhoneRequestDto'
+      required:
+        - phone
+        
+    PhoneRequestDto:
+      description: 'Номер телефона'
+      type: object
+      properties:
+        countryCode:
+          type: string
+          description: 'Код страны'
+        number:
+          type: string
+          description: 'Номер телефона'
+        
+    IdentificationCardRequestDto:
+      description: 'Данные документа, удостоверяющего личность'
+      type: object
+      properties:
+        serie:
+          type: string
+          description: 'Серия документа'
+        number:
+          type: string
+          description: 'Номер документа'
+        issueDate:
+          type: string
+          format: date
+          description: 'Дата выдачи документа (допустимые форматы: ''dd/MM/yyyy'', ''dd.MM.yyyy'')'
+        issuedBy:
+          type: string
+          description: 'Кем выдан документ'
+        docTypeCode:
+          $ref: '#/components/schemas/DocTypeCode'
+        
+    DocTypeCode:
+      type: string
+      enum: [PASSPORT, ID_PASSPORT, DRIVING_LICENSE, PENSION_CERTIFICATE, E_PENSION_CERTIFICATE, DISABILITY_CERTIFICATE, VETERAN_CERTIFICATE, CHERNOBYL_CERTIFICATE, EXTERNAL_PASSPORT, FOREIGN_PASSPORT, RESIDENCE_PERMIT, REGISTRATION_CARD, BIRTH_CERTIFICATE, ZPDR_FOP]
+      description: |
+        Код типа документа, удостоверяющего личность:
+               * `PASSPORT` - паспорт
+               * `ID_PASSPORT` - ID-паспорт
+               * `DRIVING_LICENSE` - водительское удостоверение
+               * `PENSION_CERTIFICATE` - пенсионное удостоверение
+               * `E_PENSION_CERTIFICATE` - электронное пенсионное удостоверение
+               * `DISABILITY_CERTIFICATE` - удостоверение об инвалидности
+               * `VETERAN_CERTIFICATE` - удостоверение участника войны
+               * `CHERNOBYL_CERTIFICATE` - чернобыльское удостоверение
+               * `EXTERNAL_PASSPORT` - заграничный паспорт
+               * `FOREIGN_PASSPORT` - иностранный паспорт
+               * `RESIDENCE_PERMIT` - вид на жительство
+               * `REGISTRATION_CARD` - регистрационный талон
+               * `BIRTH_CERTIFICATE` - свидетельство о рождении
+               * `ZPDR_FOP` - запись о проведении государственной регистрации ФЛП
+         
+    AddressRequestDto:
+      description: 'Данные адреса'
+      type: object
+      properties:
+        country:
+          type: string
+          description: 'Страна (ISO-коды страны в двухбуквенной системе)'
+        region:
+          $ref: '#/components/schemas/Region'
+        area:
+          type: string
+          description: 'Район'
+        town:
+          type: string
+          description: 'Населенный пункт'
+        street:
+          type: string
+          description: 'Улица'
+        house:
+          type: string
+          description: 'Номер дома'
+        addressImported:
+          type: string
+          description: 'Адрес в неструктурированном виде'
+      required:
+        - town
+        - street
+        - house
+        
+    Region:
+      type: string
+      enum:
+        - NONE_REGION
+        - KRIM_REGION
+        - VINNITSA_REGION
+        - VOLIN_REGION
+        - DNEPROPETROVSK_REGION
+        - DONEZK_REGION
+        - ZHITOMIR_REGION
+        - ZAKARPATIE_REGION
+        - ZAPOROZIE_REGION
+        - IVANOFRANKOVSK_REGION
+        - KIEV_REGION
+        - KIROVOGRAD_REGION
+        - LUGANSK_REGION
+        - LVOV_REGION
+        - NIKOLAEV_REGION
+        - ODESSA_REGION
+        - POLTAVA_REGION
+        - ROVEN_REGION
+        - SUMI_REGION
+        - TERNOPOL_REGION
+        - KHARKOV_REGION
+        - KHERSON_REGION
+        - KHMELNIZK_REGION
+        - CHERKASSI_REGION
+        - CHERNIGOV_REGION
+        - CHERNOVZI_REGION
+      description: |
+        Область:
+         * `NONE_REGION` - не задана
+         * `KRIM_REGION` - Автономная Республика Крым
+         * `VINNITSA_REGION` - Винницкая
+         * `VOLIN_REGION` - Волынская
+         * `DNEPROPETROVSK_REGION` - Днепропетровская
+         * `DONEZK_REGION` - Донецкая
+         * `ZHITOMIR_REGION` - Житомирская
+         * `ZAKARPATIE_REGION` - Закарпатская
+         * `ZAPOROZIE_REGION` - Запорожская
+         * `IVANOFRANKOVSK_REGION` - Ивано-Франковская
+         * `KIEV_REGION` - Киевская
+         * `KIROVOGRAD_REGION` - Кировоградская
+         * `LUGANSK_REGION` - Луганская
+         * `LVOV_REGION` - Львовская
+         * `NIKOLAEV_REGION` - Николаевская
+         * `ODESSA_REGION` - Одесская
+         * `POLTAVA_REGION` - Полтавская
+         * `ROVEN_REGION` - Ровенская
+         * `SUMI_REGION` - Сумская
+         * `TERNOPOL_REGION` - Тернопольская
+         * `KHARKOV_REGION` - Харьковская
+         * `KHERSON_REGION` - Херсонская
+         * `KHMELNIZK_REGION` - Хмельницкая
+         * `CHERKASSI_REGION` - Черкасская
+         * `CHERNIGOV_REGION` - Черниговская
+         * `CHERNOVZI_REGION` - Черновицкая
+         
+    ContractInsObjectRequestDto:
+      description: 'Застрахованный объект'
+      type: object
+      properties:
+        objectCode:
+          type: string
+          description: 'Код застрахованного объекта (insuredPerson)'
+        insuredPerson:
+          $ref: '#/components/schemas/ContractInsuredPersonDataRequestDto'
+        realPremie_sum:
+          $ref: '#/components/schemas/CurrencyFieldValue'
+      required:
+        - objectCode
+        - insuredPerson
+        - realPremie_sum
+        
+    ContractInsuredPersonDataRequestDto:
+      description: 'Застрахованное лицо'
+      type: object
+      properties:
+        personType:
+          type: string
+          enum:
+            - NATURAL
+          default: NATURAL
+          description: |
+            Тип контрагента:
+              * `NATURAL` - физическое лицо
+            По умолчанию: `NATURAL`
+        person:
+          $ref: '#/components/schemas/PersonRequestDto'
+        inn:
+          type: string
+          description: 'ИНН'
+        innRefused:
+          type: boolean
+          description: "Отказался от ИНН"
+          default: false
+        contact:
+          $ref: '#/components/schemas/ContactRequestDto'
+        identificationCard:
+          $ref: '#/components/schemas/IdentificationCardRequestDto'
+        address:
+          $ref: '#/components/schemas/AddressRequestDto'
+        resident:
+          type: boolean
+          default: true
+          description: 'Признак резидента. По умолчанию: true'
+      required:
+        - personType
+        - person
+        - address
+         
+    CurrencyFieldValue:
+      description: 'Класс, предназначенный для хранения значений в валюте'
+      properties:
+        value:
+          type: number
+          format: double
+          description: 'Сумма'
+        type:
+          $ref: '#/components/schemas/CurrencyType'
+         
+    CurrencyType:
+      type: string
+      enum:
+        - UAH
+        - USD
+        - EUR
+      description: |
+        Валюта:
+         * `UAH` - гривна
+         * `USD` - доллар США
+         * `EUR` - евро
+         
+    ResponseStatus:
+      type: string
+      enum:
+        - SUCCESS
+        - ERROR
+      description: |
+        Статус ответа:
+         * `SUCCESS` - успешное выполнение
+         * `ERROR` - ошибка выполнения
+         
+    ContractCreationEntityType:
+      type: string
+      enum:
+        - CONTRACT
+        - ORDER
+      description: |
+        Сущность:
+         * `CONTRACT` - договор
+         * `ORDER` - заказ
+         
+    ContractCreationResponse:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/ResponseStatus'
+        responseMessage:
+          type: string
+          description: 'Текстовое сообщение о результате операции'
+        entity:
+          $ref: '#/components/schemas/ContractCreationEntityType'
+        id:
+          type: string
+          description: 'Идентификатор сущности'
+        requestContractNumber:
+          type: string
+          description: 'Номер договора из запроса'
+      required:
+        - status

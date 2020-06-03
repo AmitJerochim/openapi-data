@@ -1,0 +1,1294 @@
+openapi: 3.0.0
+info:
+  version: "1.0.2"
+  title: 'SevenBee App'
+  description: 'API for SevenBee Application'
+  
+servers:
+  - url: https://example.io/api/v1.0.1
+
+tags:
+  - name: Access Management
+    description: Actions for that can be taken to login and logout of the app
+  
+  - name: User Management
+    description: User lifecycle actions
+    
+  - name: Property Management
+    description: Property lifecycle actions
+
+paths:
+  /no-auth/user/register:
+    post:
+      tags: 
+        - User Management
+      summary: Register a new user
+      description: Registers a new user on SevenBee, does not require authentication
+      requestBody:
+        $ref: '#/components/requestBodies/RegisterUser'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserRegistered'
+        '400':
+          description: Error validating request body.
+        '409':
+          description: Email Exists.
+          content:
+            text/plain:
+              schema:
+                type: string
+              
+  /login:
+    post:
+      tags: 
+        - Access Management
+      description: Login a registered user and creates a persistent server session
+      summary: Authenticate a user for the api
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: 
+                - email
+                - password
+                - client_id
+                - client_secret
+                - grant_type
+              properties:
+                username:
+                  type: string
+                  description: email address of user (not username!)
+                password:
+                  type: string
+                client_id:
+                  type: string
+                  description: Use 'app' here
+                client_secret:
+                  type: string
+                  description: Use 'null' here
+                grant_type:
+                  type: string
+                  description: Use 'password' here
+              example:
+                username: jane@example.com
+                password: strong_password
+                client_id: app
+                client_secret: null
+                grant_type: password
+                
+      responses:
+        '200':
+          description: Successfully authenticated user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: 
+                    type: boolean
+                  message:
+                    type: string
+              example:
+                success: true
+                message: Login OK
+            
+          headers:
+            Access-Control-Allow-Credentials: 
+              schema:
+                type: boolean
+            Access-Control-Allow-Origin: 
+              schema:
+                type: string
+            Connection: 
+              schema:
+                type: string
+            Content-Type: 
+              schema:
+                type: string
+            Date: 
+              schema:
+                type: string
+                format: date-time
+            ETag:
+              schema:
+                  type: string
+            set-cookie: 
+              schema:
+                type: string
+                description: Authentication cookie
+            Strict-Transport-Security: 
+              schema:
+                type: string
+                description: max-age for cookie
+            Transfer-Encoding: 
+              schema:
+                type: string
+            Vary: 
+              schema:
+                type: string
+            X-Content-Type-Options:
+              schema:
+                type: string
+            X-DNS-Prefetch-Control:
+              schema:
+                type: string
+            X-Download-Options: 
+              schema:
+                type: string
+            X-Frame-Options: 
+              schema:
+                type: string
+            X-XSS-Protection: 
+              schema:
+                type: string
+                description: Confirming XSS protection
+        '401':
+          description: Username and password provided are invalid
+  /logout:
+    get:
+      tags:
+        - Access Management
+      description: Logout of the api and end persistent server session
+      summary: Logout of the api
+      responses:
+        '200':
+          description: Logged out successfully
+          
+  /no-auth/user/forgotpw:
+    post:
+      tags: 
+        - User Management
+      summary: Password Reset
+      description: Sends an email with instructions on resetting password
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email: 
+                  type: string
+              example:
+                email: jane@example.com
+      responses:
+        '200':
+          description: Password reset instructions sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                example:
+                  success: true
+                  message: passwordResetSuccessful
+        '400':
+          description: Error validating request body.
+        '404':
+          description: Email does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: 
+                    type: boolean
+                  message:
+                    type: string
+                example:
+                  success: true
+                  message: userNoExist
+                  
+  /user/invite:
+    post:
+      tags: 
+        - User Management
+      summary: Invite a user to a property and/or SevenBee
+      description: User is invited to specified property if the user is already in SevenBee or a related account is created in SevenBee for the email if not
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - property
+                - invited_role
+              properties:
+                email: 
+                  type: string
+                property:
+                  type: string
+                invited_role: 
+                  type: string
+                  enum: 
+                    - landlord
+                    - tenant
+                    - agent
+                invitation_message:
+                  type: string
+                  description: A custom message from the user to the invitee
+              example:
+                email: tenant@example.com
+                property: 5eb3b795b54586c2a96bb155
+                invited_role: tenant
+                invitation_message: Please join me at 221b Baker street on the SevenBee app
+      responses:
+        '200':
+          description: User exists and invited to property successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: object
+                    properties: 
+                      email:
+                        type: string
+                example:
+                  success: true
+                  message: 
+                    email: tenant@example.com
+        '201':
+          description: User does not exist and invited to join SevenBee and property successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: object
+                    properties: 
+                      email:
+                        type: string
+                example:
+                  success: true
+                  message: 
+                    email: tenant@example.com
+        '400':
+          description: Error validating request body.
+        '409':
+          description: Already a contact in this property
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: 
+                    type: boolean
+                  message:
+                    type: string
+                example:
+                  success: true
+                  message: contact
+  /user/getuserbyemail:
+    get:
+      tags: 
+        - User Management
+      summary: Gets logged in user's details by email
+      description: User details are retrieved using email provided. This is useful when the user ID is not present on the client, e.g. during login
+      parameters:
+        - in: query
+          name: email
+          required: true
+          schema:
+            type: string 
+      responses:
+        '200':
+          $ref: '#/components/responses/GetUserByEmail'
+        '400':
+          description: Error validating request body.
+        
+  /user/info:
+    get:
+      tags: 
+        - User Management
+      summary: Gets logged in user's details by User ID
+      description: Get info for user account information using the user ID
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: string
+          required: true
+        - in: query
+          name: _
+          schema:
+            type: string
+          required: false
+      responses:
+        '200':
+          $ref: '#/components/responses/UserInfo'
+        '400':
+          description: Error validating request body.
+    put:
+      tags:
+        - User Management
+      summary: Update user account information
+      description: Updates logged in user's account information
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId: 
+                  type: string
+                  description: User Id
+                id:
+                  type: string
+                  description: User Id
+                password:
+                  type: string
+                  description: Only send this when password change is required
+                hiddenPassword:
+                  type: string
+                  description: Only send this if password change is required
+                username: 
+                  type: string
+                  minLength: 3
+                email: 
+                  type: string
+                phone:
+                  type: string
+                  minLength: 5
+              example:
+                userId: 5e447a5fb57af354c531239b
+                id: 5e447a5fb57af354c531239b
+                password: password
+                hiddenPassword: password
+                username: walt whitman
+                phone: "+447412345678"
+                
+      responses:
+        '200':
+          $ref: '#/components/responses/UserInfo'
+        '400':
+          description: Error validating request body.
+    delete:
+      tags: 
+        - User Management
+      summary: Deletes a user's account from SevenBee
+      description: Account information is anonymised
+      parameters:
+      - in: query
+        name: userId
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Account deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: 
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 'account deleted'
+        '400':
+          description: Error validating request body.
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: 
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "account not found"
+                    
+  
+  /user/setAvatar:
+    put:
+      tags:
+        - User Management
+      summary: Set an Avatar for a user
+      description: Attaches a Media entity to a user's profile as an avatar for logged in user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileId
+              properties:
+                fileId: 
+                  type: string
+                  description: Media File Id
+                  example: 5e447b1ab57af354c53123a0
+      responses:
+        '200':
+          description: Avatar set successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: 
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    description: URL of avatar file
+                    example: https://bucket.s3.eu-west-2.amazonaws.com/5e447a5fb57af354c531239b/attachments-1587108532447.jpg
+          
+        '400':
+          description: Error validating request body.
+        
+  /user/notificationToken:
+    put:
+      tags:
+        - User Management
+      summary: Set token for a user's push notifications
+      description: Set a Firebase / Apple notification token for a user's push notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - platform
+              properties:
+                token: 
+                  type: string
+                platform:
+                  type: string
+                  enum:
+                    - android
+                    - ios
+      responses:
+        '200':
+          description: Token added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: 
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 'token added'
+        '400':
+          description: Error validating request body.  
+  
+  /user/removeProperty:
+    post:
+      tags:
+        - User Management
+      summary: Removes a user from a property
+      description: Removes userToRemoveId that is provided in request or remove logged userId if no userToRemoveId is provided.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - propertyId
+              properties:
+                propertyId: 
+                  type: string
+                  example: 5e447b1ab57af354c53123a0
+                userToRemove:
+                  type: string
+                  example: 5e447a5fb57af354c531239b
+      responses:
+        '200':
+          description: User Removed from Property
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: 
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 'removed'
+        '400':
+          description: Error validating request body.
+        '403':
+          description: Access denied for tenant removing others
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: 
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Access denied for tenant removing others'
+                    
+  /property/add:
+    post:
+      tags:
+        - Property Management
+      summary: Add a new property to SevenBee
+      description: Adds a new property to SevenBee for a user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address_line1
+                - postcode
+                - role
+                - town
+                - type
+                - userId
+              properties:
+                address_line1:
+                  type: string
+                  example: 221b Baker Street
+                postcode: 
+                  type: string
+                  example: NW1 6XE
+                role: 
+                  type: string
+                  description: role of this user in the property
+                  enum:
+                    - tenant
+                    - agent
+                    - landlord
+                town: 
+                  type: string
+                  example: London
+                type:
+                  type: string
+                  enum:
+                    - residential
+                    - commercial
+                userId: 
+                  type: string
+                  example: 5e447a5fb57af354c531239b
+      
+      responses:
+        '201':
+          $ref: '#/components/responses/PropertyAdded'
+        '400':
+          description: Error validating request body.  
+
+  /property/all:
+    get:
+      tags:
+        - Property Management
+      summary: Gets all Property for a user
+      description: Gets all the property a logged in SevenBee user is a member of.
+      responses:
+        '200':
+          $ref: '#/components/responses/PropertyList'
+        '400':
+          description: Error validating request body.  
+
+  /property/info:
+    get:
+      tags:
+        - Property Management
+      summary: Gets details of a Property for a given user
+      description: Gets all the details for a given property if a SevenBee user is a member of that property
+      parameters:
+        - name: propertyId
+          in: query
+          description: ID of property to retrieve details for.
+          required: true
+          schema:
+            type: string
+             
+      responses:
+        '200':
+          $ref: '#/components/responses/PropertyInfo'
+        '400':
+          description: Error validating request body.  
+        '404':
+          description: Could not get property info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Error getting property data
+                    
+    put:
+      tags:
+        - Property Management
+      summary: Update property details
+      description: Update property details if role is landlord or if you added property
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - propertyId
+              properties:
+                propertyId:  
+                  type: string
+                  example: "5eb5b04f8cde0d3b01f9c831"
+                address_line1:
+                  type: string
+                  example: 221b Baker street
+                postcode:
+                  type: string
+                  example: "NW1 6XE"
+                theme_color:
+                  type: string
+                  example: "#2D56D0"
+                town:
+                  type: string
+                  example: London
+                type:
+                  type: string
+                  example: residential
+                  enum: 
+                    - residential
+                    - commercial
+                
+      responses:
+        '200':
+          description: Successfully updated the property details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: 
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 'updated'
+        
+        '400':
+          description: Error validating request body.
+        '404':
+          description: Property not found
+          content: 
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'property not found'
+
+  /property/members:
+    get:
+      tags:
+        - Property Management
+      summary: Gets list of members for a property
+      description: Gets all the members for a given property and their assigned roles
+      parameters:
+        - in: query
+          name: property
+          schema:
+            type: string
+          required: true
+        
+        - in: query
+          name: excludeSelf
+          schema: 
+            type: string
+          description: Exclude current logged in user from list
+      
+      responses:
+        '200':
+          $ref: '#/components/responses/PropertyMembers'
+        
+        '400':
+          description: Error validating request body.
+
+  /property/log:
+    get:
+      tags:
+        - Property Management
+      summary: Gets list of activities related to the property
+      description: Gets all the activities related to the property as a stream
+      parameters:
+        - in: query
+          name: propertyId
+          schema:
+            type: string
+          required: true
+          example: "5e447b1ab57af354c53123a"
+        
+        - in: query
+          name: page
+          schema: 
+            type: integer
+          description: Page offset for activity log
+          example: 1
+      
+      responses:
+        '200':
+          $ref: '#/components/responses/ActivityLog'
+        
+        '400':
+          description: Error validating request body.
+      
+components:
+  schemas:
+    RegisterUser:
+      type: object
+      required:
+        - email
+        - password
+        - hiddenPassword
+        - username
+        - accept_terms
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        hiddenPassword:
+          type: string
+        username:
+          type: string
+        accept_terms:
+          type: string
+      example:
+        email: jane@example.com
+        password: strongP455word
+        hiddenPassword: strongP455word
+        username: Jane Doe
+        accept_terms: yes
+    UserRegistered:
+      type: object
+      properties:
+        email:
+          type: string
+      example:
+        email: jane@example.com
+    
+    UserDetails:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: object
+          properties:
+            _id:
+              type: string
+            lastModified:
+              type: integer
+            current_properties:
+              type: array
+              items:
+                type: string
+            previous_properties:
+              type: array
+              items:
+                type: string
+            usedNonces:
+              type: array
+              items:
+                type: string
+            property_roles:
+              type: array
+              description: Roles the user has in different properties. Could be landlord, tenant, or agent
+              items:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  property:
+                    type: string
+                  role:
+                    type: string
+            property_dates:
+              type: array
+              description: List of properties this user is a member of and the dates they were added
+              items:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    description: Property ID
+                  property:
+                    type: string
+                    description: Property ID
+                  dateAdded:
+                    type: string
+                    description: Date this user was added to the property
+                    format: date-time
+            username:
+              type: string
+            email:
+              type: string
+              title: The email schema
+            registeredDate:
+              type: string
+              format: date-time
+            nonce:
+              type: string
+            __v:
+              type: integer
+            phone:
+              type: string
+            avatar:
+              type: object
+              properties:
+                _id:
+                  type: string
+                filename:
+                  type: string
+                container:
+                  type: string
+                  description: file type and environment
+                mimetype:
+                  type: string
+                  title: The mimetype schema
+                  description: mimetype of the file
+                url:
+                  type: string
+                  description: full url of image
+                isOfType:
+                  type: object
+                  properties:
+                    video:
+                      type: boolean
+                    photo:
+                      type: boolean
+                    audio:
+                      type: boolean
+                    file:
+                      type: boolean
+                id:
+                  type: string
+                  description: ID of the media used as an avatar
+            hasPassword:
+              type: boolean
+            initials:
+              type: string
+            id:
+              type: string
+              description: User ID
+      example:
+        success: true
+        message:
+          _id: 5e447a5fb57af354c531239b
+          lastModified: 1587108532
+          current_properties:
+          - 5e447b1ab57af354c53123a0
+          previous_properties: []
+          usedNonces: []
+          property_roles:
+          - _id: 5e447b1ab57af354c53123a2
+            property: 5e447b1ab57af354c53123a0
+            role: landlord
+          property_dates:
+          - _id: 5e447b1ab57af354c53123a1
+            property: 5e447b1ab57af354c53123a0
+            dateAdded: '2020-02-12T22:24:26.429Z'
+          username: walter white
+          email: simon@gmail.com
+          registeredDate: '2020-02-12T22:21:19.462Z'
+          nonce: 15301eeb0d912a5e226a2d3a208ed67f
+          __v: 0
+          phone: ''
+          avatar:
+            _id: 5e995ab4a906c81dc69859c5
+            filename: attachments-1587108532447.jpg
+            container: development-pictures
+            mimetype: image/jpeg
+            url: https://bucket.s3.eu-west-2.amazonaws.com/5e447a5fb57af354c531239b/attachments-1587108532447.jpg
+            isOfType:
+              video: false
+              photo: true
+              audio: false
+              file: false
+            id: 5e995ab4a906c81dc69859c5
+          hasPassword: true
+          initials: ww
+          id: 5e447a5fb57af354c531239b
+    Property:
+      type: object
+      properties:
+        __v:
+          example: 0
+          type: integer
+        _id:
+          example: 5eb5b04f8cde0d3b01f9c831
+          title: The Property Id
+          type: string
+        addedBy:
+          example: 5e447a5fb57af354c531239b
+          type: string
+        address_line1:
+          example: 221b Baker Street
+          type: string
+        dateAdded:
+          example: 2020-05-08T19:17:35.347Z
+          type: string
+          format: date-time
+        id:
+          example: 5eb5b04f8cde0d3b01f9c831
+          type: string
+        postcode:
+          example: NW1 6XE
+          type: string
+        theme_color:
+          example: #02A8F4
+          type: string
+        town:
+          example: London
+          type: string
+        type:
+          example: residential
+          type: string
+
+    PropertyAdded:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserDetails'
+        property:
+          $ref: '#/components/schemas/Property'
+          
+    PropertyList:
+      type: object
+      properties:
+        success:
+          type: boolean
+          default: true
+          example: true
+        message:
+          type: array
+          description: List of properties
+          items:
+            type: object
+            properties:
+              _id:
+                type: string
+                example: 5eb5b04f8cde0d3b01f9c831
+              address_line1:
+                type: string
+                example: 221b Baker Street
+              postcode:
+                type: string
+                example: NW1 6XE
+              town:
+                type: string
+                example: London
+              type:
+                type: string
+                example: residential
+              dateAdded:
+                type: string
+                format: date-time
+                example: "2020-05-08T19:17:35.347Z"
+              theme_color:
+                type: string
+                example: "#02A8F4"
+              addedBy:
+                type: string
+                example: 5e447a5fb57af354c531239b
+              unread:
+                type: integer
+                description: Number of unread messages related to this property for this user. Will not be sent if user has read all messages  
+                example: 1
+              pending:
+                type: integer
+                description: Number of unresolved issues related to this property for this user. Will not be sent if all issues in the property are resolved  
+                example: 1
+              __v:
+                type: integer
+                example: 0
+    
+    PropertyInfo:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: object
+          properties:
+            _id:
+              type: string
+              example: 5eb5b04f8cde0d3b01f9c831
+            address_line1:
+              type: string
+              example: 221b Baker Street
+            postcode:
+              type: string
+              example: NW1 6XE
+            town:
+              type: string
+              example: London
+            type:
+              type: string
+              example: residential
+            dateAdded:
+              type: string
+              format: date-time
+              example: "2020-05-08T19:17:35.347Z"
+            theme_color:
+              type: string
+              example: "#02A8F4"
+            addedBy:
+              type: string
+              example: 5e447a5fb57af354c531239b
+            __v:
+              type: integer
+              example: 0
+            id:
+              type: string
+              example: 5eb5b04f8cde0d3b01f9c831
+            isResidential:
+              type: boolean
+              example: true
+            isCommercial:
+              type: boolean
+              example: false
+            theme_colors:
+              type: array
+              items: 
+                type: string
+                example: "#02A8F4"
+              title: The theme_colors schema
+              description: List of all theme colours available. This would be changed to its own API.
+              default:
+                ["#2D56D0", "#019587", "#C6131C", "#018E42", "#C19013", "#02A8F4"]
+            role:
+              type: string
+              example: tenant
+            isLandlord:
+              type: boolean
+              example: false
+            isPropertyOwner:
+              type: boolean
+              example: true
+            canModify:
+              type: boolean
+              example: true
+            canNotModify:
+              type: boolean
+              example: false
+    
+    UserAvatar:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "5e995ab4a906c81dc69859c5"
+        filename:
+          type: string
+          example: "attachments-1587108532447.jpg"
+        container:
+          type: string
+          description: file type and environment
+          example: "development-pictures"
+        mimetype:
+          type: string
+          title: The mimetype schema
+          description: mimetype of the file
+          example: "image/jpeg"
+        url:
+          type: string
+          description: full url of image
+          example: "https://s3bucket.eu-west-2.amazonaws.com/5e447a5fb57af354c531239b/attachments-1587108532447.jpg"
+        isOfType:
+          type: object
+          properties:
+            video:
+              type: boolean
+              example: false
+            photo:
+              type: boolean
+              example: true
+            audio:
+              type: boolean
+              example: false
+            file:
+              type: boolean
+              example: false
+        id:
+          type: string
+          description: ID of the media used as an avatar
+          example: "5e995ab4a906c81dc69859c5"
+    
+    PropertyMembers:
+      type: object
+      properties:
+        _id: 
+         type: string
+         example: "5ea7ddca8243d0505fa8d286"
+        property_roles: 
+          type: array
+          items:
+            type: object
+            properties:
+              property:
+                type: string
+                example: "5ea7ddca8243d0505fa8d286"
+              role:
+                type: string
+                example: "landlord"
+          
+        email:
+          type: string
+          example: "jane.doe@outlook.com"
+        username:
+          type: string
+          example: "Jane Doe"
+        hasPassword:
+          type: boolean
+          example: false
+        initials:
+          type: string
+          example: "jd"
+        id:
+          type: string
+          example: "5ea7ddca8243d0505fa8d286"
+        avatar:
+          $ref: '#/components/schemas/UserAvatar'
+    
+    ActivityLog:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "5eaeafd59f870eb76e05dea6"
+        userRef:
+          type: object
+          properties:
+            _id: 
+               type: string
+               example: "5ea7ddca8243d0505fa8d286"
+            username:
+              type: string
+              example: "Jane Doe"
+            hasPassword:
+              type: boolean
+              example: false
+            initials:
+              type: string
+              example: "jd"
+            id:
+              type: string
+              example: "5ea7ddca8243d0505fa8d286"
+            avatar:
+              $ref: '#/components/schemas/UserAvatar'
+        propertyRef:
+          type: object
+          properties:
+            _id:
+              type: string
+              example: "5e447b1ab57af354c53123a0"
+            address_line1:
+              type: string
+              example: "10 Downing street"
+        activityType:
+          type: string
+          example: "updated_property"
+        activityDate:
+          type: string
+          format: date-time
+          example: "2020-05-03T11:49:41.007Z"
+        __v:
+          type: integer
+          example: 0
+        
+    
+  requestBodies:
+    RegisterUser:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RegisterUser'
+      description: User details for registration
+      required: true
+  
+  
+  responses:
+    UserRegistered:
+      description: Successfully registered user
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserRegistered'
+    GetUserByEmail:
+      description: Response for get user by email
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserDetails'
+    UserInfo:
+      description: Response for user account info
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserDetails'
+    
+    PropertyAdded:
+      description: Property Added Successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PropertyAdded'
+            
+    PropertyList:
+      description: List of properties this user is a member of
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PropertyList'
+    
+    PropertyInfo:
+      description: Details of a given property
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PropertyInfo'
+            
+    PropertyMembers:
+      description: List of members in a given property
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PropertyMembers'
+    
+    ActivityLog:
+      description: List of activities related to a given property
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ActivityLog'

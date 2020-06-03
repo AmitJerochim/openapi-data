@@ -1,0 +1,285 @@
+openapi: 3.0.0
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/vasily802/ExperienceApi/1.0.0
+info:
+  description: Experience API
+  version: "1.0.0"
+  title: Experience API
+  contact:
+    email: vav802@gmail.com
+tags:
+  - name: admin
+    description: Secured admin-only calls
+  - name: public
+    description: Public-facing calls
+security:
+  - BasicAuth: []
+components:
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+  parameters:
+    Query:
+      in: query
+      name: query
+      description: pass an optional search string for looking up experiences
+      required: false
+      schema:
+        type: string
+    Page:
+      in: query
+      name: page
+      description: page number for pagination
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+    Limit:
+      in: query
+      name: limit
+      description: page size for pagination
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 99
+    Types:
+      in: query
+      name: types
+      description: types of experiences to look for
+      required: false
+      schema:
+        type: string
+        example: man-made
+    Sort:
+      in: query
+      name: sort
+      description: sort order
+      required: false
+      schema:
+        type: string
+        example: popularity
+  schemas:
+    ServiceResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    ApiResponse:
+      type: object
+      required:
+        - responseHeader
+      properties:
+        responseHeader:
+          $ref: '#/components/schemas/ResponseHeader'
+        responseBody:
+          $ref: '#/components/schemas/ResponseBody'
+    ResponseHeader:
+      type: object
+      properties:
+        filter:
+          $ref: '#/components/schemas/Filter'
+    ResponseBody:
+      oneOf:
+        - $ref: '#/components/schemas/ExperienceListResponseBody'
+        - $ref: '#/components/schemas/ExperienceDetailsResponseBody'
+      discriminator:
+        propertyName: responseType
+    ExperienceListResponseBody:
+      type: object
+      properties:
+        responseType:
+          type: string
+        experiences:
+          type: array
+          items:
+            $ref: '#/components/schemas/Experience'
+    ExperienceDetailsResponseBody:
+      type: object
+      properties:
+        responseType:
+          type: string
+        experience:
+          $ref: '#/components/schemas/Experience'
+    Filter:
+      type: object
+      properties:
+        query:
+          type: string
+          example: Tree house
+        page:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 1
+        limit:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 99
+          example: 99
+        pages:
+          type: integer
+          format: int32
+          example: 1
+        total:
+          type: integer
+          format: int32
+          example: 30
+        types:
+          type: array
+          items:
+            type: string
+          example: 
+            - man-made
+            - nature
+        sort:
+          type: string
+          example: popularity
+    Experience:
+      type: object
+      required:
+        - id
+        - name
+        - timeframe
+        - location
+        - photos
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        name:
+          type: string
+          example: Awesome Experience
+        timeframe:
+          $ref: '#/components/schemas/Timeframe'
+        location:
+          $ref: '#/components/schemas/Location'
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Photo'
+    Timeframe:
+      required:
+        - start
+        - end
+      properties:
+        start:
+          type: string
+          format: date-time
+          example: '2016-08-29T09:12:33.001Z'
+        end:
+          type: string
+          format: date-time
+          example: '2016-08-29T09:12:33.001Z'
+        description:
+          type: string
+          example: 'example description'
+      type: object
+    Location:
+      required:
+        - latitude
+        - longitude
+      properties:
+        latitude:
+          type: number
+          format: float
+          example: 33.978859
+        longitude:
+          type: number
+          format: float
+          example: -118.459475
+        description:
+          type: string
+          example: 'example description'
+      type: object
+    Photo:
+      required:
+        - url
+      properties:
+        url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+  responses:
+    200ServiceSuccess:
+      description: Successful service request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ServiceResponse'
+    200ApiSuccess:
+      description: Successful API request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    400Error:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ServiceResponse'
+paths:
+  /health:
+    get:
+      tags:
+        - public
+      summary: gets api health status
+      operationId: getHealth
+      description: Api health status
+      responses:
+        '200':
+          $ref: '#/components/responses/200ServiceSuccess'
+        '400':
+          $ref: '#/components/responses/400Error'
+  /experiences:
+    get:
+      tags:
+        - public
+      summary: searches experiences
+      operationId: searchExperiences
+      description: |
+        By passing in the appropriate options, you can search for
+        available experiences in the system
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Types'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          $ref: '#/components/responses/200ApiSuccess'
+        '400':
+          $ref: '#/components/responses/400Error'
+  /experience/{experienceId}:
+    get:
+      tags:
+        - public
+      summary: gets experience details from its unique id
+      operationId: getExperience
+      description: |
+        By passing in a unique experience id, you can get
+        its details
+      parameters:
+        - name: experienceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/200ApiSuccess'
+        '400':
+          $ref: '#/components/responses/400Error'

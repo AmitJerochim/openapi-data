@@ -1,0 +1,919 @@
+openapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+  - description: iArrive API
+    url: https://virtserver.swaggerhub.com/apptech-evan-huang/iArrive/1.0.0
+info:
+  description: iArrive API
+  version: "1.0.0"
+  title: iArrive API
+  contact:
+    email: evan.huang@apptech.com.hk
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: Authorization
+  - name: Manage Organization
+  - name: Manage Staff
+  - name: Manage Checks
+  - name: Facial Recognition
+paths:
+  /api/auth:
+    post:
+      summary: Authorization API
+      tags:
+        - Authorization
+      description: |
+        Get token for other APIs by providing email and password. Returned token is a Json Web Token which can be decoded and contain some information like the organization ID. The token should be added in HTTP header or cookies to use all authorization required APIs.
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Auth'
+        description: Email and password
+      responses:
+        '200':
+          description: Correct email and password, returns token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZSI6eyJvcmdhbml6YXRpb25faWQiOiJxTFZYRzhmdkUzNXQ0TEs3Iiwic3VwZXJfYWRtaW4iOnRydWUsInBlcm1pc3Npb25zIjpbXX0sImVtYWlsIjoidGVzdEBhcHB0ZWNoLmNvbS5oayIsImlhdCI6MTU3NTg3MjkxNCwiZXhwIjoxNTc4NDY0OTE0fQ.xv4NT5emlsbSPVllZ4WdCVj081TZf3I5tXt-JhRzV4A"
+                  organization:
+                    $ref: '#/components/schemas/Organization'
+  /api/organizations:
+    post:
+      summary: Create organization
+      tags:
+        - Manage Organization
+      description: |
+        Create (register) new organization. A new organiation and a new user are created at the same time. The token is returned directly so you don't need to call authorization API again. In real case, calling this API will take some time (around 10 seconds) because the server need to allocate some resource for newly created organization. Please also note organizations created by this API are under "free plan", which means the organization only can add up to 2 staff. For testing purpose, you can contact our colleague to manually upgrade your plan.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Organization Name"
+                address:
+                  type: string
+                  example: "Somewhere on the Earth"
+                description:
+                  type: string
+                  example: "A company"
+                logo:
+                  type: string
+                  format: binary
+                user_email:
+                  type: string
+                  example: "test@apptech.com.hk"
+                user_password:
+                  type: string
+                  example: "TEST_PASSWORD"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzY29wZSI6eyJvcmdhbml6YXRpb25faWQiOiJxTFZYRzhmdkUzNXQ0TEs3Iiwic3VwZXJfYWRtaW4iOnRydWUsInBlcm1pc3Npb25zIjpbXX0sImVtYWlsIjoidGVzdEBhcHB0ZWNoLmNvbS5oayIsImlhdCI6MTU3NTg3MjkxNCwiZXhwIjoxNTc4NDY0OTE0fQ.xv4NT5emlsbSPVllZ4WdCVj081TZf3I5tXt-JhRzV4A"
+                  organization_name:
+                    type: string
+                    example: "Organization Name"
+                  organization_address:
+                    type: string
+                    example: "Somewhere on the Earth"
+                  organization_description:
+                    type: string
+                    example: "A company"
+                  organization_logo_url:
+                    type: string
+                    format: url
+                    example: "/default_company_logo.png"
+                  organization_id:
+                    type: string
+                    example: "6Ad7j2WxPPPsqHpx"
+                  login_email:
+                    type: string
+                    format: email
+                    example: "test@apptech.com.hk"
+  /api/organizations/{organization_id}:
+    get:
+      security:
+        - user: []
+      summary: Get organization information
+      tags:
+        - Manage Organization
+      description: |
+        Returns general information about the organization. 
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+  /api/organizations/{organization_id}/staffs:
+    get:
+      security:
+        - user: []
+      summary: Get staff list
+      tags:
+        - Manage Staff
+      description: |
+        Get all staffs in an organization
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  staffs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Staff"
+  /api/organizations/{organization_id}/staffs/{staff_id}:
+    get:
+      security:
+        - user: []
+      summary: Get single staff info
+      tags:
+        - Manage Staff
+      description: |
+        Get information for given `staff_id`. Calling this API will return all checks for the staff, which can be a huge amount of data, so use it carefully. If you want to get check information with pagination, you can use `checks` APIs.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+        - $ref: "#/components/parameters/StaffID"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  staff:
+                    $ref: "#/components/schemas/Staff"
+    delete:
+      security:
+        - user: []
+      summary: Delete staff
+      tags:
+        - Manage Staff
+      description: |
+        Delete the staff for given `staff_id`. This will trigger a training task.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+        - $ref: "#/components/parameters/StaffID"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+    patch:
+      security:
+        - user: []
+      summary: Update staff
+      tags:
+        - Manage Staff
+      description: |
+        Update staff's information for given `staff_id`.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+        - $ref: "#/components/parameters/StaffID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                active:
+                  type: boolean
+                staff_no:
+                  type: string
+                  example: "CEO001"
+                working_hour_follow_organization:
+                  type: boolean
+                working_hour_start:
+                  type: string
+                  example: "09:30"
+                working_hour_end:
+                  type: string
+                  example: "17:00"
+                first_name:
+                  type: string
+                  example: "John"
+                last_name:
+                  type: string
+                  example: "Smith"
+                job_title:
+                  type: string
+                  example: "CEO"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+  /api/organizations/{organization_id}/staffs/{staff_id}/images:
+    get:
+      security:
+        - user: []
+      summary: Get staff images
+      tags:
+        - Manage Staff
+      description: |
+        Get staff's face images for given `staff_id`. Pagination enabled, so you need to specify `page` in query. If no `page` is specified, the first page will return. If you really want to get all images, use the get all images API below.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+        - $ref: "#/components/parameters/StaffID"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  images:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FaceImage"
+  /api/organizations/{organization_id}/staffs/all_images:
+    get:
+      security:
+        - user: []
+      summary: Get all images for all staff
+      tags:
+       - Manage Staff
+      description: |
+        This API is usually used for exporting face images for training purpose. The API will return a huge amount of data so use it carefully.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  staffs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        first_name:
+                          type: string
+                          example: "John"
+                        last_name:
+                          type: string
+                          example: "Smith"
+                        staff_no:
+                          type: string
+                          example: "CEO001"
+                        job_title:
+                          type: string
+                          example: "CEO"
+                        images:
+                          type: array
+                          items:
+                            type: string
+                            format: url
+                            example: "face.png"
+  /api/organizations/{organization_id}/staffs/{staff_id}/checks:
+    get:
+      security:
+        - user: []
+      summary: Get checks
+      tags:
+        - Manage Checks
+      description: |
+        Get staff's checks with given `staff_id` filter by `year` and `month`. `month` ranges from `1` to `12`.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+        - $ref: "#/components/parameters/StaffID"
+        - name: year
+          in: query
+          schema:
+            type: integer
+            example: "2019"
+        - name: month
+          in: query
+          schema:
+            type: integer
+            example: 12
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  checks:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Check"
+    post:
+      security:
+        - user: []
+      summary: Create check
+      tags:
+        - Manage Checks
+      description: |
+        Create a check for given `staff_id`.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+        - $ref: "#/components/parameters/StaffID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                check_type:
+                  type: integer
+                  enum: [1, 2]
+                  example: 1
+                image_url:
+                  type: string
+                  format: url
+                  example: "face.png"
+                is_not_me:
+                  type: boolean
+                  example: false
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+  /api/organizations/{organization_id}/staffs/{staff_id}/checks/{check_id}:
+    patch:
+      security:
+        - user: []
+      summary: Update check
+      tags:
+        - Manage Checks
+      description: |
+        Update a check for given `check_id`.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+        - $ref: "#/components/parameters/StaffID"
+        - $ref: "#/components/parameters/CheckID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                check_type:
+                  type: integer
+                  enum: [1, 2]
+                  example: 1
+                time:
+                  type: string
+                  format: date-time
+                  example: "2019-09-18T04:46:14.219Z"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+    delete:
+      security:
+        - user: []
+      summary: Delete check
+      tags:
+        - Manage Checks
+      description: |
+        Delete a check for given `check_id`.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+        - $ref: "#/components/parameters/StaffID"
+        - $ref: "#/components/parameters/CheckID"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean      
+  /api/organizations/{organization_id}/faces/image:
+    post:
+      security:
+        - user: []
+      summary: Upload image
+      tags:
+        - Facial Recognition
+      description: |
+        upload a face image from the client and return `image_filename` used for creating checks or faces
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary        
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  image_filename:
+                    type: string
+                    format: url
+                    example: "face.png"
+  /api/organizations/{organization_id}/faces:
+    post:
+      security:
+        - user: []
+      summary: Create a new staff (with face images)
+      tags:
+        - Manage Staff
+      description: |
+        Create a new staff. Before calling this API, you should first call upload image API serveral times to upload all images captured by the client and get the image url list.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                  example: "John"
+                last_name:
+                  type: string
+                  example: "Smith"
+                job_title:
+                  type: string
+                  example: "CEO"
+                staff_no:
+                  type: string
+                  example: "CEO001"
+                face_name:
+                  type: string
+                  example: "3PpaPUp2CXt9wkeK"
+                train:
+                  type: boolean
+                image_urls:
+                  type: array
+                  items:
+                    type: string
+                    format: url
+                    example: "face.png"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  staff:
+                    $ref: "#/components/schemas/Staff"
+  /api/organizations/{organization_id}/faces/train:
+    get:
+      security:
+        - user: []
+      summary: Check training status
+      tags:
+        - Facial Recognition
+      description: |
+        Check if server is currently training a classifier for your organization and check if last training is successful. It is recommended you call this API every time you want to manually start training to see if a training task is already in progress. If you find `last_training_success` is `false` (rarely happen), you may need to check you newly added staff's images or just remove the staff and add it again.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  training:
+                    type: boolean
+                    example: false
+                  last_training_success:
+                    type: boolean
+    post:
+      security:
+        - user: []
+      summary: Train a classifier
+      tags:
+        - Facial Recognition
+      description: |
+        Start the training process and update the classifier. Only after training completes can you recognize newly added faces. Actually, training will start automatically if parameter `train` is `true` when creating a face, so you don't need to manually call this API every time. Training will also start automatically when updating staff images or removing staff. Training processes are managed in a queue, so calling this API multiple times will add multiple training task in the training queue, so don't abuse the API to save server resource. If you really need to manually start training, you'd better first check training status and make sure `training` is `false` before you start a new training task. Usually each training task will take around 30 seconds.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                wait:
+                  type: boolean
+                  example: false
+                  description: |
+                    If `wait` is `true` (or not provided), the API will wait until training completes. This may take a long time so you may need to prepare a loading UI. Otherwise, the API will return immediately and leave the training task running in the backend.
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  training:
+                    type: boolean
+  /api/organizations/{organization_id}/faces/recognize:
+    post:
+      security:
+        - user: []
+      summary: Recognize a face
+      tags:
+        - Facial Recognition
+      description: |
+        Upload a image and recognize the face in the image. The largest face in the image will be recognized. Staff information will be returned.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: "John Smith"
+                  confidence:
+                    type: number
+                    example: 0.8
+                  success:
+                    type: boolean
+                  staff_id:
+                    type: string
+                    example: "zwzSfx44RXKu3AGN"
+                  staff_no:
+                    type: string
+                    example: "CEO001"
+                  image_url:
+                    type: string
+                    format: url
+                    example: "face.png"
+                  last_check_type:
+                    type: integer
+                    enum: [1, 2]
+                    example: 1
+                  last_check_date:
+                    type: string
+                    format: date-time
+                    example: "2019-09-18T04:46:14.219Z"
+  /api/organizations/{organization_id}/faces/mass_recognize:
+    post:
+      security:
+        - user: []
+      summary: Recognize multiple faces in a image
+      tags:
+        - Facial Recognition
+      description: |
+        Upload a image and recognize all the faces in the image. Only faces with high enough confidence will return. The bounding box of each face will also return.
+      parameters:
+        - $ref: "#/components/parameters/OrganizationID" 
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  result:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: "John Smith"
+                        confidence:
+                          type: number
+                          example: 0.8
+                        box:
+                          type: object
+                          properties:
+                            top:
+                              type: integer
+                              example: 100
+                            bottom:
+                              type: integer
+                              example: 150
+                            left:
+                              type: integer
+                              example: 80
+                            right:
+                              type: integer
+                              example: 130
+                        staff_id:
+                          type: string
+                          example: "zwzSfx44RXKu3AGN"
+                        staff_no:
+                          type: string
+                          example: "CEO001"
+                        image_url:
+                          type: string
+                          format: url
+                          example: "face.png"
+                        last_check_type:
+                          type: integer
+                          enum: [1, 2]
+                          example: 1
+                        last_check_date:
+                          type: string
+                          format: date-time
+                          example: "2019-09-18T04:46:14.219Z"
+components:
+  securitySchemes:
+    user:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrganizationID:
+      name: organization_id
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "qLVXG8fvE35t4LK7"
+    StaffID:
+      name: staff_id
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "zwzSfx44RXKu3AGN"
+    CheckID:
+      name: check_id
+      in: path
+      required: true
+      schema:
+        type: string
+        example: "r4bAfMGgN53YHjan"
+  schemas:
+    Auth:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "test@apptech.com.hk"
+        password:
+          type: string
+          format: password
+          example: "eBxAfCJHvT9VfRg2"
+    Organization:
+      type: object
+      properties:
+        organization_id:
+          type: string
+          example: "qLVXG8fvE35t4LK7"
+        name:
+          type: string
+          example: "Example Organization"
+        address:
+          type: string
+          example: "Somewhere on the Earth"
+        description:
+          type: string
+          example: "A company"
+        logo_image_url:
+          type: string
+          format: url
+          example: "logo.png"
+        features:
+          $ref: "#/components/schemas/OrganizationFeature"
+    OrganizationFeature:
+      type: object
+      properties:
+        auto_confirm:
+          type: boolean
+        check_mode:
+          type: array
+          items:
+            type: string
+            enum: ["auto", "manual"]
+          example: ["auto"]
+        multiple_sites:
+          type: boolean
+        site_distance_threshold:
+          type: number
+          example: 0.1
+        auto_staff_id:
+          type: boolean
+        permission_enabled:
+          type: boolean
+        confidence_threshold:
+          type: boolean
+        min_face_image:
+          type: integer
+          example: 4
+        report_enabled:
+          type: boolean
+        export_enabled:
+          type: boolean
+        single_device_login:
+          type: boolean
+        show_description:
+          type: boolean
+        max_training_image:
+          type: integer
+          example: 100
+        show_recognition_status:
+          type: boolean
+    Staff:
+      type: object
+      properties:
+        staff_no:
+          type: string
+          example: "CEO001"
+        working_hour_follow_organization:
+          type: boolean
+        working_hour_start:
+          type: string
+          example: "09:30"
+        working_hour_end:
+          type: string
+          example: "17:00"
+        first_name:
+          type: string
+          example: "John"
+        last_name:
+          type: string
+          example: "Smith"
+        job_title:
+          type: string
+          example: "CEO"
+        staff_id:
+          type: string
+          example: "zwzSfx44RXKu3AGN"
+        join_date:
+          type: string
+          format: date-time
+          example: "2019-12-09T09:35:51.902Z"
+        active:
+          type: boolean
+        face_name:
+          type: string
+          example: "rMkRE25D7F8WRsyy"
+        face_trained:
+          type: boolean
+        face_image_url:
+          type: string
+          format: url
+          example: "face.png"
+        last_check_date:
+          type: string
+          format: date-time
+          example: "2019-12-10T09:35:51.902Z"
+        last_check_type:
+          type: integer
+          example: 1
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Check"
+    Check:
+      type: object
+      properties:
+        check_id:
+          type: string
+          example: "r4bAfMGgN53YHjan"
+        time:
+          type: string
+          format: date-time
+          example: "2019-12-10T09:35:51.902Z"
+        check_type:
+          type: integer
+          enum: [1, 2]
+          example: 1
+        image_url:
+          type: string
+          format: url
+          example: "face-check.png"
+    FaceImage:
+      type: object
+      properties:
+        image_id:
+          type: string
+          example: "mybvjF7gNy8GrJgm"
+        type:
+          type: integer
+          enum: [1, 2]
+          example: 1
+        used:
+          type: boolean
+        train:
+          type: boolean
+        url:
+          type: string
+          format: url
+          example: "face.png"
+        create_time:
+          type: string
+          format: date-time
+          example: "2019-12-10T09:35:51.902Z"

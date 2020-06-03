@@ -1,0 +1,1235 @@
+openapi: 3.0.0
+
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/abasky/deeppay/1.0.0
+  - url: https://api.dev.deeppay.swiss/ebanking/v1
+    description: Development server - DeepPay
+  - url: https://api.int.deeppay.swiss/ebanking/v1
+    description: Integration server - DeepPay
+  - url: https://api.deeppay.swiss/ebanking/v1
+    description: Production server - DeepPay
+  
+
+    
+info:
+  version: "1.0.0"
+  title: DeepPay API
+  description: The simple API for banking interfaces
+
+
+tags:
+  - name: Accounting
+    description: "Provides live credit card transactions."
+  - name: Discovery
+    description: "Provides information on a transmitted IBAN"
+  - name: Ebanking
+    description: "Uniform interface to all Swiss credit card institutions."
+
+paths:
+
+#########################################################################
+#############################  Discvoery  ###############################
+#########################################################################
+
+  "/discovery/institutes/{iban}":
+    get:
+      tags:
+        - Discovery
+      description: returns the institute for a given iban
+      operationId: getInstitutes
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: iban
+          in: path
+          required: true
+          schema:
+            type: string        
+      responses:
+        '200':
+          description: Information about an institute
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Institue'
+        '422':
+          description: Supplied iban is not valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscoveryError'
+                
+  "/discovery/institutes":               
+   get:
+      tags:
+        - Discovery
+      description: returns the institute(s) for a given swiftbic or country with bank clearing number
+      operationId: getInstitutesByFilter
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: swiftbic
+          in: query
+          schema:
+            type: string
+          description: A swift ID
+        - name: country
+          in: query
+          schema:
+            type: string        
+          description: A country, i.e. ch. Must be used together with `bcnumber`.
+        - name: bcnumber
+          in: query
+          schema:
+            type: string            
+          description: A Bank Clearing Number. Must be user together with `country`.
+      responses:
+        '200':
+          description: Information about an institute
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: '#/components/schemas/Institue'
+                }
+        '422':
+          description: >
+            Country and Bank Clearing Number cannot be empty.
+            `bcnumber` is not a valid clearing number.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscoveryError'
+                
+ 
+  
+#########################################################################
+#############################  E-Banking  ###############################
+#########################################################################
+
+  "/interfaces/{interface}/login":
+    post:
+      tags:
+        - Ebanking
+      description: "First, the user has to query the contract and the corresponding password and send them with the request. The required BankId can be queried with the /discovery Route. For testing purposes the BankId=abacus can be used in the Finnova service. A Mobile TAN is queried here, which is included in the response for test purposes. <br><br> The response contains one of the statuses MOBILE_TAN, OTP, OPTICAL_CHALLENGE, GRID_CARD, CHANGE_PASSWORD, CHOOSE or ERROR. You must react to these as follows <br> If the status is CHANGE_PASSWORD, the parameter 'passwordNew' must be filled with the user input and sent along with it. After that the 2nd login step is always executed. <br><br> If the status is one of the following (MOBILE_TAN, OTP, OPTICAL_CHALLENGE, GRID_CARD) the user input must be sent in the field 'challenge' in the 2nd request. <br><br>If the parameter 'challenge' is filled in the response, it must be displayed to the user. <br>The OPTICAL_CHALLENGE is a BASE64 encoded image (PNG format). <br><br> If the status is CHOOSE, <br><br>A set cookie is also included. The received SET-COOKIE has to be sent as a cookie."
+      
+      operationId: loginStep1
+      security: 
+        - OAuth:
+          - https://api.deeppay.ch/auth/ebanking
+      parameters:
+        - $ref: '#/components/parameters/Interface'
+      requestBody:
+        description: TBD
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/LoginStepOneRequest'
+                - $ref: '#/components/schemas/LoginStepTwoRequest'
+      responses:
+        '200':
+          description: response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/LoginStepOneResponseMobileTan'
+                  - $ref: '#/components/schemas/LoginStepOneResponseOpticalChallenge'
+              example:
+                tbd: "TBD"
+        401:
+          $ref: '#/components/responses/401_Unauthorized'
+        403:
+          $ref: '#/components/responses/403_Forbidden'
+        404:
+          $ref: '#/components/responses/404_NotFound'
+          
+  "/interfaces/{interface}/logout":
+    post:
+      tags:
+        - Ebanking
+      description: Logout TBD
+      operationId: logout
+      security: 
+        - OAuth:
+          - https://api.deeppay.ch/auth/ebanking
+      parameters:
+        - $ref: '#/components/parameters/Interface'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRequest'
+      responses:
+        200:
+          description: TBD
+        401:
+          $ref: '#/components/responses/401_Unauthorized'
+        403:
+          $ref: '#/components/responses/403_Forbidden'
+        404:
+          $ref: '#/components/responses/404_NotFound'
+          
+          
+  "/interfaces/{interface}/statements":
+    get:
+      tags:
+        - Ebanking
+      description: "Get all statements of specified file type <br><br> For the collection of payment files, the cookie must also be sent. The request parameter 'transportData' and the desired format 'format' must also be specified."
+      operationId: getStatements
+      security: 
+        - OAuth:
+          - https://api.deeppay.ch/auth/ebanking
+      parameters:
+        - $ref: '#/components/parameters/Interface'
+        - in: query
+          name: format
+          required: true
+          schema:
+            $ref:  '#/components/schemas/StatementFileTypes'
+        - in: query
+          name: account
+          required: false
+          description: TBD
+          schema:
+            type: string
+        - in: query
+          name: dateFrom
+          required: false
+          description: TBD
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: dateTo
+          required: false
+          description: TBD
+          schema:
+            type: string
+            format: date-time           
+      responses:
+        '200':
+          description: response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatementResponse'
+
+
+
+  "/interfaces/{interface}/statements/{statementId}":
+    get:
+      tags:
+        - Ebanking
+      description: Get single statement
+      operationId: getStatement
+      security: 
+        - OAuth:
+          - https://api.deeppay.ch/auth/ebanking
+      parameters:
+        - $ref: '#/components/parameters/Interface'
+        - in: path
+          name: statementId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: format
+          required: true
+          schema:
+            $ref:  '#/components/schemas/StatementFileTypes'
+        - in: query
+          name: account
+          required: false
+          description: TBD
+          schema:
+            type: string
+        - in: query
+          name: dateFrom
+          required: false
+          description: TBD
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: dateTo
+          required: false
+          description: TBD
+          schema:
+            type: string
+            format: date-time           
+      responses:
+        '200':
+          description: response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatementResponse'
+
+
+
+  "/interfaces/{interface}/payments":
+    post:
+      tags:
+        - Ebanking
+      description: Payments
+      operationId: payment
+      security: 
+        - OAuth:
+          - https://api.deeppay.ch/auth/ebanking
+      parameters:
+        - $ref: '#/components/parameters/Interface'
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/PaymentRequestModel'
+                - $ref: '#/components/schemas/ElinkPaymentRequestModel'
+              
+      responses:
+        '200':
+          description: response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+
+
+#########################################################################
+#############################    OAuth    ###############################
+#########################################################################
+
+
+  "/interfaces/{interface}/oauth/authorize":
+    get:
+      tags:
+        - Ebanking
+      description: Get redirect url
+      operationId: oauth
+      security: 
+        - oauth:
+          - https://api.deeppay.ch/auth/ebanking
+      parameters:
+        - $ref: '#/components/parameters/OAuthInterface'
+        - in: query
+          name: bankId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: clientId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: redirectUrl
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: state
+          required: false
+          schema:
+            type: string
+        
+      responses:
+        '303':
+          description: TBD - Redirect URL to institute login page
+          headers:
+            Location: 
+              schema:
+                type: string
+
+     
+
+  "/interfaces/{interface}/oauth/token":
+    post:
+      tags:
+        - Ebanking
+      description: Exchange token
+      operationId: requestToken
+      security: 
+        - oauth:
+          - https://api.deeppay.ch/auth/ebanking
+      parameters:
+        - $ref: '#/components/parameters/OAuthInterface'
+      requestBody:
+        description: TBD
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/OAuthExchangeTokenRequest'
+                - $ref: '#/components/schemas/OAuthRefreshTokenRequest'
+      responses:
+        200:
+          description: TBD
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthExchangeTokenResponse'
+
+
+
+
+#########################################################################
+#############################  Accounting ###############################
+#########################################################################
+
+
+  "/accounting/login":
+    post:
+      tags:
+        - Accounting
+      description: Statements login 
+      operationId: accountingLogin
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        description: TBD
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountingLoginRequest'
+      responses:
+        200:
+          description: response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountingLoginResponse'
+        401:
+          $ref: '#/components/responses/401_Unauthorized'
+        403:
+          $ref: '#/components/responses/403_Forbidden'
+        404:
+          $ref: '#/components/responses/404_NotFound'
+
+  "/accounting/statements":
+    get:
+      tags:
+        - Accounting
+      description: Get statements
+      operationId: accountingStatements
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: transportData
+          required: true
+          schema:
+            $ref:  '#/components/schemas/TransportData'
+        - in: query
+          name: dateFrom
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: "From date in ISO-8601 format yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+
+        - in: query
+          name: dateTo
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: "To date in ISO-8601 format yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+
+        - in: query
+          name: cardNumber
+          required: false
+          schema:
+            type: string
+          description: "Filter by credit card."
+
+        - in: query
+          name: updateCardNumber
+          required: false
+          schema:
+            type: string
+          description: Option to fill credit card number in the response. (Transferwise does not deliver merchant by default)
+
+        - in: query
+          name: updateCardBrand
+          required: false
+          schema:
+            type: string
+          description: Option to fill credit card brand in the response. (Transferwise does not deliver merchant by default)
+        
+      responses:
+        200:
+          description: response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountingStatementResponse'
+        401:
+          $ref: '#/components/responses/401_Unauthorized'
+        403:
+          $ref: '#/components/responses/403_Forbidden'
+        404:
+          $ref: '#/components/responses/404_NotFound'
+
+  "/accounting/oauth/authorize":
+    get:
+      tags:
+        - Accounting
+      description: Get redirect url
+      operationId: AccountingOauth
+      security: 
+        - oauth:
+          - https://api.deeppay.ch/auth/ebanking
+      parameters:
+        - in: query
+          name: bankId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: clientId
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: redirectUrl
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: state
+          required: false
+          schema:
+            type: string
+        
+      responses:
+        '303':
+          description: TBD - Redirect URL to institute login page
+          headers:
+            Location: 
+              schema:
+                type: string
+
+     
+
+  "/accounting/oauth/token":
+    post:
+      tags:
+        - Accounting
+      description: Exchange token
+      operationId: AccountingRequestToken
+      security: 
+        - oauth:
+          - https://api.deeppay.ch/auth/ebanking
+      requestBody:
+        description: TBD
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/OAuthExchangeTokenRequest'
+                - $ref: '#/components/schemas/OAuthRefreshTokenRequest'
+      responses:
+        200:
+          description: TBD
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OAuthExchangeTokenResponse'
+
+
+  "/accounting/customers":
+    post:
+      tags:
+        - Accounting
+      description: "__Route is restricted to swiss21.org__ - For the initial card ordering process to create a customer in the system."
+      operationId: AccountingCreateCustomer
+      security:
+        - Swiss21ApiKeyAuth: []
+      requestBody:
+        description: Required parameters for creating a customer.
+        required: true
+        content: 
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CornerCard'
+      responses:
+        '201':
+          description: Created, contains location header for new created ressource
+        409:
+          $ref: '#/components/responses/409_Exists'
+        401:
+          $ref: '#/components/responses/401_Unauthorized'
+
+  "/accounting/customers/{abacusId}":
+    get:
+      tags:
+        - Accounting
+      description: "__Route is restricted to swiss21.org__ - To check if a framework agreement is available for an abacusId"
+      operationId: AccountingCheckForFrameworkAgreement
+      security:
+        - Swiss21ApiKeyAuth: []
+      parameters:
+        - name: abacusId
+          description: Abacus UUID
+          in: path
+          required: true
+          schema:
+            type: string        
+      responses:
+        '200':
+          description: "Frameworkagreeement exists" 
+        '204':
+          description: "Frameworkagreeement does not exists."
+        401:
+          $ref: '#/components/responses/401_Unauthorized'
+        404:
+          $ref: '#/components/responses/404_NotFound'
+ 
+  "/auth/apikey":
+    post:
+      tags:
+        - Authentication
+      description: generate api-key for activated abacus installations
+      operationId: apikeygen
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Auth'
+      responses:
+        200:
+          description: response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        404:
+          $ref: '#/components/responses/404_NotFound'
+          
+          
+components:
+  parameters:
+    Interface:
+      name: interface
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/SupportedInterfaces'
+    OAuthInterface:
+      name: interface
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/SupportedOAuthInterfaces'
+  schemas:
+    Auth:
+      type: object
+      properties:
+        licenceNumber:
+          type: string
+        licenceName:
+          type: string
+        signature:
+          type: string
+          description: signed licenceNumber
+          
+    AuthResponse:
+      type: object
+      properties:
+        apiKey:
+          type: string
+      
+    CornerCard:
+      type: object
+      properties:
+        bankId: # TODO - extrahieren
+          $ref:  '#/components/schemas/AccountingInterfaces'
+          
+        abacusId:
+          type: string
+          format: uuid
+          example: "6c1f3db8-762a-4fef-a1c4-32558d33ea09"
+          description: Generated UUID for customer, printed on contract
+        cardNumber:
+          type: string
+          example: "4929228561739035"
+          description: Required only for instant cards
+        customerId:
+          type: string
+          description: user id of dependent system (ninja = accountUUID, erp=licenceNr)
+      required:
+        - abacusId
+        - bankId
+    Institue:
+      type: object
+      properties:
+        iban:
+          type: string
+          example: "CH0308391290725551000"
+        bankId:
+          type: string
+          example: "8391"
+        bankName:
+          type: string
+          example: "WIR Bank Genossenschaft"
+        shortTerm:
+          type: string
+          example: "WIR"
+        swift:
+          type: string
+          example: "WIRBCHBBXXX"
+        domicile:
+          type: string
+          example: "Auberg 1"
+        postalAddress:
+          type: string
+          example: "Postfach"
+        postCode:
+          type: string
+          example: "4002"
+        city:
+          type: string
+          example: "Basel"
+    Interface:
+      type: object
+      properties:
+        iban:
+          type: string
+          example: CH0308391290725551000
+        bankId:
+          type: string
+          example: "8391"
+        bankName:
+          type: string
+          example: WIR Bank Genossenschaft
+        interfaceName:
+          type: string
+          example: Finnova
+        interfacePath:
+          type: string
+          example: finnova
+        basePath:
+          type: string
+          example: "/interfaces/finnova"
+    DiscoveryError:
+      type: object
+      properties:
+        status: 
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        message:
+          type: string
+          example: "Supplied IBAN CH0308391390725551000 is not valid"
+    ClientRequest:
+      type: object
+      properties:
+        transportData:
+          $ref:  '#/components/schemas/TransportData'
+      required: 
+        - transportData
+    
+    ClientResponse:
+      type: object
+      properties:
+        transportData:
+          $ref: '#/components/schemas/TransportData'
+  
+    PaymentRequestModel:
+      allOf:
+        - $ref:  '#/components/schemas/ClientRequest'
+        - type: object
+          properties:
+            format:
+              $ref:  '#/components/schemas/PaymentFileTypes'
+            file:
+              format: binary
+          required:
+            - format
+            - file
+    ElinkPaymentRequestModel:
+      allOf:
+        - $ref:  '#/components/schemas/ClientRequest'
+        - type: object
+          properties:
+            format:
+              $ref:  '#/components/schemas/PaymentFileTypes'
+            file:
+              format: binary
+            deviceNote:
+               $ref: '#/components/schemas/PaymentAdviceNote' 
+            details:
+              type: boolean
+          required:
+            - format
+            - file
+    LoginStepOneRequest:
+      type: object
+      properties:
+        contractId:
+          type: string
+          example: "foo"
+        password:
+          type: string
+          example: "bar"
+        bankId:
+          type: string
+          example: "8391"
+        language:
+          type: string
+          example: "de"
+      required: 
+        - contractId
+        - password
+        - bankId
+    LoginStepTwoRequest:
+      type: object
+      properties:
+        challenge:
+          type: string
+          example: "8044"
+        transportData:
+           $ref:  '#/components/schemas/TransportData'
+    LoginStepOneResponseMobileTan:
+      allOf:
+        - $ref: '#/components/schemas/ClientResponse' 
+        - type: object
+          properties:
+            message:
+              type: string
+              example: "Bitte folgenden Code eingeben: 8044"
+            state:
+              type: string
+              example: "MOBILE_TAN"
+    PaymentResponse:
+      allOf:
+        - $ref: '#/components/schemas/ClientResponse'
+        - type: object
+          properties:
+            state:
+              type: string
+            message:
+              type: string
+            file:
+              type: string
+              description: Pain002 - TBD
+    StatementResponse:
+      allOf:
+        - $ref: '#/components/schemas/ClientResponse' 
+        - type: object
+          properties:
+            format:
+              type: string
+            file:
+              type: string
+    LoginStepOneResponseOpticalChallenge:
+      type: object
+      properties:
+        message:
+          type: string
+        transportData:
+          type: string
+          example: "b=abacus!l=de"
+        state:
+          type: string
+          example: "OPTICAL_CHALLENGE"
+        challenge:
+          $ref: '#/components/schemas/Challenge'
+    Challenge:
+      type: object
+      properties:
+        id: 
+          type: string
+        format:
+          type: string
+        content:
+          $ref: '#/components/schemas/Content'
+    Content:
+      type: object
+      properties:
+        value:
+          type: string
+          example: "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"
+    
+    OAuthExchangeTokenRequest:
+      type: object
+      properties:
+        grantType:
+          type: string
+          example: "authorizationCode"
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+        redirectUrl:
+          type: string
+        code:
+          type: string
+      required: 
+        - grantType
+        - clientId
+        - clientSecret
+        - redirectUrl
+        - code
+    OAuthExchangeTokenResponse:
+      type: object
+      properties:
+        transportData:
+         $ref:  '#/components/schemas/TransportData'
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+    OAuthRefreshTokenRequest:
+      type: object
+      properties:
+        grantType:
+          type: string
+          example: "refreshToken"
+        bankId:
+          type: string
+        clientSecret:
+          type: string
+        clientId:
+          type: string
+        refreshToken:
+          type: string
+      required: 
+        - grantType
+        - bankId
+        - clientId
+        - clientSecret
+        - refreshToken
+    TransportData:
+      type: string
+      description: TBD
+    StatementFileTypes:
+      type: string
+      enum:
+        - MT940
+        - CAMT053
+        - CAMT054
+        - ESR
+        - LSV
+    PaymentFileTypes:
+      type: string
+      enum:
+        - PAIN001
+        - PAIN008
+      description: TBD
+    PaymentAdviceNote:
+      type: string
+      enum:
+        - DEFAULT
+        - NO_ADVICE
+        - SINGLE_ADVICE
+        - COLLECTIVE_ADVICE_WITH_DETAILS
+        - COLLECTIVE_ADVICE_NO_DETAILS
+      description: TBD
+    SupportedInterfaces:
+      type: string
+      enum:
+        - finnova
+        - elink
+        - avaloq
+    AccountingInterfaces:
+      type: string
+      enum:
+        - CORNER
+        - REVOLUT
+        - SUMUP
+        - TRANSFERWISE
+      description: Identification of the interface to communicate with.
+    SupportedOAuthInterfaces:
+      type: string
+      enum:
+       - finnova
+    ErrorObject:
+      type: object
+      properties:
+        title:
+          type: string
+        status:
+          type: string
+        detail:
+          type: string
+        id:
+          type: string
+    AccountingLoginRequest:
+      type: object
+      properties:
+        bankId: # TODO - extrahieren
+          $ref:  '#/components/schemas/AccountingInterfaces'
+        accessToken:
+          type: string
+          description: access token of users 'bankId' institute 
+        refreshToken:
+          type: string
+          description: refresh token of users 'bankId' institute 
+        clientId:
+          type: string
+          description: app-id of users 'bankId' institute 
+        clientSecret:
+          type: string
+          description: app-secret of users 'bankId' institute 
+      required:
+        - bankId
+    AccountingLoginResponse:
+      type: object
+      properties:
+        transportData:
+          $ref: '#/components/schemas/TransportData'
+    AccountingStatementResponse:
+      type: object
+      properties:
+        statements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Statement'
+    Statement:
+      type: object
+      properties:
+        id:
+          type: string
+          description: "Statement id in the system of the institute."
+        institute:
+          $ref: '#/components/schemas/CardInstitute'
+        date:
+          type: string
+          format: date-time
+          description: Date in ISO-8601 format yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
+        amount:
+          $ref: '#/components/schemas/Amount'
+        fees:
+          $ref: '#/components/schemas/Amount'
+        tip:
+          $ref: '#/components/schemas/Amount'
+        statementType:
+          $ref: '#/components/schemas/StatementType'
+        bookingType:
+          $ref: '#/components/schemas/BookingType'
+        paymentState:
+          $ref: '#/components/schemas/PaymentState'
+        description:
+          type: string
+          description: "Description or additional information of the transaction."
+        merchant:
+          $ref: '#/components/schemas/Merchant'
+        creditCard:
+          $ref: '#/components/schemas/CreditCard'
+        exchange:
+          $ref: '#/components/schemas/Exchange'
+        category:
+          type: string
+          description: Textual description of the category (MCC)
+        categoryCode:
+          type: string
+          description: Merchant Category Code - MCC
+        paymentReference:
+          type: string
+        payout:
+          $ref: '#/components/schemas/Payout'
+        
+    
+    CardInstitute:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/AccountingInterfaces'
+        type:
+          $ref: '#/components/schemas/InstituteType'
+         
+        
+    Amount:
+      type: object
+      properties:
+        value:
+          type: number
+          format: double
+        currency:
+          type: string
+          example: CHF
+    
+    
+    Merchant:
+      type: object
+      properties:
+        id:
+          type: string
+        category:
+          type: string
+          description: Textual description of the category (MCC)
+
+        categoryCode:
+          type: string
+          description:  Merchant Category Code - MCC
+        firstLine:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        name:
+          type: string
+        postCode:
+          type: string
+        state:
+          type: string
+        user:
+          type: string
+        location:
+          $ref: '#/components/schemas/GeoPosition'
+          
+    CreditCard:
+      type: object
+      properties:
+        number:
+          type: string
+          description: "Credit card number used for the transaction. Is filled in Revolut and not in Transferwise. Because Transferwise always stores the same credit card, the response can be filled with the additional parameter 'updateCardNumber'."
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        type:
+          type: string
+        brand:
+          type: string
+
+    Exchange:
+      type: object
+      properties:
+        fromAmount:
+          $ref: '#/components/schemas/Amount'
+        toAmount:
+          $ref: '#/components/schemas/Amount'
+        rate:
+          type: number
+          format: double
+      description: "If the transaction is of StatementType TRANSFER, it contains bill of exchange information."
+        
+    Payout:
+      type: object
+      properties:
+        id:
+          type: string
+        date:
+          type: string
+          format: date-time
+        amount:
+          type: number
+          format: double
+  
+
+    GeoPosition:
+      type: object
+      properties:
+        lan:
+          type: number
+          format: double
+        lon:
+          type: number
+          format: double
+        
+    StatementType:
+      type: string
+      enum:
+        - CARD_PAYMENT
+        - CARD_REFUND
+        - CARD_CHARGEBACK
+        - CARD_CREDIT
+        - EXCHANGE
+        - TRANSFER
+        - FEE
+        - REFUND
+        - TOPUP
+        - TOPUP_RETURN
+        - TAX
+        - TAX_REFUND
+        - ATM
+        - DEPOSIT
+    InstituteType:
+      type: string
+      enum:
+        - TERMINAL
+        - CARD
+      description: "Variation of the Institute. If it is a credit card or a credit card terminal."
+      example: "CARD"
+    BookingType:
+      type: string
+      enum:
+        - DEBIT
+        - CREDIT
+    PaymentState:
+      type: string
+      enum:
+        - PENDING
+        - COMPLETE
+        - DECLINED
+        - FAILED
+     
+  examples:
+    objectExample:
+      value:
+        id: 1
+        name: new object
+      summary: A sample object
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    Swiss21ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    OAuth:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth-dev.abasky.net/auth/realms/abasky/protocol/openid-connect/auth
+          tokenUrl: https://auth-dev.abasky.net/auth/realms/abasky/protocol/openid-connect/token
+          scopes:
+            https://api.deeppay.ch/auth/ebanking: access banking interface
+  responses:
+    400_BadRequest:
+      description: The server cannot or will not process the request due to an apparent client error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorObject'
+    401_Unauthorized:
+      description: Unauthorized - Authentication is required and has failed or has not yet been provided
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorObject'
+    403_Forbidden:
+      description: Forbidden - user do not have the necessary permissions for a resource 
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorObject'
+    404_NotFound:
+      description: NotFound - The requested resource could not be foun
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorObject'
+    409_Exists:
+      description: Exists - The requested resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorObject'

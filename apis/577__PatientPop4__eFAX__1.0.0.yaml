@@ -1,0 +1,386 @@
+openapi: 3.0.0
+info:
+  description: Send and Receive Fax Documents Online within the PatientPop Portal
+  version: "1.0.0"
+  title: PatientPop Digital Fax
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+paths:
+  /send:
+    post:
+      tags:
+        - Send Fax
+      summary: Send Fax to Recipient
+      requestBody:
+        $ref: '#/components/requestBodies/faxSendRequest'
+      responses:
+       '201':
+          description: Fax was successfully scheduled
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SentFax'
+  /presign:
+    post:
+      tags:
+        - Send Fax
+      summary: Get temporary S3 Presign URL for upload from the frontend
+      responses:
+        '201':
+          description: document uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresignResponse'
+  /webhook:
+    post:
+      tags:
+        - Receive Fax
+      summary: receive fax from vendor by listening to webhook
+      responses:
+        '200':
+          description: fax received
+  /poll:
+    post:
+      tags:
+        - Poll Incoming Faxes
+      summary: receive fax from vendor by polling
+      responses:
+        '200':
+          description: fax received
+  /inbox/{location_key}:
+    get:
+      tags:
+        - Inbox
+      summary: view inbox
+      parameters: 
+        - in: path
+          name: location_key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        - in: query
+          name: page_count
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page_key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: get fax results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReceivedFax'
+  /inbox/{location_key}/{fax_id}/download:
+    get:
+      tags:
+        - Inbox
+      summary: get fax from inbox
+      parameters:
+        - in: path
+          name: fax_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: location_key
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: view
+          description: Returns application/pdf if true, else application/octet-stream
+          schema:
+            type: string
+      responses:
+        '200':
+          description: get fax results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceivedFax'
+  /outbox/{location_key}:
+    get:
+      tags:
+        - Outbox
+      summary: view outbox
+      parameters:
+        - in: path
+          name: fax_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: location_key
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page_count
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: page_key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: get fax results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SentFax'
+  /outbox/{location_key}/{fax_id}/download:
+    get:
+      tags:
+        - Outbox
+      summary: get fax from outbox
+      parameters:
+        - in: path
+          name: fax_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: location_key
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: view
+          description: Returns application/pdf if true, else application/octet-stream
+          schema:
+            type: string
+      responses:
+        '200':
+          description: get fax results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentFax'
+  /numbers:
+    get:
+      tags:
+        - Numbers
+      summary: view fax numbers associated to practice
+      description: This is used when determine which locations will have an inbox
+      parameters: 
+        - in: query
+          name: practice_key
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: location_key
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Get all fax numbers for a practice
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FaxNumber'
+              
+    post:
+      tags:
+        - Numbers
+      summary: create number for a practice
+      requestBody:
+        $ref: '#/components/requestBodies/numberCreateRequest'
+      responses:
+        '201':
+          description: Created number for practice
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaxNumber'
+components:
+  schemas:
+    SentFax:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        sender:
+          $ref: '#/components/schemas/Sender'
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recipient'
+        fax_file_location:
+          type: string
+          example: https://s3.location.url
+        status:
+          type: string
+          example: SENT
+        sent_at:
+          type: string
+        error:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    ReceivedFax:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        sender:
+          $ref: '#/components/schemas/Sender'
+        recipient:
+          $ref: '#/components/schemas/Recipient'
+        fax_file_location:
+          type: string
+          example: https://s3.location.url
+        status:
+          type: string
+          example: UNREAD
+        sent_at:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    FaxNumber:
+      type: object
+      properties:
+        fax_number:
+          type: string
+          example: 310-000-0000
+        practice_key:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        location_key:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        vendor_properties:
+          type: object
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    PresignResponse:
+      type: object
+      properties:
+        url:
+          type: string
+        fields:
+          $ref: '#/components/schemas/PresignResponseFields'
+    PresignResponseFields:
+      type: object
+      properties:
+        key:
+          type: string
+        AWSAccessKeyId:
+          type: string
+        policy:
+          type: string
+        signature:
+          type: string
+    Recipient:
+      type: object
+      properties:
+        fax_number:
+          type: string
+          example: 000-000-0000
+    Sender:
+      type: object
+      properties:
+        fax_number:
+          type: string
+          example: 000-000-0000
+  requestBodies:
+    faxSendRequest:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              location_id:
+                type: string
+                format: uuid
+                example: d290f1ee-6c54-4b01-90e6-d701748f0851
+              to_fax:
+                type: string
+                format: phone
+                example: 818-000-0000
+              from_fax:
+                type: string
+                format: phone
+                example: 310-000-0000
+              fax_file_location:
+                type: string
+                format: uri
+                example: https://s3.us-east-1.amazonaws.com/mybucket/file.pdf
+    numberCreateRequest:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              practice_key:
+                type: string
+                format: uuid
+                example: d290f1ee-6c54-4b01-90e6-d701748f0851
+              location_key:
+                type: string
+                format: uuid
+                example: d290f1ee-6c54-4b01-90e6-d701748f0851
+    updateInboxFax:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                format: uuid
+                example: UNREAD|READ
+    updateOutboxFax:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                format: uuid
+                example: SENT|PENDING|ERROR

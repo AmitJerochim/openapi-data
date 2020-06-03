@@ -1,0 +1,574 @@
+openapi: 3.0.0
+info:
+  version: 'v1'
+  title: 'Listed'
+  description: ''
+
+paths: 
+  /login:
+      post:
+        summary: Faz o login do usuário.
+        description: Endpoint destinado para fornecimento do token de autenticação.
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                example: 
+                  username: "@greatcodeGC or greatcode.GC@gmail.com"
+                  password: "greatcode123"
+        responses:
+          '200':
+            description: Login realizado com sucesso.
+            content:
+              application/json:
+                schema:
+                  type: object
+                example: 
+                  token: eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJAZ3JlYXRjb2RlR0MxIiwiZXhwIjoxNTgxODEzMjk5LCJpYXQiOjE1ODE3OTUyOTl9.hbmAJHPUc10pQfXE5rCbQ1ATLh1dPw9xHQUW9k4UoihK4D8d25BP2gw5AGj9LFuL0bkDJ5yLMF-PYLdd4zLIxQ
+          '401':
+            description: Login e/ou senha incorretos.
+            content:
+              application/problem+json:
+                schema:
+                  type: object
+                example: 
+                  title: Credenciais inválidas
+                  message: 'Error 401: Login e/ou senha incorretos'
+                  status: UNAUTHORIZED
+
+  /users:
+    post:
+      summary: Faz o cadastro de um novo usuário.
+      description: Endpoint destinado para o cadastro de usuários.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserListed'
+            example: 
+              email: greatcode.gc@gmail.com
+              name: greatcode
+              username: greatcodeGC
+              password: greatcode123
+              biography: Uma empresa criada por jovens estudantes de TI
+                     
+      responses:
+        '201':
+          description: Um token JJWT utilizado para autenticação.
+          content:
+            application/json:
+              schema:
+                type: object
+                example: 
+                  token: eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJAZ3JlYXRjb2RlR0MxIiwiZXhwIjoxNTgxODEzMjk5LCJpYXQiOjE1ODE3OTUyOTl9.hbmAJHPUc10pQfXE5rCbQ1ATLh1dPw9xHQUW9k4UoihK4D8d25BP2gw5AGj9LFuL0bkDJ5yLMF-PYLdd4zLIxQ
+        '409':
+          description: Este username/email já está sendo usado
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                example: 
+                    title: Este(s) username e email já está em uso
+                    message: 'Error 409: O(s) campo(s) username e email já se encontram cadastrados em nosso banco.'
+                    status: CONFLICT
+                    cause: null
+  
+  /users/{username}:
+    get:
+      summary: Retorna um usuário.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: username
+          schema:
+            type: string
+          required: true
+          description: Username do usuário que está sendo pesquisado (sem @).
+          
+        - in: header
+          name: Authorization
+          schema:
+            type: string
+            format: jwt
+          required: true
+          description: 'Bearer <token>'
+
+      responses:
+        '200':
+          description: Informações do usuário
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                email: greatcode.gc@gmail.com
+                name: greatcode
+                username: greatcodeGC
+                biography: Uma empresa criada por jovens estudantes de TI
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  
+  /profile:
+    get:
+      summary: Retorna os usuário inserido no token de autenticação
+      security: 
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/authorization'
+        
+      responses:
+        '200':
+          description: Informações do usuário
+          content:
+            application/json:
+                schema:
+                  type: object
+                example:
+                  name: greatcode
+                  username: greatcodeGC
+                  biography: Uma empresa criada por jovens estudantes de TI
+                  tag: empresa
+                  image: <link>
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      
+    post:
+      summary: Cadastra e atualiza a imagem de perfil do usuário registrado no token
+      description: Endpoint com o intuito de cadastrar e atualizar a imagem de perfil do usuário inserido no token. Deve enviar um campo form-data com a key = file e o seu valor será uma imagem jpg/jpeg
+      security: 
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/authorization'
+
+      responses:
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      
+    put:
+      summary: Faz atualizações no usuário registrado no token
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/authorization'
+          
+      requestBody:
+        required: true
+        content:
+          application/json:
+             schema:
+                type: object
+                example:
+                  newName: "greatcodeNewName"
+                  newUsername: "great"
+                  newTag: "Empresa"
+                  newBiography: "Empresa de desenvolvimento"
+      
+      responses:
+        '200':
+          description: Retorna o perfil do usuário após as alterações
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  name: "greatcodeNewName"
+                  image: null
+                  username: "@great"
+                  tag: "empresa"
+                  biography: "Empresa de desenvolvimento"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      
+    patch:
+      summary: Faz atualizações na senha do usuário
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/authorization'
+      
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                password: "passowrdAtual"
+                newPassword: "novaPassword"
+        
+      responses:
+        '200':
+          description: Indica que a senha foi modificada
+        '400':
+          description: Inidica que a senha atual enviada não está correta
+          content:
+            application/problem+json:
+              schema:
+                type: object
+                example: 
+                  title: Senha incorreta
+                  message: A senha não é a mesma que a cadastrada
+                  status: BAD_REQUEST
+                  cause: null
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+          
+  /notifications:
+    get:
+      summary: Retorna todas as notificações ligadas ao usuário
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/authorization'
+      
+      responses:
+        '200':
+          description: Retorna as notificações pertecentes ao usuário
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+  
+  /notifications/{notification_id}:
+    put:
+      summary: Atualiza o campo read da notificações
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/authorization'
+        - in: path
+          name: notification_id
+          required: true
+          schema:
+            type: number
+        
+      responses:
+        '200':
+          description: Leitura da notificação atualizada
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Backlog: 
+      properties:
+        id:
+          type: number
+          uniqueItems: true
+          nullable: false
+        name:
+          type: string
+          uniqueItems: false
+          nullable: false
+          maxLength: 100
+        description:
+          type: string
+          uniqueItems: false
+          nullable: true
+          maxLength: 200
+        priority:
+          type: integer
+          uniqueItems: false
+          nullable: false
+          minimum: 1
+          maximum: 10
+        concluded:
+          type: boolean
+          uniqueItems: false
+          nullable: false
+        durationEstimated:
+          type: object
+          uniqueItems: false
+          nullable: false
+        project:
+          $ref: '#/components/schemas/Project'
+        sprints:
+          type: array
+          uniqueItems: false
+          nullable: true
+          items:
+            $ref: '#/components/schemas/Sprint'
+        
+      required:
+        - id
+        - name
+        - priority
+        - concluded
+        - durationEstimated
+        - project
+      
+    Category:
+      properties:
+        id:
+          type: integer
+          uniqueItems: true
+          nullable: false
+        name:
+          uniqueItems: false
+          nullable: false
+          maxLength: 30
+        project:
+          $ref: '#/components/schemas/Project'
+        users:
+          type: array
+          uniqueItems: false
+          nullable: true
+          items:
+              $ref: '#/components/schemas/UserListed'
+        
+      required:
+        - id
+        - name
+    
+    Project:
+      properties:
+        id:
+          type: integer
+          uniqueItems: true
+          nullable: false
+        name:
+          type: string
+          uniqueItems: false
+          nullable: false
+          maxLength: 100
+        description:
+          type: string
+          uniqueItems: false
+          nullable: true
+          maxLength: 255
+        weekSprint:
+          type: integer
+          uniqueItems: false
+          nullable: false
+          minimum: 1
+          maximum: 4
+        concluded:
+          type: boolean
+          uniqueItems: false
+          nullable: false
+        creator:
+          type: string
+          uniqueItems: false
+          nullable: false
+          maxLength: 21
+        dateStart:
+          type: object
+          uniqueItems: false
+          nullable: false
+          example: new LocalDate(2020, 02, 15)
+        dateEnd:
+          type: object
+          uniqueItems: false
+          nullable: true
+        
+      required:
+        - id
+        - name
+        - weekSprint
+        - concluded
+        - creator
+        - dateStart
+      
+    Sprint:
+      properties:
+        id:
+          type: integer
+          uniqueItems: true
+          nullable: false
+        name:
+          type: string
+          uniqueItems: false
+          nullable: false
+          maxLength: 60
+        description:
+          type: string
+          uniqueItems: false
+          nullable: true
+          maxLength: 120
+        metaSprint:
+          type: string
+          uniqueItems: false
+          nullable: false
+          maxLength: 100
+        concluded:
+          type: boolean
+          uniqueItems: false
+          nullable: false
+        dateStart:
+          type: object
+          uniqueItems: false
+          nullable: false
+          example: new LocalDate()
+        dateEnd:
+          type: object
+          uniqueItems: false
+          nullable: true
+          example: new LocalDate()
+        project:
+          $ref: '#/components/schemas/Project'
+        backlogs:
+          type: array
+          uniqueItems: false
+          nullable: true
+          items:
+            $ref: '#/components/schemas/Backlog'
+        
+      required:
+        - id
+        - name
+        - metaSprint
+        - concluded
+        - dateStart
+        - dateEnd
+        - project
+      
+    Task:
+      properties:
+        id:
+          type: number
+          uniqueItems: true
+          nullable: false
+        name: 
+          type: string
+          uniqueItems: false
+          nullable: false
+          maxLength: 100
+        description:
+          type: string
+          uniqueItems: false
+          nullable: true
+          maxLength: 255
+        concluded:
+          type: boolean
+          uniqueItems: false
+          nullable: false
+        durationEstimated:
+          type: object
+          uniqueItems: false
+          nullable: false
+        backlog:
+          $ref: '#/components/schemas/Backlog'
+        
+      required:
+        - id
+        - name
+        - concluded
+        - durationEstimated
+        - backlog
+      
+    UserListed:
+      properties:
+        id:
+          type: integer
+          uniqueItems: true
+          nullable: false
+        email:
+          type: string
+          uniqueItems: true
+          maxLength: 120
+          nullable: false
+        name:
+          type: string
+          uniqueItems: false
+          maxLength: 50
+          nullable: false
+        username:
+          type: string
+          uniqueItems: true
+          maxLength: 21
+          nullable: false
+        password:
+          type: string
+          uniqueItems: false
+          maxLength: 80
+          nullable: false
+        biography:
+          type: string
+          uniqueItems: false
+          maxLength: 150
+          nullable: true
+        tag:
+          type: string
+          uniqueItems: false
+          maxLength: 20
+          nullable: true
+        image:
+          type: string
+          uniqueItems: true
+          maxLength: 255
+          nullable: true
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        
+      required:
+        - id
+        - email
+        - name
+        - username
+        - password
+      
+    Notification:
+      properties:
+        id:
+          type: number
+          uniqueItems: true
+        name:
+          type: string
+          nullable: false
+        description:
+          type: string
+          nullable: false
+        read:
+          type: boolean
+          nullable: false
+          
+      required:
+        - id
+        - email
+        - name
+        - username
+        - password
+        
+  parameters:
+    authorization:
+      in: header
+      name: Authorization
+      schema:
+        type: string
+        format: jwt
+      required: true
+      description: 'Bearer <token>'
+  responses:
+    UnauthorizedError:
+      description: O token de autenticação é obrigatório neste endpoint.  // Token inválido
+      content:
+        application/problem+json:
+          schema:
+            type: object
+            example:
+              timestamp: '2020-02-17T23:43:56.911+0000'
+              status: 403
+              error: Forbidden
+              message: Access Denied
+              path: <endpoint>
+
+# Added by API Auto Mocking Plugin
+servers:
+  - description: Link da API
+    url: https://aqueous-atoll-11626.herokuapp.com
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/GreatCode/Listed-api/v1

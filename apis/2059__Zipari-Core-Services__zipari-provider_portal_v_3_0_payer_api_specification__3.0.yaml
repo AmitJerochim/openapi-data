@@ -1,0 +1,1768 @@
+openapi: 3.0.0
+info:
+  title: Zipari Provider Portal V3.0- Payer API Specification
+  description: Zipari Payer API Specifications defines the REST API's to be implemented by the Payers to integrate with Zipari Portals.
+  version: "3.0"
+paths:
+  /members/:
+    get:
+      tags:
+      - member
+      summary: Get the list of Members associated with search criteria
+      description: "Returns a list of member object. \n\nSearch can be performed using\
+        \ Member Last Name, Member Number or by Member Date of Birth. Additional search fields can be included as needed by the configuration of the portal.\n"
+      operationId: members_list
+      parameters:
+      - name: last_name
+        in: query
+        description: Member's last name to be used for search by last name
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: member_number
+        in: query
+        description: Unique member identifier associated with the member
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: date_of_birth
+        in: query
+        description: Members date of birth in YYYY-MM-DD format
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          format: date
+      responses:
+        200:
+          description: An array of member objects
+          content:
+            application/json:
+              schema:
+                required:
+                  - count
+                  - results
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Count representing the number of objects returned in the results array
+                  next:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the next set of records
+                  previous:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the previous set of records
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Member'
+        403:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        405:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /members/{member_number}/:
+    get:
+      tags:
+      - member
+      summary: Get Member Details by Member Number
+      description: |
+        Returns the Member Information for the specified member_number
+
+        member_number is the unique identifier of the member specified by the payer .
+      operationId: members_read
+      parameters:
+      - name: member_number
+        in: path
+        description: The unique identifier of the member to retrieve
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        200:
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        403:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        405:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  
+  /members/{member_number}/plan-benefits/:
+    get:
+      tags:
+      - eligibility
+      summary: Get plan benefit details of plans associated with the member.
+      description: "This API provides all of the plan information and the related benefit details of the plan to be\
+        \ displayed online for the user. \nThe data returned in this API is used\
+        \ only as a static display and not used for any calculation or accumulations.\n\
+        If any calculated values to be displayed, perform the calculation at the payer\
+        \ side and send it as a benefit. \n"
+      operationId: benefits_read
+      parameters:
+      - name: member_number
+        in: path
+        description: unique identifier of the member to retrieve the list of benefits
+          associated with the plan
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        200:
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                required:
+                  - count
+                  - results
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Count representing the number of objects returned in the results array
+                  next:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the next set of records
+                  previous:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the previous set of records
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlanInformation'
+        403:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        405:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /members/{member_number}/benefit-periods/:
+    get:
+      tags:
+      - accumulator
+      summary: Get benefit periods associated with the member used for benefit accumulators.
+      description: |
+        Provides benefit period date ranges used for benefit accumulator calculation.
+      operationId: benefitperiod_read
+      parameters:
+      - name: member_number
+        in: path
+        description: member number to retrieve the list of benefit accumulator values
+          associated with the member.
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - name: member_coverage_id
+        in: path
+        description: unique identifier for the member to coverage association.
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: provides list of benefit period associated to the member.
+          content:
+            application/json:
+              schema:
+                required:
+                  - count
+                  - results
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Count representing the number of objects returned in the results array
+                  next:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the next set of records
+                  previous:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the previous set of records
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BenefitPeriod'
+        403:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        405:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /members/{member_number}/benefits/:
+    get:
+      tags:
+      - accumulator
+      summary: Get benefit accumulator values associated with the members.
+      description: |
+        Provides Individual and Family Deductible, Individual and Family Out of Pocket and any other benefit accumulators such as number of physical therapy visits etc.
+      operationId: accumulators_read
+      parameters:
+      - name: member_number
+        in: path
+        description: member number to retrieve the list of benefit accumulator values
+          associated with the member.
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - name: benefit_period_id
+        in: query
+        description: benefit period identifier to retrieve the list of benefit accumulator values associated with the member for the benefit period.
+        required: true
+        style: form
+        explode: false
+        schema:
+          type: integer
+      responses:
+        200:
+          description: provides list of benefits with their accumulated values and the benefit period.
+          content:
+            application/json:
+              schema:
+                required:
+                  - count
+                  - results
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Count representing the number of objects returned in the results array
+                  next:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the next set of records
+                  previous:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the previous set of records
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Accumulator'
+        403:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        405:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /claims/:
+    get:
+      tags:
+      - claims
+      summary: Get a list of claims for the member
+      description: |
+        Returns a list of claims associated with search criteria
+
+        Search can be performed using Member First Name, Last Name, Claim Number or by Claim Status.
+      operationId: claims_list
+      parameters:
+      - name: first_name
+        in: query
+        description: Member's first name to be used for search by first name
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: last_name
+        in: query
+        description: Member's last name to be used for search by last name
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: claim_number
+        in: query
+        description: Unique claim number associated with the claim
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      - name: claim_status
+        in: query
+        description: Claim status associated with the claim
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: An array of claim objects
+          headers:
+            x-next:
+              description: A link to the next page of responses
+              style: simple
+              explode: false
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                required:
+                  - count
+                  - results
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Count representing the number of objects returned in the results array
+                  next:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the next set of records
+                  previous:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the previous set of records
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Claim'
+        403:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        405:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  
+                
+  /claims/{claim_number}/:
+    get:
+      tags:
+      - claims
+      summary: Get claim details for a claim.
+      description: This API provides all of the details of a claim. The details includes the claim lines associated with the claim.
+      operationId: claim_read
+      parameters:
+      - name: claim_number
+        in: path
+        description: unique identifier of the claim
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        200:
+          description: Expected response to a valid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimDetail'
+        403:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        405:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /transfer-of-care/:
+    get:
+      tags:
+      - authorization
+      summary: Get a list Authorization and Referrral Status.
+      description: |
+        This API provides all of data related to authorization status and history, physician referral status and history.  (Transfer of Care).
+      operationId: tocs_list
+      parameters:
+      - name: member_number
+        in: path
+        description: member number to retrieve the Authorization and Referrral Status.
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - name: toc_type
+        in: query
+        description: Type of the request.
+        required: true
+        style: form
+        explode: false
+        schema:
+          type: string
+          enum:
+          - authorization
+          - refferal
+          - predetermination
+      - name: toc_status
+        in: query
+        description: Status used for search query. Optional.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          enum:
+          - approved
+          - denied
+          - pending
+      - name: search_start_date
+        in: query
+        description: Start Date for search filtering. Optional. Conditionally required
+          if search_end_date is provided.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          format: YYYY-MM-DD
+      - name: search_end_date
+        in: query
+        description: End Date for search filtering. Optional. Conditionally required
+          if search_start_date is provided.
+        required: false
+        style: form
+        explode: true
+        schema:
+          type: string
+          format: YYYY-MM-DD
+      responses:
+        200:
+          description: provides list of TransferOfCare object associated with the
+            search parameters.
+          headers:
+            x-member_number:
+              description: member_number used as the request parameter
+              style: simple
+              explode: false
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                required:
+                  - count
+                  - results
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Count representing the number of objects returned in the results array
+                  next:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the next set of records
+                  previous:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the previous set of records
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TransferOfCare'
+        403:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        405:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /documents/:
+    get:
+      tags:
+      - document center
+      summary: Get a list of Documents associated with the Member.
+      description: |
+        This API returns a list of document object associated with the member.
+      operationId: documents_list
+      parameters:
+      - name: member_number
+        in: path
+        description: member number to retrieve the associated documents.
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        200:
+          description: provides list of Document object associated with the search parameters.
+          headers:
+            x-member_number:
+              description: member_number used as the request parameter
+              style: simple
+              explode: false
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                required:
+                  - count
+                  - results
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Count representing the number of objects returned in the results array
+                  next:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the next set of records
+                  previous:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the previous set of records
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+        403:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        405:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /document/{id}/:
+    get:
+      tags:
+      - document center
+      summary: Get document using the document id.
+      description: |
+        This API returns a document object associated with the member for an request to get meta data as application/json.
+        This API endpoint also can be configured to return a binary stream if the response needed is for an applicaion/pdf or image/*.
+      operationId: documents_read
+      parameters:
+      - name: id
+        in: path
+        description: unique document identifier to retrieve the associated document.
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        200:
+          description: provides the Document object associated with the document id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        403:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        405:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  
+
+  /messages/:
+    get:
+      tags:
+      - message center
+      summary: Get messages from payer system.
+      description: |
+        This API provides all of the messages for the specific user from the message source system of the payer.
+      operationId: messages_list
+      parameters:
+      - name: member_number
+        in: path
+        description: member number to retrieve the list of messages associated with
+          the member.
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      responses:
+        200:
+          description: provides list of messages associated with the member.
+          headers:
+            x-member_number:
+              description: member_number used as the request parameter
+              style: simple
+              explode: false
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                required:
+                  - count
+                  - results
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Count representing the number of objects returned in the results array
+                  next:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the next set of records
+                  previous:
+                    type: integer
+                    description: query identifier defined by the api developer for getting the previous set of records
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        403:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        405:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags:
+      - message center
+      summary: Post message from portal to payer system.
+      description: |
+        This API provides all of the message information captured on the portal and submit the same to the payer system.
+      operationId: message_post
+      requestBody:
+        description: Post new message created by member to the payer system. Message
+          Id field is set as empty and replies attribute is set to null. Parent ID is populated when the member is responding to a message.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+      responses:
+        200:
+          description: Successfully posted the message to the payer system.
+ 
+  /messages/{id}/:
+    put:
+      tags:
+      - message center
+      summary: Updates a message within a payer system.
+      parameters:
+      - name: id
+        in: path
+        description: unique document identifier to retrieve the associated document.
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      description: |
+        Updates whether or not a message has been read.
+      operationId: message_put
+      requestBody:
+        description: Updates whether or not a message has been read.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+      responses:
+        200:
+          description: Successfully posted the message to the payer system.
+      
+
+components:
+  schemas:
+    Member:
+      required:
+      - member_number
+      - name
+      type: object
+      properties:
+        member_number:
+          type: string
+          description: unique member identifier assigned by the payer
+        name:
+          $ref: '#/components/schemas/Name'
+        ssn:
+          type: string
+          description: Members social security number
+        medicare_number:
+          type: string
+          description: medicare HIC number of the medicare member. only needed if the member is a medixare member and have to display the medicare number on the screen.
+        gender:
+          type: string
+          description: Members gender
+          enum:
+          - male
+          - female
+          - not_specified
+        birth_date:
+          type: string
+          description: Members Date of Birth
+          format: date (YYYY-MM-DD)
+        tobacco_use:
+          type: boolean
+          description: Does the member uses tobacco or not
+        marital_status:
+          type: string
+          description: Members marital status
+        ethnicity:
+          type: string
+          description: Members ethinicity
+        home_phone:
+          type: string
+          description: Members registered home phone number
+        cell_phone:
+          type: string
+          description: Members registered cell phone number
+        office_phone:
+          type: string
+          description: Members registered office phone number
+        primary_phone_type:
+          type: string
+          description: Members preferred phone contact type
+          enum:
+          - home
+          - cell
+          - office
+        email_address:
+          type: string
+          description: Members registered email address
+        primary_language:
+          type: string
+          description: Members primary language
+        secondary_language:
+          type: boolean
+          description: Members secondary language
+        has_disability:
+          type: string
+          description: Member disability status
+        relationship_to_subscriber:
+          type: string
+          description: Members relationship to subscriber ( This is not needed for
+            Medicare Market)
+          enum:
+          - Self
+          - Spouse
+          - Daughter
+          - Son
+        subscriber_number:
+          type: string
+          description: Identifier of the Primary Subscriber Members relationship to
+            subscriber ( This is not needed for Medicare Market)
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        pcp_list:
+          description: List of Primary care physician associated with the Member
+          type: array
+          items:
+            $ref: '#/components/schemas/PCP'
+            
+    # Generic Name Component used for defining the name attributes of all users
+    Name:
+      description: Defines the Name of the Person
+      required:
+      - first_name
+      - last_name
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        middle_name:
+          type: string
+        prefix:
+          type: string
+        suffix:
+          type: string
+      
+    
+    # Policy represents an health insurance policy
+    Policy:
+      description: Nested object defining the details of policy,  coverages and members associated to the coverage
+      required:
+      - policy_number
+      - policy_status
+      - effective_date
+      - termination_date
+      - product_coverages
+      type: object
+      properties:
+        policy_number:
+          description: unique policy identifier
+          type: string
+        policy_status:
+          description: status of the policy
+          type: string
+          enum: 
+            - active
+            - terminated
+            - inactive
+        policy_status_reason:
+          description: reason for status being terminated or inactive
+          type: string
+        policy_premium:
+          description: premium associated with the policy
+          type: string
+        effective_date:
+          description: policy effective date
+          type: string
+          format: "YYYY-MM-DD"
+        termination_date:
+          description: policy termination date
+          type: string
+          format: "YYYY-MM-DD"
+        product_coverages:
+          description: coverages associated with the policy.
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductCoverage'
+        group:
+          description: If the Member is a Group Member, then Group Object is included to get Members Group Identifier.
+          type: object
+          $ref: '#/components/schemas/Group'
+        policy_contacts:
+          description: Contact person associated with the policy on behalf od the member.
+          type: array
+          items:
+            $ref: '#/components/schemas/Contact'
+            
+    ProductCoverage:
+      required:
+        - product_coverage_type
+        - effective_date
+        - termination_date
+        - external_plan_id
+        - external_plan_name
+        - member_coverages
+      type: object
+      properties: 
+        product_coverage_id:
+          description: unique policy coverage identifier
+          type: string
+        product_coverage_type:
+          description: type of product coverage
+          type: string
+          enum:
+            - medical
+            - dental
+            - vision
+            - drug
+            - life
+            - accident
+            - medicare
+        effective_date:
+          description: coverage effective date
+          type: string
+          format: "YYYY-MM-DD"
+        termination_date:
+          description: coverage termination date
+          type: string
+          format: "YYYY-MM-DD"
+        external_plan_id:
+          description: unique plan identifier assigned by the payer. This plan idenitifier is used for retrieving benefits assoicated with the plan.
+          type: string
+        external_plan_name:
+          description: name of the plan as provided on enrollment.
+          type: string
+        external_plan_name_sbc_url:
+          description: url to access plan sbc. optional field.
+          type: string
+          format: url
+        member_coverages:
+          description: details of members who have elected the product coverage.
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberCoverage'
+    Group:
+      required:
+        - group_number
+        - group_name
+        - effective_date
+        - termination_date
+        - group_status
+        
+      properties:
+        group_number:
+          description: unique identifier of the group. used for group based portal view configurations.
+          type: string
+        group_name:
+          description: name of the group / company
+          type: string
+        effective_date:
+          description: group effective date
+          type: string
+          format: "YYYY-MM-DD"
+        termination_date:
+          description: group termination date
+          type: string
+          format: "YYYY-MM-DD"
+        group_status:
+          description: status of the group
+          type: string
+          enum: 
+            - active
+            - terminated
+    
+    MemberCoverage: 
+      required:
+        - member_coverage_id
+        - external_plan_id
+        - effective_date
+        - termination_date
+        - members
+      properties:
+        member_coverage_id:
+          description: unique identifier for the member to coverage association.
+          type: string
+        external_plan_id:
+          description: unique plan identifier assigned by the payer. This plan idenitifier is used for retrieving benefits assoicated with the plan.
+          type: string
+        effective_date:
+          description: member coverage election effective date
+          type: string
+          format: "YYYY-MM-DD"
+        termination_date:
+          description: member coverage termination date
+          type: string
+          format: "YYYY-MM-DD"
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+        
+          
+    Contact:
+      required:
+        - contact_id
+        - name
+        - gender
+        - phone_number
+        - address
+        - contact_relationship
+      properties:
+        contact_id:
+          type: string
+          description: unique identifier for contact assigned by the payer
+        name:
+          $ref: '#/components/schemas/Name'
+        gender:
+          type: string
+          description: gender of the contact
+        phone_number:
+          type: string
+          description: primary phone number of the contact
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        contact_relationship:
+          description: The nature of the relationship between the member and the contact person.
+          type: string
+          
+    Address:
+      required:
+        - street_name_1
+        - city_name
+        - zip_code
+        - state
+        - address_type
+      properties:
+        street_name_1:
+          description: Street Name
+          type: string
+        street_name_2:
+          description: Optional additional lines for Street Name
+          type: string
+        street_name_3:
+          description: Optional additional lines for Street Name
+          type: string
+        city_name:
+          description: Name of the City
+          type: string
+        zip_code:
+          description: Zipcode
+          type: string
+          format: "00000"
+        state:
+          description: State name
+          type: string
+        address_type:
+          description: Physical or Mailing address
+          type: string
+          enum:
+            - physical
+            - mailing
+          
+    PlanInformation:
+      required:
+        - external_plan_id
+        - external_plan_name
+        - product_coverage_type
+        - plan_benefits
+      properties:
+        external_plan_id:
+          description: unique plan identifier assigned by the payer. This plan idenitifier is used for retrieving benefits assoicated with the plan.
+          type: string
+        external_plan_name:
+          description: name of the plan as provided on enrollment.
+          type: string
+        external_plan_name_sbc_url:
+          description: url to access plan sbc. optional field.
+          type: string
+          format: url
+        product_coverage_type:
+          description: type of product coverage
+          type: string
+          enum:
+            - medical
+            - dental
+            - vision
+            - drug
+            - life
+            - accident
+            - medicare
+        plan_year:
+          description: year for which the plan was available to enroll.
+          type: integer
+          format: YYYY
+        plan_benefits:
+          description: benefits associated with the plan
+          type: array
+          items:
+            $ref: '#/components/schemas/Benefit'
+        
+    Benefit:
+      required:
+      - benefit_category
+      - benefit_category_display_seq_number
+      - short_description
+      - detail_description
+      type: object
+      properties:
+        benefit_category:
+          type: string
+          description: Service category of the benefit such as Primary Care, Hospitalization
+            etc.
+        benefit_display_seq_number:
+          type: integer
+          format: int32
+          description: sequence number for sorting the list for display
+        participation_level:
+          type: string
+          enum:
+          - single
+          - family
+        network:
+          type: string
+          description: To identify the description provided is for In or Out of Network.
+            Set this as default to InNetwork and set as OutOfNetwork only if the description
+            provided for out of network to be displayed to the user.
+          enum:
+          - InNetwork
+          - OutOfNetwork
+        short_description:
+          type: string
+          description: short description of the in network benefit
+        detail_description:
+          type: string
+          description: detailed description of the in network benefit
+      description: Benefit associated with a Plan / Coverage
+    Accumulator:
+      required:
+      - accumulated_value
+      - accumulator_category
+      - allowed_amount
+      - benefit_period_end_date
+      - benefit_period_start_date
+      - accumulation_coverage_type
+      type: object
+      properties:
+        benefit_period_start_date:
+          type: string
+          description: Start date of the accumulator calculation
+          format: YYYY-MM-DD
+        benefit_period_end_date:
+          type: string
+          description: Last date until which the accumulators are calculated
+          format: YYYY-MM-DD
+        accumulation_coverage_type:
+            type: string
+            description: coverage type(s) used as part of accumulation calculation.
+            enum:
+            - medical
+            - rx
+            - medical and rx
+        accumulator_category:
+          type: string
+          enum:
+          - Individual Deductible
+          - Family Deductible
+          - Individual MOOP
+          - Family MOOP
+        allowed_amount:
+          type: number
+          format: amount with 2 decimal places
+        accumulated_value:
+          type: number
+          format: amount with 2 decimal places
+    
+    
+    TransferOfCare:
+      required:
+      - effective_date
+      - number
+      - requesting_provider
+      - service_request
+      - service_request_date
+      - servicing_provider
+      - termination_date
+      - toc_status
+      - toc_type
+      type: object
+      properties:
+        number:
+          type: string
+          description: Transfer of care reference number / identifier
+        toc_type:
+          type: string
+          description: Type of the transfer of care request.
+          enum:
+          - authorization
+          - refferal
+          - predetermination
+        toc_status:
+          type: string
+          description: Status of the transfer of care request.
+          enum:
+          - approved
+          - denied
+          - pending
+        service_request_date:
+          type: string
+          description: Date of service request
+          format: YYYY-MM-DD
+        service_request:
+          type: string
+          description: Transfer of care service request details
+        effective_date:
+          type: string
+          description: Transfer of care effective date
+          format: YYYY-MM-DD
+        termination_date:
+          type: string
+          description: Transfer of care termination date
+          format: YYYY-MM-DD
+        requesting_provider:
+          $ref: '#/components/schemas/Provider'
+        servicing_provider:
+          $ref: '#/components/schemas/Provider'
+        procedures:
+          description: list of procedures associated with the authorization request
+          type: array
+          items:
+            $ref: '#/components/schemas/Procedure'
+        diagnoses:
+          description: list of diagnosis codes associated with the authorization request
+          type: array
+          items:
+            $ref: '#/components/schemas/Diagnosis'
+        requested_unit:
+          type: string
+          description: Transfer of care requested units
+        approved_unit:
+          type: string
+          description: Transfer of care approved units
+        used_unit:
+          type: string
+          description: Transfer of care used units
+    
+    Provider:
+      required:
+      - name
+      - provider_id
+      type: object
+      properties:
+        provider_id:
+          type: string
+          description: Payer defined unique identifier of the service provider
+        name:
+          $ref: '#/components/schemas/Name'
+        provider_npi:
+          description: NPI number of the service provider 
+          type: string
+          
+    PCP:
+      required:
+      - pcp_effective_date
+      - provider
+      type: object
+      properties:
+        pcp_effective_date:
+          description: effective date from which the primary care physician is associated with the member
+          type: string
+          format: date
+        pcp_termination_date:
+          description: termination date of the primary care physicians association with the member
+          type: string
+          format: date
+        provider:
+          description: Details of the primary care physician
+          type: object
+          $ref: '#/components/schemas/Provider'
+        pcp_termination_reason:
+          description: reason for terminating the PCP
+          type: string
+          maxLength: 255
+        
+        
+          
+    Message:
+      required:
+      - author_name
+      - content
+      - id
+      - is_read
+      - subject
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique reference identifier for the message
+          format: int32
+        parent_message_id:
+          type: integer
+          description: Unique reference identifier for the message that is being responded to
+          format: int32
+        subject:
+          maxLength: 255
+          minLength: 1
+          type: string
+          description: Message subject entered by the user
+        category:
+          description: Message category used for filtering or groupiong the messages.
+          type: string
+          enum:
+          - Benefits
+          - Claims
+          - Enrollments
+          - Premium Billing
+          - Technical Support
+          - Find a Doctor
+        author_name:
+          maxLength: 255
+          minLength: 1
+          type: string
+          description: Message author name (from address on the message)
+        content:
+          maxLength: 255
+          minLength: 1
+          type: string
+          description: Content of the message (message body)
+        is_read:
+          type: boolean
+          description: Flag to specify whether the message is read or not ( default
+            to False)
+        replies:
+          type: array
+          description: An array of Message Objects associated with the Message (All
+            the replies associated with the message.)
+          items:
+            $ref: '#/components/schemas/Message'
+    
+    Document:
+      required:
+      - id
+      - file_type
+      - file_name
+      - url
+      - document_category
+      type: object
+      properties:
+        id:
+          description: Unique identifier of the document which can be used for referencing the document
+          type: string
+        file_type:
+          description: Type of the file
+          type: string
+          enum: [pdf, worddoc, excel,jpeg,tif,png]
+        file_name:
+          description: Display name of the document. This name will be used for display on user interface
+          type: string
+        url:
+          description: URL for accessing the document from the source rpository.
+          type: string
+        effective_date:
+          description: Effective date on which the document can be displayed to the user.
+          type: string
+          format: "YYYY-MM-DD"
+        termination_date: 
+          description: Date after which the document is no longer visible for the user.
+          type: string
+          format: "YYYY-MM-DD"
+        document_date:
+          description: Date of creation of the document. 
+          type: string
+          format: "YYYY-MM-DD"
+        document_category:
+          description: carrier specific document categorization for filtering. New categories can be included based on configuration.
+          type: string
+          enum:
+            - Claims
+            - Benefits
+            - Forms
+            - Tax Documents
+        language:
+          description: language of the document ( English, Spanish etc)
+          type: string
+          
+    
+    
+    Claim:
+      required:
+      - claim_number
+      - claim_status
+      - claim_type
+      - patient
+      - provider
+      - service_date
+      - total_submitted_amount
+      - total_patient_responsibility_amount
+      - total_paid_amount
+      type: object
+      properties:
+        claim_number:
+          type: string
+          description: The business identifier for the 
+            claim which is used for referencing a claim across any system.
+        claim_status:
+          description: The status of the claim
+          type: string
+          enum:
+          - active
+          - cancelled
+          - pending
+          - entered-in-error
+          - adjusted
+        claim_type:
+          type: string
+          description: The product category of claim
+          enum:
+          - rx
+          - medical
+          - dental
+        claim_subtype:
+          type: string
+          description: A finer grained suite of claim sub type description which may convey
+            additional information such practioner, professional, institutional,oral, pharmacy, vision.
+        service_date:
+          description: Date of service
+          type: string
+          format: "YYYY-MM-DD"
+        total_submitted_amount:
+          description: Total claim amount submitted
+          type: number
+          format: amount
+        total_patient_responsibility_amount:
+          description: Total amount owed by the member
+          type: number
+          format: amount
+        total_paid_amount:
+          description: Total amount paid by the insurance carrier
+          type: number
+          format: amount
+        eob_document_id:
+          description: Unique identifier for explanation of benefits document
+          type: string
+        patient:
+          description: patient associated with the claim (member)
+          type: object
+          $ref: '#/components/schemas/Member'
+        provider:
+          description: service provider associated with the claim (member)
+          type: object
+          $ref: '#/components/schemas/Provider'
+        claim_detail:
+          description: Details of individual claim 
+          type: object
+          $ref: '#/components/schemas/ClaimDetail'
+        
+          
+    ClaimDetail:
+      required:
+      - claim_number
+      - claim_status
+      - claim_type
+      - service_date
+      - patient
+      - provider
+      - total_submitted_amount
+      - total_patient_responsibility_amount
+      - total_paid_amount
+      - claim_lines
+      properties:
+        claim_number:
+          type: string
+          description: The business identifier for the 
+            claim which is used for referencing a claim across any system.
+        claim_status:
+          description: The status of the claim
+          type: string
+          enum:
+          - active
+          - cancelled
+          - pending
+          - entered-in-error
+          - adjusted
+        claim_type:
+          type: string
+          description: The product category of claim
+          enum:
+          - rx
+          - medical
+          - dental
+        claim_subtype:
+          type: string
+          description: A finer grained suite of claim sub type description which may convey
+            additional information such practioner, professional, institutional,oral, pharmacy, vision.
+        service_date:
+          description: Date of service
+          type: string
+          format: "YYYY-MM-DD"
+        total_submitted_amount:
+          description: Total claim amount submitted
+          type: number
+          format: amount
+        total_patient_responsibility_amount:
+          description: Total amount owed by the member
+          type: number
+          format: amount
+        total_paid_amount:
+          description: Total amount paid by the insurance carrier
+          type: number
+          format: amount
+        total_copay_amount:
+          description: Total copay amount of the claim
+          type: number
+          format: amount
+        total_coinsurance_amount:
+          description: Total coinsurance amount of the claim
+          type: number
+          format: amount
+        total_deductible_amount:
+          description: Total coinsurance amount of the claim
+          type: number
+          format: amount
+        eob_document_id:
+          description: Unique identifier for explanation of benefits document, to be used as a meta data for accessing eob document.
+          type: string
+        eob_document_url:
+          description: URL of the eob document to be linked from the claim dertails. 
+          type: string
+          format: url
+        payment_status:
+          description: status of the claim payment
+          type: string
+          enum:
+          - completed
+          - pending
+        payment_information:
+          description: details of the claim payment to provider
+          type: array
+          items:
+            type: object
+            properties:
+              payment_type:
+                description: represents partial or complete payment of the benefits payable
+                type: string
+                enum:
+                  - complete
+                  - partial
+              payment_date: 
+                description: date on which the payment was made
+                type: string
+                format: "YYYY-MM-DD"
+              payment_amount:
+                description: actual payment amount (Benefits payable less any payment adjustment.)
+                type: string
+                format: amount
+              payment_adjustment:
+                description: any adjutments applied on to this payment
+                type: string
+                format: amount
+              payment_adjustment_reason:
+                description: Reason for the payment adjustment.
+                type: string
+              payment_check_number:
+                description: Check number associated with the payment (payment identifier)
+                type: string
+              payment_check_issued_to:
+                description: Issued to information on the check
+                type: string
+        patient:
+          description: patient associated with the claim (member)
+          type: object
+          $ref: '#/components/schemas/Member'
+        provider:
+          description: service provider associated with the claim (member)
+          type: object
+          $ref: '#/components/schemas/Provider'
+        claim_lines:
+          description: details provided as individual claim lines
+          type: array
+          items:
+            $ref: '#/components/schemas/ClaimLine'
+        procedures:
+          description: procedure(s) associated with the claim.
+          type: array
+          items:
+            $ref: '#/components/schemas/Procedure'
+        diagnoses:
+          description: list of diagnosis codes associated with the claim 
+          type: array
+          items:
+            $ref: '#/components/schemas/Diagnosis'
+            
+    ClaimLine:
+      required:
+      - line_number
+      - service_from_date
+      - service_to_date
+      properties:
+        line_number:
+          description: unique identifier for the cliam line
+          type: integer
+        service_from_date:
+          description: start date of service
+          type: string
+          format: "YYYY-MM-DD"
+        service_to_date:
+          description: end date of service
+          type: string
+          format: "YYYY-MM-DD"
+        billed_amount:
+          description: Billed amount of the claim's line
+          type: string
+          format: amount
+        service_units:
+          description: Service units applied to the claim's line
+          type: string
+        deductible_amount:
+          description: Deductible amount of the claim's line
+          type: string
+          format: amount
+        allowed_amount:
+          description: Allowed amount of the claim's line
+          type: string
+          format: amount
+        amount_not_covered:
+          description: Amount not covered by the claim's line
+          type: string
+          format: amount
+        paid_amount:
+          description: paid amount of the claim's line
+          type: string
+          format: amount
+        type_of_service_description:
+          type: string
+          description: description of the claim line's service
+        coinsurance_amount:
+          description: co-insurance amount for the claim's line
+          type: string
+          format: amount
+        copay_amount:
+          description: co-pay amount for the claim's line
+          type: string
+          format: amount
+        patient_responsibility_amount:
+          description: patient responsibility of the claim's line
+          type: string
+          format: amount
+        procedures:
+          description: procedure(s) associated with the claim.
+          type: array
+          items:
+            $ref: '#/components/schemas/Procedure'
+        diagnoses:
+          description: list of diagnosis codes associated with the claim 
+          type: array
+          items:
+            $ref: '#/components/schemas/Diagnosis'
+          
+          
+    Procedure:
+      required:
+      - procedure_code
+      - procedure_description
+      properties:
+        procedure_code:
+          description: cpt code
+          type: string
+        procedure_description:
+          description: cpt code description to be displayed
+          type: string
+          
+    Diagnosis:
+      required:
+      - diagnosis_code
+      - diagnosis_description
+      properties:
+        diagnosis_code:
+          description: icd code
+          type: string
+        procedure_description:
+          description: icd code description to be displayed
+          type: string
+        
+    
+    BenefitPeriod:
+      required:
+      - id
+      - start_date
+      - end_date
+      properties:
+        id:
+          description: unique identifier for the benefit period
+          type: integer
+          format: int32
+        start_date:
+          description: Benefit Period start date
+          type: string
+          format: "YYYY-MM-DD"
+        end_date:
+          description: Benefit Period end date
+          type: string
+          format: "YYYY-MM-DD"
+    
+    NestedIDCard:
+      required:
+      - front_doc_id
+      - back_doc_id
+      type: object
+      properties:
+        full_doc_id:
+          description: Document ID including both front and back images, prefix with external:// if served from tenant
+          type: string
+          maxLength: 128
+        front_doc_id:
+          description: Document ID for front image, prefix with external:// if served from tenant
+          type: string
+          maxLength: 128
+        back_doc_id:
+          description: Document ID for back image, prefix with external:// if served from tenant
+          type: string
+          maxLength: 128
+        preview_doc_id:
+          description: Document ID for preview image, prefix with external:// if served from tenant
+          type: string
+          maxLength: 128
+        effective_date:
+          type: string
+          format: date
+        termination_date:
+          type: string
+          format: date
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+    
+    Error:
+      required:
+      - code
+      - user_friendly_message
+      - system_message
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        user_friendly_message:
+          type: string
+        system_message:
+          type: string
+        validation_errors:
+          description: error messages associated with any data level validations or orther validations
+          type: array
+          items:
+            type: object
+            properties:
+              error_code:
+                description: validation error code
+                type: integer
+                format: int32
+              error_message:
+                description: validation error message
+                type: string
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Zipari-Core-Services/zipari-provider_portal_v_3_0_payer_api_specification/3.0

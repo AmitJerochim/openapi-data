@@ -1,0 +1,430 @@
+openapi: 3.0.0
+info:
+  title: NWOS Orders API
+  version: 1.0.0
+  description: >-
+    Open API specification for North West Ostomy Supplies (NWOS) integration.
+servers:
+  - url: '{environment}/v1'
+    description: URL for NWOS API endpoint
+    variables:
+      environment:
+        default: https://localhost:8080/nwos/api # Development environment
+paths:
+  /orders:
+    post:
+      description: This operation can be used to create a NWOS order.
+      parameters:
+        - in: header
+          name: Cache-Control
+          schema:
+            type: string
+          required: true
+        - in: header
+          name: Content-Type
+          schema:
+            type: string
+          required: true
+      tags:
+        - NWOS Order Request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/orderRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+  /orders/{orderReference}/status:
+    get:
+      description: This operation can be used to track a NWOS order.
+      parameters:
+        - in: header
+          name: Cache-Control
+          schema:
+            type: string
+          required: true
+        - in: header
+          name: Content-Type
+          schema:
+            type: string
+          required: true
+        - in: path
+          name: orderReference
+          schema:
+            type: string
+            minLength: 1
+          required: true
+      tags:
+        - NWOS Order Request
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderResult'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+        '500':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/orderError'
+security:
+  - APIKeyHeader: []
+components:
+  schemas:
+    requestHeader:
+      type: object
+      properties:
+        messageId:
+          description: Globally Unique Identifier for the message
+          type: string
+          pattern: "[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}"
+          example: 315648b2-e574-47ff-880d-a8a400e33dea
+        accountNumber:
+          description: Boots Store Number
+          type: string
+          minLength: 1
+          example: "2061"
+        deliveryAddress:
+          description: Boots Store address and postcode
+          type: string
+          minLength: 1
+          example: 102 New St, BIRMINGHAM, West Midlands, B2 4HQ
+        orderReference:
+          description: Unique order reference
+          minLength: 14
+          maxLength: 14
+          type: string
+          example: NWOS0000000001
+      required: 
+        - messageId
+        - accountNumber
+        - deliveryAddress
+        - orderReference
+    responseHeader:
+      type: object
+      properties:
+        messageId:
+          description: Globally Unique Identifier for the message
+          type: string
+          pattern: "[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}"
+          example: 315648b2-e574-47ff-880d-a8a400e33dea
+        orderReference:
+          description: Unique order reference
+          minLength: 14
+          maxLength: 14
+          type: string
+          example: NWOS0000000001
+      required: 
+        - messageId
+        - orderReference
+    dispensedItem:
+      type: object
+      properties:
+        dispensedProductCode:
+          type: string
+          description: Dispensed Product SNOMED code
+          minLength: 1
+        dispensedProductPIPCode:
+          type: string
+          description: Dispensed Product PIP code
+          minLength: 1
+        dispensedProductName:
+          type: string
+          minLength: 1
+        quantity:
+          type: number
+          format: float
+          minimum: 0
+      required:
+        - dispensedProductCode
+        - dispensedProductPIPCode
+        - dispensedProductName
+        - quantity
+    prescribedItem:
+      type: object
+      properties:
+        itemNumber:
+          type: integer
+          minimum: 1
+        productCode:
+          type: string
+          description: Product SNOMED code
+          minLength: 1
+        productName:
+          type: string
+          minLength: 1
+        quantity:
+          type: number
+          format: float
+          minimum: 0
+        uom:
+          type: string
+          minLength: 1
+        dosageInstructions:
+          type: string
+          minLength: 1
+        dispensedItem:
+          type: array
+          items:
+            $ref: '#/components/schemas/dispensedItem'
+          minItems: 1
+      required: 
+        - itemNumber
+        - productCode
+        - productName
+        - quantity
+        - uom
+        - dosageInstructions
+        - dispensedItem
+    prescriptionForm:
+      type: object
+      properties:
+        prescriptionFormId:
+          type: string
+          description: PMS prescription form identifier
+          minLength: 1
+        upn:
+          type: string
+          description: The prescription Barcode for Electronic Prescriptions
+        repeatNumber:
+          type: integer
+          minimum: 1
+          description: The current repeat iteration
+        prescriptionDate:
+          type: string
+          format: date-time
+        prescriber:
+          type: object
+          properties:
+            code:
+              type: string
+              description: The code of the pescriber in the electronic prescription 
+              example: 973498
+            name:
+              type: string
+              minLength: 1
+            practice:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: The Code of the Practice in the electronic Prescription
+                    example: K82007
+                  name:
+                    type: string
+                    minLength: 1
+                  address:
+                    type: string
+                    minLength: 1
+                  postcode:
+                    type: string
+                required:
+                  - name
+                  - address
+          required:
+            - name
+            - practice
+        prescribedItem:
+          type: array
+          items:
+            $ref: '#/components/schemas/prescribedItem'
+          minItems: 1
+      required: 
+        - prescriptionFormId
+        - prescriptionDate
+        - prescriber
+        - prescribedItem
+    prescriptionGroup:
+      type: object
+      properties:
+        prescriptionGroupId:
+          type: string
+          description: PMS prescription group identifier
+          minLength: 1
+        patient:
+          type: object
+          description: Patient detail information
+          properties:
+            title:
+              type: string
+            firstName:
+              type: string
+              minLength: 1
+            lastName:
+              type: string
+              minLength: 1
+            dateOfBirth:
+              type: string 
+              pattern: "([1-9]\\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01]))"
+              example: "1980-01-01"
+            postcode:
+              type: string 
+            gender:
+              type: string 
+              enum: [Male,Female,Unknown]
+            nhsNumber:
+              type: string
+              minLength: 1
+            exemptionCode:
+              type: string
+              description: The Patient Exemption
+              example: "A"
+            chs:
+              type: string
+              enum: [No,CHS,EMAR]
+              default: No
+          required: 
+            - firstName
+            - lastName
+            - chs
+        prescriptionForm:
+          type: array
+          items:
+            $ref: '#/components/schemas/prescriptionForm'
+          minItems: 1
+        note:
+          type: string
+      required:
+        - prescriptionGroupId
+        - patient
+        - prescriptionForm
+    order:
+      type: array
+      items:
+        $ref: '#/components/schemas/prescriptionGroup'
+      minItems: 1
+    orderRequest:
+      type: object
+      properties:
+        header:
+          $ref: '#/components/schemas/requestHeader'
+        order:
+          $ref: '#/components/schemas/order'
+      required:
+        - header
+        - order
+    orderResponse:
+      type: object
+      properties:
+        header:
+          $ref: '#/components/schemas/responseHeader'
+        orderStatus:
+          $ref: '#/components/schemas/status' 
+      required:
+        - header
+        - orderStatus
+    orderError:
+      type: object
+      properties:
+        header:
+          $ref: '#/components/schemas/responseHeader'      
+        error:
+          $ref: '#/components/schemas/error'
+      required:
+        - header
+        - error
+    orderResult:
+      type: object
+      properties:
+        header:
+          $ref: '#/components/schemas/responseHeader'
+        orderStatus:
+          $ref: '#/components/schemas/status'
+      required: 
+        - header
+        - orderStatus
+    status:
+      type: string
+      enum: [Accepted, Rejected, InProgress, Completed, Sent]
+    error:
+      type: object
+      properties:         
+        code:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+          example: An unexpected error occurred
+      required: 
+        - code
+        - description
+  securitySchemes:
+    APIKeyHeader:
+      type: apiKey
+      in: header
+      name: x-api-key

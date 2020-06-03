@@ -1,0 +1,128 @@
+openapi: 3.0.1
+info:
+  title: Abstra SMS Survey API
+  description: API for retrieving survey responses from ARM
+  version: "1.0.1"
+servers:
+  - url: 'https://surveys-api.abstra.dev/sms/v1'
+paths:
+  /responses:
+    get:
+      tags:
+        - Surveys
+      description: Retrieve all SMS related survey responses
+      parameters: 
+        - in: query
+          name: delta
+          description: Date to be used as a delta
+          schema:
+            type: string
+            format: date
+            example: '2019-12-10T19:00:32'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Surveys'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      servers:
+        - url: 'https://surveys-api.abstra.dev/sms/v1'
+    servers:
+      - url: 'https://surveys-api.abstra.dev/sms/v1'
+  /token:
+    post:
+      tags:
+        - Authorization
+      description: >-
+        Be granted an authorization token to use in the bearer pattern as the
+        authorization header. "Authorization: Bearer {token}"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                username:
+                  type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            text/html:
+              schema:
+                type: string
+                example: valid_authorization_token
+                description: Authorization token
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+      servers:
+        - url: 'https://surveys-api.abstra.dev/sms/v1'
+    servers:
+      - url: 'https://surveys-api.abstra.dev/sms/v1'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    UnauthorizedError:
+      description: Access token is missing or invalid
+  schemas:
+    Surveys:
+      type: array
+      description: An array containing each surveys array of responses
+      items:
+        $ref: '#/components/schemas/SurveyResponses'
+    SurveyResponses:
+      type: array
+      description: An array of survey responses for the corresponding survey
+      items:
+        $ref: '#/components/schemas/SurveyResponse'
+    SurveyResponse:
+      type: object
+      description: An object containing response data for a corresponding survey
+      properties:
+        id:
+          type: integer
+          minimum: 1
+          example: 1
+        WorkOrderNumber:
+          type: string
+          example: SMS-123456
+        datestamp:
+          type: string
+          example: '2019-12-13 18:39:09'
+        exampleIsRestroomWorking:
+          type: string
+          example: 'Y'
+        exampleRestroomComments:
+          type: string
+          example: Restroom is in good condition
+        examplePicture1:
+          type: array
+          items:
+            $ref: '#/components/schemas/SurveyPictureObject'
+    SurveyPictureObject:
+      type: object
+      description: An object containing a link and metadata for a survey picture
+      properties:
+        url:
+          type: string
+          example: 'https://storage.googleapis.com/bucket/img_123.jpg'
+        comment:
+          type: string
+          example: Picture of malfunctioning sink
+        name:
+          type: string
+          example: img_123
+        ext:
+          type: string
+          example: jpg
+security:
+  - bearerAuth: []

@@ -1,0 +1,2348 @@
+openapi: 3.0.0
+
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/w7733/WeSupply/1.0.0
+    
+#security:
+#  - accessCode:
+#      - read
+#      - write
+
+info:
+  version: "1.0.1"
+  title: WeSupply API
+  description: >-
+    Documentation for WeSupply API. All of WeSupply API require authentication. To get client_id and client_secret go to your WeSupply admin domain for example yourstore.labs.wesuplly.xyz/admin and go to Settings -> Providers. Send POST to yourstore.labs.wesupply.xyz/api/oauth/token with client_id and client_secret keys in body, using x-www-form-urlencoded format. Use /api/oauth/token to get a token and then you can make other WeSupply operations.
+tags: 
+  - name: api
+    description: Operations for API
+paths:
+  /api/oauth/token:
+    post:
+      tags:
+        - api
+      operationId: oauthToken
+      summary: "Get access token"
+      description: >-
+        All of WeSupply API require authentication. To get client_id and client_secret go to your WeSupply admin domain, for example yourstore.labs.wesuplly.xyz/admin and go to Settings -> Providers. Send POST to yourstore.labs.wesupply.xyz/api/oauth/token with client_id and client_secret keys and "client_credentials" as grant_type in body, using x-www-form-urlencoded format.
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/AuthBody"
+        description: You can obtain a short life token by using your client_id and client_secret params, and "client_credentials" as grant_type
+      responses:
+        200:
+          description: "Created"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        400:
+          description: "Your request was missing a required parameter"
+        404:
+          description: "The resource you are looking for does not exist"
+        500:
+          description: "Internal server error"
+  /api/import:
+    post:
+      tags:
+        - api
+      operationId: apiImportPush
+      summary: "Order Import API with push operation"
+      description: >-
+        You can push orders into the WeSupply platform as an XML data. Make sure you use a valid authorization token for this operation.<br><br>
+        Please make sure that StatusID and Status is mapped to each order as well as all items. <br><br>
+        ItemStatusId & ItemStatus Table <br>
+        29 => parent::ITEM_CANCEL, // Cancelled <br>
+        24 => parent::ITEM_RETURN, // Item Return Received <br>
+        32 => parent::ITEM_RETURN, // Item Return Requested <br>
+        15 => parent::ITEM_PICKUP, // Ready for Pickup (In-Store Pickup) <br>
+        16 => parent::ITEM_PICKUP, // Picked Up (After In-Store Pickup) <br>
+        26 => parent::ITEM_OUTOFSTOCK, // Out Of Stock <br>
+        40 => parent::ITEM_OUTOFSTOCK, // Unable to Fulfill <br>
+        17 => parent::ITEM_SHIP, // Item Shipped - Tracking Sent <br>
+        45 => parent::ITEM_SHIP, // Received <br>
+        23 => parent::ITEM_POSTORDER, // Pick/Pack <br>
+        38 => parent::ITEM_POSTORDER, // Acknowledged <br>
+        4  => parent::ITEM_ORDERED, // Ordered <br>
+        Ex: <br>
+        ItemStatus -> Item Return Received <br>
+        ItemStatusId -> 24 <br><br>
+        OrderStatusId & OrderStatus Table <br>
+        4  => parent::ORDER_PROCESSING, // Ordered <br>
+        20 => parent::ORDER_RECEIVED, // Ordered, Payment Authorized <br>
+        6  => parent::ORDER_COMPLETE, // Order Complete - (Invoiced) <br>
+        12 => parent::ORDER_PENDING_SHIPPING, // Processed - Shipping Pending - (Invoiced) <br>
+        31 => parent::ORDER_PENDING_SHIPPING, // Partially Complete - Shipping Pending - (Invoiced) <br>
+        11 => parent::ORDER_CANCELLED, // Order Cancelled <br>
+        35 => parent::ORDER_ONHOLD, // On Hold <br>
+        34 => parent::ORDER_PARTIALLY_COMPLETE, // Partially Complete - Cancelled Item(s) <br>
+        19 => parent::ORDER_PAYMENT_FAILURE, // Payment Failure <br>
+        9  => parent::ORDER_RETURN, // Return Requested <br>
+        10 => parent::ORDER_RETURN, // Returned <br>
+        Ex: <br>
+        OrderStatus -> Returned <br>
+        OrderStatusId -> 10 
+      security: 
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: "orders: [ XML Orders data ]"
+        content:
+          application/xml:
+            schema:
+              $ref: "#/components/schemas/Orders"
+      responses:
+        200:
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: "Successfully imported 1 orders"
+        400:
+          description: "If orders field is missing"
+          content:
+            text/html:
+              schema:
+                example: "Stream ended unexpectedly"
+        401:
+          description: "Unauthorized - Authorization failed. Double check your access token"
+          content:
+            text/html:
+              schema:
+                example: "Invalid token"
+        412:
+          description: "If one mandatory field is missing or data is incorrect"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties: 
+                        error: 
+                          type: object
+                          properties:
+                            exception: 
+                              type: string
+                              example: "Exception type"
+                            message:
+                              type: string
+                              example: "Error message"
+                            order: 
+                              type: object
+                              example: "Order data"
+                            item: 
+                              type: array
+                              items:
+                                type: object
+                                example: "Item data"
+        500:
+          description: "Internal server error"
+        503:
+          description: "Service Unavailable"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid API response"
+                  description:
+                    type: string
+                    example: "String could not be parsed as XML"
+  /api/authLinks:
+    get:
+      tags:
+        - api
+      operationId: apiOrder
+      summary: "Get WeSupply order links"
+      description: >-
+        This API provides a direct link to WeSupply, where your customers can see a detailed page regarding their order.
+      security: 
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+        - name: orders
+          in: query
+          description: "Provide orders field."
+          required: true
+          schema:
+            type: object
+            properties:
+              orders:
+                type: array
+                items: 
+                  type: integer
+                  example: 1016,1015,1014
+      responses:
+        200:
+          description: "Created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/authenticate"
+        503:
+          description: "If orders field is missing."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid API response"
+                  description:
+                    type: string
+                    example: "Orders parameter missing!"
+  /api/returns:
+    get:
+      tags:
+        - api
+      operationId: apiReturns
+      summary: "Grab returns"
+      description: >- 
+        This API allows you to get a list of all returns made to your orders, from WeSupply.
+      security: 
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: "Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/returnsResponse"
+        401:
+          description: "If the Oauth token has expired."
+          content:
+            text/html:
+              schema:
+                example: "Invalid token: access token is invalid"
+        503:
+          description: "If account type doesn't have enough privileges."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid API response"
+                  description:
+                    type: string
+                    example: "Api get returns access denied!"
+  /api/returns/recent:
+    get:
+      tags:
+        - api
+      operationId: apiRecentReturns
+      summary: "Grab recent returns"
+      description: >- 
+        This API allows you to get a list of recent returns made to your orders, from WeSupply.
+      security: 
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: "Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/returnsRecentResponse"
+        401:
+          description: "If the Oauth token has expired."
+          content:
+            text/html:
+              schema:
+                example: "Invalid token: access token is invalid"
+        503:
+          description: "If account type doesn't have enough privileges."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid API response"
+                  description:
+                    type: string
+                    example: "Api get returns access denied!"
+  /api/phone/enrol:
+    get:
+      tags:
+        - api
+      operationId: apiSms
+      summary: "SMS Signup/Notification"
+      description: >-
+        This API is used for your customers to receive SMS notifications for certain changes that may occur to their orders. You can specifically select which change your customers should be notified of.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "000000087"
+        - name: phone
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 0457236321
+        - name: prefix
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 40
+        - name: country
+          in: query
+          required: true
+          schema:
+            type: string
+            example: CA
+      responses:
+        200:
+          description: >-
+            "True."
+          content:
+            text/html:
+              schema:
+                example: "The call went ok and WeSupply was successfully notified"
+        503:
+          description: >- 
+            "Error."
+          content:
+            text/html:
+              schema:
+                example: "There are missing parameters in your call (order or phone) or the phone parameter has a length smaller then 10."
+  /api/phone/unsubscribe:
+    get:
+      tags:
+        - api
+      operationId: apiSmsUnsubscribe
+      summary: "SMS Unsubscribe"
+      description: >-
+        SMS Unsubscribe.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "000000087"
+        - name: phone
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 0457236321
+      responses:
+        200:
+          description: >-
+            "True."
+          content:
+            text/html:
+              schema:
+                example: "The call went ok and WeSupply was successfully notified"
+        503:
+          description: >- 
+            "Error."
+          content:
+            text/html:
+              schema:
+                example: "Error failed to unsubscribe."
+  /api/shippingQuotes:
+    get:
+      tags:
+        - api
+      operationId: apiDeliveryDate
+      summary: "Estimate delivery date."
+      description: >-
+        Estimations based on Shipper replies.To get estimations based on Shipper replies, you will need to provide a list of parameters as follows
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+        - name: ipAddress
+          in: query
+          schema:
+            type: string
+            example: "91.204.211.38"
+        - name: supplierId
+          in: query
+          schema:
+            type: integer
+            example: 1
+        - name: countrycode
+          in: query
+          schema:
+            type: string
+            example: US
+        - name: postcode
+          in: query
+          schema:
+            type: string
+            example: ""
+        - name: price
+          in: query
+          schema:
+            type: string
+            example: "300.0000"
+        - name: curreny
+          in: query
+          schema:
+            type: string
+            example: USD
+        - name: carriers
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+            example: ["UPS"]
+      responses:
+        200:
+          description: >-
+            "True"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/shippingQuotess"
+        503:
+          description: >-
+            "Error"
+          content:
+            text/html:
+              schema:
+                example: "Parameters missing!"
+  /api/permissions:
+    get:
+      tags:
+        - api
+      operationId: apiPermissions
+      summary: "Grab returns"
+      description: >- 
+        Grab returns
+      security: 
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string 
+            example: "Service name interogated for permissions"
+      responses:
+        200:
+          description: "Ok"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  allowed:
+                    type: boolean
+                    example: true
+        201:
+          description: "Ok"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  allowed:
+                    type: boolean
+                    example: false
+        401:
+          description: "Unauthorized."
+          content:
+            text/html:
+              schema:
+                example: "Invalid token: access token is invalid"
+  /api/getShippingAllowedCountries:
+    get:
+      tags:
+        - api
+      operationId: apiShippingAllowedCountries
+      summary: "Get Shipping Allowed Countries"
+      description: >- 
+        Get Shipping Allowed Countries
+      security: 
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: "Ok"
+          content:
+            application/json:
+              schema:
+                type: string
+                example: 
+                  - GB
+                  - RO 
+                  - US
+        401:
+          description: "If the Oauth token has expired.."
+          content:
+            text/html:
+              example:
+                '<!doctype html><html><head><title>Wesupply Error</title><meta name="viewport" content="width=device-width, initial-scale=1"><base href="/"></head><body layout="column" flex class="container"><h1>Invalid token: access token is invalid</h1><h2>401</h2></body></html>'
+  /api/shippingEstimate:
+    post:
+      tags:
+        - api
+      operationId: apiShippingEstimate
+      summary: "Get Shipping Estimate (One Product)"
+      description: >-
+        Get Shipping Estimate (One Product).
+      security: 
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/shippingEstimateOneProduct"
+      responses:
+        200:
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/responseShippingEstimateOneProduct"
+        401:
+          description: "If the Oauth token has expired."
+          content:
+            text/html:
+              example:
+                '<!doctype html><html><head><title>Wesupply Error</title><meta name="viewport" content="width=device-width, initial-scale=1"><base href="/"></head><body layout="column" flex class="container"><h1>Invalid token: access token is invalid</h1><h2>401</h2></body></html>'
+        503:
+          description: "Service Unavailable"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid API response"
+                  description:
+                    type: string
+                    example: "Missing shipping estimate parameters."
+  /api/shippingEstimates:
+    post:
+      tags:
+        - api
+      operationId: apiShippingEstimates
+      summary: "Get Shipping Estimate (Multiple Products)"
+      description: >-
+        Get Shipping Estimate (Multiple Products).
+      security: 
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/shippingEstimateMultipleProducts"
+      responses:
+        200:
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/responseShippingEstimateMultipleProducts"
+        401:
+          description: "If the Oauth token has expired."
+          content:
+            text/html:
+              example: 
+                '<!doctype html><html><head><title>Wesupply Error</title><meta name="viewport" content="width=device-width, initial-scale=1"><base href="/"></head><body layout="column" flex class="container"><h1>Invalid token: access token is invalid</h1><h2>401</h2></body></html>'
+        503:
+          description: "Service Unavailable"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid API response"
+                  description:
+                    type: string
+                    example: "Missing shipping estimate parameters."
+  /api/getEstimatedDeliveryByOrderId:
+    post:
+      tags:
+        - api
+      operationId: getEstimatedDelivery
+      summary: "Get estimated delivery by order ID."
+      description: >-
+        Get estimated delivery by order ID.
+      security: 
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/requestEstimatedDelivery"
+      responses:
+        200:
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/responseGetEstimatedDelivery"
+        401:
+          description: "If the Oauth token has expired."
+          content:
+            text/html:
+              example: 
+                '<!doctype html><html><head><title>Wesupply Error</title><meta name="viewport" content="width=device-width, initial-scale=1"><base href="/"></head><body layout="column" flex class="container"><h1>Invalid token: access token is invalid</h1><h2>401</h2></body></html>'
+        503:
+          description: "Service Unavailable"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid API response"
+                  description:
+                    type: string
+                    example: "No response."
+  /api/returns/grabById:
+    get:
+      tags:
+        - api
+      operationId: apiGrabById
+      summary: "Grab a specific return identified by it's reference id"
+      description: >-
+        Grab a specific return identified by it's reference id
+      security: 
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+        - name: provider
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "Magento"
+        - name: reference
+          in: query
+          required: true
+          schema:
+            type: integer
+            example: 128749811718
+      responses:
+        200:
+          description: "Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/grabById"
+        503:
+          description: "Service Unavailable"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid API response"
+                  description:
+                    type: string
+                    example: "Api get returns access denied!"
+        401:
+          description: "Unauthorized."
+          content:
+            text/html:
+              schema:
+                example: "Invalid token: access token is invalid"
+  /api/estimates:
+    get:
+      tags:
+        - api
+      operationId: apiEstimates
+      summary: "Get estimates"
+      description: >-
+        Get estimates
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: AccesToken
+          in: header
+          description: Authorization token
+          required: true
+          schema:
+            type: string
+        - name: ipAddress
+          in: query
+          schema:
+            type: string
+            example: "91.204.211.38"
+        - name: supplierId
+          in: query
+          schema:
+            type: integer
+            example: 1
+        - name: postcode
+          in: query
+          schema:
+            type: string
+            example: ""
+        - name: countrycode
+          in: query
+          schema:
+            type: string
+            example: US
+        - name: price
+          in: query
+          schema:
+            type: string
+            example: "300.0000"
+        - name: curreny
+          in: query
+          schema:
+            type: string
+            example: USD
+        - name: carriers
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+            example: ["UPS"]
+        - name: carriers
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+            example: ["USPS"]
+      responses:
+        200:
+          description: "Ok"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/estimates"
+        503:
+          description: "Service Unavailable"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid API response"
+                  description:
+                    type: string
+                    example: "[ParameterName] parameter missing!"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    AuthBody:
+      properties:
+        grant_type:
+          type: string
+          example: "client_credentials"
+        client_id:
+          type: string
+          example: "38ac38ae29d722b08b8f2c2a916390be"
+        client_secret:
+          type: string
+          example: "a3cd29614de96942bc0fc0127a064f92886a47d4ed25fa9b94d88442796d369c"
+      required:
+        - grant_type
+        - client_id
+        - client_secret
+    AuthResponse:
+      properties:
+        access_token:
+          type: string
+          example: "75fc735c4599fee126a8c7bfca5f1616db4e02a9"
+        token_type:
+          type: string
+          example: "Bearer"
+        expires_in:
+          type: integer
+          example: 3599
+        scope:
+          type: string
+          example: "*"
+    Orders:
+      type: object
+      properties:
+        Order:
+          type: object
+          properties:
+            OrderDate: 
+              type: string
+              example: "2019-11-07 05:37:39"
+              description: "Order Creation Date"
+            LastModifiedDate:  
+              type: string
+              example: "2019-11-07 05:49:56"
+              description: "Last Modified Order Date"
+            StoreId:  
+              type: number
+              example: "1"
+              description: "If Multistore set store ID value, ex. 1, 2, 3. else : 1"
+            OrderModified:  
+              type: string
+              example: "2019-11-07 134956"
+              description: "Last Modified Order Date"
+            OrderPaymentTypeId:  
+              type: number
+              example: ""
+              description: "Payment Type ID"
+            OrderID:  
+              type: number
+              example: "mage_7"
+              description: "Order ID"
+            OrderNumber:  
+              type: string
+              example: "12"
+              description: "Order Number Internal (if inexistent then External)"
+            FirstName:  
+              type: string
+              example: "John"
+              description: "Customer First Name"
+            LastName:  
+              type: string
+              example: "Doe"
+              description: "Customer Last Name"
+            OrderContact:  
+              type: string
+              example: "John Doe"
+              description: "Customer First and Last Name"
+            OrderAmount:  
+              type: number
+              example: "690.0000"
+              description: "Order Amount (Subtotal)"
+            OrderAmountShipping:  
+              type: string
+              example: "119.9100"
+              description: "Shipping Amount"
+            OrderAmountTax:  
+              type: number
+              example: "0.0000"
+              description: "Order Total Tax Amount"
+            OrderAmountTotal:  
+              type: number
+              example: "671.9100"
+              description: "Order Grand Total"
+            OrderAmountCoupon:  
+              type: string
+              example: "0.0000"
+              description: "Order Coupon Amount (Discount)"
+            OrderAmountGiftCard:  
+              type: string
+              example: "0.0000"
+              description: "Order Gift Card Amount"
+            OrderShippingAddress1:  
+              type: string
+              example: "Oksoktaruk Blvd"
+              description: "Order Shipping Address Line 1"
+            OrderShippingCity:  
+              type: string
+              example: "White Mountain"
+              description: "Order Shipping City"
+            OrderShippingStateProvince:  
+              type: string
+              example: "Alaska"
+              description: "Order Shipping State"
+            OrderShippingZip:  
+              type: string
+              example: "99784"
+              description: "Order Shipping Zip Code"
+            OrderShippingPhone:  
+              type: string
+              example: "0123456789"
+              description: "Order Shipping Phone Number"
+            OrderShippingCountry:  
+              type: string
+              example: "United States"
+              description: "Order Shipping Country"
+            OrderShippingCountryCode:  
+              type: string
+              example: "US"
+              description: "Order Shipping Country Code"
+            OrderPaymentType:  
+              type: string
+              example: "Credit Card (Braintree)"
+              enum: [CC , GC , COD ]
+              description: "Order Payment Type"
+            OrderDiscountDetailsTotal:  
+              type: string
+              example: "-138.0000"
+              description: "Order Discount Amount"
+            OrderExternalOrderID:  
+              type: number
+              example: "12"
+              description: "Order Number (External order number such as Ecomm platform order number)"
+            CurrencyCode:  
+              type: string
+              example: "USD"
+            OrderStatus:  
+              type: string
+              example: "Complete"
+              enum: [Ordered, Payment Authorized, Order Complete, Processed - Shipping Pending, Partially Complete - Shipping Pending, Order Cancelled, On Hold, Partially Complete - Cancelled Item(s), Payment Failure, Return Requested, Returned]
+              description: "Order Status"
+            OrderStatusId:  
+              type: number
+              example: "6"
+              enum: [4 (Ordered),20 (Payment Authorized),6 (Order Complete),12 (Processed - Shipping Pending),31 (Partially Complete - Shipping Pending),11 (Order Cancelled),35 (On Hold),34 (Partially Complete - Cancelled Item(s)),19 (Payment Failure),9 (Return Requested),10 (Returned)]
+              description: "Order Status ID"
+            OrderCustomer: 
+              type: object
+              properties:
+                CustomerName:   
+                  type: string
+                  example: "John Doe"
+                  description: "Customer Billing First and Last Name"
+                IsGuest:    
+                  type: boolean
+                  example: 0
+                CustomerID:    
+                  type: number
+                  example: 2
+                  description: "Customer Id"
+                CustomerFirstName:    
+                  type: string
+                  example: "John"
+                  description: "Customer Billing First Name"
+                CustomerLastName:    
+                  type: string
+                  example: "Doe"
+                  description: "Customer Billing Last Name"
+                CustomerPostalCode:    
+                  type: string
+                  example: "11205"
+                  description: "Customer Billing Zip Code"
+                CustomerEmail:    
+                  type: string
+                  example: "john.doe@teststore.com"
+                  description: "Customer Billing Email"
+                CustomerShippingAddresses: 
+                  type: object
+                  properties: 
+                    CustomerShippingAddress:
+                      type: object
+                      properties: 
+                        AddressID: 
+                          type: number
+                          example: "13"
+                          description: "Customer Shipping Address ID"
+                        AddressContact:  
+                          type: string
+                          example: "John Doe"
+                          description: "Customer Shipping Address First and Last Name (leave empty if no info)"
+                        AddressAddress1:  
+                          type: string
+                          example: "Oksoktaruk Blvd"
+                          description: "Customer Shipping Address Line 1 (leave empty if no info)"
+                        AddressCity:  
+                          type: string
+                          example: "White Mountain"
+                          description: "Customer Shipping Address City (leave empty if no info)"
+                        AddressState:  
+                          type: string
+                          example: "Alaska"
+                          description: "Customer Shipping Address State"
+                        AddressZip:  
+                          type: string
+                          example: "99784"
+                          description: "Customer Shipping Address ZIP"
+                        AddressCountry:  
+                          type: string
+                          example: "United States"
+                          description: "Customer Shipping Address Country"
+                        AddressCountryCode:  
+                          type: string
+                          example: "US"
+                          description: "Customer Shipping Address Contry Code (leave empty if no info)"
+                        AddressPhone:  
+                          type: string
+                          example: "0123456789"
+                          description: "Customer Shipping Address Phone Number (leave empty if no info)"
+                      required:
+                        - AddressID
+                        - AddressState
+                        - AddressZip
+                        - AddressCountry
+              required:
+                - CustomerID
+                - CustomerEmail
+            OrderItems: 
+              type: object
+              properties:
+                Item: 
+                  type: object
+                  properties:
+                    ItemID: 
+                      type: number
+                      example: "24"
+                      description: "Order Item ID"
+                    ItemLevelSupplierName:  
+                      type: string
+                      example: "1"
+                      description: "Item Supplier Name"
+                    ItemPrice:  
+                      type: number
+                      example: "69.0000"
+                      description: "Order Item Price"
+                    ItemAddressID:  
+                      type: number
+                      example: "13"
+                      description: "Order Item Shipping Address ID"
+                    Option1:  
+                      type: string
+                      example: ""
+                      description: "Order Item Variables"
+                    Option2: 
+                      type: object
+                      properties:
+                        Size: 
+                          type: string
+                          example: "XS"
+                        Color: 
+                          type: string
+                          example: "Black"
+                      description: "Order Item Variables"
+                    Option3:  
+                      type: string
+                      example: ""
+                      description: "Order Item Variables"
+                    ItemProduct:
+                      type: object
+                      properties: 
+                        ProductID: 
+                          type: number
+                          example: "1370"
+                          description: "Order Item Variable ID"
+                        ProductCode:  
+                          type: string
+                          example: "Neve Studio Dance Jacket"
+                          description: "Order Item Variable Name"
+                        ProductPartNo:  
+                          type: string
+                          example: "WJ11-XS-Black"
+                          description: "Order Item Variant SKU"
+                      required:
+                        - ProductID
+                        - ProductCode
+                    ItemTitle:   
+                      type: string
+                      example: "Neve Studio Dance Jacket"
+                    ItemImageUri:   
+                      type: string
+                      example: "https//www.petstore.com/pub/media/catalog/product/w/j/wj11-black_main_1.jpg"
+                    ItemQuantity:   
+                      type: number
+                      example: "10"
+                      description: "Order Item QTY"
+                    ItemShippingService:   
+                      type: string
+                      example: "United Parcel Service"
+                      description: "Order Item Shipping Method"
+                    ItemPOShipper:   
+                      type: string
+                      example: "UPS"
+                      description: "Item Shipper"
+                    ItemShippingTracking:   
+                      type: string
+                      example: "1Z2EF066YW52386245"
+                      description: "Order Item Shipping Tracking Number"
+                    ItemTotal:   
+                      type: number
+                      example: "345.0000"
+                      description: "Order Item Total Amount"
+                    ItemTax:   
+                      type: number
+                      example: "0.0000"
+                      description: "Order Item Tax Amount"
+                    ItemDiscountDetailsTotal:   
+                      type: number
+                      example: "69.0000"
+                    ItemStatus:   
+                      type: string
+                      example: "Shipped"
+                      enum: [Cancelled, Item Return Received, Item Return Requested, Ready for Pickup (In-Store Pickup), Picked Up (After In-Store Pickup), Out Of Stock, Unable to Fulfill, Item Shipped - Tracking Sent, Received, Pick/Pack, Acknowledged, Ordered]
+                      description: "Order Item Status"
+                    ItemStatusId:   
+                      type: number
+                      example: "17"
+                      enum: [29 (Cancelled), 24 (Item Return Received), 32 (Item Return Requested), 15 (Ready for Pickup (In-Store Pickup)), 16 (Picked Up (After In-Store Pickup)), 26 (Out Of Stock), 40(Unable to Fulfill), 17 (Item Shipped - Tracking Sent), 45 (Received), 23 (Pick/Pack), 38 (Acknowledged), 4 (Ordered)]
+                      description: "Order Item Status ID"
+                    ItemShipping:   
+                      type: number
+                      example: "119.9100"
+                    Item_CouponAmount:   
+                      type: number
+                      example: "0.0000"
+                    PickupUTCTimestamp:
+                      type: number
+                      example: "1587653473"
+                    PickupUTCOffset:
+                      type: string
+                      example: "+10800"
+                      description: "Offset in seconds from UTC"
+                  required:
+                    - ItemID
+                    - ItemLevelSupplierName
+                    - ItemPrice
+                    - ItemAddressID
+                    - ItemQuantity
+                    - ItemPOShipper
+                    - ItemTotal
+          required:
+              - OrderDate
+              - OrderID
+              - OrderAmount
+              - OrderAmountTax
+              - OrderAmountTotal
+              - OrderShippingStateProvince
+              - OrderShippingZip
+              - OrderShippingCountry
+              - OrderExternalOrderID
+    returnsResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          return_number:
+            type: string
+            example: "152446755342"
+          created_at:
+            type: integer
+            example: 1558356599
+          updated_at:
+            type: integer
+            example: 1556779960
+          state:
+            type: string
+            example: "refunded"
+          return_comment:
+            type: string
+            example: ""
+          return_logic:
+            type: object
+            properties:
+              id: 
+                type: integer
+                example: 1554123772810
+              name:
+                type: string
+                example: "Caa"
+              proprity: 
+                type: integer
+                example: 5
+              return_window:
+                type: integer
+                example: 348
+              requires_authorization:
+                type: object
+                properties:
+                  auth_type:
+                    type: string
+                    example: "automatic"
+                  state:
+                    type: string
+                    example: "approved"
+          logistics:
+            type: object
+            properties:
+              return_store_id:
+                type: string
+                example: ""
+              return_label_cost:
+                type: string
+                example: "6.95"
+              return_location:
+                type: object
+                properties:
+                  address_1: 
+                    type: string
+                    example: ""
+                  address_2: 
+                    type: string
+                    example: ""
+                  city: 
+                    type: string
+                    example: ""
+                  state: 
+                    type: string
+                    example: ""
+                  zip_code: 
+                    type: string
+                    example: ""
+                  country: 
+                    type: string
+                    example: ""
+              return_shipping_info:
+                type: object
+                properties:
+                  tracking_number:
+                    type: string
+                    example: "1ZY45F730399693933"
+                  return_carrier:
+                    type: string
+                    example: "UPS"
+                  status:
+                    type: string
+                    example: "Delivered"
+                  at:
+                    type: integer
+                    example: 1549540560
+          refund_currency:
+            type: boolean
+            example: false
+          refund_cost:
+            type: string
+            example: "free"
+          refund_control:
+            type: object
+            properties:
+              refund_cost_value: 
+                type: integer
+                example: 0
+              refund_shipping_fee:
+                type: string
+                example: "no"
+              refund_shipping_fee_value:
+                type: integer
+                example: 0
+              refund_type:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "credit"
+                  total_value:
+                    type: number
+                    example: 288.95
+                  refund_status:
+                    type: string
+                    example: "Refunded"
+                  at:
+                    type: integer
+                    example: 1558356106
+          customer:
+            type: object
+            properties:
+              id:
+                type: string
+                example: "52345"
+              email:
+                type: string
+                example: "john.doe@yahoo.com"
+          order:
+            type: object
+            properties:
+              created_at:
+                type: string
+                example: "2019-01-03T08:22:43"
+              number_ext:
+                type: string
+                example: "STORE100000000115879"
+              number_int:
+                type: string
+                example: "68089"
+          items:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: "117891"
+                name: 
+                  type: string
+                  example: "Title unavailable"
+                qty:
+                  type: integer
+                  example: 5
+                sku: 
+                  type: string
+                  example: "836277-091"
+                return_reason:
+                  type: string
+                  example: "Ordered Wrong Items"
+                price:
+                  type: number
+                  example: 45.55
+                restock_item:
+                  type: string
+                  example: "True"
+    returnsRecentResponse:
+      type: array
+      example: 
+        - "184115944876"
+        - "182925271333"
+        - "193971481171"
+        - "143232890515"
+    authenticate:
+      type: object
+      properties:
+        external_id1:
+          type: string
+          example: "http://yourstore.labs.wesupply.xyz/vieworder?k=W%2BEKKeKccfy"
+        external_id2:
+          type: string
+          example: "http://yourstore.labs.wesupply.xyz/vieworder?k=RR4weT5iuvJ9QKW2"
+        external_id3:
+          type: string
+          example: "http://yourstore.labs.wesupply.xyz/vieworder?k=0%2B1tKpqbJBW%2FP2D"
+    shippingQuotess:
+      type: object
+      properties:
+        UPS:
+          type: object
+          properties:
+            1DM:
+              type: integer
+              example: 1581588205
+            1DA:
+              type: integer
+              example: 1581588205
+            1DP:
+              type: integer
+              example: 1581588205
+            GND:
+              type: integer
+              example: 1581588205
+    shippingEstimateOneProduct:
+      type: object
+      properties:
+        request_id:
+          type: string
+          example: "VjQSEa7g3zT4UAteEFskkDbU5NtaX46Y"
+        location_type:
+          type: string
+          example: "zip_code"
+        location_id:
+          type: object
+          properties:
+            zip_code:
+              type: string
+              example: "01719"
+            country_code:
+              type: string
+              example: "US"
+        user_type:
+          type: string
+          example: "session"
+        user_id:
+          type: string
+          example: "suckl2a2vtcvnqhg6q12rf5bue"
+        lists:
+          type: object
+          properties: 
+            customer_group:
+              type: string
+              example: "NOT LOGGED IN"
+        time: 
+          type: object
+          properties:
+            timestamp: 
+              type: integer
+              example: 1569411661
+            timezone:
+              type: string
+              example: "America/Los_Angeles"
+        product:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "6"
+            key:
+              type: string
+              example: "24-MB02"
+            name:
+              type: string
+              example: "Fusion Backpack"
+            url:
+              type: string
+              example: "https://yourstore.wesupply.xyz/index.php/fusion-backpack.html"
+            image_url:
+              type: string
+              example: "https://yourstore.wesupply.xyz/pub/media/catalog/product/m/b/mb02-gray-0.jpg"
+            price:
+              type: integer
+              example: 59
+            price_currency:
+              type: string
+              example: "USD"
+            stock_status:
+              type: string
+              example: "in_stock"
+            category_ids:
+              type: string
+              example: 
+                - "3"
+                - "4"
+            category_names:
+              type: string
+              example: 
+                - "Gear"
+                - "Bags"
+            attributes:
+              type: object
+              properties:
+                activity:
+                  type: string
+                  example: "Hiking,School,Yoga"
+                style_bags:
+                  type: string
+                  example: "Backpack,Laptop"
+            measurements:
+              type: object
+              properties:
+                length:
+                  type: string
+                  example: ""
+                width:
+                  type: string
+                  example: ""
+                height:
+                  type: string
+                  example: ""
+                measure_unit:
+                  type: string
+                  example: "in"
+                weight:
+                  type: string
+                  example: ""
+                weight_unit:
+                  type: string
+                  example: "lb"
+    responseShippingEstimateOneProduct:
+      type: object
+      properties:
+        request_id:
+          type: string
+          example: "VjQSEa7g3zT4UAteEFskkDbU5NtaX46Y"
+        location_type:
+          type: string
+          example: "zip_code"
+        location_id:
+          type: string
+          example: "01719"
+        location_country:
+          type: string
+          example: "US"
+        estimated_delivery_date:
+          type: string
+          example: "1570136923"
+        estimated_time_minutes_processing:
+          type: integer
+          example: 9215
+        estimated_time_minutes_shipping:
+          type: integer
+          example: 2880
+        estimated_time_minutes_e2e:
+          type: integer
+          example: 12095
+        time_remaining_seconds:
+          type: integer
+          example: 509188
+        display_remaining_time:
+          type: boolean
+          example: false
+        allowed_countries:
+          type: array
+          items:
+            type: string
+            example: "US"
+    shippingEstimateMultipleProducts:
+      type: object
+      properties:
+        request_id:
+          type: string
+          example: "Srz92MQwmiffOhdN37qUENcSRSWBoYqq"
+        location_type:
+          type: string
+          example: "zip_code"
+        location_id:
+          type: object
+          properties:
+            zip_code:
+              type: string
+              example: "01719"
+            country_code:
+              type: string
+              example: "US"
+        user_type:
+          type: string
+          example: "session"
+        user_id:
+          type: string
+          example: "suckl2a2vtcvnqhg6q12rf5bue"
+        lists:
+          type: object
+          properties: 
+            customer_group:
+              type: string
+              example: "NOT LOGGED IN"
+        time: 
+          type: object
+          properties:
+            timestamp: 
+              type: integer
+              example: 1569411661
+            timezone:
+              type: string
+              example: "America/Los_Angeles"
+        products:
+          type: object
+          properties:
+            1220:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: "1220"
+                key:
+                  type: string
+                  example: "WJ01-M-Blue"
+                name:
+                  type: string
+                  example: "Stellar Solar Jacket-M-Blue"
+                url:
+                  type: string
+                  example: "https:\/\/mage23.weltpixel.local\/index.php\/stellar-solar-jacket.html"
+                image_url:
+                  type: string
+                  example: "https:\/\/mage23.weltpixel.local\/pub\/media\/catalog\/product\/w\/j\/wj01-blue_main_1.jpg"
+                price:
+                  type: integer
+                  example: 75
+                price_currency:
+                  type: string
+                  example: "USD"
+                stock_status:
+                  type: string
+                  example: "in_stock"
+                category_ids:
+                  type: array
+                  items:
+                    type: string
+                    example: 
+                      - "23"
+                      - "8"
+                      - "34"
+                      - "2"
+                category_names:
+                  type: array
+                  items:
+                    type: string
+                    example: 
+                      - "Jackets"
+                      - "New Luma Yoga Collection"
+                      - "Erin Recommends"
+                      - "Default Category"
+                attributes:
+                  type: object
+                  properties:
+                    climate:
+                      type: string
+                      example: "Hiking,School,Yoga"
+                    color:
+                      type: string
+                      example: "Blue"
+                    material:
+                      type: string
+                      example: "Cocona&reg; performance fabric,Wool,Fleece"
+                    pattern:
+                      type: string
+                      example: "Solid"
+                    size:
+                      type: string
+                      example: "M"
+                    sku:
+                      type: string
+                      example: "WJ01-M-Blue"
+                    style_general:
+                      type: string
+                      example: "Jacket,Hooded,Soft Shell,Full Zip"
+                measurements:
+                  type: object
+                  properties:
+                    length:
+                      type: string
+                      example: ""
+                    width:
+                      type: string
+                      example: ""
+                    height:
+                      type: string
+                      example: ""
+                    measure_unit:
+                      type: string
+                      example: "in"
+                    weight:
+                      type: string
+                      example: "1.0000"
+                    weight_unit:
+                      type: string
+                      example: "lb"
+            1217:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: "1217"
+                key:
+                  type: string
+                  example: "WJ01-S-Blue"
+                name:
+                  type: string
+                  example: "Stellar Solar Jacket-S-Blue"
+                url:
+                  type: string
+                  example: "https:\/\/mage23.weltpixel.local\/index.php\/stellar-solar-jacket.html"
+                image_url:
+                  type: string
+                  example: "https:\/\/mage23.weltpixel.local\/pub\/media\/catalog\/product\/w\/j\/wj01-blue_main_1.jpg"
+                price:
+                  type: integer
+                  example: 75
+                price_currency:
+                  type: string
+                  example: "USD"
+                stock_status:
+                  type: string
+                  example: "in_stock"
+                category_ids:
+                  type: string
+                  example: 
+                    - "23"
+                    - "8"
+                    - "34"
+                    - "2"
+                category_names:
+                  type: string
+                  example: 
+                    - "Jackets"
+                    - "New Luma Yoga Collection"
+                    - "Erin Recommends"
+                    - "Default Category"
+                attributes:
+                  type: object
+                  properties:
+                    climate:
+                      type: string
+                      example: "All-Weather,Mild,Spring,Windy"
+                    color:
+                      type: string
+                      example: "Blue"
+                    material:
+                      type: string
+                      example: "Cocona&reg; performance fabric,Wool,Fleece"
+                    pattern:
+                      type: string
+                      example: "Solid"
+                    size:
+                      type: string
+                      example: "S"
+                    sku:
+                      type: string
+                      example: "WJ01-S-Blue"
+                    style_general:
+                      type: string
+                      example: "Jacket,Hooded,Soft Shell,Full Zip"
+                measurements:
+                  type: object
+                  properties:
+                    length:
+                      type: string
+                      example: ""
+                    width:
+                      type: string
+                      example: ""
+                    height:
+                      type: string
+                      example: ""
+                    measure_unit:
+                      type: string
+                      example: "in"
+                    weight:
+                      type: string
+                      example: "1.0000"
+                    weight_unit:
+                      type: string
+                      example: "lb"
+        shippers:
+          type: object
+          properties:
+            UPS:
+              type: object
+              properties:
+                methods:
+                  type: string
+                  example:
+                    - 1DM
+                    - 1DML
+            USPS:
+              type: object
+              properties:
+                methods:
+                  type: string
+                  example:
+                    - 1
+                    - 2
+            dhl:
+              type: object
+              properties:
+                methods:
+                  type: string
+                  example:
+                    - 2
+                    - 7
+    responseShippingEstimateMultipleProducts:
+      type: object
+      properties:
+        request_id:
+          type: string
+          example: "xZniSLz4KmnXNPWXPvu4nQROTD62jVYn"
+        location_type:
+          type: string
+          example: "zip_code"
+        location_id:
+          type: string
+          example: "99508"
+        location_country:
+          type: string
+          example: "US"
+        allowed_countries:
+          type: array
+          items:
+            type: string
+            example: "US"
+        estimates:
+          type: object
+          properties:
+            flatrate:
+              type: object
+              properties:
+                methods:
+                  type: array
+            tablerate:
+              type: object
+              properties:
+                methods:
+                  type: array
+            ups:
+              type: object
+              properties:
+                methods:
+                  type: object
+                  properties:
+                    11:
+                      type: object
+                      properties:
+                        estimated_delivery_date:
+                          type: object
+                          properties:
+                            1217:
+                              type: string
+                              example: "-"
+                            1218:
+                              type: string
+                              example: "-"
+                            1227:
+                              type: string
+                              example: "-"
+                            1231:
+                              type: string
+                              example: "-"
+                    14:
+                      type: object
+                      properties:
+                        estimated_delivery_date:
+                          type: object
+                          properties:
+                            1217:
+                              type: string
+                              example: "1571011200"
+                            1218:
+                              type: string
+                              example: "1570752000"
+                            1227:
+                              type: string
+                              example: "1570752000"
+                            1231:
+                              type: string
+                              example: "1571011200"
+                    1DM:
+                      type: object
+                      properties:
+                        estimated_delivery_date:
+                          type: object
+                          properties:
+                            1217:
+                              type: string
+                              example: "-"
+                            1218:
+                              type: string
+                              example: "-"
+                            1227:
+                              type: string
+                              example: "-"
+                            1231:
+                              type: string
+                              example: "-"
+                    1DML:
+                      type: object
+                      properties:
+                        estimated_delivery_date:
+                          type: object
+                          properties:
+                            1217:
+                              type: string
+                              example: "-"
+                            1218:
+                              type: string
+                              example: "-"
+                            1227:
+                              type: string
+                              example: "-"
+                            1231:
+                              type: string
+                              example: "-"
+            usps:
+              type: object
+              properties:
+                methods:
+                  type: object
+                  properties:
+                    1:
+                      type: object
+                      properties:
+                        estimated_delivery_date:
+                          type: object
+                          properties:
+                            1217:
+                              type: string
+                              example: "1571097600"
+                            1218:
+                              type: string
+                              example: "1571097600"
+                            1227:
+                              type: string
+                              example: "1571097600"
+                            1231:
+                              type: string
+                              example: "1571097600"
+                    2:
+                      type: object
+                      properties:
+                        estimated_delivery_date:
+                          type: object
+                          properties:
+                            1217:
+                              type: string
+                              example: "1571097600"
+                            1218:
+                              type: string
+                              example: "1571097600"
+                            1227:
+                              type: string
+                              example: "1571097600"
+                            1231:
+                              type: string
+                              example: "1571097600"
+    grabById:
+      type: object
+      properties:
+        reference:
+          type: string
+          example: "181742606290"
+        OrderNo:
+          type: string
+          example: "mage_35"
+        ExternOrderNo:
+          type: string
+          example: "000000046"
+        customer_id:
+          type: string
+          example: "2"
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              itemId:
+                type: string
+                example: "99"
+              quantity:
+                type: integer
+                example: 1
+              reason:
+                type: string
+                example: "not_as_described"
+              reason_desc:
+                type: string
+                example: "Not as Described"
+              logic_applied:
+                type: string
+                example: "Any Reason"
+              control_quality:
+                type: object
+                properties:
+                  exists:
+                    type: boolean
+                    example: true
+                  resellable:
+                    type: boolean
+                    example: true
+                  cleaned:
+                    type: boolean
+                    example: true
+                  custom_1557734837853:
+                    type: boolean
+                    example: false
+              refund_total:
+                type: integer
+                example: 80
+              authorization_required:
+                    type: boolean
+                    example: false
+        logistics:
+          type: object
+          properties:
+            ship_back:
+              type: boolean
+              example: true
+            return_to_store:
+              type: boolean
+              example: true
+            generate_label:
+              type: boolean
+              example: false
+            cost:
+              type: integer
+              example: 0
+            cost_source:
+              type: string
+              example: "free"
+            type:
+              type: string
+              example: "offline"
+            type_desc:
+              type: string
+              example: "Offline Refund"
+            refund_shipping:
+              type: boolean
+              example: false
+            refund_total:
+              type: integer
+              example: 80
+            refund_subtotal:
+              type: integer
+              example: 80
+            refund_instant:
+              type: boolean
+              example: false
+        activity:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "issue-refund"
+            statusNumber:
+              type: integer
+              example: 4
+            authorization_date:
+              type: integer
+              example: 1579609468
+            authorization_comment:
+              type: string
+              example: ""
+            reception_comment:
+              type: string
+              example: ""
+            received_date:
+              type: integer
+              example: 1579609487
+            received_comment:
+              type: string
+              example: ""
+            controlled_date:
+              type: integer
+              example: 1579609500
+            controlled_comment:
+              type: string
+              example: ""
+            refunded_date:
+              type: integer
+              example: 0
+            refunded_comment:
+              type: string
+              example: ""
+        authorization_required:
+          type: boolean
+          example: false
+        authorization_approval:
+          type: boolean
+          example: true
+        authorization_pending:
+          type: boolean
+          example: true
+        tracking:
+          type: string
+          example: ""
+        ship_label_url:
+          type: string
+          example: ""
+        ship_label_cost:
+          type: integer
+          example: 0
+        ship_label_currency:
+          type: string
+          example: "USD"
+        ship_carrier:
+          type: string
+          example: ""
+        store:
+          type: array
+          items:
+            type: object
+            properties:
+              SupplierId:
+                type: string
+                example: "1"
+              SupplierName:
+                type: string
+                example: "Performance-PCs.com"
+              Address1:
+                type: string
+                example: "1701 Robert J. Conlan Blvd. NE"
+              Address2:
+                type: string
+                example: "Unit #5"
+              City:
+                type: string
+                example: "Palm Bay"
+              State:
+                type: string
+                example: "FL"
+              Postcode:
+                type: string
+                example: "32909"
+              Country:
+                type: string
+                example: "US"
+              AcceptReturns:
+                type: string
+                example: "YES"
+              DefaultShipLocation:
+                type: string
+                example: "YES"
+              DefaultReturnLocation:
+                type: string
+                example: "YES"
+              Phone:
+                type: string
+                example: "888-381-8222"
+              Email:
+                type: string
+                example: "Sales@Performance-PCs.com"
+              Sun:
+                type: string
+                example: "Closed"
+              Mon:
+                type: string
+                example: "8am - 5 pm"
+              Tues:
+                type: string
+                example: "9am - 5 pm"
+              Wed:
+                type: string
+                example: "9am - 5 pm"
+              Thurs:
+                type: string
+                example: "9am - 5 pm"
+              Fri:
+                type: string
+                example: "9am - 5 pm"
+              Sat:
+                type: string
+                example: "Closed"
+              LinkFacebook:
+                type: string
+                example: "https:\/\/www.facebook.com\/PerformancePCs"
+              LinkInstagram:
+                type: string
+                example: "https:\/\/www.instagram.com\/performancepcs\/"
+              LinkYelp:
+                type: string
+                example: "https:\/\/www.trustpilot.com\/review\/www.performance-pcs.com"
+              LinkTwitter:
+                type: string
+                example: "https:\/\/twitter.com\/PerformancePCs"
+              LinkPinterest:
+                type: string
+                example: "https:\/\/www.pinterest.com\/performancepcs\/"
+              LinkCustom:
+                type: string
+                example: "https:\/\/www.youtube.com\/user\/PerformancepcsTV"
+              ProcessedInfo:
+                type: boolean
+                example: true
+              ProcessedNeighbours:
+                type: boolean
+                example: true
+              StoreIdentifier:
+                type: object
+                properties:
+                  CountryUrl:
+                    type: string
+                    example: "US"
+                  StateUrl:
+                    type: string
+                    example: "FL"
+                  CityUrl:
+                    type: string
+                    example: "Palm-Bay"
+                  Address1Url:
+                    type: string
+                    example: "1701-Robert-J--Conlan-Blvd--NE"
+                  SupplierNameUrl:
+                    type: string
+                    example: "Performance-PCs-com"
+              CountryPrefix:
+                type: string
+                example: "1"
+              MetaData:
+                type: object
+                properties:
+                  PlaceId:
+                    type: string
+                    example: "Ejg1LCAxNzAxIFJvYmVydCBKIENvbmxhbiBCbHZkIE5FLCBQYWxtIEJheSwgRkwgMzI5MDUsIFVTQSIdGhsKFgoUChIJ3zJR1k4S3ogRkQGUCHpbUKsSATU"
+                  FormattedAdress:
+                    type: string
+                    example: "1701 Robert J Conlan Blvd NE #5, Palm Bay, FL 32905, USA"
+                  Geometry:
+                    type: object
+                    properties:
+                      bounds:
+                        type: object
+                        properties:
+                          northeast:
+                            type: object
+                            properties:
+                              lat:
+                                type: number
+                                example: 28.04049
+                              lng:
+                                type: number
+                                example: -80.5961742
+                          southwest:
+                            type: object
+                            properties:
+                              lat:
+                                type: number
+                                example: 28.0402718
+                              lng:
+                                type: number
+                                example: -80.5967573
+                      location:
+                        type: object
+                        properties:
+                          lat:
+                            type: number
+                            example: 28.040393
+                          lng:
+                            type: number
+                            example: -80.5964791
+                      location_type:
+                        type: string
+                        example: "ROOFTOP"
+                      viewport:
+                        type: object
+                        properties:
+                          northeast:
+                            type: object
+                            properties:
+                              lat:
+                                type: number
+                                example: 28.0417298802915
+                              lng:
+                                type: number
+                                example: -80.5951167697085
+                          southwest:
+                            type: object
+                            properties:
+                              lat:
+                                type: number
+                                example: 28.0390319197085
+                              lng:
+                                type: number
+                                example: -80.5978147302915
+                  DirectionsUrl:
+                    type: string
+                    example: "https:\/\/www.google.com\/maps\/dir\/?api=1&origin=&destination=28.040393,-80.5964791"
+                  currentOperatingHours:
+                    type: string
+                    example: "9AM - 5 PM"
+        modified:
+          type: integer
+          example: 1579609468
+        created:
+          type: integer
+          example: 1579609468
+        refunded:
+          type: boolean
+          example: false
+        completed:
+          type: string
+          example: ""
+        restock:
+          type: boolean
+          example: true
+        status:
+          type: string
+          example: "Issue Refund"
+        status_message:
+          type: string
+          example: ""
+        api_notice:
+          type: boolean
+          example: false
+        api_notice_at:
+          type: boolean
+          example: false
+    estimates:
+      type: object
+      properties:
+        countrycode:
+          type: string
+          example: "US"
+        zip:
+          type: string
+          example: "19010"
+        shipper:
+          type: object
+          properties:
+            USPS:
+              type: object
+              properties:
+                First:
+                  type: integer
+                  example: 1564381138
+                Priority:
+                  type: integer
+                  example: 1564294738
+                ParcelSelect:
+                  type: integer
+                  example: 1564381138
+    requestEstimatedDelivery:
+      properties:
+        orderid:
+          type: string
+          example: "000000190"
+      required:
+       - orderid
+    responseGetEstimatedDelivery:
+      type: object
+      properties:
+        EstimateRequestId:
+          type: string
+          example: "jQyDs7MmYi3G9Q9C78WmvvkXH0mPhTxK"
+        EstimateUTCOffset:
+          type: number
+          example: "-25200"
+        EstimateUTCTimestamp:
+          type: string
+          example: "1589907600,1591203600"

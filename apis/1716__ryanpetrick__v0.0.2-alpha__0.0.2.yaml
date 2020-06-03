@@ -1,0 +1,318 @@
+openapi: 3.0.0
+info:
+  title: Registration 
+  description: >-
+    This API is used to register devices with the Safety io Cloud offerings.
+    This process and API will be used to register devices and/or update their
+    SIM card status over the life of the product. The intended users will be the
+    device itself, the manufacturing test fixture, or the system managing the
+    cloud serivce activations (this could be SUMMON, the Altair Grid or the A2
+    in the cloud).
+  version: "0.0.2"
+  contact:
+    email: CloudPlatform@safetyio.com
+x-amazon-apigateway-request-validators:
+  all:
+    validateRequestBody: true
+    validateRequestParameters: true
+paths:
+  /registration/devices:
+    post:
+      x-amazon-apigateway-request-validator: all
+      summary: Create a new Device and Return the Inactive Certificate
+      description: >
+        Create and provision a new device within the system. This will create an
+        IoT Thing and return
+
+        the inactive certificate, which can be used to communicate over MQTT and
+        validate that the
+
+        SIM card is in the 'Test-Ready'.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationRequest'
+      responses:
+        '200':
+          description: >-
+            Certificate, API Endpoint and all needed data on registration
+            success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationResponse'
+        '400':
+          description: Malformed Request Data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: Malformed Request
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': >-
+            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LTEHttpLambda.Arn}/invocations
+        credentials:
+          'Fn::Sub': '${LTEHttpApiRole.Arn}'
+        responses:
+          default:
+            statusCode: '200'
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+  '/registration/devices/{serialNumber}':
+    get:
+      x-amazon-apigateway-request-validator: all
+      summary: Retrieve all stored Information regarding that Device
+      parameters:
+        - $ref: '#/components/parameters/serialNumber'
+      responses:
+        '200':
+          description: The Device Information
+          content:
+            application/json:
+              schema:
+                type: object
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': >-
+            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LTEHttpLambda.Arn}/invocations
+        credentials:
+          'Fn::Sub': '${LTEHttpApiRole.Arn}'
+        responses:
+          default:
+            statusCode: '200'
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+  '/registration/devices/{serialNumber}/customers':
+    put:
+      x-amazon-apigateway-request-validator: all
+      summary: Activate Device and assign to a Customer
+      description: |
+        Registers the device to a customer.
+      parameters:
+        - $ref: '#/components/parameters/serialNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivationRequest'
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Malformed Request Data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: Malformed Request
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': >-
+            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LTEHttpLambda.Arn}/invocations
+        credentials:
+          'Fn::Sub': '${LTEHttpApiRole.Arn}'
+        responses:
+          default:
+            statusCode: '200'
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+    delete:
+      x-amazon-apigateway-request-validator: all
+      summary: Decomission a Device and remove it from Customer
+      description: |
+        Decomissions the device.
+      parameters:
+        - $ref: '#/components/parameters/serialNumber'
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: Malformed Request Data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                example:
+                  message: Malformed Request
+      x-amazon-apigateway-integration:
+        uri:
+          'Fn::Sub': >-
+            arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LTEHttpLambda.Arn}/invocations
+        credentials:
+          'Fn::Sub': '${LTEHttpApiRole.Arn}'
+        responses:
+          default:
+            statusCode: '200'
+        passthroughBehavior: when_no_match
+        httpMethod: POST
+        contentHandling: CONVERT_TO_TEXT
+        type: aws_proxy
+components:
+  parameters:
+    serialNumber:
+      in: path
+      name: serialNumber
+      description: Unique identifier for the device
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+        example: 000A001001170001
+        minLength: 16
+        maxLength: 16
+        pattern: '^[0-9a-zA-Z]+$'
+  schemas:
+    ActivationRequest:
+      type: object
+      required:
+        - activationCode
+        - customerId
+      properties:
+        activationCode:
+          type: string
+          example: 1234CDEF
+        customerId:
+          type: string
+          example: 12300000-0000-0000-0000-000000000777
+    RegistrationRequest:
+      type: object
+      required:
+        - iccid
+        - serialNumber
+        - activationCode
+        - buildInformation
+      properties:
+        iccid:
+          type: string
+          example: '89011703278314622856'
+          minLength: 20
+          maxLength: 20
+        serialNumber:
+          type: string
+          example: 000A001001170001
+          minLength: 16
+          maxLength: 16
+          pattern: '^[0-9a-zA-Z]+$'
+        activationCode:
+          type: string
+          example: 1234CDEF
+        buildInformation:
+          $ref: '#/components/schemas/BuildInformation'
+    RegistrationResponse:
+      type: object
+      properties:
+        certificate:
+          $ref: '#/components/schemas/Certificate'
+        thing:
+          $ref: '#/components/schemas/Thing'
+        iotEndpoint:
+          type: string
+          description: >-
+            URL to the regions IoT-Data:ATS Endpoint (necessary for
+            communicating over MQTT)
+      example:
+        endpointAddress: amiad8p4au6x2.iot.us-east-1.amazonaws.com
+        certificate:
+          certificateArn: >-
+            arn:aws:iot:us-east-1:896206781577:cert/10121c087c2be006d485b01259fa5c09d7459a41691f759698063e2b311066d3
+          certificateId: 10121c087c2be006d485b01259fa5c09d7459a41691f759698063e2b311066d3
+          certificatePem: |
+            -----BEGIN CERTIFICATE-----
+            Some Chars
+            -----END CERTIFICATE-----
+          keyPair:
+            PublicKey: |
+              -----BEGIN PUBLIC KEY-----
+              Some Chars
+              cQIDAQAB
+              -----END PUBLIC KEY-----
+            PrivateKey: |
+              -----BEGIN RSA PRIVATE KEY-----
+              Some Chars
+              -----END RSA PRIVATE KEY-----
+        thing:
+          thingName: 000A001001170008
+          thingArn: 'arn:aws:iot:us-east-1:896206781577:thing/000A001001170008'
+          thingId: 6d69ecea-edb2-487b-a072-78370d285cea
+    Certificate:
+      type: object
+      description: The IoT Certificate
+      properties:
+        certificateArn:
+          type: string
+          description: The arn of the certificate
+        certificateId:
+          type: string
+          description: The id of the certificate
+        certificatePem:
+          type: string
+          description: The certifciate in pem format
+        keyPair:
+          $ref: '#/components/schemas/KeyPair'
+    Thing:
+      type: object
+      description: The IoT Thing
+      properties:
+        thingName:
+          type: string
+          description: The name of the thing (SN of the device)
+        thingArn:
+          type: string
+          description: The arn of the thing
+        thingId:
+          type: string
+          description: The id of the thing
+    KeyPair:
+      type: object
+      properties:
+        PublicKey:
+          type: string
+          description: The public key
+        PrivateKey:
+          type: string
+          description: The private Key
+    BuildInformation:
+      type: object
+      properties:
+        softwareVersion:
+          type: string
+          example: 1.0.3_branchName
+        buildDate:
+          type: string
+          format: date-time
+          example: '2016-08-29T09:12:33.001Z'
+        location:
+          type: string
+          enum:
+            - Berlin
+            - Cranberry
+            - Murraysville
+            - Unknown
+          default: Unknown
+servers:
+  - url: https://m98dqd0ew5.execute-api.us-east-1.amazonaws.com/prod
+    description: Testing Jasper
+  - url: https://uo7dqlwahc.execute-api.us-east-1.amazonaws.com/prod
+    description: Production Jasper

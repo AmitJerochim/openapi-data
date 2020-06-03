@@ -1,0 +1,262 @@
+openapi: 3.0.0
+info:
+  description: >-
+    GetInclusive LMS provides API end-points for participant management and
+    reporting.  If you have specific needs not met by the provided end-points,
+    please do not hesitate to contact us.  We are continuing to expand the
+    features we expose through APIs. <h2>Authentication / Authorization</h2>All
+    API calls must accompany a request header <b>x-api-key</b> to access the
+    end-points.</p><p><h2>Usage / Throttling</h2> Please limit your API calls to
+    TWO per second (hard-limit); the API queue depth is 5000 pending calls, all
+    subsequent calls are dropped.
+  version: "1.41b"
+  title: GetInclusive LMS API
+  contact:
+    email: ali@getinclusive.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+paths:
+  /user_info:
+    get:
+      summary: Detailed status of ONE specific participant
+      operationId: user_info
+      description: >
+        "Retrieve information about a participant using their unique id (user_uid) or email address.  This would return all the courses the
+        participant was invited to, is enrolled in, and how many invitations and
+        reminders have been sent.  If you are looking for Bulk retrieval, please look at Status api"
+      parameters:
+        - in: header
+          name: x-api-key
+          description: required API key
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: user_uid
+          required: false
+          description: 'email addresses to search, only one user_uid is allowed'
+          schema:
+            type: string
+        - in: query
+          name: email
+          required: false
+          description: 'email addresses to search, only one email address allowed, use only if user_id is not provided'
+          schema:
+            type: string
+        - in: query
+          name: course_id
+          description: Course ID to scope the search to (Optional)
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: >-
+            JSON array 'results' courses (and completion status), invitations
+            (sent count, accepted/viewed status) and reminders (sent counts,
+            accepted/viewed) for the participant
+  /status:
+    get:
+      summary: >-
+        Participant Status
+      operationId: status
+      description: |
+        Returns 100 records at a time of participants in one or more courses.  By default it returns invitations and user accounts, and for each record, it returns information about all courses (modules) that the user is enrolled in and the status - pending, or completed.
+      parameters:
+        - in: header
+          name: x-api-key
+          description: required API key
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          required: false
+          description: 'which page number to return, default = 1'
+          schema:
+            type: string
+        - in: query
+          name: per_page
+          required: false
+          description: 'How many results to return in a page, default = 100 at a time'
+          schema:
+            type: string
+        - in: query
+          name: type
+          required: false
+          description: 'type of results to retrieve, "invitations", or "users" who accepted the invitations, or all (default)'
+          schema:
+            type: string
+        - in: query
+          name: user_uid
+          required: false
+          description: 'Comma separated list of user_uids to search'
+          schema:
+            type: string
+        - in: query
+          name: emails
+          required: false
+          description: 'Comma separated email addresses to search'
+          schema:
+            type: string
+        - in: query
+          name: refdata
+          description: reference data to search for (Optional)
+          schema:
+            type: string
+        - in: query
+          name: course_id
+          description: Comma separated list of Course IDs, integers.  This should be used to scope the search otherwise large data-set will need to be iterated over
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: >-
+            JSON array 'results' containing user object(s).  Each user object
+            has: <p/>1) account info (e.g. name and auth_link) <p/> 2) courses
+            the user is enrolled into, and <p/> 3) events associated with the
+            courses, e.g. when they started or completed the course. <p/>Note,
+            the auth_link can be used to invite the user
+  /invite:
+    get:
+      summary: Creates a new invitation and return auth_link
+      operationId: Invitation
+      description: >
+        This endpoint create a new invitation object for a given person (email)
+        and for a specific course (course_id).  The endpoint defaults to NOT
+        trigger the invitation email.  Auth link can be used to generate emails
+        outside of the GetInclusive LMS, e.g. using institution's own email
+        infrastructure.  This email behavior can be overridden to trigger the
+        delivery of email via GetInclusive system - see the `send_mail` option.
+      parameters:
+        - in: header
+          name: x-api-key
+          description: required API key
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: email
+          required: true
+          description: >-
+            email addresses of the participant to create the invitation object
+            for.  Email is not actually delivered unless the `send_mail` parameter
+            is set
+          schema:
+            type: string
+        - in: query
+          name: course_id
+          required: true
+          description: ID of the course to invite the user to
+          schema:
+            type: integer
+            minimum: 0
+        - in: query
+          name: user_uid
+          required: false
+          description: >-
+            Unique id for the participant.  This id carries over to the user
+            account when an invitation is accepted.  If this invited user will have second of third ids, then please use the `refdata` query parameter for these additional IDs, see `refdata` description below
+          schema:
+            type: string
+        - in: query
+          name: refdata
+          description: >-
+            Optional Reference data (key value pairs, e.g.,`KEY1:VALUE1;KEY2:VALUE2`) serving as meta-data for the user.  
+            
+            
+            Use it to provide information such as cohort info,
+            affiliations, department, etc.  This
+            reference data will be inherited by the user object when the
+            invitation is accepted.  For more information about the reference
+            data, please refer to [Reference Data Documentation
+            here](https://support.getinclusive.com/articles/7Td7RbyT/Reference-Data-For-Better-Reports)
+            
+            Note - you can also use refdata to provide second or third unique IDs for this user, using the `ID` key multiple times.
+          schema:
+            type: string
+        - in: query
+          name: send_email
+          description: >-
+            Should the GetInclusive LMS Send an invitation email.  Please make
+            sure that the invitation email in the dashboard reflects the content
+            you would like to deliver.  Defaults to false.  Allowed values are
+            `1, 0, true, false`
+          schema:
+            type: string
+      responses:
+        '200':
+          description: JSON of the created invite object
+  /student/user_data:
+    get:
+      summary: Get user profile information by unique id
+      operationId: get_user_info
+      description: >
+        "Retrieve information about a participant, including the courses the
+        participant was invited to, is enrolled in, and how many invitations and reminders have been sent."
+      parameters:
+        - in: header
+          name: x-api-key
+          description: required API key
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: user_uid
+          required: true
+          description: user_uid for user lookup
+          schema:
+            type: string
+        - in: query
+          name: attributes
+          description: >-
+            Comma-separated list of attributes: first_name, last_name, email,
+            email_aliases, user_uid, reference_data (Optional)
+          schema:
+            type: string
+            minimum: 0
+      responses:
+        '200':
+          description: >-
+            JSON object containing status of the query, i.e. 'success'; the
+            user_uid that was used to perform the search; data object containing the selected attributes
+    post:
+      summary: Update user profile information by unique id
+      operationId: post_user_info
+      description: >
+        Update user profile attributes.  POST request should contain user_uid (required), and attributes that will be updated by the post, e.g. if email address needs to be updated, then the request JSON will contain user_uid and email.
+        <p/>
+        Following attributes can be updated by this POST request
+        <ol>
+        <li>first_name</li>
+        <li>last_name</li>
+        <li>email</li>
+        <li>reference_data</li>
+        </ol>
+        The request example below shows last_name and email being updated by the request.
+      requestBody:
+        description: A JSON object containing user attributes to be updated.  user_uid is required
+        content:
+         application/json:
+          schema:
+            type: object
+          example:
+            user_uid: U7890
+            last_name: Neilsen
+            email: new_email@example.com
+      parameters:
+        - in: header
+          name: x-api-key
+          description: required API key
+          required: true
+          schema:
+            type: string
+          
+      responses:
+        '200':
+          description: >-
+            JSON response with 'status' field (i.e. success), and data object containing the attributes that were requested to be updated by this POST request 
+servers:
+  - url: 'https://api.getinclusive.com/prod'

@@ -1,0 +1,2540 @@
+openapi: 3.0.0
+info:
+  title: VitalSignalsTouch web portal API
+  description: VitalSignalsTouch web portal API
+  contact:
+    email: enrico.ansaloni@gmail.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.0
+servers:
+- url: https://my.vitalsignalstouch.com/api
+  description: VitalSignalsTouch production server
+- url: http://vst-njs.unimore.it/api
+  description: VitalSignalsTouch development server
+tags:
+- name: Auth
+  description: Authorization API
+- name: User
+  description: User operations
+- name: Group
+  description: Group operations
+- name: Device
+  description: Device operations  
+- name: Registration
+  description: Registration operations  
+- name: Report
+  description: Report operations
+paths:
+  /auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Authorize user / get JWT token
+      operationId: login
+      requestBody:
+        description: User name or mail and password
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/LoginUsername'
+                - $ref: '#/components/schemas/LoginMail'
+            example:
+              mail: 'user@example.com'
+              password: 'somepassword'
+      responses:
+        '201':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSuccessful"
+        '401':
+          description: Login failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthFailed"
+  /user:
+    get:
+      tags:
+      - User
+      summary: Get / search all users
+      operationId: getAllUsers
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: query
+        in: header
+        description: Query single or multiple schema fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptyQuery:
+            summary: No query set
+            value: []
+          oneField:
+            summary: Example of a query matching a single field
+            value:
+            - '_id: 5c7197af514046712352bf72'
+          multipleFields:
+            summary: Example of a query matching multiple fields
+            value:
+            - '_id: 5c7197af514046712352bf72'
+            - 'status: active'
+      - name: select
+        in: header
+        description: Select fields to display
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptySelect:
+            summary: No select set
+            value: []
+          onlyTwoFields:
+            summary: Show only two fields
+            value:
+            - '_id: 1'
+            - 'created_at: 1'
+      - name: sort
+        in: header
+        description: Sort ascending or descending on one or more fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          noSortSet:
+            summary: No sort set
+            value: []
+          sortByDateAscending:
+            summary: Sort by creation and update times ascending
+            value:
+            - 'created_at: 1'
+            - 'updated_at: 1'
+          sortByDateDescending:
+            summary: Sort by creation and update times descending
+            value:
+            - 'created_at: -1'
+            - 'updated_at: -1'
+      - name: skip
+        in: header
+        description: Skip N results
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          nullable: true
+        examples:
+          noSkipSet:
+            summary: No skip set
+          skipFirstTwo:
+            summary: Skip first 2 results
+            value: 2
+      - name: limit
+        in: header
+        description: Show only N results
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          nullable: true
+        examples:
+          noLimitSet:
+            summary: No limit set
+          onlyFirstResult:
+            summary: Show only first result
+            value: 1
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        "401":
+          description: DB exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionError'
+    post:
+      tags:
+      - User
+      summary: Create one user
+      operationId: createUser
+      security:
+      - bearerAuth: []
+      requestBody:
+        description: User data to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200'
+        "400":
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400'
+  /user/{id}:
+    get:
+      tags:
+      - User
+      summary: Get one user
+      operationId: getOneUser
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: id
+        in: path
+        description: The user id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      - name: select
+        in: header
+        description: Select fields to display
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptySelect:
+            summary: No select set
+            value: []
+          onlyTwoFields:
+            summary: Show only two fields
+            value:
+            - '_id: 1'
+            - 'created_at: 1'
+      - name: sort
+        in: header
+        description: Sort ascending or descending on one or more fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          noSortSet:
+            summary: No sort set
+            value: []
+          sortByDateAscending:
+            summary: Sort by creation and update times ascending
+            value:
+            - 'created_at: 1'
+            - 'updated_at: 1'
+          sortByDateDescending:
+            summary: Sort by creation and update times descending
+            value:
+            - 'created_at: -1'
+            - 'updated_at: -1'
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_1'
+        "401":
+          description: DB exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionError'
+    put:
+      tags:
+      - User
+      summary: Update one user
+      operationId: updateOneUser
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The user id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        description: User data to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200'
+        "400":
+          description: DB exception error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400'
+        "401":
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401'
+    delete:
+      tags:
+      - User
+      summary: Delete one user
+      operationId: deleteOneUser
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The user id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_2'
+        "400":
+          description: DB exception error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_1'
+        "401":
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401'
+  /group:
+    get:
+      tags:
+      - Group
+      summary: Get / search all groups
+      operationId: getAllGroups
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: query
+        in: header
+        description: Query single or multiple schema fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptyQuery:
+            summary: No query set
+            value: []
+          oneField:
+            summary: Example of a query matching a single field
+            value:
+            - '_id: 5c7197af514046712352bf72'
+          multipleFields:
+            summary: Example of a query matching multiple fields
+            value:
+            - '_id: 5c7197af514046712352bf72'
+            - 'status: active'
+      - name: select
+        in: header
+        description: Select fields to display
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptySelect:
+            summary: No select set
+            value: []
+          onlyTwoFields:
+            summary: Show only two fields
+            value:
+            - '_id: 1'
+            - 'created_at: 1'
+      - name: sort
+        in: header
+        description: Sort ascending or descending on one or more fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          noSortSet:
+            summary: No sort set
+            value: []
+          sortByDateAscending:
+            summary: Sort by creation and update times ascending
+            value:
+            - 'created_at: 1'
+            - 'updated_at: 1'
+          sortByDateDescending:
+            summary: Sort by creation and update times descending
+            value:
+            - 'created_at: -1'
+            - 'updated_at: -1'
+      - name: skip
+        in: header
+        description: Skip N results
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          nullable: true
+        examples:
+          noSkipSet:
+            summary: No skip set
+          skipFirstTwo:
+            summary: Skip first 2 results
+            value: 2
+      - name: limit
+        in: header
+        description: Show only N results
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          nullable: true
+        examples:
+          noLimitSet:
+            summary: No limit set
+          onlyFirstResult:
+            summary: Show only first result
+            value: 1
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Group'
+        "401":
+          description: DB exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionError'
+    post:
+      tags:
+      - Group
+      summary: Create one group
+      operationId: createGroup
+      security:
+      - bearerAuth: []      
+      requestBody:
+        description: Group data to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Group'
+        required: true
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_3'
+        "400":
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_2'
+  /group/{id}:
+    get:
+      tags:
+      - Group
+      summary: Get one group
+      operationId: getOneGroup
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The group id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      - name: select
+        in: header
+        description: Select fields to display
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptySelect:
+            summary: No select set
+            value: []
+          onlyTwoFields:
+            summary: Show only two fields
+            value:
+            - '_id: 1'
+            - 'created_at: 1'
+      - name: sort
+        in: header
+        description: Sort ascending or descending on one or more fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          noSortSet:
+            summary: No sort set
+            value: []
+          sortByDateAscending:
+            summary: Sort by creation and update times ascending
+            value:
+            - 'created_at: 1'
+            - 'updated_at: 1'
+          sortByDateDescending:
+            summary: Sort by creation and update times descending
+            value:
+            - 'created_at: -1'
+            - 'updated_at: -1'
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_4'
+        "401":
+          description: DB exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionError'
+    put:
+      tags:
+      - Group
+      summary: Update one group
+      operationId: updateOneGroup
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The group id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        description: Group data to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Group'
+        required: true
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_3'
+        "400":
+          description: DB exception error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_2'
+        "401":
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401'
+    delete:
+      tags:
+      - Group
+      summary: Delete one group
+      operationId: deleteOneGroup
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The group id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_5'
+        "400":
+          description: DB exception error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_3'
+        "401":
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401'
+  /device:
+    get:
+      tags:
+      - Device
+      summary: Get / search all devices
+      operationId: getAllDevices
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: query
+        in: header
+        description: Query single or multiple schema fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptyQuery:
+            summary: No query set
+            value: []
+          oneField:
+            summary: Example of a query matching a single field
+            value:
+            - '_id: 5c7197af514046712352bf72'
+          multipleFields:
+            summary: Example of a query matching multiple fields
+            value:
+            - '_id: 5c7197af514046712352bf72'
+            - 'status: active'
+      - name: select
+        in: header
+        description: Select fields to display
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptySelect:
+            summary: No select set
+            value: []
+          onlyTwoFields:
+            summary: Show only two fields
+            value:
+            - '_id: 1'
+            - 'created_at: 1'
+      - name: sort
+        in: header
+        description: Sort ascending or descending on one or more fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          noSortSet:
+            summary: No sort set
+            value: []
+          sortByDateAscending:
+            summary: Sort by creation and update times ascending
+            value:
+            - 'created_at: 1'
+            - 'updated_at: 1'
+          sortByDateDescending:
+            summary: Sort by creation and update times descending
+            value:
+            - 'created_at: -1'
+            - 'updated_at: -1'
+      - name: skip
+        in: header
+        description: Skip N results
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          nullable: true
+        examples:
+          noSkipSet:
+            summary: No skip set
+          skipFirstTwo:
+            summary: Skip first 2 results
+            value: 2
+      - name: limit
+        in: header
+        description: Show only N results
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          nullable: true
+        examples:
+          noLimitSet:
+            summary: No limit set
+          onlyFirstResult:
+            summary: Show only first result
+            value: 1
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        "401":
+          description: DB exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionError'
+    post:
+      tags:
+      - Device
+      summary: Create one device
+      operationId: createDevice
+      security:
+      - bearerAuth: []      
+      requestBody:
+        description: Device data to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Device'
+        required: true
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_6'
+        "400":
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_4'
+  /device/{id}:
+    get:
+      tags:
+      - Device
+      summary: Get one device
+      operationId: getOneDevice
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The group id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      - name: select
+        in: header
+        description: Select fields to display
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptySelect:
+            summary: No select set
+            value: []
+          onlyTwoFields:
+            summary: Show only two fields
+            value:
+            - '_id: 1'
+            - 'created_at: 1'
+      - name: sort
+        in: header
+        description: Sort ascending or descending on one or more fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          noSortSet:
+            summary: No sort set
+            value: []
+          sortByDateAscending:
+            summary: Sort by creation and update times ascending
+            value:
+            - 'created_at: 1'
+            - 'updated_at: 1'
+          sortByDateDescending:
+            summary: Sort by creation and update times descending
+            value:
+            - 'created_at: -1'
+            - 'updated_at: -1'
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_7'
+        "401":
+          description: DB exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionError'
+    put:
+      tags:
+      - Device
+      summary: Update one device
+      operationId: updateOneDevice
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The group id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        description: Device data to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Device'
+        required: true
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_8'
+        "400":
+          description: DB exception error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_4'
+        "401":
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401'
+    delete:
+      tags:
+      - Device
+      summary: Delete one device
+      operationId: deleteOneDevice
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The group id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_9'
+        "400":
+          description: DB exception error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_5'
+        "401":
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401'
+  /registration:
+    get:
+      tags:
+      - Registration
+      summary: Get / search all registrations
+      operationId: getAllRegistrations
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: query
+        in: header
+        description: Query single or multiple schema fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptyQuery:
+            summary: No query set
+            value: []
+          oneField:
+            summary: Example of a query matching a single field
+            value:
+            - '_id: 5c7197af514046712352bf72'
+          multipleFields:
+            summary: Example of a query matching multiple fields
+            value:
+            - '_id: 5c7197af514046712352bf72'
+            - 'status: active'
+      - name: select
+        in: header
+        description: Select fields to display
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptySelect:
+            summary: No select set
+            value: []
+          onlyTwoFields:
+            summary: Show only two fields
+            value:
+            - '_id: 1'
+            - 'created_at: 1'
+      - name: sort
+        in: header
+        description: Sort ascending or descending on one or more fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          noSortSet:
+            summary: No sort set
+            value: []
+          sortByDateAscending:
+            summary: Sort by creation and update times ascending
+            value:
+            - 'created_at: 1'
+            - 'updated_at: 1'
+          sortByDateDescending:
+            summary: Sort by creation and update times descending
+            value:
+            - 'created_at: -1'
+            - 'updated_at: -1'
+      - name: skip
+        in: header
+        description: Skip N results
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          nullable: true
+        examples:
+          noSkipSet:
+            summary: No skip set
+          skipFirstTwo:
+            summary: Skip first 2 results
+            value: 2
+      - name: limit
+        in: header
+        description: Show only N results
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          nullable: true
+        examples:
+          noLimitSet:
+            summary: No limit set
+          onlyFirstResult:
+            summary: Show only first result
+            value: 1
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Registration'
+        "401":
+          description: DB exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionError'
+    post:
+      tags:
+      - Registration
+      summary: Create one registration
+      operationId: createRegistration
+      security:
+      - bearerAuth: []      
+      requestBody:
+        description: Registration data to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Registration'
+        required: true
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_10'
+        "400":
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_6'
+  /registration/{id}:
+    get:
+      tags:
+      - Registration
+      summary: Get one registration
+      operationId: getOneRegistration
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The user id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      - name: select
+        in: header
+        description: Select fields to display
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptySelect:
+            summary: No select set
+            value: []
+          onlyTwoFields:
+            summary: Show only two fields
+            value:
+            - '_id: 1'
+            - 'created_at: 1'
+      - name: sort
+        in: header
+        description: Sort ascending or descending on one or more fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          noSortSet:
+            summary: No sort set
+            value: []
+          sortByDateAscending:
+            summary: Sort by creation and update times ascending
+            value:
+            - 'created_at: 1'
+            - 'updated_at: 1'
+          sortByDateDescending:
+            summary: Sort by creation and update times descending
+            value:
+            - 'created_at: -1'
+            - 'updated_at: -1'
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_11'
+        "401":
+          description: DB exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionError'
+    put:
+      tags:
+      - Registration
+      summary: Update one registration
+      operationId: updateOneRegistration
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The user id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        description: Registration data to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Registration'
+        required: true
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_10'
+        "400":
+          description: DB exception error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_6'
+        "401":
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401'
+    delete:
+      tags:
+      - Registration
+      summary: Delete one registration
+      operationId: deleteOneRegistration
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The user id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_12'
+        "400":
+          description: DB exception error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_7'
+        "401":
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401'
+  /report:
+    get:
+      tags:
+      - Report
+      summary: Get / search all reports
+      operationId: getAllReports
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: query
+        in: header
+        description: Query single or multiple schema fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptyQuery:
+            summary: No query set
+            value: []
+          oneField:
+            summary: Example of a query matching a single field
+            value:
+            - '_id: 5c7197af514046712352bf72'
+          multipleFields:
+            summary: Example of a query matching multiple fields
+            value:
+            - '_id: 5c7197af514046712352bf72'
+            - 'status: active'
+      - name: select
+        in: header
+        description: Select fields to display
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptySelect:
+            summary: No select set
+            value: []
+          onlyTwoFields:
+            summary: Show only two fields
+            value:
+            - '_id: 1'
+            - 'created_at: 1'
+      - name: sort
+        in: header
+        description: Sort ascending or descending on one or more fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          noSortSet:
+            summary: No sort set
+            value: []
+          sortByDateAscending:
+            summary: Sort by creation and update times ascending
+            value:
+            - 'created_at: 1'
+            - 'updated_at: 1'
+          sortByDateDescending:
+            summary: Sort by creation and update times descending
+            value:
+            - 'created_at: -1'
+            - 'updated_at: -1'
+      - name: skip
+        in: header
+        description: Skip N results
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          nullable: true
+        examples:
+          noSkipSet:
+            summary: No skip set
+          skipFirstTwo:
+            summary: Skip first 2 results
+            value: 2
+      - name: limit
+        in: header
+        description: Show only N results
+        required: false
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          nullable: true
+        examples:
+          noLimitSet:
+            summary: No limit set
+          onlyFirstResult:
+            summary: Show only first result
+            value: 1
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Report'
+        "401":
+          description: DB exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionError'
+    post:
+      tags:
+      - Report
+      summary: Create one report
+      operationId: createReport
+      security:
+      - bearerAuth: []      
+      requestBody:
+        description: Report data to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Report'
+        required: true
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_13'
+        "400":
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_8'
+  /report/{id}:
+    get:
+      tags:
+      - Report
+      summary: Get one report
+      operationId: getOneReport
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The report id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      - name: select
+        in: header
+        description: Select fields to display
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          emptySelect:
+            summary: No select set
+            value: []
+          onlyTwoFields:
+            summary: Show only two fields
+            value:
+            - '_id: 1'
+            - 'created_at: 1'
+      - name: sort
+        in: header
+        description: Sort ascending or descending on one or more fields
+        required: false
+        style: simple
+        explode: true
+        schema:
+          type: array
+          items:
+            type: string
+        examples:
+          noSortSet:
+            summary: No sort set
+            value: []
+          sortByDateAscending:
+            summary: Sort by creation and update times ascending
+            value:
+            - 'created_at: 1'
+            - 'updated_at: 1'
+          sortByDateDescending:
+            summary: Sort by creation and update times descending
+            value:
+            - 'created_at: -1'
+            - 'updated_at: -1'
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_14'
+        "401":
+          description: DB exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExceptionError'
+    put:
+      tags:
+      - Report
+      summary: Update one report
+      operationId: updateOneReport
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The report id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        description: Report data to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Report'
+        required: true
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_13'
+        "400":
+          description: DB exception error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_9'
+        "401":
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401'
+    delete:
+      tags:
+      - Report
+      summary: Delete one report
+      operationId: deleteOneReport
+      security:
+      - bearerAuth: []      
+      parameters:
+      - name: id
+        in: path
+        description: The report id
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_200_15'
+        "400":
+          description: DB exception error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_400_10'
+        "401":
+          description: Unauthorized access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_401'
+components:
+  schemas:
+    User:
+      required:
+      - _id
+      - group
+      - mail
+      - password
+      - status
+      - username
+      type: object
+      properties:
+        _id:
+          type: string
+          format: uuid
+        username:
+          type: string
+          example: Admin
+        mail:
+          type: string
+          format: email
+          example: admin@localhost
+        group:
+          $ref: '#/components/schemas/Group'
+        description:
+          type: string
+          example: Administrator User
+        password:
+          type: string
+          format: byte
+        status:
+          type: string
+          default: pending
+          enum:
+          - pending
+          - active
+          - deleted
+        name:
+          $ref: '#/components/schemas/User_name'
+        bio:
+          $ref: '#/components/schemas/User_bio'
+        system:
+          $ref: '#/components/schemas/User_system'
+        photo:
+          type: string
+        media:
+          type: array
+          items:
+            type: string
+        contacts:
+          type: array
+          items:
+            type: string
+        locations:
+          type: array
+          items:
+            type: string
+    Group:
+      required:
+      - _id
+      - name
+      type: object
+      properties:
+        _id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: admins
+        description:
+          type: string
+          example: Administrators
+    Policy:
+      required:
+      - _id
+      - groupSchemaName
+      - groupUserIdRefPath
+      - ownerSchemaName
+      - schemaName
+      - userGroupIdRefPath
+      - userSchemaName
+      type: object
+      properties:
+        _id:
+          type: string
+          format: uuid
+        schemaName:
+          type: string
+          example: User
+        userSchemaName:
+          type: string
+          example: User
+        groupSchemaName:
+          type: string
+          example: sameAsUser
+        ownerSchemaName:
+          type: string
+          example: sameAsSchema
+        userGroupIdRefPath:
+          type: string
+          example: group._id
+        groupUserIdRefPath:
+          type: string
+          example: _id
+        ownerIdRefPath:
+          type: string
+          example: _id
+    PolicyRule:
+      required:
+      - _id
+      - match
+      type: object
+      properties:
+        _id:
+          type: string
+          format: uuid
+        ruleName:
+          type: string
+          example: allow_read_and_create_for_guests
+        ruleDescription:
+          type: string
+          example: Allow read and create operations for guest users
+        match:
+          type: string
+          default: '*'
+        matchType:
+          type: string
+          default: group
+          enum:
+          - user
+          - group
+        read:
+          type: string
+          default: "no"
+          enum:
+          - "yes"
+          - "no"
+          - owner
+        create:
+          type: string
+          default: "no"
+          enum:
+          - "yes"
+          - "no"
+          - owner
+        update:
+          type: string
+          default: "no"
+          enum:
+          - "yes"
+          - "no"
+          - owner
+        delete:
+          type: string
+          default: "no"
+          enum:
+          - "yes"
+          - "no"
+          - owner
+    Token:
+      required:
+      - _id
+      - token
+      - userId
+      type: object
+      properties:
+        _id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        token:
+          type: string
+          example: f425988c1b10eb53802a36166cf03795
+    Device:
+      required:
+      - _id
+      - macAddress
+      - usageType
+      type: object
+      properties:
+        _id:
+          type: string
+          format: uuid
+        macAddress:
+          type: string
+          example: 10:d0:7a:f7:a5:a8
+        osVersion:
+          type: string
+          example: Ubuntu 18.04.2 LTS (Bionic Beaver)
+        firmware:
+          $ref: '#/components/schemas/Device_firmware'
+        cpu:
+          type: string
+          example: ARM Cortex-A7 (1.37 GHz)
+        ram:
+          type: integer
+          example: 517177344
+        storage:
+          type: integer
+          example: 7818182656
+    Registration:
+      required:
+      - _id
+      - device
+      type: object
+      properties:
+        _id:
+          type: string
+          format: uuid
+        device:
+          $ref: '#/components/schemas/Device'
+        users:
+          type: array
+          items:
+            type: string
+            format: uuid
+    Report:
+      required:
+      - _id
+      - date
+      - macAddress
+      - user
+      type: object
+      properties:
+        _id:
+          type: string
+          format: uuid
+        macAddress:
+          type: string
+          example: 10:d0:7a:f7:a5:a8
+        user:
+          $ref: '#/components/schemas/User'
+        date:
+          type: string
+          format: date-time
+          example: 2019-10-30T00:00:00Z
+        reports:
+          type: array
+          items:
+            $ref: '#/components/schemas/Report_reports'
+    LoginUsername:
+      type: object
+      properties:
+        username:
+          type: string
+          example: admin
+        password:
+          type: string
+          example: 1249sddfd9fs9f
+    LoginMail:
+      type: object
+      properties:
+        mail:
+          type: string
+          example: admin@localhost
+        password:
+          type: string
+          example: 1249sddfd9fs9f
+    AuthSuccessful:
+      type: object
+      properties:
+        status: 
+          type: string
+          example: ok
+        statusCode:
+          type: number
+          example: 201
+        message:
+          type: string
+          example: 'User authorized.'
+        userId:
+          type: string
+          format: uuid
+          example: 5dd385bc0425532ace660832
+        isAdmin:
+          type: boolean
+          example: false
+        accessToken:
+          type: string
+          example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IXpXVCJ9.eyJtYWlsIjoiYW5zYUBlbnJpY29hbnNhbG9uOS5uZXQiLCJwYXNzd29yZCI6IlRzb2p0YzIzISIsInJlZnJlc2hLZXkiOiJGTmU5eVdudjFwdDBoZmRnbFJCYjFnPT0iLCJ1c2VySWQiOiI1ZGQzODViYzA0MjU1MzJhY2U2NjA4MzIiLCJpYXQiOjE1ODY5Mzc4MjN9.lVps8sOTcF1bbXJb4_B-gWsIkzhQHf6NxBaN5TsOfqY'
+        refreshToken:
+          type: string
+          example: 'eVJOK002T2FWbWY4Z0VBUkVucWw3b3dsM0tLZUF6VjlCMEI1dzRwT2g5c3EwUytnUzFiQkh1bC9PVFNLRDduQWt0elNoV2RMSE9IdWF3OVAydGRCemc9PQ=='
+    AuthFailed:
+      type: object
+      properties:
+        status: 
+          type: string
+          example: error
+        statusCode:
+          type: number
+          example: 401
+        message:
+          type: string
+          example: 'User NOT authorized, wrong username or password.'
+        userId:
+          type: string
+          format: uuid
+          example: 5dd385bc0425532ace660832
+    ExceptionError:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        statusCode:
+          type: number
+          example: 401
+        message:
+          type: string
+          example: 'No policy found for schema: TestWrongSchema'
+        passed:
+          type: boolean
+          example: false
+    inline_response_200:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: 'Object created and saved: schema: User - ID: 5dd85fd819c0fb739e25294f'
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/User'
+    inline_response_400:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: 'Error saving object: schema: User - DB ERRORS: MongoError: E11000
+            duplicate key error collection: vstweb-system-dev.users index: mail_1
+            dup key: { : \"admin@localhost\" }'
+        count:
+          type: integer
+          example: 0
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          $ref: '#/components/schemas/User'
+    inline_response_200_1:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: User retrieved successfully.
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/User'
+    inline_response_401:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: Permission denied
+        errors:
+          type: string
+          example: Guest user requested an authenticated resource.
+        statusCode:
+          type: integer
+          example: 401
+    inline_response_200_2:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: 'Object deleted: id: 5dd8625d9d53ea47dc892434'
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/User'
+    inline_response_400_1:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: 'Cannot find objects to delete: schema: User - query: _id=5dd8625d9d53ea47dc892436'
+        count:
+          type: integer
+          example: 0
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          $ref: '#/components/schemas/User'
+    inline_response_200_3:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: 'Object created and saved: schema: Group - ID: 5dd85fd819c0fb739e25294f'
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Group'
+    inline_response_400_2:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: 'Error saving object: schema: Group - DB ERRORS: MongoError: E11000
+            duplicate key error collection: vstweb-system-dev.groups index: name_1
+            dup key: { : \"admin\" }'
+        count:
+          type: integer
+          example: 0
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          $ref: '#/components/schemas/Group'
+    inline_response_200_4:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: Group retrieved successfully.
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Group'
+    inline_response_200_5:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: 'Object deleted: id: 5dd8625d9d53ea47dc892434'
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Group'
+    inline_response_400_3:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: 'Cannot find objects to delete: schema: Group - query: _id=5dd8625d9d53ea47dc892436'
+        count:
+          type: integer
+          example: 0
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          $ref: '#/components/schemas/Group'
+    inline_response_200_6:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: 'Object created and saved: schema: Device - ID: 5dd85fd819c0fb739e25294f'
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Device'
+    inline_response_400_4:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: 'Error saving object: schema: Device - DB ERRORS: MongoError: E11000
+            duplicate key error collection: vstweb-system-dev.devices index: macAddress_1
+            dup key: { : \"00:11:22:33:44:55\" }'
+        count:
+          type: integer
+          example: 0
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          $ref: '#/components/schemas/Device'
+    inline_response_200_7:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: Device retrieved successfully.
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Device'
+    inline_response_200_8:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: 'Object created and saved: schema: Group - ID: 5dd85fd819c0fb739e25294f'
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Device'
+    inline_response_200_9:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: 'Object deleted: id: 5dd8625d9d53ea47dc892434'
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Device'
+    inline_response_400_5:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: 'Cannot find objects to delete: schema: Device - query: _id=5dd8625d9d53ea47dc892436'
+        count:
+          type: integer
+          example: 0
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          $ref: '#/components/schemas/Device'
+    inline_response_200_10:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: 'Object created and saved: schema: Registration - ID: 5dd85fd819c0fb739e25294f'
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Registration'
+    inline_response_400_6:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: 'Error saving object: schema: Registration - DB ERRORS: MongoError:
+            E11000 duplicate key error collection: vstweb-system-dev.registrations
+            index: device_1 dup key: { : \"5dd85fd819c0fb739e25294f\" }'
+        count:
+          type: integer
+          example: 0
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          $ref: '#/components/schemas/Registration'
+    inline_response_200_11:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: Registration retrieved successfully.
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Registration'
+    inline_response_200_12:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: 'Object deleted: id: 5dd8625d9d53ea47dc892434'
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Registration'
+    inline_response_400_7:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: 'Cannot find objects to delete: schema: Registration - query: _id=5dd8625d9d53ea47dc892436'
+        count:
+          type: integer
+          example: 0
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          $ref: '#/components/schemas/Registration'
+    inline_response_200_13:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: 'Object created and saved: schema: Report - ID: 5dd85fd819c0fb739e25294f'
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Report'
+    inline_response_400_8:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: 'Error saving object: schema: Registration - DB ERRORS: MongoError:
+            E11000 duplicate key error collection: vstweb-system-dev.reports index:
+            _id_1 dup key: { : \"5dd85fd819c0fb739e25294f\" }'
+        count:
+          type: integer
+          example: 0
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          $ref: '#/components/schemas/Report'
+    inline_response_200_14:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: User retrieved successfully.
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Report'
+    inline_response_400_9:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: 'Error saving object: schema: User - DB ERRORS: MongoError: E11000
+            duplicate key error collection: vstweb-system-dev.reports index: _id_1
+            dup key: { : \"5dd85fd819c0fb739e25294f\" }'
+        count:
+          type: integer
+          example: 0
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          $ref: '#/components/schemas/Report'
+    inline_response_200_15:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        nessage:
+          type: string
+          example: 'Object deleted: id: 5dd8625d9d53ea47dc892434'
+        count:
+          type: integer
+          example: 1
+        statusCode:
+          type: integer
+          example: 200
+        data:
+          $ref: '#/components/schemas/Report'
+    inline_response_400_10:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: 'Cannot find objects to delete: schema: Report - query: _id=5dd8625d9d53ea47dc892436'
+        count:
+          type: integer
+          example: 0
+        statusCode:
+          type: integer
+          example: 400
+        data:
+          $ref: '#/components/schemas/Report'
+    User_name:
+      type: object
+      properties:
+        first:
+          type: string
+          example: Admin
+        middle:
+          type: string
+        last:
+          type: string
+          example: User
+    User_bio:
+      type: object
+      properties:
+        birthYear:
+          type: number
+          example: 0
+        weight:
+          type: number
+          example: 0
+        height:
+          type: number
+          example: 0
+        gender:
+          type: string
+          default: undisclosed
+          enum:
+          - male
+          - female
+          - undisclosed
+        hypertensive:
+          type: string
+          default: undisclosed
+          enum:
+          - "yes"
+          - "no"
+          - undisclosed
+    User_system:
+      type: object
+      properties:
+        language:
+          type: string
+          example: en
+          default: en
+    Device_firmware:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+    Report_reports:
+      type: object
+      properties:
+        type:
+          type: string
+          example: ecg
+          enum:
+          - ecg
+          - parameters
+        url:
+          type: string
+          format: uri
+          example: reports/5db7274a16e1751839cf836c/10-d0-7a-f7-a5-a8/20191030_111403.289/report_ecg.pdf
+  responses:
+    Exception:
+      description: DB exception
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ExceptionError'
+  parameters:
+    queryParam:
+      name: query
+      in: header
+      description: Query single or multiple schema fields
+      required: false
+      style: simple
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+      examples:
+        emptyQuery:
+          summary: No query set
+          value: []
+        oneField:
+          summary: Example of a query matching a single field
+          value:
+          - '_id: 5c7197af514046712352bf72'
+        multipleFields:
+          summary: Example of a query matching multiple fields
+          value:
+          - '_id: 5c7197af514046712352bf72'
+          - 'status: active'
+    selectParam:
+      name: select
+      in: header
+      description: Select fields to display
+      required: false
+      style: simple
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+      examples:
+        emptySelect:
+          summary: No select set
+          value: []
+        onlyTwoFields:
+          summary: Show only two fields
+          value:
+          - '_id: 1'
+          - 'created_at: 1'
+    sortParam:
+      name: sort
+      in: header
+      description: Sort ascending or descending on one or more fields
+      required: false
+      style: simple
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+      examples:
+        noSortSet:
+          summary: No sort set
+          value: []
+        sortByDateAscending:
+          summary: Sort by creation and update times ascending
+          value:
+          - 'created_at: 1'
+          - 'updated_at: 1'
+        sortByDateDescending:
+          summary: Sort by creation and update times descending
+          value:
+          - 'created_at: -1'
+          - 'updated_at: -1'
+    skipParam:
+      name: skip
+      in: header
+      description: Skip N results
+      required: false
+      style: simple
+      explode: false
+      schema:
+        type: integer
+        nullable: true
+      examples:
+        noSkipSet:
+          summary: No skip set
+        skipFirstTwo:
+          summary: Skip first 2 results
+          value: 2
+    limitParam:
+      name: limit
+      in: header
+      description: Show only N results
+      required: false
+      style: simple
+      explode: false
+      schema:
+        type: integer
+        nullable: true
+      examples:
+        noLimitSet:
+          summary: No limit set
+        onlyFirstResult:
+          summary: Show only first result
+          value: 1
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

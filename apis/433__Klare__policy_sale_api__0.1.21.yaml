@@ -1,0 +1,2062 @@
+openapi: 3.0.0
+info:
+  description: This is the first version of the Klare API
+  version: "0.1.21"
+  title: Klare API
+  contact:
+    email: eduardo.moraga@klare.cl
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: Authentication
+    description: Endpoint for getting a token for server side comunication
+  - name: sale
+    description: >-
+      Endpoint that allows the creation or modification of a Sale asociated with
+      a policy at Klare side
+  - name: health
+    description: This endpoint gives information of the kalre api services status
+  - name: policy
+    description: This endpoint allows operations with a specific policy at klare side
+  - name: cluster
+    description: Endpoint to get company cluster amounts for a specified rut
+  - name: blacklist
+    description: Endpoint for checking if a rut is in the company's blacklists
+  - name: config
+    description: Endpoint for checking configuration flags
+paths:
+  /auth:
+    post:
+      security:
+        - basicAuth: []
+      operationId: auth
+      description: >-
+        This services respond with a token that expires in 30 days allowing
+        server side comunication. The token generated in this enpoint sould be
+        used with other services (excluding /health)
+      responses:
+        '200':
+          description: ''
+      tags:
+        - Authentication
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                client_id:
+                  description: Klare API provided client_id
+                  type: string
+                grant_type:
+                  description: |
+                    OAuth2 grant_type
+                    - `client_credentials` for B2B communication
+                  type: string
+  /users/token:
+    post:
+      operationId: auth/login
+      description: >-
+        This service should be use to login against klare services (should not be confused with /auth)
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestId:
+                    type: string
+                    example: "2f8a7d22-f98b-4e1d-a560-c1425af18e6e"
+                  status:
+                    type: string
+                    example: granted
+                  timestamp:
+                    type: string
+                    example: "2019-12-11T00:00:00"
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+                  expiration:
+                    type: string
+                    example: "2019-12-11T23:59:00"
+      tags:
+        - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: 17199822-2
+                password:
+                  type: string
+                  example: "some_password"
+                grant_type:
+                  type: string
+                  example: "password"
+  /users/validate:
+    get:
+      operationId: auth/validate
+      description: >-
+        This service validates a token obtained from the auth/login service (do not confuse with /auth endpoint)
+      parameters:
+      - name: token
+        in: path
+        required: true
+        description: Token to be validated
+        schema:
+          type: string
+          example: "eyJraWQiOiJ6MFE4Y3BTOU12K0ZNSDhwWWgxZVh3Sk"
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestId:
+                    type: string
+                    example: "2f8a7d22-f98b-4e1d-a560-c1425af18e6e"
+                  status:
+                    type: string
+                    example: valid
+                  timestamp:
+                    type: string
+                    example: "2019-12-11T00:00:00"
+      tags:
+        - users
+  /users:
+    post:
+      operationId: users_create
+      description: Register a new user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestId:
+                    type: string
+                    example: "2f8a7d22-f98b-4e1d-a560-c1425af18e6e"
+                  userId:
+                    type: string
+                    example: "3f8b7982"
+                  status:
+                    type: string
+                    example: created
+                  timestamp:
+                    type: string
+                    example: "2019-12-11T00:00:00"
+                  active:
+                    type: boolean
+                    example: true
+      tags:
+        - users
+  '/users/{userId}':
+    get:
+      operationId: get_user_detail
+      description: Get {userId} user details
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: User identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active:
+                    type: boolean
+                    example: true
+                  timezone:
+                    type: string
+                    example: "chile/santiago"
+                  user:
+                    $ref: '#/components/schemas/User2'
+      tags:
+        - users
+    patch:
+      operationId: patch_user_detail
+      description: Update {userId} user info
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: User identifier
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                update_fields:
+                  $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestId:
+                    type: string
+                    example: "2f8a7d22-f98b-4e1d-a560-c1425af18e6e"
+                  status:
+                    type: string
+                    example: modified
+                  timestamp:
+                    type: string
+                    example: "2019-12-11T00:00:00"
+      tags:
+        - users
+    delete:
+      operationId: delete_user_detail
+      description: Disable an user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: User identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestId:
+                    type: string
+                    example: "2f8a7d22-f98b-4e1d-a560-c1425af18e6e"
+                  status:
+                    type: string
+                    example: deleted
+                  timestamp:
+                    type: string
+                    example: "2019-12-11T00:00:00"
+      tags:
+        - users
+  '/users/{userId}/password':
+    post:
+      operationId: request_password
+      description: Request a new password
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: User identifier
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestId:
+                    type: string
+                    example: "2f8a7d22-f98b-4e1d-a560-c1425af18e6e"
+                  status:
+                    type: string
+                    example: email_sent
+                  timestamp:
+                    type: string
+                    example: "2019-12-11T00:00:00"
+      tags:
+        - users
+  /health:
+    get:
+      operationId: health_list
+      description: This Service respond when the API KLARE is UP
+      responses:
+        '200':
+          description: ''
+      tags:
+        - health
+  '/policy/{policyNumber}/payment':
+    post:
+      operationId: dig_payments_status
+      description: Register a payment event originated from flow
+      parameters:
+        - name: policyNumber
+          in: path
+          required: true
+          description: Policy number
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: >-
+            Request was sucessfully processed and payload was enqueued for
+            processing
+      tags:
+        - policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentStatus'
+        description: >-
+          See
+          https://www.flow.cl/docs/api.html#tag/payment/paths/~1payment~1getStatus/get
+        required: true
+  '/customers/{rut}':
+    patch:
+      security:
+        - bearerAuth: []
+      operationId: patch_customers
+      description: Clients endorsement
+      parameters:
+        - name: rut
+          in: path
+          required: true
+          description: RUT identifier for customer endorsement
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Customer was successfully modified
+        '400':
+          description: Bad request
+      tags:
+        - endorsement
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                family_group:
+                  type: string
+                  example: single
+                  description: >-
+                    Family group [single, single_with_children, couple,
+                    couple_with_children]
+                phone:
+                  type: string
+                  example: '+56930072334'
+                  description: Phone number
+                email:
+                  type: string
+                  format: email
+                  example: info@klare.cl
+                  description: >-
+                    family group [single, single_with_children, couple,
+                    couple_with_children]
+                address:
+                  type: array
+                  description: 'All fields are optional, this object can not be empty'
+                  items:
+                    $ref: '#/components/schemas/Address'
+        description: All fields are optionals.
+  '/cluster/{rut}':
+    get:
+      security:
+        - bearerAuth: []
+      operationId: get_cluster
+      description: df
+      parameters:
+        - name: rut
+          in: path
+          required: true
+          description: RUT number for the person to check
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cluster check sucessful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rut:
+                    type: string
+                    example: 11111111-1
+                    description: RUT number for the person to check
+                  companies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ClusterCompanyResult'
+        '400':
+          description: Cluster check failed
+      tags:
+        - cluster
+  '/blacklist/{rut}':
+    get:
+      security:
+        - bearerAuth: []
+      operationId: get_blacklist
+      description: Service that return if a rut is into the blacklit
+      parameters:
+        - name: rut
+          in: path
+          required: true
+          description: RUT number for the person to check
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Blacklist check sucessful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rut:
+                    type: string
+                    example: 11111111-1
+                    description: RUT number for the person to check
+                  companies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BlacklistCompanyResult'
+        '400':
+          description: 'Bad request, invalid rut.'
+      tags:
+        - blacklist
+  /sale:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - sale
+      summary: Register a policy sale
+      operationId: register_sale
+      description: Register a policy sale
+      responses:
+        '201':
+          description: policy sale registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status_code:
+                    type: integer
+                    example: 201
+                  status_text:
+                    type: string
+                    example: created
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  request:
+                    type: object
+                    description: >-
+                      Contains the fields whose validation failed with a list of
+                      validation errors.
+                    properties: {}
+                    example: >-
+                      {"company_code":["Ensure this field has no more than 4
+                      characters."]}
+        '404':
+          description: >-
+            some entity referenced in the request was not founded, like when you
+            try to register a sale with an inexistent product code.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status_code:
+                    type: integer
+                    example: 404
+                  status_text:
+                    type: string
+                    example: not found
+                  message:
+                    type: string
+                    example: A product version for the product with code=1 not exists.
+                    description: message with details of the error
+        '409':
+          description: >-
+            a conflict was detected, like when you try to save a policy with a
+            policy number already existent in the database
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status_code:
+                    type: integer
+                    example: 409
+                  status_text:
+                    type: string
+                    example: conflict
+                  entity:
+                    type: string
+                    example: Policy
+                    description: Name of the entity related with the conflict
+                  criteria:
+                    type: object
+                    example: '{"policy_number":"pol-123456"}'
+                    description: Object with the fields implied in the conflict
+                    properties: {}
+                  message:
+                    type: string
+                    example: Policy with number=pol-123456 already exists.
+                    description: message with details of the cause of the conflict
+        '500':
+          description: something was wrong with the server
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status_code:
+                    type: integer
+                    example: 500
+                  status_text:
+                    type: string
+                    example: server error
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicySale'
+        description: >-
+          Company, Payment, Policy, Insured, Coverage and Assistances
+          information needed to register a sale
+    put:
+      operationId: update_all_sale_status
+      description: Updates multiple sale status according to the body of the request
+      responses:
+        '200':
+          description: All policies in body updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status_code:
+                    type: integer
+                    example: 201
+                  status_text:
+                    type: string
+                    example: Success
+        '404':
+          description: One of the status changes failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status_code:
+                    type: integer
+                    example: 404
+                  status_text:
+                    type: string
+                    example: Not found
+        '500':
+          description: Internal server error when serving answer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status_code:
+                    type: integer
+                    example: 500
+                  status_text:
+                    type: string
+                    example: Server error
+      tags:
+        - sale
+    parameters: []
+  '/sale/{policyNumber}':
+    put:
+      operationId: sale_update
+      description: Updates a sale status using the policy_number
+      parameters:
+        - name: policyNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '500':
+          description: Endpoint not implemented
+      tags:
+        - sale
+  '/policy/{policyNumber}':
+    patch:
+      operationId: policy_partial_update
+      description: Updates a policy beneficiaries list or payment day
+      parameters:
+        - name: policyNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Policy was successfully changed
+        '400':
+          description: Bad request
+      tags:
+        - policy
+        - endorsement
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyEndorsement'
+        description: >-
+          All first level objects are optional. If beneficiaries is supplied,
+          all fields of beneficiary object are required.
+        required: true
+  '/policy/{policyNumber}/cancellation':
+    post:
+      operationId: policy_cancellation_create
+      description: >-
+        Creates and process a policy cancelation request, informing the insurer
+        and canceling the payments.
+      parameters:
+        - name: policyNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Policy was cancelled successfully
+        '202':
+          description: 'Request accepted, but policy is already cancelled'
+      tags:
+        - policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Cancellation'
+        description: Cancellation payload
+        required: true
+  /statement/claim:
+    post:
+      operationId: statement_claim_create
+      description: Creates a statement to initiate a claim
+      responses:
+        '201':
+          description: Successfully created a claim
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    example: >-
+                      {'complainant_email': ['Enter a valid e-mail address.'],
+                      'complainant_rut': ['This field is required.']}
+                    properties: {}
+        '500':
+          description: Server error
+      tags:
+        - statement
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimStatement'
+        description: Notifies a claim statement
+        required: true
+  /config/flags:
+    get:
+      operationId: get_config_flags
+      description: >-
+        Gets the configuration flags for a given user. Without a rut gets the
+        default values.
+      parameters:
+        - name: rut
+          in: query
+          description: User's rut in xxxxxxxx-y format
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Configuration flags of a user
+          content:
+            application/json:
+              schema:
+                type: object
+                example: '{purchase: {isBlocked: true}}'
+                properties:
+                  purchase:
+                    type: object
+                    properties:
+                      isBlocked:
+                        type: boolean
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error_data:
+                    type: object
+                    example: >-
+                      {error_data: {rut: "Ensure this field has at least 9
+                      characters"}}
+      tags:
+        - config
+  '/rulesets/{model}/evaluate':
+    post:
+      operationId: risk_evaluation
+      description: >-
+        Evaluates person facts, returns info about exclusions, limits, extra
+        premiums, temporary policy elegibility or rejection
+      parameters:
+        - name: model
+          in: path
+          description: Rules model
+          required: true
+          schema:
+            type: string
+            enum:
+              - mapfre
+              - zs-simple
+              - zs-extended
+      responses:
+        '200':
+          description: Successfully evaluate a model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RulesetEvaluation'
+        '500':
+          description: Server error
+      tags:
+        - Risk Evaluation
+      requestBody:
+        content:
+          application/json:
+            example: |
+                {
+                  "model": {
+                      "total_insured": 1500,
+                      "cluster": 1000,
+                      "blacklist": false,
+                      "answers": {"any_sickness": "yes"}
+                  }
+                }
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/RulesetZSSimpleInput'
+                - $ref: '#/components/schemas/RulesetZSExtendedInput'
+                - $ref: '#/components/schemas/RulesetInput'
+        description: model facts
+        required: true
+servers:
+  - url: 'https://api.qa.klare.cloud/'
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    bearerAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Bearer token
+  schemas:
+    PolicySale:
+      type: object
+      required:
+        - company_code
+        - insured
+        - personal_health_statement
+        - policy - product_code
+      properties:
+        company_code:
+          type: string
+          enum:
+              - zs
+              - map
+          example: zs
+          description: Code to identify the Insurer (Company) to which the policy belongs, `zs` or `map`
+        policy:
+          $ref: '#/components/schemas/Policy'
+        temporary_policy:
+          $ref: '#/components/schemas/TemporaryPolicy'
+        personal_health_statement:
+          $ref: '#/components/schemas/PersonalHealthStatement'
+        insured:
+          $ref: '#/components/schemas/Insured'
+    PersonalHealthStatement:
+      type: object
+      required:
+        - answers
+        - type
+      properties:
+        type:
+          type: string
+          enum:
+            - S
+            - s
+            - C
+            - c
+          description: >
+            Personal Health statement questionnaire type
+            
+            - S(s) simple
+            
+            - C(c) complex
+            
+            
+            *For Mapfre, only Simple is available.*
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Answer'
+    Answer:
+      type: object
+      required:
+        - question_code
+        - answer_values
+      properties:
+        question_code:
+          type: string
+          maxLength: 30
+          description: |
+            ZS Available questions
+            - height
+            - weight
+            - had_any_sickness
+            - which_sickness
+            - smoke
+            - drugs
+            - high_pressure
+            - medical_treatment
+            - which_treatment
+            - surgery
+            - which_surgery
+            - when_surgery
+            - dangerous_job
+            - plane
+            - plane_type
+            - death_mother
+            - age_death_mother
+            - cause_of_death_mother
+            - death_father
+            - age_death_father
+            - cause_of_death_father
+            - dangerous_sport
+            - which_sport
+            
+            Mapfre Available questions
+            - height
+            - weight
+            - smoke
+            - transplanted
+            - which_sickness
+        answer_values:
+          type: array
+          description: |
+            Options for yes/no questions
+              - options
+                - 'true'
+                - 'false'
+                
+            For question `smoke`
+              - options
+                - 'no'
+                - 'more_20'
+                - 'yes_less_20'
+          items:
+            type: string
+            uniqueItems: true
+    Policy:
+      type: object
+      required:
+        - product_code
+        - payment_cycle
+        - sale_date
+        - flow_customer_id
+        - premium_pesos
+        - premium_uf
+        - coverage_pesos
+        - coverage_uf
+        - uf_conversion_date
+        - policy_number
+        - coverages
+        - assistances
+      properties:
+        external_id:
+          type: string
+          example: '651'
+          description: policy id from the caller system
+        payment_cycle:
+          type: string
+          enum:
+            - M
+            - m
+            - T
+            - t
+            - A
+            - a
+            - U
+            - u
+            - S
+            - s
+            - 'N'
+            - 'n'
+          description: |
+            - M(m) monthly
+            - T(t) quarterly
+            - A(a) yearly
+            - U(u) unique
+            - S(s) Biannual
+            - N(n) Payment not needed
+          example: M
+        payment_day:
+          type: integer
+          format: ' 0 < value < 31'
+          example: 23
+          description: Day number on which installment charges will be attempted
+        sale_date:
+          type: string
+          format: YYYY-MM-DD
+          example: '2018-02-09'
+          description: Policy purchase date
+        payment_date:
+          type: string
+          format: YYYY-MM-DD
+          example: '2018-02-09'
+          description: Payment date (same as sale_date with the current sale flow)
+        flow_customer_id:
+          type: string
+          format: '1,50'
+          example: cus-000001
+          description: Flow customer_id generated with the sale
+        flow_subscription_id:
+          type: string
+          format: '1,50'
+          example: sub-000001
+          description: >-
+            Flow subscription_id generated with the sale (if applicable, i.e not
+            for temporary policy)
+        product_code:
+          type: string
+          format: '1,4'
+          example: '335'
+          enum:
+            - 335
+            - 1000
+          description: |
+            Product code for the insurance
+            - 335 for ZS life insurance
+            - 1000 for Mapfre life insurance
+        premium_pesos:
+          type: integer
+          format: 0 < value
+          description: >-
+            Instalment amount in CLP (using exchange rate for 
+            uf_conversion_date)
+        premium_uf:
+          type: number
+          format: 0 < decimal value
+          description: Instalment amount in UF
+        coverage_pesos:
+          type: integer
+          format: 0 < value
+          description: >-
+            Total coverage amount in CLP (using exchange rate for 
+            uf_conversion_date)
+        coverage_uf:
+          type: number
+          format: 0 < decimal value
+          description: Total coverage amount in UF
+        uf_conversion_date:
+          type: string
+          format: YYYY-MM-DD
+          example: '2018-02-09'
+          description: >-
+            UF/CLP exchange rate date (same as sale_date with the current sale
+            flow)
+        policy_number:
+          type: string
+          maxLength: 10
+          description: Policy number from the range reserved by the Insurer Company
+        initial_validity_date:
+          type: string
+          format: YYYY-MM-DD
+          example: '2018-02-09'
+          description: Policy initial validity date
+        final_validity_date:
+          type: string
+          format: YYYY-MM-DD
+          example: '2018-02-09'
+          description: |
+            Policy final validity date
+            - 1 year for life insurance policies
+        coverages:
+          type: array
+          minItems: 1
+          description: List of policy coverages
+          items:
+            $ref: '#/components/schemas/Coverage'
+        assistances:
+          type: array
+          items:
+            type: string
+            enum:
+              - ac_med_domic
+              - ac_kine_resp_domic
+              - ac_comp_noct_medic
+              - ac_doct_online
+              - ac_orient_med_tel
+              - ac_orient_nutric_tel
+              - 2244
+              - 2245
+              - 2246
+              - 2247
+              - 2248
+              - 2249
+              - 2251
+              - 2252
+              - 2253
+              - 2254
+              - 2255
+              - 2256
+              - 2257
+              - 2258
+              - 2259
+            description: |
+              List of policy assistances
+
+              - `ac_med_domic` Medico a domicilio
+              - `ac_kine_resp_domic` Kinesiologia Respiratoria a Domicilio
+              - `ac_comp_noct_medic` Compra Nocturna de Medicamentos
+              - `ac_doct_online` Doctor Online
+              - `ac_orient_med_tel` Orientación Medica Telefónica 
+              - `ac_orient_nutric_tel` Orientación Nutricional Telefónica
+              
+              Mapfre assistances
+              
+              - 2244 Revisión Pre viaje
+              - 2245 Remolque
+              - 2246 Conducto de reemplazo
+              - 2247 Plomeria
+              - 2248 Cerrajeria
+              - 2249 Electricidad
+              - 2251 Armado de muebles
+              - 2252 Orientación Medica Telefonica
+              - 2253 Orientación Nutricional Telefonica
+              - 2254 Orientación Legal Telefonica
+              - 2255 Traslado Veterinario de Mascotas
+              - 2256 Estancia de Mascota en Residencia
+              - 2257 Info Mascotas 24 Horas
+              - 2258 Traslado Medico por Accidente en bicicleta
+              - 2259 Traslado en CABIFY
+    TemporaryPolicy:
+      type: object
+      description: Not available for Mapfre
+      required:
+        - product_code
+        - sale_date
+        - coverage_pesos
+        - coverage_uf
+        - policy_number
+        - initial_validity_date
+        - final_validity_date
+        - coverages
+      properties:
+        external_id:
+          type: string
+          example: '652'
+          description: policy id from the caller system
+        product_code:
+          type: string
+          format: '1,4'
+          example: '354'
+          description: |
+            Product code for the insurance
+            - 354 for ZS temporary insurance
+        sale_date:
+          type: string
+          format: YYYY-MM-DD
+          example: '2018-02-09'
+          description: Policy purchase date
+        coverage_pesos:
+          type: integer
+          format: 0 < value
+          example: 27000000
+          description: >-
+            Total coverage amount in CLP (using exchange rate for 
+            uf_conversion_date)
+        coverage_uf:
+          type: number
+          format: 0 < decimal value
+          example: 1000
+          description: |
+            Total coverage amount in UF
+            - 1000 UF for temporary policy
+        policy_number:
+          type: string
+          maxLength: 10
+          description: Policy number from the range reserved by the Insurer Company
+        initial_validity_date:
+          type: string
+          format: YYYY-MM-DD
+          example: '2018-02-09'
+          description: Policy initial validity date
+        final_validity_date:
+          type: string
+          format: YYYY-MM-DD
+          example: '2018-02-09'
+          description: |
+            Policy final validity date
+            - 30 days for temporary policies
+        coverages:
+          type: array
+          minItems: 1
+          description: List of policy coverages
+          items:
+            $ref: '#/components/schemas/Coverage'
+    Coverage:
+      type: object
+      required:
+        - code
+        - premium_uf
+        - coverage_uf
+      properties:
+        code:
+          type: string
+          maxLength: 6
+          description: >
+            ## ZS Coverage codes
+
+            - `1` Fallecimiento (Life insurance main coverage)
+
+            - `6` Invalidéz total y permanente 2/3 a.k.a ITP 2/3 (Life insurance
+            optional coverage)
+
+            - `12` Doble capital por muerte accidental (Life insurance optional
+            coverage)
+
+            - `12` Muerte accidental (Temporary insurance main coverage)
+            
+            ---
+            
+            ## Mapfre Coverage Codes
+            
+            - `2220` Vida (Life insurance main coverage)
+            
+            - `2221` Muerte Accidental (Life insurance
+            optional coverage)
+            
+            - `2230` Anticipo Enfermedades Graves (Life insurance optional
+            coverage)
+            
+            - `2223` Anticipo por Invalidez Permanente al 80% (Temporary insurance main coverage)
+        premium_uf:
+          type: number
+          format: 0 < decimal value
+          minimum: 0
+          description: >
+            Installment amount for the coverage
+
+            - For `1` Fallecimiento, the coverage amount includes the assistance
+            value
+              i.e this amount should be the same as the base (no extra coverages) monthly amount shown in the funnel
+        coverage_uf:
+          type: number
+          format: 0 < decimal value
+          minimum: 0
+          description: Total coverage amount in UF
+    Insured:
+      type: object
+      required:
+        - rut
+        - name
+        - paternal_last_name
+        - maternal_last_name
+        - birth_date
+        - family_group
+        - street
+        - commune_code
+        - phone
+        - email
+      properties:
+        rut:
+          type: string
+          pattern: '^\d{7,8}-[\dkK]$'
+          example: 25673196-2
+          description: RUT number for the insured/buyer
+        name:
+          type: string
+          maxLength: 30
+          description: insured/buyer name
+        paternal_last_name:
+          type: string
+          maxLength: 30
+          description: insured/buyer paternal last name
+        maternal_last_name:
+          type: string
+          maxLength: 30
+          description: insured/buyer maternal last name
+        birth_date:
+          type: string
+          format: YYYY-MM-DD
+          example: '2018-02-09'
+          description: insured/buyer birth date
+        family_group:
+          type: string
+          enum:
+            - single
+            - couple
+            - couple_with_children
+            - single_with_children
+          description: |
+            insured/buyer family group status
+            - single
+            - couple
+            - single_with_children
+            - couple_with_children
+        street:
+          type: string
+          maxLength: 25
+          description: insured/buyer address street name
+        street_number:
+          type: string
+          maxLength: 10
+          description: insured/buyer address street number
+        apartment_number:
+          type: string
+          maxLength: 7
+          description: insured/buyer address apartment number (if applicable)
+        commune_code:
+          type: string
+          maxLength: 5
+          description: insured/buyer address Klare commune code (Example 08101)
+        phone:
+          type: string
+          maxLength: 20
+          description: insured/buyer phone number
+        email:
+          type: string
+          example: jhon@mail.com
+          description: insured/buyer email address
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+          example: calle falsa
+          description: Street name
+        street_number:
+          type: string
+          example: 123
+          description: Street number
+        apartment_number:
+          type: string
+          example: 502
+          description: Apartment number
+        code:
+          type: string
+          example: 09119
+          description: Commune code (should be a valid one)
+    ClusterCompanyResult:
+      type: object
+      properties:
+        company:
+          type: string
+          example: zs
+          description: Code to identify the Insurer (Company) to which the policy belongs
+        cluster:
+          type: integer
+          example: 1000
+          description: Cluster amount for person in company
+    BlacklistCompanyResult:
+      type: object
+      properties:
+        company:
+          type: string
+          example: zs
+          description: Code to identify the Insurer (Company) to which the policy belongs
+        blacklisted:
+          type: boolean
+          example: true
+          description: Whether the person is blacklisted for the company or not
+    PaymentStatus:
+      type: object
+      properties:
+        flowOrder:
+          type: integer
+          example: 3567899
+          description: Flow order id
+        commerceOrder:
+          type: string
+          example: sf12377
+          description: Commerce order id
+        requestDate:
+          type: string
+          example: '2017-08-09'
+          description: Order creation date "<YYYY-mm-dd>"
+        status:
+          type: integer
+          example: 1
+          description: Order status
+        subject:
+          type: string
+          example: Plan 23
+          description: Order subject
+        currency:
+          type: string
+          example: CLP
+          description: Currency
+        amount:
+          type: number
+          format: 0 < decimal value
+          example: 12000
+          description: Order ammount
+        payer:
+          type: string
+          example: user@mail.com
+          description: Payer's email
+        optional:
+          type: object
+          example: {}
+          description: Optional data sent by commerce
+        pending_info:
+          type: object
+          example: {}
+          description: >-
+            Additional info for pending payment when a payment coupon was
+            generated
+        paymentData:
+          type: object
+          example: {}
+          description: Payment information
+    Cancellation:
+      type: object
+      properties:
+        reason:
+          type: string
+          example: It's too expensive
+          description: Cancellation reason
+        reason_code:
+          type: string
+          example: too_expensive
+          description: Cancellation reason code
+        origin:
+          type: string
+          enum:
+            - provider
+            - insurer
+          description: |
+            cancellation origin
+            - provider (only for 2nd party integrations e.g DIG)
+            - insurer (only for insurance companies, e.g Mapfre)
+        cancellation_date:
+          type: string
+          format: date
+          example: '2019-06-06'
+          description: Cancellation date
+    PolicyEndorsement:
+      type: object
+      properties:
+        payment_day:
+          type: integer
+          example: 4
+          description: Payment day (must be a number between 1 and 31)
+        beneficiaries:
+          type: array
+          description: Beneficiaries list
+          items:
+            $ref: '#/components/schemas/Beneficiary'
+    Beneficiary:
+      type: object
+      properties:
+        name:
+          type: string
+          example: John
+          description: Name
+        paternal_lastname:
+          type: string
+          example: Doe
+          description: Paternal last name
+        maternal_lastname:
+          type: string
+          example: Rover
+          description: Maternal last name
+        relationship:
+          type: string
+          example: husband
+          description: Relationship
+          enum:
+            - husband
+            - wife
+            - son
+            - daughter
+            - couple
+            - other
+        rut:
+          type: string
+          example: 14792011-3
+          description: Rut
+        birthdate:
+          type: string
+          format: date
+          example: '1996-04-05'
+        email:
+          type: string
+          example: info@klare.cl
+          description: email
+        coverage:
+          type: number
+          format: float
+          example: 1
+          description: coverage as float (all beneficiaries should sum 1.0)
+    ClaimStatement:
+      type: object
+      properties:
+        complainant_fullname:
+          type: string
+          example: Camila Andrea
+          description: Claimnant's fullname
+        complainant_rut:
+          type: string
+          example: 14792011-3
+          description: Claimnant's rut
+        complainant_phone:
+          type: integer
+          example: '+56999332211'
+          description: Claimnant's phone
+        complainant_email:
+          type: string
+          example: claimnant@klare.cl
+          description: Claimnant's email
+        complainant_full_address:
+          type: string
+          example: 'Av. Las Condes 1920, 301. Las Condes.'
+          description: Claimnant's full address
+        complainant_insured_relationship:
+          type: string
+          example: Madre
+          description: Complainant's relationship
+        claim_datetime:
+          type: string
+          format: date-time
+          example: '2019-04-04 01:04:05'
+          description: Event datetime
+        claim_description:
+          type: string
+          example: 'Ocurrio el 2019-04-04, accidente de autos'
+          description: Claim description
+        type:
+          type: string
+          example: 'Muerte Accidental'
+          description: Sinister type
+        insured_rut:
+          type: string
+          format: xxxxxxxx-x
+          example: 14792011-3
+          description: Insured's rut
+        policy_number:
+          type: integer
+          example: '1234532'
+          description: Policy number
+    RulesetZSSimpleInput:
+      type: object
+      required: 
+       - model
+      properties:
+        model:
+          type: object
+          required:
+            - total_insured
+            - cluster
+            - blacklisted
+            - answers
+          properties:
+            total_insured:
+              type: integer
+              example: 2000
+              description: Total coverage amount in UF
+            cluster:
+              type: integer
+              example: 2000
+              description: User cluster amount
+            blacklisted:
+              type: boolean
+              example: true
+              description: Whether the user is blacklisted by insurer or not
+            answers:
+              type: object
+              description: Personal health answers
+              properties:
+                any_sickness:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared a condition
+    RulesetZSExtendedInput:
+      type: object
+      required: 
+       - model
+      properties:
+        model:
+          type: object
+          required:
+            - total_insured
+            - cluster
+            - blacklisted
+            - answers
+          properties:
+            total_insured:
+              type: integer
+              example: 2000
+              description: Total coverage amount in UF
+            cluster:
+              type: integer
+              example: 2000
+              description: Person cluster amount
+            blacklisted:
+              type: boolean
+              example: true
+              description: Whether the user is blacklisted by insurer or not
+            answers:
+              type: object
+              description: Personal health answers
+              required: 
+                - height
+                - weight
+              properties:
+                height:
+                  type: integer
+                  example: 171
+                  description: Person's height in cm
+                weight:
+                  type: integer
+                  example: 60
+                  description: Person's weight in kg
+                had_any_sickness:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared a condition
+                smoke:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person smokes more than 20 cigarettes a day or not
+                drugs:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person consume drugs or not
+                high_pressure:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person has high blood pressure or not
+                medical_treatment:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person is under medical treatment or not
+                surgery:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person had surgery or not
+                dangerous_job:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person has a dangerous work or not
+                plane:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person is a private pilot or not
+                age_death_mother:
+                  type: integer
+                  example: 70
+                  description: Age of mother's death. Omit answer if mother is alive
+                cause_of_death_mother:
+                  type: string
+                  example: 'cancer'
+                  description: Cause of mother's death. Omit answer if mother is alive
+                  enum: ['cancer', 'cardiac','other']
+                age_death_father:
+                  type: number
+                  example: 66
+                  description: Age of father's death. Omit answer if father is alive
+                cause_of_death_father:
+                  type: string
+                  example: 'other'
+                  description: Cause of father's death. Omit answer if father is alive
+                  enum: ['cancer', 'cardiac','other']
+    RulesetInput:
+      type: object
+      required: 
+       - model
+      properties:
+        model:
+          type: object
+          required:
+            - total_insured
+            - cluster
+            - blacklisted
+            - age
+            - answers
+          properties:
+            total_insured:
+              type: integer
+              example: 2000
+              description: Total coverage amount in UF
+            cluster:
+              type: integer
+              example: 2000
+              description: Person cluster amount
+            blacklisted:
+              type: boolean
+              example: true
+              description: Whether the user is blacklisted by insurer or not
+            age:
+              type: integer
+              example: 31
+              description: Person's age
+            answers:
+              type: object
+              description: Personal health answers
+              required: 
+                - height
+                - weight
+              properties:
+                height:
+                  type: integer
+                  example: 171
+                  description: Person's height in cm
+                weight:
+                  type: integer
+                  example: 60
+                  description: Person's weight in kg
+                ninguna:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared being healthy (no sickness) or not 
+                hipertension_arterial:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared hipertension_arterial or not
+                diabetes_mellitus_1:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared diabetes_mellitus_1 or not
+                diabetes_mellitus_2:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared diabetes_mellitus_2 or not
+                hipotiroidismo:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared hipotiroidismo or not
+                cancer_no_avanzado:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared cancer_no_avanzado or not
+                cancer_avanzado_o_terminal:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared cancer_avanzado_o_terminal or not
+                resistencia_a_la_insulina:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared resistencia_a_la_insulina or not
+                artrosis:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared artrosis or not
+                artritis_reumatoidea:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared artritis_reumatoidea or not
+                insuficiencia_renal_cronica:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared insuficiencia_renal_cronica or not
+                transplantado:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared transplantado or not
+                ave_secuelado:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared ave_secuelado or not
+                ave_no_secuelado:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared ave_no_secuelado or not
+                iam_cardiopatia_coronaria:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared iam_cardiopatia_coronaria or not
+                arritmia_cardiaca:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared arritmia_cardiaca or not
+                tabaquismo:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared tabaquismo or not
+                apnea_del_sueno:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared apnea_del_sueno or not
+                asma_bronquial:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared asma_bronquial or not
+                epilepsia:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared epilepsia or not
+                enfermedades_lumbares:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared enfermedades_lumbares or not
+                cirrosis_hepatica:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared cirrosis_hepatica or not
+                arteriales_perifericas:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared atariales_perifericas or not
+                insuficiencia_venosa:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared insuficiencia_venosa or not
+                fibriomialgia:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared fibriomialgia or not
+                depresion_bipolar_esquizofrenia_psicosis:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared depresion_bipolar_esquizofrenia_psicosis or not
+                trastorno_panico_adaptacion_ansiedad_angustia:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared trastorno_panico_adaptacion_ansiedad_angustia or not
+                depresion_mayor:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared depresion_mayor or not
+                vih_carga_viral_0_pob_linf_t_ok:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared vih_carga_viral_0_pob_linf_t_ok or not
+                vih_carga_viral:
+                  type: string
+                  example: 'yes'
+                  description: Whether the person declared vih_carga_viral or not
+    RulesetEvaluation:
+      type: object
+      properties:
+        model_name:
+          type: string
+          example: zs-simple
+          description: context that was used as rule model
+        model_version:
+          type: string
+          example: 1.0.0
+          description: version of the rule model used
+        model_fact:
+          type: object
+          description: resulting model facts
+          properties:
+            answers:
+              type: object
+              description: 'question code as key, answer as value'
+              example:
+                had_any_sickness: yes
+            limit:
+              type: integer
+              description: 'total_insured limit in UF if limited, 0 otherwise'
+              example: 0
+            coverages:
+              type: array
+              description: coverage evaluation details
+              items:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: coverage code
+                    example: life
+                  rejected:
+                    type: boolean
+                    description: whether the coverage is rejected or not
+                    example: false
+                  temporary:
+                    type: boolean
+                    description: whether the coverage is rejected or not
+                    example: true
+                  exclusions:
+                    type: array
+                    items:
+                      type: string
+                      description: list of sickness codes excluded for this coverage
+                  extra_premium:
+                    type: number
+                    description: multipliying factor for coverage premium
+                    example: 0
+        additional_data:
+          type: object
+          properties:
+            firedRules:
+              type: array
+              description: names of the fired model rules
+              items:
+                type: string
+                example: had_any_sickness
+    User:
+      type: object
+      required:
+        - rut
+        - id_number
+        - name
+        - paternal_last_name
+        - maternal_last_name
+        - birth_date
+        - birth_country
+        - gender
+        - civil_status
+        - family_group
+        - street
+        - street_number
+        - apartment_number
+        - region_code
+        - city_code
+        - commune_code
+        - phone
+        - email
+      properties:
+        rut:
+          type: string
+          pattern: '^\d{7,8}-[\dkK]$'
+          example: 25673196-2
+          description: RUT number for the insured/buyer
+        id_number:
+          type: string
+          example: "355394281"
+          description: id card serial number
+        name:
+          type: string
+          maxLength: 30
+          description: insured/buyer name
+          example: John
+        paternal_last_name:
+          type: string
+          maxLength: 30
+          description: insured/buyer paternal last name
+          example: Doe
+        maternal_last_name:
+          type: string
+          maxLength: 30
+          description: insured/buyer maternal last name
+          example: Appleseed
+        birth_date:
+          type: string
+          format: YYYY-MM-DD
+          example: '2018-02-09'
+          description: insured/buyer birth date
+        birth_country:
+          type: string
+          example: 'CL'
+          description: insured/buyer birth date
+        family_group:
+          type: string
+          enum:
+            - single
+            - couple
+            - couple_with_children
+            - single_with_children
+          description: |
+            insured/buyer family group status
+            - single
+            - couple
+            - single_with_children
+            - couple_with_children
+        street:
+          type: string
+          maxLength: 25
+          description: insured/buyer address street name
+          example: "Av. Nueva costanera"
+        street_number:
+          type: string
+          maxLength: 10
+          description: insured/buyer address street number
+          example: 4040
+        apartment_number:
+          type: string
+          maxLength: 7
+          description: insured/buyer address apartment number (if applicable)
+          example: 202
+        region_code:
+          type: string
+          maxLength: 5
+          description: insured/buyer address Klare region code (Example 10)
+          example: "10"
+        city_code:
+          type: string
+          maxLength: 5
+          description: insured/buyer address Klare city code (Example 102)
+          example: "102"
+        commune_code:
+          type: string
+          maxLength: 5
+          description: insured/buyer address Klare commune code (Example 10208)
+          example: "10208"
+        phone:
+          type: string
+          maxLength: 20
+          description: insured/buyer phone number
+        email:
+          type: string
+          example: john@mail.com
+          description: insured/buyer email address
+    User2:
+      type: object
+      required:
+        - rut
+        - id_number
+        - user_id
+        - name
+        - paternal_last_name
+        - maternal_last_name
+        - birth_date
+        - birth_country
+        - gender
+        - civil_status
+        - family_group
+        - street
+        - street_number
+        - apartment_number
+        - region_code
+        - city_code
+        - commune_code
+        - phone
+        - email
+      properties:
+        rut:
+          type: string
+          pattern: '^\d{7,8}-[\dkK]$'
+          example: 25673196-2
+          description: RUT number for the insured/buyer
+        id_number:
+          type: string
+          example: "355394281"
+          description: id card serial number
+        user_id:
+          type: string
+          example: "250a9318f9b"
+          description: resource id
+        name:
+          type: string
+          maxLength: 30
+          description: insured/buyer name
+          example: John
+        paternal_last_name:
+          type: string
+          maxLength: 30
+          description: insured/buyer paternal last name
+          example: Doe
+        maternal_last_name:
+          type: string
+          maxLength: 30
+          description: insured/buyer maternal last name
+          example: Appleseed
+        birth_date:
+          type: string
+          format: YYYY-MM-DD
+          example: '2018-02-09'
+          description: insured/buyer birth date
+        birth_country:
+          type: string
+          example: 'CL'
+          description: insured/buyer birth date
+        family_group:
+          type: string
+          enum:
+            - single
+            - couple
+            - couple_with_children
+            - single_with_children
+          description: |
+            insured/buyer family group status
+            - single
+            - couple
+            - single_with_children
+            - couple_with_children
+        street:
+          type: string
+          maxLength: 25
+          description: insured/buyer address street name
+          example: "Av. Nueva costanera"
+        street_number:
+          type: string
+          maxLength: 10
+          description: insured/buyer address street number
+          example: 4040
+        apartment_number:
+          type: string
+          maxLength: 7
+          description: insured/buyer address apartment number (if applicable)
+          example: 202
+        region_code:
+          type: string
+          maxLength: 5
+          description: insured/buyer address Klare region code (Example 10)
+          example: "10"
+        city_code:
+          type: string
+          maxLength: 5
+          description: insured/buyer address Klare city code (Example 102)
+          example: "102"
+        commune_code:
+          type: string
+          maxLength: 5
+          description: insured/buyer address Klare commune code (Example 10208)
+          example: "10208"
+        phone:
+          type: string
+          maxLength: 20
+          description: insured/buyer phone number
+        email:
+          type: string
+          example: john@mail.com
+          description: insured/buyer email address

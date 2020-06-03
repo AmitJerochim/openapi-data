@@ -1,0 +1,271 @@
+openapi: 3.0.0
+servers:
+  - url: https://jonia45lf2.execute-api.ap-southeast-1.amazonaws.com/staging/v1
+  - url: https://api.ipricegroup.com/v1
+info:
+  description: The panel below displays documentation all endpoints, parameters and error messages available to the iPrice API. <b>Categories, Products</b> and <b>Search</b> endpoints are live. Price range feature for Products endpoint is under development.
+  version: "1.0.7"
+  title: iPrice ProductAPI
+  contact:
+    email: vyhien.nguyenho@ipricegroup.com
+tags:
+  - name: Categories
+  - name: Products
+  - name: Search
+paths:
+  /categories:
+    get:
+      tags:
+        - Categories
+      description: This endpoint can be used to get information about iPrice's category hierarchy & naming. Note that the hierarchy starts from L0 at the highest level. <ul><li>When no category path is provided, all L0 categories will be returned.</li> <li>When a category path is provided, all the child categories one level deeper for that specific path will be returned.</li> <li>e.g. If an L2 category path is provided, all L3 children of that path will be returned.</li></ul>
+      operationId: getCategories
+      parameters:
+        - name: cc
+          in: query
+          description: country code, eg. "id" for HomeCredit
+          required: true
+          schema:
+            type: string
+        - name: pid
+          in: query
+          description: project identification
+          required: true
+          schema:
+            type: string
+        - name: category
+          in: query
+          description: path of category, eg. "ponsel-tablet", "perhiasan/kalung"
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '400':
+          description: required parameter(s) is missing
+        '404':
+          description: category not found
+  /products:
+    get:
+      tags:
+        - Products
+      description: This endpoint can be used to request for details of products that fall under a chosen category. <ul><li>The products returned can either be ordered by "Popularity" or "Largest Discount" via the "sort" parameter.</li><li>The products returned can either be comparables only, non-comparables only, or a mixture of both via the "type" parameter.</li></ul>
+      operationId: getProducts
+      parameters:
+        - name: cc
+          in: query
+          description: country code, eg. "id" for HomeCredit
+          required: true
+          schema:
+            type: string
+        - name: pid
+          in: query
+          description: project identification
+          required: true
+          schema:
+            type: string
+        - name: category
+          in: query
+          description: path of category, eg. "ponsel-tablet", "perhiasan/kalung"
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: either "comparable" or "product", default is a mixture of both
+          required: false
+          schema:
+            type: string
+        - name: min_price
+          in: query
+          description: mininum price for the returned products
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: max_price
+          in: query
+          description: maximum price for the returned products
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: sort
+          in: query
+          description: either "popularity" or "discount", default is "popularity"
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: number of returned products, default is 5
+          required: false
+          schema:
+            type: integer
+        - name: page
+          in: query
+          description: page select in pagination, default is 1
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    description: total number of products (without the limit)
+                  page_url:
+                    type: string
+                    description: page URL from iPrice
+                  page:
+                    type: integer
+                    description: current page of the pagination
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+        '400':
+          description: required parameter(s) is missing
+        '404':
+          description: no products in this category
+  /search:
+    get:
+      tags:
+        - Search
+      description: This endpoint can be used to request for information on product or category suggestions based on search terms input by the user.
+      operationId: getSearchSuggestions
+      parameters:
+        - name: cc
+          in: query
+          description: country code, eg. "id" for HomeCredit
+          required: true
+          schema:
+            type: string
+        - name: pid
+          in: query
+          description: project identification
+          required: true
+          schema:
+            type: string
+        - name: term
+          in: query
+          description: search keyword, eg. "lenovo laptop", "iphone 7"
+          required: true
+          schema:
+            type: string
+        - name: number_of_lists
+          in: query
+          description: number of returned listing page suggestions, default is 5
+          required: false
+          schema:
+            type: integer
+        - name: number_of_products
+          in: query
+          description: number of returned product suggestions, default is 7
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        url:
+                          type: string
+                        image:
+                          type: string
+                        price:
+                          type: number
+                          format: float
+                        category:
+                          type: string
+                  lists:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        page_name:
+                          type: string
+                        url:
+                          type: string
+                  result_page:
+                    type: string
+        '400':
+          description: required parameter(s) is missing
+        '404':
+          description: no suggestions for this keyword
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        type:
+          type: string
+          description: ""
+          enum:
+            - comparable
+            - product
+        name:
+          type: string
+        image:
+          type: string
+        brand:
+          type: string
+        price:
+          type: number
+          format: float
+        original_price:
+          type: number
+          format: float
+        discount_percentage:
+          type: integer
+        stores:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              url:
+                type: string
+        product_url:
+          type: string
+        comparable_url:
+          type: string
+    Category:
+      type: object
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+      xml:
+        name: Category
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+security:
+  - ApiKeyAuth: []

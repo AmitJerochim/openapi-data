@@ -1,0 +1,638 @@
+#############################################################
+# Copy this content to swagger to generate api documentation
+##############################################################
+
+openapi: 3.0.0
+
+info:
+  title: Shiftee Open API Documentation
+  version: 1.2.331
+  description: |
+    ## Open API 액세스 토큰 사용법
+    1. **최고관리자** 계정으로 회사 접속 후, "회사 설정 > 연동" 선택
+
+    2. "Open API" scope 선택 후, 액세스 토큰 발급<br>
+    **액세스 토큰은 시프티에 생성된 회사별로 발급이 가능하며, 발급된 액세스 토큰은 보안에 매우 유의하여야 함.**
+
+    3. 액세스 토큰이 잘 작동하는지 **GET /openapi/company**를 호출:<br>
+    `curl https://shiftee.io/openapi/company -H "Accept: application/json" -H "Authorization: Bearer {{ ACCESS_TOKEN }}"`
+
+    4. API 호출시, `Authorization` Header 에 다음과 같은 형식으로 위에서 발급받은 액세스 토큰 입력:
+    `Authorization: Bearer {{ ACCESS_TOKEN }}`
+
+servers:
+  - url: 'https://shiftee.io/openapi'
+
+tags:
+  - name: company
+    description: 회사 API
+  - name: location
+    description: 지점/조직 API
+  - name: employee
+    description: 직원 API
+  - name: shift
+    description: 근무일정 API
+#  - name: attendance
+#    description: 출퇴근기록 API
+  - name: leave
+    description: 휴가 API
+  - name: request
+    description: 요청 API
+
+paths:
+  ### /company ###
+  /company:
+    get:
+      tags:
+        - company
+      summary: 회사 정보 가져오기
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+
+  ### /location ###
+  /location/all:
+    put:
+      tags:
+        - location
+      summary: 다수 지점/조직 생성 및 수정
+      description: |
+        다수 지점/조직을 생성 혹은 수정할 시 사용.<br>
+        `location_code`를 unique key값으로 사용해, Shiftee DB에 해당 `location_code`가 존재하지 않을시에 신규 생성하고 (INSERT), 이미 존재할시에 지점/조직 정보를 수정함 (UPDATE).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required:
+                  - location_code
+                  - name
+                properties:
+                  location_code:
+                    type: string
+                    example: L21000
+                    description: 지점/조직 식별을 위한 고유한 지점/조직 코드. 해당 지점/조직 코드가 Shiftee DB에 이미 생성되어 있는지 여부에 따라 INSERT를 할지 UPDATE를 할지 결정.
+                  parent_location_code:
+                    type: string
+                    example: L20000
+                    description: |
+                      (선택) 현 지점/조직의 상위 지점/조직 코드. 비어있으면 최상위 지점/조직으로 간주. 상위 지점/조직은
+                      시프티에 이미 생성이 되어있어야함.
+                  name:
+                    type: string
+                    example: IT부서
+                  address:
+                    type: string
+                    example: 서울시 중구 삼일대로 343
+                    description: (선택) 지점/조직 출퇴근 장소의 도로명 주소
+                  coordinate:
+                    type: array
+                    items:
+                      type: number
+                      format: double
+                    example:
+                      - 37.571881
+                      - 126.987894
+                    description: (선택) 지점/조직의 출퇴근 장소 좌표
+                  coordinate_radius:
+                    type: integer
+                    example: 150
+                    description: (선택) 지점/조직의 출퇴근 장소 좌표 반경
+                  note:
+                    type: string
+                    description: (선택) 지점/조직에 대한 메모
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - created
+                  - updated
+                properties:
+                  created:
+                    type: number
+                    example: 10
+                    description: 생성된 지점/조직 갯수
+                  updated:
+                    type: number
+                    example: 5
+                    description: 수정된 지점/조직 갯수
+                  ignored:
+                    type: number
+                    example: 2
+                    description: 변경사항이 없는 지점/조직 갯수
+                  errors:
+                    type: string
+                    description: 연동 중 발생한 에러들
+
+  ### /employee ###
+  /employee/all:
+    put:
+      tags:
+        - employee
+      summary: 다수 직원 생성 및 수정
+      description: |
+        다수 직원을 생성 혹은 수정할 시 사용.<br>
+        `employee_number`를 unique key값으로 사용해, Shiftee DB에 해당 `employee_number`가 존재하지 않을시에 직원 정보를 신규 생성하고 (INSERT), 이미 존재할시에 직원 정보를 수정함 (UPDATE).
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required:
+                  - employee_number
+                  - first_name
+                  - last_name
+                  - access_level
+                  - location_codes
+                  - position_names
+                properties:
+                  employee_number:
+                    type: string
+                    example: N7635064
+                    description: 직원 식별을 위한 고유한 사원번호
+                  first_name:
+                    type: string
+                    example: 승원
+                  last_name:
+                    type: string
+                    example: 신
+                  access_level:
+                    $ref: '#/components/schemas/AccessLevel'
+                  location_codes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - '20000'
+                      - '21000'
+                      - '30000'
+                    description: |
+                      직원에게 배정할 지점/조직 코드들. 배정을 위해 해당 지점/조직은 시프티에 이미 생성이 되어있어야 함.
+                      배정된 지점/조직에 하위 지점/조직들이 있을시에, 자동 배정함.
+                  immediate_location_codes:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - '35000'
+                    description: |
+                      (선택) 직원에게 배정할 **직속** 지점/조직 코드들. 배정을 위해 해당 지점/조직은 시프티에 이미 생성이 되어있어야 함.
+                      배정된 지점/조직에 하위 지점/조직들이 있어도, 자동 배정하지 않음.
+                  position_names:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - Line Manager
+                    description: 직원에게 배정할 직무들. 배정을 위해 해당 직무는 시프티에 이미 생성되어있어야 함.
+                  invitation_email:
+                    type: string
+                    example: example@shiftee.io
+                    description: (선택) 합류를 위한 초대코드를 보낼 직원의 이메일 주소.
+                  invitation_phone_number:
+                    type: string
+                    example: 01012347890
+                    description: (선택) 합류를 위한 초대코드를 보낼 직원의 전화번호.
+                  note:
+                    type: string
+                    example: 선택근무제 적용
+                    description: (선택) 직원에 대한 메모.
+                  active:
+                    type: boolean
+                    example: true
+                    description: 직원의 현재 활성 여부. 해당 직원이 퇴사시, `false` 사용.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - created
+                  - updated
+                properties:
+                  created:
+                    type: number
+                    example: 10
+                    description: 생성된 직원수
+                  updated:
+                    type: number
+                    example: 5
+                    description: 수정된 직원수
+                  ignored:
+                    type: number
+                    example: 2
+                    description: 변경사항이 없는 직원수
+                  errors:
+                    type: string
+                    description: 발생한 에러들
+
+  ### /shift ###
+  /shift/all:
+    get:
+      tags:
+        - shift
+      summary: 범위 내 근무일정 가져오기
+      parameters:
+        - in: query
+          name: from
+          description: 근무일정을 가져올 시작 범위
+          schema:
+            type: string
+            format: date-time
+            example: '2019-09-06T00:00:00+09:00'
+        - in: query
+          name: to
+          description: 근무일정을 가져올 종료 범위
+          schema:
+            type: string
+            format: date-time
+            example: '2019-09-06T23:59:59+09:00'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shift'
+
+  ### /attendance ###
+  /attendance:
+    post:
+      tags:
+        - attendance
+      summary: 출퇴근기록 생성
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - employee_number
+                - clock_in_time
+              properties:
+                employee_number:
+                  type: string
+                  example: N7635064
+                  description: 출퇴근기록을 생성할 직원의 사원번호.
+                clock_in_time:
+                  type: string
+                  format: date-time
+                  example: '2019-09-06T09:00:00+09:00'
+                  description: 출근시간.
+                clock_out_time:
+                  type: string
+                  format: date-time
+                  example: '2019-09-06T18:00:00+09:00'
+                  description: '(선택) 퇴근시간. 비워둘 시, 아직 근무중으로 간주.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attendance'
+
+    put:
+      tags:
+        - attendance
+      summary: 출퇴근기록 수정
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - attendance_id
+                - clock_in_time
+              properties:
+                attendance_id:
+                  type: number
+                  description: 수정할 출퇴근기록의 ID
+                clock_in_time:
+                  type: string
+                  format: date-time
+                  example: '2019-09-06T09:00:00+09:00'
+                  description: 출근시간.
+                clock_out_time:
+                  type: string
+                  format: date-time
+                  example: '2019-09-06T18:00:00+09:00'
+                  description: '(선택) 퇴근시간. 비워둘 시, 아직 근무중으로 간주.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attendance'
+
+  ### /leave ###
+  /leave/all:
+    get:
+      tags:
+        - leave
+      summary: 범위 내 휴가 가져오기
+      parameters:
+        - in: query
+          name: from
+          description: 휴가를 가져올 시작 범위
+          schema:
+            type: string
+            format: date-time
+            example: '2019-09-06T00:00:00+09:00'
+        - in: query
+          name: to
+          description: 휴가를 가져올 종료 범위
+          schema:
+            type: string
+            format: date-time
+            example: '2019-09-06T23:59:59+09:00'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Leave'
+    put:
+      tags:
+        - leave
+      summary: 다수 휴가 생성 및 삭제
+      description: |
+        다수 휴가를 생성 혹은 삭제할 시 사용.<br>
+        `deleted` 필드가 `true`인 경우, `(employee_number, leave_type, start_time, end_time)`를 unique composite key로 사용해, 휴가 정보를 삭제함 (DELETE).<br>
+        `deleted` 필드가 없거나 `false`인 경우, 휴가 정보를 신규 생성함 (INSERT).<br>
+        장기 휴가의 경우 `start_time` 과 `end_time` 을 여러 날에 걸쳐 생성할 수 있음 (eg. 5일치 연차휴가 : `2019-09-06T00:00:00+09:00` - `2019-09-09T23:59:59+09:00`)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required:
+                  - employee_number
+                  - leave_type
+                  - start_time
+                  - end_time
+                  - paid_hours
+                properties:
+                  employee_number:
+                    type: string
+                    example: N7635064
+                    description: 직원 식별을 위한 고유한 사원번호
+                  leave_group_name:
+                    type: string
+                    example: 연차휴가
+                    description: 휴가 차감을 (eg. 연차휴가, 보상휴가) 위한 휴가 그룹명 지정
+                  leave_type:
+                    type: string
+                    example: 연차
+                    description: 휴가 유형
+                  start_time:
+                    type: string
+                    format: date-time
+                    example: "2019-09-06T00:00:00+09:00"
+                    description: 휴가 시작 시간
+                  end_time:
+                    type: string
+                    format: date-time
+                    example: "2019-09-07T23:59:59+09:00"
+                    description: 휴가 종료 시간
+                  paid_hours:
+                    type: number
+                    example: 8
+                    description: 유급휴가시간. 예) 무급 휴가 - 0, 3일 연차 - 24
+                  deduction_amount:
+                    type: number
+                    example: 1
+                    description: 휴가 차감일수. 예) 연차휴가 - 1, 특별휴가 - 0
+                  note:
+                    type: string
+                    example: 개인 사유로 연차 신청합니다
+                    description: (선택) 휴가 사유 입력.
+                  deleted:
+                    type: boolean
+                    example: true
+                    description: |
+                      (선택) 삭제 여부
+                      `deleted` 필드가 `true`인 경우, `(employee_number, leave_type, start_time, end_time)`를 unique composite key로 사용해, 휴가 정보를 삭제함 (DELETE).
+                      `deleted` 필드가 없거나 `false`인 경우, 휴가 정보를 신규 생성함 (INSERT).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - created
+                  - deleted
+                properties:
+                  created:
+                    type: number
+                    example: 10
+                    description: 생성된 휴가 갯수
+                  deleted:
+                    type: number
+                    example: 5
+                    description: 삭제된 휴가 갯수
+                  errors:
+                    type: string
+                    description: 발생한 에러들
+
+  ### /request ###
+  /request/leave/all:
+    get:
+      tags:
+        - request
+      summary: 승인된 휴가 요청 건들 가져오기
+      parameters:
+        - in: query
+          name: date
+          description: 휴가 요청 건을 가져올 날짜
+          schema:
+            type: string
+            format: date-time
+            example: '2019-09-06T00:00:00+09:00'
+        - in: query
+          name: splitLeaves
+          description: 여러 날에 걸친 휴가를 1일 단위로 분할함
+          schema:
+            type: boolean
+            example: false
+        - in: query
+          name: leave_group_name
+          description: 휴가 그룹명으로 필터함
+          schema:
+            type: string
+            example: 연차휴가
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaveRequest'
+
+components:
+  schemas:
+    AccessLevel:
+      type: string
+      enum:
+        - owner
+        - manager
+        - supervisor
+        - staff
+      example: staff
+      description: 직원의 액세스권한.
+    Company:
+      type: object
+      required:
+        - name
+        - created_at
+      properties:
+        name:
+          type: string
+          example: 주식회사 시프티
+          description: 회사 이름
+        created_at:
+          type: string
+          format: date-time
+          example: '2019-09-05T00:00:00+09:00'
+          description: 회사 생성일자
+    Shift:
+      type: object
+      required:
+        - employee_number
+        - start_time
+        - end_time
+      properties:
+        employee_number:
+          type: string
+          example: N7635064
+          description: 직원 사원번호.
+        start_time:
+          type: string
+          format: date-time
+          example: '2019-09-06T09:00:00+09:00'
+          description: 근무일정 시작시간
+        end_time:
+          type: string
+          format: date-time
+          example: '2019-09-06T18:00:00+09:00'
+          description: 근무일정 종료시간
+    Leave:
+      type: object
+      required:
+        - employee_number
+        - leave_type
+        - start_time
+        - end_time
+      properties:
+        employee_number:
+          type: string
+          example: N7635064
+          description: 직원 사원번호.
+        leave_type:
+          type: string
+          example: 연차휴가(3일)
+          description: 휴가 유형.
+        start_time:
+          type: string
+          format: date-time
+          example: '2019-09-06T00:00:00+09:00'
+          description: 휴가 시작시간
+        end_time:
+          type: string
+          format: date-time
+          example: '2019-09-08T23:59:59+09:00'
+          description: 휴가 종료시간
+    Attendance:
+      type: object
+      required:
+        - attendance_id
+        - employee_number
+        - clock_in_time
+        - note
+        - created_at
+      properties:
+        attendance_id:
+          type: integer
+          example: 1
+          description: 출퇴근기록 ID. 특정 출퇴근기록의 수정/삭제 등을 위해 출퇴근기록 ID를 보내야 함.
+        employee_number:
+          type: string
+          example: N7635064
+          description: 직원 사원번호.
+        clock_in_time:
+          type: string
+          format: date-time
+          example: '2019-09-06T09:00:00+09:00'
+          description: 출근시간.
+        clock_out_time:
+          type: string
+          format: date-time
+          example: '2019-09-06T18:00:00+09:00'
+          description: 퇴근시간.
+        note:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          example: '2019-09-06T09:00:00+09:00'
+          description: 출퇴근기록이 생성된 시간.
+    LeaveRequest:
+      type: object
+      required:
+        - employee_number
+        - leave_type
+        - start_time
+        - end_time
+      properties:
+        employee_number:
+          type: string
+          example: N7635064
+          description: 직원 사원번호.
+        leave_type:
+          type: string
+          example: 연차휴가(3일)
+          description: 휴가 유형.
+        start_time:
+          type: string
+          format: date-time
+          example: '2019-09-06T00:00:00+09:00'
+          description: 휴가 시작시간
+        end_time:
+          type: string
+          format: date-time
+          example: '2019-09-08T23:59:59+09:00'
+          description: 휴가 종료시간
+        deleted:
+          type: boolean
+          example: false
+          description: 해당 휴가 요청 건이 휴가 생성 요청인지, 휴가 삭제 요청인지 표기.
+        updated_at:
+          type: string
+          format: date-time
+          example: '2019-09-06T15:33:21+09:00'
+          description: 해당 요청 건이 승인된 시간 (승인일자)
+        created_at:
+          type: string
+          format: date-time
+          example: '2019-09-06T08:10:11+09:00'
+          description: 해당 요청 건이 생성된 시간 (신청일자)

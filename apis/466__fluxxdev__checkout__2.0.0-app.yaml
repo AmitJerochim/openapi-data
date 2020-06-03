@@ -1,0 +1,507 @@
+openapi: 3.0.0
+info:
+  version: "2.0.0-app"
+  title: Checkout API
+  description: Send orders to Fluxx
+  contact:
+    email: tecnologia@fluxx.com.br
+tags:
+  - name: checkout
+    description: Send Orders for PreApproval to Fluxx
+paths:
+  /checkout/prepare:
+    post:
+      tags:
+         - prepare
+      summary: Check offer availability
+      operationId: prepareOrder
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object  
+                properties:
+                  uuid:
+                    type: string
+                    description: Fluxx Checkout Id
+                  institution:
+                    type: object
+                    properties:
+                      bankCode:
+                        type: integer
+                        description: "Codigo parceiro"
+                        example: 33
+                      bankName:
+                        type: string
+                        description: "Nome banco parceiro"
+                        example: "Empréstimo SIM"
+                  offers:
+                    $ref: '#/components/schemas/Offers'
+        '400':
+          description: Invalid field
+        '401':
+          description: Not authorized
+        '404':
+          description: Resource not found
+        '405':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '5XX':
+          description: Internal server error
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Nome do Cliente
+                email:
+                  type: string
+                  description: Email do Cliente
+                dateOfBirth:
+                  type: string
+                  format: date 
+                  description: Data de Nascimento do cliente (AAAA-MM-DD)  
+                cpf:
+                  type: string
+                  description: Número do Documento (CPF)
+                phone:
+                  $ref: '#/components/schemas/Phone'
+                amount:
+                  $ref: '#/components/schemas/Amount'
+        description: Checkout object to be added for Pre-Approval
+        required: true
+  /checkout:
+    post:
+      tags:
+        - checkout
+      summary: Send order to fluxx
+      operationId: addOrder
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderUUID'
+        '400':
+          description: Invalid field
+        '401':
+          description: Not authorized
+        '404':
+          description: Resource not found
+        '405':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error' 
+        '5XX':
+          description: Internal server error
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Checkout'
+        description: Checkout object to be added for Pre-Approval
+        required: true
+      callbacks:  
+        confirmed:   
+          '{$request.body#/merchant.confirmationUrl}': 
+            post:
+              requestBody:   
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        ownId:
+                          type: string
+                          example: "0000014"
+                        orderUUID:
+                          type: string
+                          example: "8540ee84-d17c-45f2-be45-e028c22f"
+                        status:
+                          type: string
+                          enum:
+                            - "confirmed"
+                      required:
+                        - ownId
+                        - orderUUID
+                        - status
+              responses:  
+                '200':
+                  description: Your server returns this code if it accepts the callback
+        rejected:   
+          '{$request.body#/merchant.cancelUrl}': 
+            post:
+              requestBody:   
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        ownId:
+                          type: string
+                          example: "0000014"
+                        orderUUID:
+                          type: string
+                          example: "8540ee84-d17c-45f2-be45-e028c22f"
+                        status:
+                          type: string
+                          enum:
+                            - "rejected"
+                      required:
+                        - ownId
+                        - orderUUID
+                        - status
+              responses:  
+                '200':
+                  description: Your server returns this code if it accepts the callback
+  /checkout/{uuid}:
+    get:
+      tags:
+        - checkout
+      summary: Check Loan Status for Order
+      operationId: checkOrder
+      parameters:
+        - in: path
+          name: uuid
+          required: true
+          description: Checkout ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Checkout'
+        '400':
+          description: Invalid field
+        '401':
+          description: Not authorized
+        '404':
+          description: Resource not found
+        '5XX':
+          description: Internal server error
+servers:
+  - url: 'https://sandbox.fluxx.com.br/v1'
+security:
+  - basicAuth: []
+components:
+  securitySchemes:
+    basicAuth:    
+      type: http
+      scheme: basic
+  schemas:
+    Checkout:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: Fluxx Checkout ID 
+          readOnly: true
+        status:
+          type: string
+          description: Status
+          readOnly: true
+          enum:
+            - accepted
+            - captured
+            - confirmed
+            - rejected
+        createdAt:
+          type: string
+          readOnly: true
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        ownId:
+          type: string
+          description: Store Order Id
+          example: meu_order_id
+        offerUUID:
+          type: string
+          description: Selected Offer uuid 
+        customer:
+          $ref: '#/components/schemas/Customer'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        amount:
+          $ref: '#/components/schemas/Amount'
+        merchant:
+          $ref: '#/components/schemas/Merchant'
+        redirectUrl:
+          type: string
+          description: Redirect User to this URL
+          example: "https://client.sandbox.fluxx.com.br/enroll/RB553"
+          readOnly: true
+    OrderUUID:
+      type: object
+      properties:
+        orderUUID:
+          type: string
+          example: "01eb8e98-e14f-4821-b74c-f175a45eaf06"
+          description: Order UUID
+    Amount:
+      type: object
+      properties:
+        total:
+          type: integer
+          format: int32
+          example: 11000
+          description: Valor total sem vírgula (11000 = R$ 110,00)
+        subtotal:
+          $ref: '#/components/schemas/Subtotal'
+    Subtotal:
+      type: object
+      properties:
+        shipping:
+          type: integer
+          format: int32
+          example: 1000
+          description: Valor total sem vírgula (1000 = R$ 10,00)
+        discount:
+          type: integer
+          format: int32
+          example: 1000
+          description: Valor total sem vírgula (1000 = R$ 10,00)
+        addition:
+          type: integer
+          format: int32
+          example: 100
+          description: Valor total sem vírgula (100 = R$ 1,00)
+    Item:
+      type: object
+      properties:
+        product:
+          type: string
+          description: Product Name
+          example: Trono de ferro
+        category:
+          type: string
+          description: Category Name
+          example: MOVEIS
+        detail:
+          type: string
+          description: Product Details
+          example: Trono de ferro composto por milhares de espadas
+        quantity:
+          type: integer
+          format: int32
+          example: 1
+        price:
+          type: integer
+          format: int32
+          example: 10000
+    Merchant:
+      type: object
+      properties:
+        confirmationUrl:
+          type: string
+          description: URL to inform on credit released
+          example: 'https://merchantsite.com/confirm'
+        cancelUrl:
+          type: string
+          description: URL to inform in case o credit not approved
+          example: 'https://merchantsite.com/cancel'
+        userConfirmationAction:
+          type: string
+          enum:
+            - POST
+            - GET
+          description: Action to use with ConfirmationURL/CancelURL
+          example: POST
+        name:
+          type: string
+          description: Merchant Name
+          example: Minha Loja
+    Customer:
+      type: object
+      properties:
+        fullName:
+          type: string
+          description: Customer Full Name
+          example: Cersei Lannister
+        email:
+          type: string
+          description: Customer Email
+          example: cersei@email.com
+        gender:
+          type: string
+          description: Genero
+          enum:
+            - M
+            - F
+            - O
+        birthDate:
+          type: string
+          format: date
+        birthCity:
+          type: string
+          description: City of birth
+        birthState:
+          type: string
+          description: State of birth
+        taxDocument:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+        phone:
+          type: array
+          items:
+            $ref: '#/components/schemas/Phone'
+        billingAddresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+    Document:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - CPF
+            - CNPJ
+            - RG
+          description: Document Type
+          example: CPF
+        number:
+          type: string
+          description: Document Number
+          example: "17660491091"
+    Phone:
+      type: object
+      properties:
+        countryCode:
+          type: integer
+          format: int32
+          example: 55
+        areaCode:
+          type: integer
+          format: int32
+          example: 11
+        number:
+          type: integer
+          format: int32
+          example: 999889988
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+          description: Street Name
+          example: Avenida Faria Lima
+        streetNumber:
+          type: string
+          description: Street Number
+          example: "500"
+        complement:
+          type: string
+          description: Complement
+          example: "10"
+        district:
+          type: string
+          description: District Name
+          example: Itaim Bibi
+        city:
+          type: string
+          description: City Name
+          example: Sao Paulo
+        state:
+          type: string
+          description: State Name
+          example: SP
+        country:
+          type: string
+          description: Country Code
+          example: BR
+        zipcode:
+          type: string
+          description: ZipCode
+          example: "342016"
+        type:
+          type: string
+          description: Residente type
+          example: SHIPPING
+    Offers:
+      type: array
+      items: 
+        type: object
+        properties:
+          uuid:
+            type: string
+            description: Identificador da oferta de crédito
+          installmentValue:
+            type: number
+            description: Valor da parcelas
+            example: 124.77
+          totalFinancedValue:
+            description: Valor total financiado
+            type: number
+            example: 1026.21
+          installmentAmount:
+            type: number
+            description: Numero de Parcelas
+          firstInstallmentDate:
+            type: string
+            format: date
+            description: Data primeira parcela
+          cETMensal:
+            type: number
+            description: Taxa de juros mensal
+            example: 0.0623
+          cETAnual:
+            type: number
+            description: Taxa de juros anual
+            example: 1.2612
+          totalTaxes:
+            type: number
+            description: Tarifas totais
+            example: 22.33
+          offerDescription:
+            type: string
+            description: "Descrição da oferta"
+            example: "3x de R$ 40,00 com juros de R$ 20,00"
+            
+    Error:
+      type: object
+      properties:
+        field:
+          type: string
+          description: 'Campo com erro, pode ser nulo'
+        message:
+          type: string
+          description: Mensagem descrevendo o erro
+        code:
+          type: string
+          description: 'Codigo curto, referência do erro'
+        errtype:
+          type: string
+          description: 'Tipo de erro retornado, pode ser nulo'
+        status:
+          type: string
+          description: Mensagem do status retornado
+        statusCode:
+          type: number
+          description: Status HTTP retornado
+        customer:
+          type: string
+          description: 'Numero do documento fo customer, pode ser nulo'

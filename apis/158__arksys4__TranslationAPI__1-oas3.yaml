@@ -1,0 +1,482 @@
+openapi: 3.0.0
+info:
+  description: >-
+   **Translation API developed by Translata company.**
+   <br><br>
+
+   This product is designed to automate translation process. Communication is bidirectional so first of all customers should register a webhook (with post call /webhook/create) which will notify them when their translations are ready. By using a /translate post method our customers can request a file or pure text for translation. Once the translation is finished our sever will call webhook registrated earlier. Customers are notified that their translations are ready this way. After this webhook call customer should use /translated/{jobIdOrReference}/{targetLanguage} get method to retreive their translations.
+   <br><br>
+
+   Workflow:
+   <br>
+   1. Webhook registration. **This step is done only once**
+   <br>
+   2. Requesting a translation.
+   <br>
+   3. Receiving a call from our server that the translation is ready.
+   <br>
+   4. Requesting finished translation after webhook notification.
+
+   <br><br>
+   Please bear in mind that you can create a new webhook if the old one does not suite your needs but number of webhooks per user is limited and therefore customers shoud use /webhook/delete to remove any unused webhooks.
+
+   <br><br>
+   If you are running a PHP server we can provide you with library designed to work with our API.
+  version: "1-oas3"
+  title: Translation API
+  contact:
+    email: support@translata.sk
+tags:
+  - name: oauth
+    description: Call for authorization token obtaining.
+  - name: webhook create
+    description: Call for creating webhook.
+  - name: webhook delete
+    description: Call for deleting webhook.
+  - name: translate
+    description: Call for creating translation.
+  - name: translated
+    description: Call for downloading translated file or text.
+paths:
+  /oauth/token:
+    post:
+      tags:
+        - oauth
+      summary: returns access token
+      description: >-
+        Call provides access token. If you have obtained **username**,
+        **password** and **client_id** with **client_secret**, you are allowed
+        to make this call. Token is valid for 24h, from obtaining.<br> If you
+        are interested and you do not have access credentials, let us know via
+        e-mail, in contact section.
+      responses:
+        '200':
+          description: Token successfuly created
+          content:
+            string:
+              schema:
+                $ref: '#/components/schemas/tokenResponse'
+        '400':
+          description: 'Invalid input, object invalid'
+        '401':
+          description: Unauthorized
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/token'
+        description: Get token
+  /webhook/create:
+    post:
+      tags:
+        - webhook create
+      summary: returns webhook
+      description: >-
+        <p>Call provides webhook. If your task is ready, we make **POST**
+        request on your webhook url with body parameters:</p> - <b>taskId</b>
+        <br> - <b>reference</b> <br> - <b>sourceLanguage</b> <br> -
+        <b>targetLanguages</b> <br> - <b>jobUid</b> <br> - <b>userId</b> <br> -
+        <b>status</b> <br>
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          description: Bearer Token
+          schema:
+            type: string
+            format: token
+        - in: header
+          name: version
+          required: true
+          description: Version of API (1)
+          schema:
+            type: number
+            format: numeric
+        - in: header
+          name: Accept
+          description: application/json
+          schema:
+            type: string
+            format: text
+      responses:
+        '200':
+          description: Webhook successfuly created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/webhookCreateResponse'
+        '400':
+          description: 'Invalid input, object invalid'
+        '401':
+          description: Unauthorized
+        '409':
+          description: Webhook already exists
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/webhookCreate'
+        description: Create webhook
+  '/webhook/delete/{nameOrUrl}':
+    delete:
+      tags:
+        - webhook delete
+      summary: deletes webhook
+      description: >-
+        If you want delete your webhook, you can do it via this call. All you
+        need, is **name** or **url** of your webhook, which has to be set as the
+        path parameter.
+      parameters:
+        - in: path
+          name: nameOrUrl
+          schema:
+            type: string
+            format: text
+            example: webhook1
+          required: true
+          description: Name of the webhook or webhook url
+        - in: header
+          name: Authorization
+          required: true
+          description: Bearer Token
+          schema:
+            type: string
+            format: token
+        - in: header
+          name: version
+          required: true
+          description: Version of API (1)
+          schema:
+            type: number
+            format: numeric
+        - in: header
+          name: Accept
+          description: application/json
+          schema:
+            type: string
+            format: text
+      responses:
+        '200':
+          description: Webhook successfuly deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/webhookDeletedResponse'
+        '400':
+          description: 'Invalid input, object invalid'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Webhook does not exists
+  /translate:
+    post:
+      tags:
+        - translate
+      summary: creates translation task
+      description: >-
+        If you have access token, you are able to make translate call. This is
+        core call, which provides executing of translation process and returns
+        **taskId**. <br>For success translation, you have to send source
+        language (**sourceLan_code**) and target language/languages
+        (**targetLan_codes**), as a valid language code - check [ISO
+        639-1](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes).
+        <br><br>The **file** parameter is supported by any kind of the filetype
+        (most likely *.txt*, *.docx/.doc*, *.xlsx/.xls*, *.csv*, *.php*,
+        *.html*, *.json*, *.xml*, etc.) and the length of **text** parameter is
+        restricted to <4GB. <br> Please mind, **ONE PARAMETER OF FILE OR TEXT
+        HAS TO BE SET!**
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          description: Bearer Token
+          schema:
+            type: string
+            format: token
+        - in: header
+          name: version
+          required: true
+          description: Version of API (1)
+          schema:
+            type: number
+            format: numeric
+        - in: header
+          name: Accept
+          description: application/json
+          schema:
+            type: string
+            format: text
+      responses:
+        '200':
+          description: Translation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/translateResponse'
+        '400':
+          description: 'Invalid input, object invalid'
+        '401':
+          description: Unauthorized
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/translation'
+        description: Creates translation
+  '/translated/{jobIdOrReference}/{targetLanguage}':
+    get:
+      tags:
+        - translated
+      summary: provides finished translation
+      operationId: getTranslation
+      description: >-
+        If the translation is done and ready, our server makes **POST** request
+        on your **webhook** with body parameters - **jobId**, **reference**.
+        <br> <br>
+
+        Then you are allowed to make this call, setting **jobId** or
+        **reference** and **language** within path parameter.
+        <br> <br>
+
+        Returns translated file or text.
+      parameters:
+        - in: path
+          name: jobIdOrReference
+          required: true
+          schema:
+            type: string
+          description: Numeric **ID** of the job returned by webhook or **reference** given in translate call to get your translation
+        - in: path
+          name: targetLanguage
+          required: true
+          schema:
+            type: string
+          description: Required when using reference.
+        - in: header
+          name: Authorization
+          required: true
+          description: Bearer Token
+          schema:
+            type: string
+            format: token
+        - in: header
+          name: version
+          required: true
+          description: Version of API (1)
+          schema:
+            type: number
+            format: numeric
+        - in: header
+          name: Accept
+          description: application/json
+          schema:
+            type: string
+            format: text
+      responses:
+        '200':
+          description: Successfuly downloaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/translatedResponse'
+        '400':
+          description: 'Invalid input, object invalid'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Task does not exists or not completed
+components:
+  schemas:
+    token:
+      type: object
+      required:
+        - username
+        - password
+        - client_id
+        - client_secret
+      properties:
+        username:
+          type: string
+          format: text
+          example: admin
+        password:
+          type: string
+          format: password
+          example: 123456
+        client_id:
+          type: integer
+          format: number
+          example: 2
+        client_secret:
+          type: string
+          format: text
+          example: 24ysQFcPQsk6XdkM4YoSjMMbm9vg4EMVk1U24050
+    tokenResponse:
+      type: string
+      example: >-
+        eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjI3YTE5NDUzZjQ2MzdmYzI2Nzc2MjVlNDUzNjhjZDc3NGY0NDJiMzIwYmYwM2EyNmQ1MDY3NDM4ZjNmMmQ0ZmM1N2UzOGMwNmQ3MjBmZGY2In0.eyJhdWQiOiIyIiwianRpIjoiMjdhMTk0NTNmNDYzN2ZjMjY3NzYyNWU0NTM2OGNkNzc0ZjQ0MmIzMjBiZjAzYTI2ZDUwNjc0MzhmM2YyZDRmYzU3ZTM4YzA2ZDcyMGZkZjYiLCJpYXQiOjE1NjE5NzkxMTAsIm5iZiI6MTU2MTk3OTExMCwiZXhwIjoxNTkzNjAxNTEwLCJzdWIiOiIyIiwic2NvcGVzIjpbXX0.bi6ODthyGaaej53vybzk1Scw873lSe2PUyjXvanFP7vwXshFRhdmhpA6bzDIPYkfnTu1GZ3KXTuXpfbaqX3Uvllf8aqCm4sxitZntRR0h7ZFv8upsUeugJfS1YKVUq5vkAdIaTAuyOfc6nc_ld9x5ieKPGXJ36KZbt3aC4ohZXVJeOlgmxge9_MCBq7gdf14qyPL7h-dXlDD9MR8_krepvtwUufHXhry6uU5E8YDQmhFV3MraO3IA53grJhUwxNCGFwYQFgwbfhwjnMiNngH28gZWPkXLAGECjl-EsBDDMIfhDX70K7y-yuhA5E93pgLFxy7Wmzdk-2zQODQnF09cHU-TRCdHzNrS0iKipDTNUk2jYQXT-3HjA-F0THjrYAc031MCmU5ZvcwaUMcsFdLPCKNtEBS-7uH-n_1g77f5QfhVh6ZCI8atnvn3Ib7h3GqdBW1yb6TqcMySAMmJDm594Ave07C6OgT3_BbIiNi_-NtnBVAIu5LBRK9Xn9uyR6dtIdZBj_lMqALMkqC0wI2xOG0gkMcS7btrA9z48IdA1LRVQ3zwCad4MrcO4vJS8-VztucQANgzwzs_rPgDXU8S7OyczZtcr6shbowzXrHah6za4ogwHixKFJkSzCn3jLEUF5GHueNcy5lOLhBiMvw9rE3lukS8CjOiY5M6YsdGo8
+    webhook:
+      type: object
+      required:
+        - token
+        - api_version
+      properties:
+        name:
+          type: string
+          format: text
+          example: webhook1
+        url:
+          type: string
+          format: text
+          example: 'https://yourwebhook.url/'
+        type:
+          type: string
+          format: text
+          example: finished translations
+    webhookCreate:
+      type: object
+      required:
+        - token
+        - api_version
+      properties:
+        name:
+          type: string
+          format: text
+          example: webhook1
+        url:
+          type: string
+          format: text
+          example: 'https://yourwebhook.url/'
+        type:
+          type: string
+          format: text
+          example: finished translations
+    webhookDelete:
+      type: object
+      required:
+        - token
+    translation:
+      type: object
+      required:
+        - token
+        - api_version
+        - sourceLan_code
+        - targetLan_codes
+        - file
+        - text
+      properties:
+        sourceLan_code:
+          type: string
+          format: ISO 639-1
+          example: en
+        targetLan_codes:
+          type: array
+          example:
+            - sk
+            - de
+          items:
+            type: string
+        file:
+          type: string
+          format: file
+          example: /home/User/Desktop/translate.txt
+        text:
+          type: string
+          format: text
+          example: Translate me please
+        reference:
+          type: string
+          format: text
+          example: translation_1
+          
+    webhookResponse:
+      type: object
+      properties:
+        taskId:
+          type: number
+          format: integer
+          example: 1
+        jobId:
+          type: number
+          format: integer
+          example: 1
+        reference:
+          type: string
+          format: text
+          example: 'your-reference-as-ginven-in-translate-call'
+        sourceLanguage:
+          type: string
+          format: text
+          example: 'en'
+        targetLanguage:
+          type: string
+          format: text
+          example: 'sk'
+        status:
+          type: string
+          format: text
+          example: 'completed'
+
+    translateResponse:
+      type: object
+      properties:
+        taskId:
+          type: number
+          format: numeric
+          example: 1
+    translatedResponse:
+      type: object
+      properties:
+        data:
+          type: string
+          format: text
+          example: Translated file content
+    webhookCreateResponse:
+      type: object
+      properties:
+        id:
+          type: number
+          format: numeric
+          example: 1
+        name:
+          type: string
+          format: text
+          example: webhook1
+        url:
+          type: string
+          format: text
+          example: 'https://yourwebhook.url/'
+        type:
+          type: string
+          format: text
+          example: finished translations
+        user_id:
+          type: number
+          format: numeric
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: '2019-07-01T08:56:47.000Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2019-07-01T08:56:47.000Z'
+    webhookDeletedResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          format: text
+          example: webhook1
+        url:
+          type: string
+          format: text
+          example: 'https://yourwebhook.url/'
+        status:
+          type: string
+          format: text
+          example: DELETED
+servers:
+  - description: Translation API
+    url: 'https://translate.translata.sk'

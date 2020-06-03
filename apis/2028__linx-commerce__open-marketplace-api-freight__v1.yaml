@@ -1,0 +1,167 @@
+openapi: 3.0.0
+
+info:
+  version: "v1"
+  title: Marketplace API Freight
+  description: | 
+
+servers:
+  - url: http://api.linxcommerce.io/open-marketplace-api-freight/v1/
+    description: Production
+  - url: http://staging-api.linxcommerce.io/open-marketplace-api-freight/v1/
+    description: Staging
+  
+paths:
+  
+  /freights:        
+    post:
+      tags:
+        - Freight
+      summary: Retorna cotação para um carrinho
+      description: 
+        | 
+          1. Caso por qualquer motivo um ou mais SKUs não possam ser entregues, retornar a coleção de shippingQuotes vazia.
+        
+          2. Em caso de HTTP Status diferente de 200 na resposta ao Consultar o Frete será utilizado o modo de contingência.
+          
+          3. Em caso do conteúdo da resposta inválida será utilizado o modo de contingência.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FreightQuoteRequest'
+      responses:
+        '200':
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FreightQuoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '5XX':
+          $ref: '#/components/responses/UnexpectedError'
+                
+components:
+
+  responses:
+    Created:
+      description: Created
+    NoContent:
+      description: No content (success)
+    NotFound:
+      description: The specified resource was not found
+    Unauthorized:
+      description: Unauthorized
+    BadRequest:
+      description: Bad request.
+    UnexpectedError:
+      description: Unexpected error.
+
+  schemas:
+  
+    FreightQuoteRequest:
+      type: object
+      description: Representação dos dados de uma cotação de frete
+      properties:
+        destinationZipcode:
+          description: Código postal do endereço de destino
+          example: 00000-000
+          type: string
+        deliveryTimeSet:
+          description: Define se o retorno do prazo de entrega deve considerar apenas Dias Úteis (bd) ou então Dias Consecutivos (cd). Em caso de não definido, será considerado apenas Dias Úteis (bd).
+          example: "bd"
+          enum: [bd, cd]
+          type: string
+        items:
+          description: Lista de produtos
+          type: array
+          items:
+            type: object
+            properties:
+              sku:
+                description: Código que identifica o SKU (variação)
+                example: "123456"
+                type: string
+              quantity:
+                description: Quantidade de itens deste SKU
+                example: 2
+                type: integer
+              price:
+                description: Preço de venda do SKU
+                example: 11.99
+                type: number
+              weight:
+                description: Peso do SKU em Quilos
+                example: 4.100
+                type: number
+              width:
+                description: Largura em Centímetros
+                example: 40.50
+                type: number
+              height:
+                description: Altura em Centímetros
+                example: 20.10
+                type: number
+              lenght:
+                description: Profundidade em Centímetros
+                example: 10.50
+                type: number
+          
+    FreightQuoteResponse:
+      type: object
+      description: Representação do retorno de uma cotação de frete
+      properties:
+        shippingQuotes:
+          description: Opções de entrega para uma cotação
+          type: array
+          items:
+            type: object
+            properties:
+              items:
+                description: Items da entrega, se vazio considera-se que todos os items da cotação serão entregues nesta opção de entrega.
+                type: array
+                items:
+                  type: object
+                  properties:
+                    sku:
+                      description: Identificador do SKU (variação)
+                      example: "123456"
+                      type: string
+                    quantity:
+                      description: Quantidade de itens deste SKU que será entregue nesta cotação.
+                      example: 1
+                      type: integer
+              shippingMethodId:
+                description: Identificador do meio de entrega
+                example: "12"
+                type: string
+              shippingMethodName: 
+                description: Nome do meio de entrega
+                example: "Sedex"
+                type: string
+              shippingCost:
+                description: Preço total do frete
+                example: 19.90
+                type: number
+              deliveryTime:
+                description: Representação dos dados de prado da entrega
+                type: object
+                properties:
+                  unityTime:
+                    description: Define se os valores dos outros atributos é em Minutos, Horas ou Dias.
+                    example: "hours"
+                    enum: [minutes, hours, days]
+                    type: string
+                  transitTime:
+                    description: Tempo de trânsito do pacote (da entrada no caminhão até a entrega para o comprador), na unidade de tempo definida em unityTime. Considerando a configuração de Prazo de Entrega (deliveryTimeSet) definido na requisição.
+                    example: 168
+                    type: integer
+                  handlingTime:
+                    description: Tempo de manuseio do pedido (separação e empacotamento do produto), na unidade de tempo definida em unityTime. Considerando a configuração de Prazo de Entrega (deliveryTimeSet) definido na requisição.
+                    example: 24
+                    type: integer
+                  totalTime:
+                    description: Prazo de entrega final (soma dos valores de handlingTime e transitTime), na unidade de tempo definida em unityTime. Considerando a configuração de Prazo de Entrega (deliveryTimeSet) definido na requisição.
+                    example: 192
+                    type: integer

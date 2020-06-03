@@ -1,0 +1,549 @@
+openapi: 3.0.0
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/TPP/Food-2-go/1.0.0
+  - description: Dev Server
+    url: http://panku.food2go.com/api/v1
+  - description: Pat Server
+    url: https://panku.tppf2g-test.com/api/v1
+info:
+  version: "1.0.0"
+  title: Food2Go API
+  description: The API for the Food2Go project developed TPP
+  contact:
+   email: admin@thepricingpeople.co.uk
+paths:
+  /csrf-token:
+    get:
+      summary: Returns csrf token
+      description: The endpoint to get csrf token. This requires for PUT, PATCH and DELETE requests.
+      parameters: [
+        $ref: '#/components/parameters/ClientKeyHeader',
+        $ref: '#/components/parameters/DeviceSerialHeader',
+        $ref: '#/components/parameters/Xdebug'
+      ]
+      responses:
+        '200':
+          description: A string containg the token
+          content: 
+            text/plain; charset=utf-8:
+              schema:
+                type: string
+                example: "378f2922a933884fefc42b9b43108201ea495ea9c031ba9761feaad1b0b9514fbde49d6c28fee0ce9fbb695f1422ba1308641ccf69fdd724b09f5c25f961322e"
+        '403':
+          description: An incorrect API Key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorItem'
+              example: 
+                message: Access not allowed!
+                url: /api/v1/csrf-token
+                code: 403
+                
+  /stores:
+    get:
+      summary: Get all stores
+      description: Required to register the device to a store
+      parameters: [
+        $ref: '#/components/parameters/ClientKeyHeader',
+        $ref: '#/components/parameters/DeviceSerialHeader'
+      ]
+      responses:
+        '200':
+          description: Response containg list of store
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stores'
+        '403':
+          description: An incorrect API Key or device cannot be recognised
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorItem'
+              example: 
+                message: Access not allowed!
+                url: /api/v1/stores
+                code: 403
+    
+  /device:
+    get:
+      summary: Identify device
+      description: Identify the given device has already been added to a store.
+      parameters: [
+        $ref: '#/components/parameters/ClientKeyHeader',
+        $ref: '#/components/parameters/DeviceSerialHeader'
+      ]
+      responses: 
+        '200':
+          description: Device details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceIdentify'
+              example: 
+                serial_number: 17259521401771
+                store_id: 123
+    post:
+      summary: Register a device to a store
+      parameters: [
+        $ref: '#/components/parameters/ClientKeyHeader',
+        $ref: '#/components/parameters/DeviceSerialHeader'
+      ]
+      requestBody:
+        description: Store to register for this device
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRegistrationRequest'
+      responses:
+          '200':
+            description: Response success
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/DeviceRegistrationResponse'
+              
+          '400':
+            description: Response failed.
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/DeviceRegistrationResponse'
+                example: 
+                  message: Error message. Store ID not found
+                  
+          '403':
+            description: An incorrect API Key or device cannot be recognised
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorItem'
+                example: 
+                  message: Access not allowed!
+                  url: /api/v1/stores
+                  code: 403
+                  
+  /categories:
+    get:
+      summary: Get all categories
+      parameters: [
+        $ref: '#/components/parameters/ClientKeyHeader',
+        $ref: '#/components/parameters/DeviceSerialHeader'
+      ]
+      responses:
+        '200':
+          description: Response containg list of categories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Categories'
+              
+        '403':
+            description: An incorrect API Key or device cannot be recognised
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorItem'
+                example: 
+                  message: Access not allowed!
+                  url: /api/v1/csrf-token
+                  code: 403
+                  
+  /products:
+    get:
+      summary: Get all active products
+      description: Single request to fetch all active products as the total number of products won't be more than 100 per store (customer).
+      parameters: [
+        $ref: '#/components/parameters/ClientKeyHeader',
+        $ref: '#/components/parameters/DeviceSerialHeader'
+      ]
+      responses:
+        '200':
+          description: Response containg list of active products 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Products'
+  
+components:
+  parameters:
+    ClientKeyHeader:
+      in: header
+      name: X-Client-Key
+      schema:
+        type: string
+      required: true
+    DeviceSerialHeader:
+      in: header
+      name: X-Device-Serial
+      schema:
+        type: string
+      required: true
+    Xdebug:
+      in: query
+      name: XDEBUG_SESSION_START
+      schema:
+        type: string
+      required: false
+  schemas:
+    ErrorItem:
+      type: object
+      properties:
+        message:
+          type: string
+        url:
+          type: string
+        code: 
+          type: integer
+    DeviceIdentify:
+      type: object
+      properties:
+        serial_number:
+          type: string
+          maxLength: 32
+          nullable: true
+        store_id:
+          type: integer
+          nullable: true
+          
+    DeviceRegistrationRequest:
+      type: object
+      properties: 
+        store_id: 
+          type: integer
+          format: int32
+      example:
+        store_id: 1000
+    DeviceRegistrationResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Device registered successfully
+      
+    Products:
+      type: array
+      items:
+        type: object
+        properties:
+          id: 
+            type: integer
+            format: int32
+          category_id:
+            type: integer
+            format: int32
+          name:
+            type: string
+            maxLength: 100
+          sku:
+            type: string
+            maxLength: 24
+            nullable: true
+          internal_name: 
+            type: string
+            maxLength: 100
+            nullable: true
+          barcode:
+            type: string
+            nullable: true
+          description:
+            type: string
+            nullable: true
+          type:
+            type: string
+            nullable: true
+          best_before_days:
+            type: number
+            minimum: 1
+            maximum: 99
+            nullable: true
+          weight:
+            type: number
+            minimum: 0
+            exclusiveMinimum: true
+            format: double
+            nullable: true
+          price:
+            type: number
+            minimum: 0
+            exclusiveMinimum: true
+            format: float
+            nullable: true
+          serves:
+            type: integer
+            minimum: 0
+            nullable: true
+          serving_size:
+            type: string
+            maxLength: 20
+            nullable: true
+          vegan:
+            type: boolean
+          vegetarian:
+            type: boolean
+          ingredients:
+            type: string
+            nullable: true
+          allergy_advice:
+            type: string
+            maxLength: 200
+            nullable: true
+          caution_text:
+            type: string
+            maxLength: 200
+            nullable: true
+          reheating_instructions:
+            type: string
+            nullable: true
+          assets:
+            type: array
+            items:
+              type: object
+              properties:
+                type:
+                  type: string
+                url: 
+                  type: string
+                  format: uri
+                is_main_image: 
+                  type: boolean
+                  
+          #nutritions
+          added_sugars:
+            type: string
+            nullable: true
+          calcium:
+            type: string
+            nullable: true
+          carbohydrates:
+            type: string
+            nullable: true
+          cholesterol:
+            type: string
+            nullable: true
+          energy:
+            type: string
+            nullable: true
+          fat:
+            type: string
+            nullable: true
+          fibre:
+            type: string
+            nullable: true
+          iron:
+            type: string
+            nullable: true
+          mono:
+            type: string
+            nullable: true
+          poly:
+            type: string
+            nullable: true
+          potassium:
+            type: string
+            nullable: true
+          protein:
+            type: string
+            nullable: true
+          salt:
+            type: string
+            nullable: true
+          saturates:
+            type: string
+            nullable: true
+          sodium:
+            type: string
+            nullable: true
+          starch:
+            type: string
+            nullable: true
+          sugars:
+            type: string
+            nullable: true
+          trans_fat:
+            type: string
+            nullable: true
+          vitamin_d:
+            type: string
+            nullable: true
+          calories:
+            type: string
+            nullable: true
+          
+          
+      example:
+        - id: 1
+          category_id: 2
+          name: Spicy Chicken Katsu Roll
+          sku: 114059
+          internal_name: Spicy Chicken Katsu Roll - New
+          barcode: 5056273500988
+          description: Salmon, Seafood Stick, Avo & Cucumber Roll with Korean Red Pepper & Spicy Mayo
+          type: Ready to Eat
+          best_before_days: 1
+          weight: 100g
+          price: 2.99
+          serves: 1
+          serving_size: 1 roll
+          vegan: false
+          vegetarian: false
+          ingredients: "Cooked rice (water, rice, sugar, spirit vinegar, rice vinegar, salt, rapeseed oil, fructose-glucose syrup, cane molasses), salmon (fish) (14%))"
+          allergy_advice: "Contains: Wheat / Milk / Egg / Mustard / Soybeans / Fish / Crustaceans"
+          caution_text: "Although care has been taken to remove bones, small pieces may remain."
+          reheating_instructions: "Cooking Guidelines (From Chilled) Microwave: Remove from the packaging and place onto a microwavable bowl. Set the vegetable mix aside. Place in the centre of microwave at 700W for 5 minutes or 900w for 4 minutes. Allow to stand for 1 minute. Add the vegetable mix back on the dish. Serve. Oven: Pre-heat oven to 200°C, Fan 180°C, Gas 6. Remove all outer packaging. Set the vegetable mix aside. Place the beef and the rice into an oven proof baking dish. Add 1 table spoon of water on the rice. Cover with a tight-fitting lid. Place the beef mix and the rice on a baking tray in the centre of the oven. Heat the product for 15 minutes or until piping hot. Add the vegetable mix back on the dish. Serve."
+          assets:
+            - type: image
+              url: https://s3.eu-west-2.amazonaws.com/assets.tppf2g-test.com/yosushi/1/89836aa3e5f9486b8a9b37f9750b9bfe_md.jpg
+              is_main_image: true
+            - type: image
+              url: https://s3.eu-west-2.amazonaws.com/assets.tppf2g-test.com/yosushi/1/cupcakes_md.jpg
+              is_main_image: false
+            - type: pdf
+              url: https://s3.eu-west-2.amazonaws.com/assets.tppf2g-test.com/yosushi/1/test.pdf
+              is_main_image: null
+          added_sugars: 1g
+          calcium: 28mg
+          carbohydrates: 55.4g
+          cholesterol: 25g
+          energy: 379.3kj
+          fat: 4.7g
+          fibre: 0.4g
+          iron: 1mg
+          mono: 2.3g
+          poly: 0.4g
+          potassium: 167mg
+          protein: 10.1g
+          salt: 50mg
+          saturates: 1.5g 
+          sodium: 620mg
+          starch: 0.4g
+          sugars: 7.9g
+          trans_fat: 0.1g
+          vitamin_d: 1mcg
+          
+          
+        - id: 2
+          category_id: 3
+          name: Spicy Chicken Katsu Roll 2
+          sku: null
+          internal_name: null
+          barcode: null
+          description: Salmon, Seafood Stick, Avo & Cucumber Roll with Korean Red Pepper & Spicy Mayo
+          type: null
+          best_before_days: 1
+          weight: 100g
+          price: 2.99
+          serves: 1
+          serving_size: null
+          vegan: false
+          vegetarian: false
+          ingredients: "Cooked rice (water, rice, sugar, spirit vinegar, rice vinegar, salt, rapeseed oil, fructose-glucose syrup, cane molasses), salmon (fish) (14%))"
+          allergy_advice: null
+          caution_text: null
+          reheating_instructions: "Cooking Guidelines (From Chilled) Microwave: Remove from the packaging and place onto a microwavable bowl. Set the vegetable mix aside. Place in the centre of microwave at 700W for 5 minutes or 900w for 4 minutes. Allow to stand for 1 minute. Add the vegetable mix back on the dish. Serve. Oven: Pre-heat oven to 200°C, Fan 180°C, Gas 6. Remove all outer packaging. Set the vegetable mix aside. Place the beef and the rice into an oven proof baking dish. Add 1 table spoon of water on the rice. Cover with a tight-fitting lid. Place the beef mix and the rice on a baking tray in the centre of the oven. Heat the product for 15 minutes or until piping hot. Add the vegetable mix back on the dish. Serve."
+          assets:
+            - type: image
+              url: https://s3.eu-west-2.amazonaws.com/assets.tppf2g-test.com/yosushi/1/89836aa3e5f9486b8a9b37f9750b9bfe_md.jpg
+              is_main_image: true
+
+          added_sugars: 1g
+          calcium: 28mg
+          carbohydrates: 55.4g
+          cholesterol: 25g
+          energy: 379.3kj
+          fat: 4.7g
+          fibre: 0.4g
+          iron: 1mg
+          mono: 2.3g
+          poly: 0.4g
+          potassium: 167mg
+          protein: 10.1g
+          salt: 50mg
+      
+    Categories:
+      type: array
+      items:
+        type: object
+        properties:
+          id: 
+            type: integer
+            format: int32
+          name:
+            type: string
+      example:
+        - id: 1
+          name: Hot Food
+        - id: 2
+          name: Mexican
+        - id: 3
+          name: Japanese
+    
+    Stores:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            format: int32
+            readOnly: true
+          store_number:
+            type: integer
+            format: int32
+            nullable: true
+          name:
+            type: string
+          address_line_1:
+            type: string
+          address_line_2:
+            type: string
+            nullable: true
+          address_line_3:
+            type: string
+            nullable: true
+          city:
+            type: string  
+          postcode:
+            type: string
+          country:
+            type: string
+            nullable: true
+          phone:
+            type: string
+            nullable: true
+          email:
+            type: string
+            format: email
+            nullable: true
+          close_date:
+            type: string
+            format: date
+            nullable: true
+      example:
+        - id: 123
+          store_number: 1000
+          name: Yoshushi Leeds
+          address_line_1: 1 Station Rd.
+          address_line_2: null,
+          address_liine_3: null,
+          city: Leeds
+          postcode: LS1 2WR
+          country: null,
+          phone: 01132343456
+          email: yoleeds@yosushi.com
+          close_date: '2021-05-26'
+        - id: 345
+          store_number: 1005
+          name: Yoshushi London
+          address_line_1: Oxford Street
+          address_line_2: null,
+          address_liine_3: null,
+          city: London
+          postcode: SW1 2EG
+          country: null,
+          phone: null
+          email: yolondon@yosushi.com
+          close_date: null

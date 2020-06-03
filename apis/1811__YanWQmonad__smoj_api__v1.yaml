@@ -1,0 +1,321 @@
+openapi: 3.0.0
+info:
+  version: 'v1'
+  title: 'SMOJ API'
+  description: |
+    A API proxy to SMOJ.
+    
+    > Note: Timestamp is millisecond.
+
+paths:
+  /:
+    get:
+      summary: API welcome page
+      description: A static simple page, but not cached, can be used to check if online
+      responses:
+        '200':
+          description: A welcome message
+          content:
+            text/plain:
+              schema:
+                type: string
+  
+  /submissions:
+    get:
+      summary: Get submissions
+      description: Get SMOJ submissions by page, can apply filters
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: page index
+        - in: query
+          name: problem
+          schema:
+            type: integer
+          required: false
+          description: problem filter
+        - in: query
+          name: username
+          schema:
+            type: string
+          required: false
+          description: user filter
+      responses:
+        '200':
+          description: List of submissions
+          content:
+            application/json:
+              schema:
+                properties:
+                  page:
+                    $ref: '#/components/schemas/Page'
+                  submissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Submission'
+  
+  /contests:
+    get:
+      summary: Get contests list
+      description: Get contest list by page
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: page index
+      responses:
+        '200':
+          description: List of contests summary
+          content:
+            application/json:
+              schema:
+                properties:
+                  page:
+                    $ref: '#/components/schemas/Page'
+                  contests:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContestPreview'
+  
+  /contest/{id}:
+    get:
+      summary: Get contest detail
+      description: Get contest detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: contest id
+      responses:
+        '200':
+          description: Contest detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contest'
+  
+  /contest/{id}/result:
+    get:
+      summary: Get contest result
+      description: Get contest result
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: contest id
+        - in: query
+          name: after_contest
+          schema:
+            type: boolean
+            default: false
+          description: Show the original result or the result of corrected submissions
+      responses:
+        '200':
+          description: Contest result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContestResult'
+
+components:
+  schemas:
+    Page:
+      properties:
+        item_count:
+          type: integer
+        page_size:
+          type: integer
+        page_count:
+          type: integer
+        page_index:
+          type: integer
+        has_next:
+          type: boolean
+        has_prev:
+          type: boolean
+      required:
+        - item_count
+        - page_size
+        - page_count
+        - page_index
+        - has_next
+        - has_prev
+    
+    Submission:
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        problem_id:
+          type: integer
+        timestamp:
+          type: integer
+        compile_message:
+          type: string
+          nullable: true
+        result:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/TestcaseResult'
+        score:
+          type: integer
+          nullable: true
+          description: If null, it means the score is not allowed to fetch yet
+        contest_id:
+          type: integer
+          nullable: true
+          description: The contest that this submission belong to
+        in_contest:
+          type: boolean
+          description: Whether the submission is submitted when contest is running
+      required:
+        - id
+        - username
+        - problem_id
+        - timestamp
+        - compile_message
+        - result
+        - score
+        - contest_id
+        - in_contest
+    
+    TestcaseResult:
+      properties:
+        result:
+          type: string
+        time:
+          type: integer
+          nullable: true
+          description: Will be null if result is "Compile Error" or so on
+        memory:
+          type: integer
+          nullable: true
+        score:
+          type: integer
+      required:
+        - result
+        - time
+        - memory
+        - score
+    
+    ContestPreview:
+      description: Contest summary without details
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        smoj_id:
+          type: integer
+        start_time:
+          type: integer
+        end_time:
+          type: integer
+        mode:
+          type: integer
+          enum: [0, 1]
+          description: 0 is ACM, 1 is OI mode yet
+        fetched:
+          type: boolean
+      required:
+        - id
+        - name
+        - smoj_id
+        - start_time
+        - end_time
+        - mode
+        - fetched
+        
+    Contest:
+      description: Contest details
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        smoj_id:
+          type: integer
+        start_time:
+          type: integer
+        end_time:
+          type: integer
+        mode:
+          type: integer
+          enum: [0, 1]
+          description: 0 is ACM, 1 is OI mode yet
+        participants:
+          type: array
+          nullable: true
+          description: Will be null if we can\'t fetch the details 
+          items:
+            type: string
+        problems:
+          type: array
+          nullable: true
+          items:
+            type: integer
+        fetched:
+          type: boolean
+      required:
+        - id
+        - name
+        - smoj_id
+        - start_time
+        - end_time
+        - mode
+        - participants
+        - problems
+        - fetched
+    
+    ContestResult:
+      description: Contest result, like a 2D array
+      properties:
+        problems:
+          type: array
+          items:
+            type: integer
+        participants:
+          type: array
+          items:
+            type: string
+        table:
+          description: username to result mapping
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              username:
+                type: string
+              score:
+                type: integer
+              results:
+                type: object
+                description: problem id to score mapping. null if no submission
+                additionalProperties:
+                  type: integer
+                  nullable: true
+            required:
+              - username
+              - score
+              - results
+      required:
+        - problems
+        - participants
+        - table
+
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/YanWQmonad/smoj_api/v1
+  - description: Production API proxy to SMOJ
+    url: https://smoj.monadx.com/api

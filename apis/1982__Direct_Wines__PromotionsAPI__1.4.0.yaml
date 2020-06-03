@@ -1,0 +1,366 @@
+openapi: 3.0.2
+info:
+  version: "1.4.0"
+  title: Promotions API
+  description: |
+       This API provides a set of operations to:-
+       - Discover information about available promotions
+       - Allow an individual to manage their current set of active promotions
+  contact:
+    email: apisupport@laithwaiteswine.com       
+servers:
+# Added by API Auto Mocking Plugin
+  - url: '/api'
+    description: This Website
+  - url: https://virtserver.swaggerhub.com/Direct_Wines/PromotionsAPI/1.4.0
+    description: SwaggerHub API Auto Mocking
+tags:
+  - name: Promotions API Suite
+  
+# =========================================================================================
+#  API methods start here
+# =========================================================================================  
+paths:
+  '/user/promotions/active-promotions':
+    get:
+      tags:
+        - Promotions API Suite
+      summary: >-
+        List active promotions for the current user
+      description: |
+        This method lists all of the active promotions for the current user.
+        
+        Active promotions are those which have been granted to the customer normally by means of applying a discount voucher (a.k.a. a 'discount coupon)
+      operationId: getActivePromotions
+      responses:
+        '200':
+          description: successful operation
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrantedPromotionsResponse'
+        '422':
+           description: A validation error occured when calling this method. 
+           content: 
+            application/json:
+              schema:
+                 $ref: 'https://api.swaggerhub.com/apis/Direct_Wines/CommonAPIModelsSuite/1.2.0#/components/schemas/CommonResponseHeader'  
+                 
+  '/user/promotions/active-promotions/{id}':
+    delete:
+      tags:
+        - Promotions API Suite
+      summary: >-
+        Revoke active promotion
+      description: |
+        Revoke an active promotion by removing it from the customers list of active promotions.
+        
+        The revised list of active promotions is then returned
+
+      operationId: deleteActivePromotion
+      parameters:
+        - in: path
+          name: id
+          description: The promotion id to remove from the active list
+          required: true
+          schema:
+            type: string
+            example: 'epromo2460033'
+      responses:
+        '200':
+          description: The promotion was successfully removed.
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrantedPromotionsResponse'
+        '403':
+          description: >-
+           The caller is not authorised to use this method in this channel.
+        '422':
+           description:  |
+              A validation error occured when calling this method.
+              e.g.  This may indicate the promotion id may invalid.
+              
+              The response payload will provide more information.
+           content: 
+            application/json:
+              schema:
+                 $ref: 'https://api.swaggerhub.com/apis/Direct_Wines/CommonAPIModelsSuite/1.2.0#/components/schemas/CommonResponseHeader'
+# --------------------------------------------------------------------------------------                 
+  '/promotions/bulk-promotions/{itemCode}':
+    get:
+      tags:
+        - Promotions API Suite
+      summary: >-
+        Return the Bulk Promotions that are available if the user purchases a
+        particular item code
+      description: ''
+      operationId: getBulkPromotionsForItem
+      parameters:
+        - in: path
+          name: itemCode
+          description: The item code to query.
+          required: true
+          schema:
+            type: string
+            example: 0022618
+      responses:
+        '200':
+          description: successful operation
+          content: 
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromotionsResponse'
+        '422':
+           description: A validation error occured when calling this method. 
+           content: 
+            application/json:
+              schema:
+                 $ref: 'https://api.swaggerhub.com/apis/Direct_Wines/CommonAPIModelsSuite/1.2.0#/components/schemas/CommonResponseHeader'  
+
+# ------------------------------------------------------------------------------------------------------------------
+  /promotions/bulk-promotions/order:
+    get:
+      tags:
+        - Promotions API Suite
+      summary: Return Bulk Promotion for order
+      description: ''
+      operationId: getBulkPromotionsForOrder
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: >-
+                  https://api.swaggerhub.com/apis/Direct_Wines/CommonAPIModelsSuite/1.2.0#/components/schemas/ApiResponse
+components:
+  schemas:
+# ==============================================================================  
+#   Response Objects
+# ==============================================================================  
+    PromotionsResponse:
+      allOf:
+        - $ref: 'https://api.swaggerhub.com/apis/Direct_Wines/CommonAPIModelsSuite/1.2.0#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            response:
+                $ref: '#/components/schemas/Promotions'
+                
+    GrantedPromotionsResponse:
+      allOf:
+        - $ref: 'https://api.swaggerhub.com/apis/Direct_Wines/CommonAPIModelsSuite/1.2.0#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            response:
+                $ref: '#/components/schemas/GrantedPromotions'                
+                
+                
+# ==============================================================================  
+#   Data Objects/Beans
+# ==============================================================================   
+
+    Promotions:
+      type: object
+      properties:
+        promotionItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/Promotion'
+            
+    GrantedPromotions:
+      type: object
+      properties:
+        grants:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrantedPromotion'            
+
+# -------------------------------------------------------------------------------
+    GrantedPromotion:
+      description: | 
+         A Granted Promotion provides details about a promotion that an individual customer has previously been granted.
+         
+         This consists of 2 pieces on information:-
+         - Information about the promotion itself
+         - Status Information,  which provides detaiils about when the promotion was granted to the current user
+      type: object
+      properties:
+        promotion:
+          $ref: '#/components/schemas/Promotion'  
+        usage:
+          $ref: '#/components/schemas/PromotionUsageStatus'    
+
+# -------------------------------------------------------------------------------
+    PromotionUsageStatus:
+      type: object
+      properties:
+        grantedDate:
+          description:  |
+            The date when the promotion was granted.
+            This in ISO 8601 format.
+          type: string
+          format: date-time
+          example: "2019-09-01 01:00:00"
+          readOnly: true         
+        expirationDate:
+          description: >
+            The date when the promotion will expire and the user will no longer be able to use it.
+            Note that this date may be different to the end-date on the promotion itself.
+            
+            
+            Very often a promotion is granted up to a specific date.   e.g.   The 'August Offers' promotion might be offered up to 31st August
+            However the customer is then given a grace period in which to use that promotion and that is this expiration date.
+            
+            
+            Where no date is available,  them it implies that there is no expiration date by which the promotion must be used.
+            
+            
+            This in ISO 8601 format.
+          type: string
+          format: date-time
+          example: "2019-12-31 01:00:00"
+          readOnly: true   
+        numberOfUses:
+          description:  |
+            This is the number of times that the customer can use this promotion
+            Generally a promotion can only be used once,  but multi use promotions are sometimes offered.
+            In that scenarion,  every time the promotion is used this property is decremented
+            Once the value is zero, it is considered 'used up' and the promtion is removed from the active list.
+          type: integer
+          format: int32
+          example: 1
+          readOnly: true            
+          
+
+    Promotion:
+      type: object
+      properties:
+        promoId:
+          type: string
+          description: The internal promotion id
+          example: 'epromo2460033'
+        promoName:
+          type: string
+          description: The name of the promotion
+          example: 'Waxed Bat Two case deal - 0125018'
+          readOnly: true
+        description:
+          type: string
+          description: A description about the purpose of the promotion.   This is often used as a web headline
+          example: 'BUY 24 bottles for £191.76 - Pay just £7.99 a bottle - SAVE £72'
+          readOnly: true
+        startDate:
+          description:  |
+            The start date-time when the promotion comes into effect.
+            This in ISO 8601 format.
+            
+            If no date is present then the promotion is assumed to be always in effect.
+          type: string
+          format: date-time
+          example: "2019-08-01 01:00:00"
+          readOnly: true         
+        endDate:
+          description:  |
+            The end date-time when the promotion is no longer available.
+            This in ISO 8601 format.
+            
+            If no date is present then the promotion is assumed to be always in effect.
+          type: string
+          format: date-time
+          example: "2019-09-30 23:59:00"
+          readOnly: true           
+        channel:
+          type: string
+          enum: 
+          - 'All Channels'
+          - 'WebSite Only'
+          - 'CallCentre Only'
+          description: |
+             A description about which channel the promotion applies to.  Valid values are:-
+             * `All Channels` - The promotion is available on the website and via the telephone call centre.
+             * `WebSite Only' - The promotion is available via the website only.
+             * `CallCentre Only' - The promotion is available via a phone call to the call centre only.
+          example: 'All Channels'
+          readOnly: true
+        locales:  
+          type: array
+          items:
+            type: string
+          example: ['en_GB_UKLAIT', 'en_GB_UKCLUB']  
+          readOnly: true           
+        bulkUIRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkPromotionRuleSummary'
+          readOnly: true           
+        tierUIRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/TierPromotionRuleSummary'
+          readOnly: true           
+# -------------------------------------------------------------------------------
+    BulkPromotionRuleSummary:
+      type: object
+      properties:
+        discountType:
+          type: string
+          enum:
+          - 'Fixed Price'
+          - 'Amount Off'
+          - 'Percent Off'
+          description: |
+             This defines the type of the promotion discount
+             * `Fixed Price` - The promotion will give the item at a special discounted fixed price.
+             * `Amount Off` - The promotion will give an amount off the current SSP.
+             * `Percent Off` - The promotion will give a percentage off the current SSP.
+          readOnly: true           
+        amount:
+          description: |
+            The cost of the item after applying the promtion
+          type: number
+          readOnly: true
+          format: double
+          example: 69.99          
+        qualifyingItems:  
+          type: array
+          items:
+            type: string
+          readOnly: true           
+        itemsToBeDiscounted:  
+          type: array
+          items:
+            type: string
+          readOnly: true           
+# -------------------------------------------------------------------------------------
+    TierPromotionRuleSummary:
+      type: object
+      properties:
+        discountType:
+          type: string
+          enum:
+          - 'Fixed Price'
+          - 'Amount Off'
+          - 'Percent Off'
+          description: |
+             This defines the type of the promotion discount
+             * `Fixed Price` - The promotion will give the item at a special discounted fixed price.
+             * `Amount Off` - The promotion will give an amount off the current SSP.
+             * `Percent Off` - The promotion will give a percentage off the current SSP.
+          example: 'Fixed Price'   
+          readOnly: true           
+        amount:
+          description: |
+            The itemcost of the item when the customer purchases a qunatity that falls into this tier range
+          type: number
+          readOnly: true
+          format: double
+          example: 7.99          
+        itemCode:  
+          type: string
+          example: '0125018'
+          readOnly: true           
+        quantity:  
+          type: integer
+          example: 24
+          readOnly: true

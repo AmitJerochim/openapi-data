@@ -1,0 +1,669 @@
+openapi: 3.0.0
+info:
+  description: "These endpoints return utilization and status data from Ecofit-enabled equipment. Units used are 'seconds' for time, and 'meters' for distance. To use, either provide an array of serial numbers, an array of Ecofit equipment IDs, or a single Ecofit facility ID. Response size is limited to 6Mb, so gzip compression is recommended for larger requests."
+  version: "v1.0"
+  title: Ecofit Data API
+  contact:
+    name: Ecofit Networks Inc.
+    url: 'https://www.ecofitnetworks.com/'
+    email: info@myecofit.com
+paths:
+  /v1/equipment/daily:
+    post:
+      tags:
+        - search by equipment
+      summary: Daily equipment utilization data
+      description: | 
+        Returned in local facility time. 
+        Accepts an array of ecofit equipment_id (int) or serial_number (str) as 'identifier'. 
+        'end' timestamp can be nulled to automatically set it to today's date.
+      parameters:
+        - in: header
+          name: Accept-Encoding
+          schema:
+            type: string
+            default: "gzip"
+      responses:
+        '200':
+          description: 200 response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utDailyResponse'
+        default:
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'                
+      security:
+        - api_key: []
+      requestBody:
+        $ref: '#/components/requestBodies/byEquipmentDateRequest'
+  /v1/equipment/hourly:
+    post:
+      tags:
+        - search by equipment
+      summary: Hourly equipment utilization data
+      description: | 
+        Returned in UTC time. 
+        Accepts an array of ecofit equipment_id (int) or serial_number (str) as 'identifier'. 
+        'end' timestamp can be nulled to automatically set it to today's date.
+      parameters:
+        - in: header
+          name: Accept-Encoding
+          schema:
+            type: string
+            default: "gzip"
+      responses:
+        '200':
+          description: 200 response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utHourlyResponse'
+        default:
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'                
+      security:
+        - api_key: []
+      requestBody:
+        $ref: '#/components/requestBodies/byEquipmentDateRequest'
+  /v1/equipment/lifetime:
+    post:
+      tags:
+        - search by equipment
+      summary: Lifetime equipment utilization data
+      description: | 
+        Accepts an array of ecofit equipment_id (int) or serial_number (str) as 'identifier'. 
+        Dates not required; 'start' and 'end' can be nulled.
+      parameters:
+        - in: header
+          name: Accept-Encoding
+          schema:
+            type: string
+            default: "gzip"
+      responses:
+        '200':
+          description: 200 response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utLifetimeResponse'
+        default:
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'                
+      security:
+        - api_key: []
+      requestBody:
+        $ref: '#/components/requestBodies/byEquipmentRequest'
+  /v1/equipment/status:
+    post:
+      tags:
+        - search by equipment
+      summary: Status info from given equipment.
+      description: | 
+        Returned in UTC time. 
+        Accepts an array of ecofit equipment_id (int) or serial_number (str) as 'identifier'. 
+        'end' timestamp can be nulled to automatically set it to today's date. Possible statuses are 0 - Offline, 1 - Low Usage, 2 - Good, 3 - Override/No Status.
+      parameters:
+        - in: header
+          name: Accept-Encoding
+          schema:
+            type: string
+            default: "gzip"
+      responses:
+        '200':
+          description: 200 response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/statusResponse'
+        default:
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'                
+      security:
+        - api_key: []
+      requestBody:
+        $ref: '#/components/requestBodies/byEquipmentDateRequest'
+  /v1/equipment/status/last:
+    post:
+      tags:
+        - search by equipment
+      summary: Last reported status info from given equipment.
+      description: >
+        Returned in UTC time. 
+        Accepts an array of ecofit equipment_id (int) or serial_number (str).
+        Dates not required; 'start' and 'end' can be nulled. Possible statuses are 0 - Offline, 1 - Low Usage, 2 - Good, 3 - Override/No Status.
+      parameters:
+        - in: header
+          name: Accept-Encoding
+          schema:
+            type: string
+            default: "gzip"
+      responses:
+        '200':
+          description: 200 response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/statusResponse'
+        default:
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'                
+      security:
+        - api_key: []
+      requestBody:
+        $ref: '#/components/requestBodies/byEquipmentRequest'
+  /v1/facility/daily:
+    post:
+      tags:
+        - search by facility
+      summary: Daily utilization data from all equipment in a facility.
+      description: |
+        Data returned in local facility time. 
+        Accepts an ecofit facility_id (int). 
+        'end' timestamp can be nulled to automatically set it to today's date.
+      parameters:
+        - in: header
+          name: Accept-Encoding
+          schema:
+            type: string
+            default: "gzip"
+      responses:
+        '200':
+          description: 200 response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utDailyResponse'
+        default:
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'                
+      security:
+        - api_key: []
+      requestBody:
+        $ref: '#/components/requestBodies/byFacilityDateRequest'
+  /v1/facility/hourly:
+    post:
+      tags:
+        - search by facility
+      summary: Hourly utilization data from all equipment in a facility.
+      description: |
+        Data returned in UTC. 
+        Accepts an ecofit facility_id (int). 
+        'end' timestamp can be nulled to automatically set it to today's date.
+      parameters:
+        - in: header
+          name: Accept-Encoding
+          schema:
+            type: string
+            default: "gzip"        
+      responses:
+        '200':
+          description: 200 response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utHourlyResponse'
+        default:
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'                
+      security:
+        - api_key: []
+      requestBody:
+        $ref: '#/components/requestBodies/byFacilityDateRequest'
+  /v1/facility/lifetime:
+    post:
+      tags:
+        - search by facility
+      summary: Lifetime utilization data from all equipment in a facility.
+      description: |
+        Accepts an ecofit facility_id (int). 
+        Dates not required; 'start' and 'end' can be nulled.
+      parameters:
+        - in: header
+          name: Accept-Encoding
+          schema:
+            type: string
+            default: "gzip"        
+      responses:
+        '200':
+          description: 200 response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utLifetimeResponse'
+        default:
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'                
+      security:
+        - api_key: []
+      requestBody:
+        $ref: '#/components/requestBodies/byFacilityRequest'
+  /v1/facility/status:
+    post:
+      tags:
+        - search by facility
+      summary: Status data from all equipment in a facility.
+      description: |
+        Data returned in UTC in 4-hour intervals. 
+        Accepts an ecofit facility_id (int). 
+        'end' timestamp can be nulled to automatically set it to today's date. Possible statuses are 0 - Offline, 1 - Low Usage, 2 - Good, 3 - Override/No Status.
+      parameters:
+        - in: header
+          name: Accept-Encoding
+          schema:
+            type: string
+            default: "gzip"        
+      responses:
+        '200':
+          description: 200 response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/statusResponse'
+        default:
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'                
+      security:
+        - api_key: []
+      requestBody:
+        $ref: '#/components/requestBodies/byFacilityDateRequest'
+  /v1/facility/status/last:
+    post:
+      tags:
+        - search by facility
+      summary: Last reported status info from given equipment.
+      description: |
+        Data returned in UTC. 
+        Accepts an ecofit facility_id (int). 
+        Dates not required; 'start' and 'end' can be nulled. Possible statuses are 0 - Offline, 1 - Low Usage, 2 - Good, 3 - Override/No Status.
+      parameters:
+        - in: header
+          name: Accept-Encoding
+          schema:
+            type: string
+            default: "gzip"        
+      responses:
+        '200':
+          description: 200 response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/statusResponse'
+        default:
+          description: Error response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/errorResponse'
+      security:
+        - api_key: []
+      requestBody:
+        $ref: '#/components/requestBodies/byFacilityRequest'
+servers:
+  - url: 'https://api.myecofit.com/data'
+components:
+  requestBodies:
+    byEquipmentRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/byEquipmentRequest'
+          examples:
+            by_serial:
+              value: {'identifiers': ['SN00001', 'SN00002', 'SN00003']}
+            by_eqid:
+              value: {'identifiers': [343, 2401, 999]}
+      required: true
+    byEquipmentDateRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/byEquipmentDateRequest'
+      required: true
+    byFacilityDateRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/byFacilityDateRequest'
+      required: true
+    byFacilityRequest:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/byFacilityRequest'
+      required: true
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: x-api-key
+      in: header
+  schemas:
+    errorResponse:
+      title: error
+      type: object
+      properties:
+        message:
+          type: string
+    statusResponse:
+      title: status
+      type: array
+      items:
+        type: object
+        properties:
+          data:
+            type: array
+            items:
+              type: object
+              properties:
+                status_datetime:
+                  type: string
+                status:
+                  type: integer
+          serial_number:
+            type: string
+          equipment_id:
+            type: integer
+        required:
+          - data
+          - equipment_id
+          - serial_number
+    utHourlyResponse:
+      title: utilization_hourly
+      type: array
+      items:
+        type: object
+        properties:
+          equipment_id:
+            type: integer
+          equipment_category_id:
+            type: integer
+            nullable: true
+          equipment_subtype_id:
+            type: integer
+            nullable: true
+          alias:
+            type: string
+          serial_number:
+            type: string
+          tech_notes:
+            type: string
+            nullable: true
+          offset_ut:
+            type: integer
+          offset_ud:
+            type: integer
+          station_id:
+            type: integer
+            nullable: true
+          mode:
+            type: integer
+          brand_id:
+            type: integer
+            nullable: true
+          brand_name:
+            type: string
+            nullable: true
+          model_id:
+            type: integer
+            nullable: true
+          model_name:
+            type: string
+            nullable: true
+          equipment_category_name:
+            type: string
+            nullable: true
+          equipment_type_id:
+            type: integer
+            nullable: true
+          equipment_type_name:
+            type: string
+            nullable: true
+          equipment_subtype_name:
+            type: string
+            nullable: true
+          data:
+            $ref: '#/components/schemas/hourlyEqData'
+    hourlyEqData:
+      type: array
+      required:
+        - gateway_id
+        - facility_id
+        - utilization_map
+        - equipment_uuid
+        - utilization_time
+        - utilization_distance
+        - sensor_reference_code
+        - data_datetime
+        - gateway_reference_code
+        - gateway_hardware_id
+        - sensor_hardware_id
+        - sensor_id
+        - window_size
+        - map_size
+        - submit_time
+        - button_accel_threshold
+        - button_status
+        - button_tx_period
+      items:
+        type: object
+        properties: 
+          gateway_id:
+            type: integer
+            nullable: true
+          facility_id:
+            type: integer
+            nullable: true
+          utilization_map:
+            type: string
+            nullable: true
+          equipment_uuid:
+            type: string
+            nullable: true
+          utilization_time:
+            type: integer
+            nullable: true
+          utilization_distance:
+            type: integer
+            nullable: true
+          sensor_reference_code:
+            type: string
+            nullable: true
+          data_datetime:
+            type: string
+            nullable: true
+          gateway_reference_code:
+            type: string
+            nullable: true
+          gateway_hardware_id:
+            type: string
+            nullable: true
+          sensor_hardware_id:
+            type: string
+            nullable: true
+          sensor_id:
+            type: integer
+            nullable: true
+          window_size:
+            type: integer
+            nullable: true
+          map_size:
+            type: integer
+            nullable: true
+          submit_time:
+            type: string
+            nullable: true
+          button_accel_threshold:
+            type: string
+            nullable: true
+          button_status:
+            type: string
+            nullable: true
+          button_tx_period:
+            type: string
+            nullable: true
+          metrics:
+            type: array
+            items:
+              type: object
+              required:
+                - id
+                - value
+              properties:
+                id:
+                  type: string
+                value:
+                  type: integer
+    byFacilityDateRequest:
+      type: object
+      required:
+        - facility_id
+        - start
+        - end
+      properties:
+        facility_id:
+          type: integer
+          example: 50
+        start:
+            type: string
+            nullable: false
+            pattern: '^\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}$'
+            example: '2019-10-31 14:30:00'
+        end:
+            type: string
+            nullable: true
+            pattern: '^\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}$'
+            example: '2019-10-31 14:30:00'
+      title: by_facility_daterange
+    byEquipmentRequest:
+      type: object
+      required: 
+        - identifiers
+      properties:
+        identifiers:
+          type: array
+          example: ["SN001", "02020002", "SPEC00023"]
+          items: 
+            oneOf:
+              - type: string
+              - type: integer
+      title: by_equipment
+    byFacilityRequest:
+      type: object
+      required:
+        - facility_id
+      properties:
+        facility_id:
+          type: integer
+          example: 50
+      title: by_facility
+    utLifetimeResponse:
+      title: utilization_lifetime
+      type: array
+      items:
+        type: object
+        properties:
+          data:
+            type: object
+            properties: {}
+          offset_ut:
+            type: integer
+          serial_number:
+            type: string
+          mode:
+            type: integer
+          alias:
+            type: string
+          offset_ud:
+            type: integer
+          equipment_id:
+            type: integer
+        required:
+          - alias
+          - data
+          - equipment_id
+          - mode
+          - offset_ud
+          - offset_ut
+          - serial_number
+    utDailyResponse:
+      title: utilization_daily
+      type: array
+      items:
+        type: object
+        properties:
+          offset_ut:
+            type: integer
+          serial_number:
+            type: string
+          brand_name:
+            type: string
+          brand_id:
+            type: integer
+          mode:
+            type: integer
+          alias:
+            type: string
+          offset_ud:
+            type: integer
+          equipment_id:
+            type: integer
+        required:
+          - alias
+          - brand_id
+          - brand_name
+          - equipment_id
+          - mode
+          - offset_ud
+          - offset_ut
+          - serial_number
+    byEquipmentDateRequest:
+      type: object
+      required:
+        - identifiers
+      properties:
+        identifiers:
+          type: array
+          example: ["SN001", "02020002", "SPEC00023"]
+          items: 
+            oneOf:
+              - type: string
+              - type: integer
+        start:
+            type: string
+            nullable: false
+            pattern: '^\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}$'
+            example: '2019-10-31 14:30:00'
+        end:
+            type: string
+            nullable: true
+            pattern: '^\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}$'
+            example: '2019-10-31 14:30:00'
+
+      title: by_equipment_daterange

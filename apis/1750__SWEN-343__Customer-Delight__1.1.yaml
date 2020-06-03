@@ -1,0 +1,395 @@
+openapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/SWEN-343/Customer-Delight/1.0.0
+  - description: SwaggerHub API Auto Mocking
+    url: https://localhost:8081/api/v1
+info:
+  description: The Kennware Customer Delight API
+  version: "1.1"
+  title: Simple Customer Delight API
+  contact:
+    email: axb6999@rit.edu
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: employees
+    description: Operations available to Customer Delight employees
+  - name: consumers
+    description: Operations available to regular consumers
+paths:
+  /tickets:
+    get:
+      tags:
+        - employees
+      summary: searches for tickets
+      operationId: getTickets
+      description: |
+        By passing in the appropriate options, you can filter for
+        available tickets in the system
+      parameters:
+        - in: query
+          name: lastName
+          description: pass an optional last name for filtering by like names
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: status
+          description: pass an optional ticket status to filter by
+          schema:
+            $ref: '#/components/schemas/TicketStatusEnum'
+        - in: query
+          name: agent
+          description: pass an optional assigned agent to filter by
+          schema:
+            type: string
+      responses:
+        '200':
+          description: tickets matching filter criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ticket'
+    post:
+      tags:
+        - employees
+      summary: adds a ticket
+      operationId: addTicket
+      description: Adds a ticket to the system
+      responses:
+        '200':
+          description: item created
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Ticket'
+        '500':
+          description: 'invalid input, object invalid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketCreationInput'
+        description: Ticket to add
+  /ticket/edit/{id}:
+    post:
+      tags:
+        - employees
+      summary: edits a ticket
+      operationId: editTicket
+      description: Edits a ticket in the system
+      parameters:
+        - in: path
+          name: id
+          description: pass a ticket UUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: item edited
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Ticket'
+        '500':
+          description: 'Ticket with that UUID does not exist'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketEditInput'
+        description: Properties to edit
+  /ticket/setStatus/{id}:
+    post:
+      tags:
+        - employees
+      summary: edits a ticket's status
+      operationId: editTicketStatus
+      description: Edits a ticket's status in the system
+      parameters:
+        - in: path
+          name: id
+          description: pass a ticket UUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: item edited
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Ticket'
+        '500':
+          description: 'Ticket with that UUID does not exist'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketStatus'
+        description: Status to set
+  /ticket/initStatus/{id}:
+    post:
+      tags:
+        - employees
+      summary: Initializes a tickets status and handling
+      operationId: initTicketStatus
+      description: Initializes a tickets status and handling
+      parameters:
+        - in: path
+          name: id
+          description: pass a ticket UUID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: item edited
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Ticket'
+        '500':
+          description: 'Ticket with that UUID does not exist'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductStatusResponse'
+  /ticket/{lastName}/{uuid}:
+    get:
+      tags:
+        - consumers
+      summary: gets a specific ticket based on last name and UUID
+      operationId: getTicket
+      description: |
+        By passing in the appropriate options, you can get a ticket by lastName and UUID
+      parameters:
+        - in: path
+          name: lastName
+          description: pass a last name
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: uuid
+          description: pass a uuid
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 'd290f1ee-6c54-4b01-90e6-d701748f0851'
+      responses:
+        '200':
+          description: ticket with given last name and UUID
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/Ticket'
+        '500':
+          description: "Ticket with that lastName and UUID does not exist"
+components:
+  schemas:
+    TicketStatusEnum:
+      type: string
+      enum: [
+              "OPEN",
+              "SCHEDULED_FOR_RETURN",
+              "RECEIVED",
+              "FIXING",
+              "ORDER_SHIPPED_TO_CUSTOMER",
+              "REFUND_ISSUED",
+              "CLOSED"
+            ]
+      example: 'OPEN'
+    ReturnOrRefundEnum:
+      type: string
+      enum: [
+              "RETURN",
+              "REFUND",
+            ]
+      example: 'RETURN'
+    OrderHandling:
+      type: string
+      enum: [
+              "DISASSEMBLY",
+              "FIX",
+            ]
+      example: 'FIX'
+    TicketCreationInput:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - wearableName
+        - orderNumber
+        - issue
+      properties:
+        firstName:
+          type: string
+          example: 'John'
+        lastName:
+          type: string
+          example: 'Smith'
+        wearableName:
+          type: string
+          example: 'Healthies01'
+        rmaNumber:
+          type: number
+          example: '1234'
+        orderNumber:
+          type: number
+          example: 1421223
+        address:
+          type: string
+          example: '1 Lomb Memorial Dr Ropchester NY, 14586'
+        agent:
+          type: string
+          example: 'agent123'
+        issue:
+          type: string
+          example: "My device won't charge"
+        status:
+            $ref: '#/components/schemas/TicketStatusEnum'
+    TicketEditInput:
+      type: object
+      properties:
+        firstName:
+          type: string
+          example: 'John'
+        lastName:
+          type: string
+          example: 'Smith'
+        wearableName:
+          type: string
+          example: 'Healthies01'
+        orderNumber:
+          type: number
+          example: 1421223
+        address:
+          type: string
+          example: '1 Lomb Memorial Dr Ropchester NY, 14586'
+        agent:
+          type: string
+          example: 'agent123'
+        issue:
+          type: string
+          example: "My device won't charge"
+        status:
+          $ref: '#/components/schemas/TicketStatusEnum'
+    Ticket:
+      type: object
+      required:
+        - id
+        - createdAt
+        - updatedAt
+        - firstName
+        - lastName
+        - wearableName
+        - orderNumber
+        - issue
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 'd290f1ee-6c54-4b01-90e6-d701748f0851'
+        createdAt:
+          type: string
+          format: date-time
+          example: '2019-10-15T17:50:37.147+0000'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2019-10-15T17:50:37.147+0000'
+        firstName:
+          type: string
+          example: 'John'
+        lastName:
+          type: string
+          example: 'Smith'
+        wearableName:
+          type: string
+          example: 'Healthies01'
+        rmaNumber:
+          type: number
+          example: '12334'
+        orderNumber:
+          type: number
+          example: 1421223
+        address:
+          type: string
+          example: '1 Lomb Memorial Dr Ropchester NY, 14586'
+        agent:
+          type: string
+          example: 'agent123'
+        issue:
+          type: string
+          example: "My device won't charge"
+        status:
+          $ref: '#/components/schemas/TicketStatusEnum'
+        internalHandling:
+          $ref: '#/components/schemas/OrderHandling'
+        handling:
+          $ref: '#/components/schemas/ReturnOrRefundEnum'
+    TicketStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/TicketStatusEnum'
+    ProductStatusResponse:
+      type: object
+      required:
+        - q1
+        - q2
+        - q3
+        - q4
+        - q5
+        - q6
+        - q7
+        - q8
+        - q9
+        - returnOrRefund
+      properties:
+        q1:
+          type: boolean
+          example: true
+        q2:
+          type: boolean
+          example: false
+        q3:
+          type: boolean
+          example: true
+        q4:
+          type: boolean
+          example: false
+        q5:
+          type: boolean
+          example: true
+        q6:
+          type: boolean
+          example: false
+        q7:
+          type: boolean
+          example: true
+        q8:
+          type: boolean
+          example: false
+        q9:
+          type: boolean
+          example: True
+        returnOrRefund:
+          $ref: '#/components/schemas/ReturnOrRefundEnum'

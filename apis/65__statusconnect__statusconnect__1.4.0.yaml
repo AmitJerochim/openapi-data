@@ -1,0 +1,1521 @@
+openapi: 3.0.1
+info:
+  title: CheckIn - Status Connect
+  description: ''
+  termsOfService: 'http://swagger.io/terms/'
+  contact:
+    email: apiteam@statusconnect.pwc.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+  version: "1.4.0"
+externalDocs:
+  description: Find out more about Swagger
+  url: 'http://swagger.io'
+servers:
+  - url: 'https://statusconnect.pwc.com/api/v1'
+tags:
+  - name: message
+    description: Everything about client message broadcast for its employees
+  - name: client
+    description: Client meta data management
+  - name: contract
+    description: Client consent acknowledgement
+  - name: checkin
+    description: End user daily checkin operations
+  - name: register
+    description: End user registration
+  - name: helper
+    description: Operations supporting overall application
+  - name: login
+    description: Everything related to authentication and authorization
+  - name: healthcheck
+    description: Check heatbeat of the server
+  - name: dashboard
+    description: Dashboard metrics operations
+  - name: survey
+    description: Survey meta data management
+paths:
+  /message/{id}/publish:
+    patch:
+      tags:
+        - message
+      summary: Publishes the message 
+      description: |
+        Publishes the message to be viewd by client employees by setting the isPublished flag to true and the publishedDate value to current date
+
+        This operation can be invoked by PwC Super User on behalf of client or by client administrator. If invoked by client administrator client authorization key needs to passed in header.
+      operationId: publishMessage
+      parameters:
+        - name: id
+          in: path
+          description: ID of message to be published
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK - Message published
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Message with supplied ID not found
+            
+            ERROR - MSG_PUBLISHED_EXISTS - A published message already exists
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+        - client_admin_token:
+            - 'read'
+            - 'write'
+  /message/{id}/unpublish:
+    put:
+      tags:
+        - message
+      summary: Unpublishes the message 
+      description:  |
+        Terms the message so that it does not popup on end user screen during checkin. Message with sepficied id should be published. 
+        
+        This operation can be invoked by PwC Super User on behalf of client or by client administrator. If invoked by client administrator client authorization key needs to passed in header.
+      operationId: unpublishMessage
+      parameters:
+        - name: id
+          in: path
+          description: ID of message to be unpublished
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK - Message unpublished
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Message with supplied ID not found
+            
+            ERROR - MSG_NOT_PUBLISHED - Message with supplied id is not published
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+        - client_admin_token:
+            - 'read'
+            - 'write'
+  /message/{id}/deactivate:
+    put:
+      tags:
+        - message
+      summary: Soft deletes a message 
+      description: |
+        Deletes (soft) the message to prevent further use by setting isActive flag to false.
+        
+        This operation can be invoked by PwC Super User on behalf of client or by client administrator. If invoked by client administrator client authorization key needs to passed in header.
+      operationId: deactivateMessage
+      parameters:
+        - name: id
+          in: path
+          description: ID of message to be deleted
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK - Message deleted/deactivated
+        '400':
+          description: ERROR - INVALID_KEY - Message with supplied ID not found
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+        - client_admin_token:
+            - 'read'
+            - 'write'
+  /message/{id}/save:
+    patch:
+      tags:
+        - message
+      summary: Update existing client message
+      description: |
+        Updates the message details for the message id passed in query string as parameter.
+        
+        This operation can be invoked by PwC Super User on behalf of client or by client administrator. If invoked by client administrator client authorization key needs to passed in header.
+      operationId: updateMessage
+      parameters:
+        - name: id
+          in: path
+          description: ID of messageto be updated
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Message object with updated values
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+        required: true
+      responses:
+        '200':
+          description: OK - Message updated
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Message with supplied ID not found
+            
+            ERROR - INVALID_SCHEMA - Supplied message object schema is invalid
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+        - client_admin_token:
+            - 'read'
+            - 'write'
+    post:
+      tags:
+        - message
+      summary: Add a new message for client
+      description: |
+        creates a new messsage in the collection of specified client
+        
+        This operation can be invoked by PwC Super User on behalf of client or by client administrator. If invoked by client administrator client authorization key needs to passed in header.
+      operationId: createNewMessage
+      parameters:
+        - name: id
+          in: path
+          description: ID of client for whom message will created
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Message object that needs to be added for client
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+        required: true
+      responses:
+        '200':
+          description: OK - New Message added
+        '400':
+          description: ERROR - INVALID_SCHEMA - Supplied message object schema is invalid
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+        - client_admin_token:
+            - 'read'
+            - 'write'
+      x-codegen-request-body-name: body
+  /message/{id}:
+    get:
+      tags:
+        - message
+      summary: Fetches message by messageid
+      description: |
+        Return the details of the message specified by id
+        
+        This operation can be invoked by PwC Super User on behalf of client or by client administrator. If invoked by client administrator client authorization key needs to passed in header.
+      operationId: getMessage
+      parameters:
+        - name: id
+          in: path
+          description: Id of message that needs to be fetched
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageDetail'
+        '400':
+          description: ERROR - INVALID_KEY - Message with supplied ID not found
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+        - client_admin_token:
+            - 'read'
+  /message/all:
+    get:
+      tags:
+        - message
+      summary: Fetches all message for the client
+      operationId: getAllMessage
+      description: |
+        Returns the list of all active messages for the client based in isActive flag value.
+        
+        This operation can be invoked by PwC Super User on behalf of client or by client administrator. If invoked by client administrator client authorization key needs to passed in header.
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageDetail'
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+        - client_admin_token:
+            - 'read'
+  /message/displayPublished:
+    get:
+      tags:
+        - message
+      summary: Fetches published message for the client
+      description: |
+        Returns the published message details for the client identified end user token based on isPublished flag value.
+        
+        This operation can be invoked by end user. End user token needs to be passed in header.
+      operationId: getPublishedMessage
+      responses:
+        '200':
+          description: OK - Message details fetched
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - user_token:
+            - 'read'          
+  
+  /client/save:
+    put:
+      tags:
+        - client
+      summary: Update existing client information
+      description: |
+        Updates the meta data of the client
+        
+        This can only be done by the PwC authorized user.
+      operationId: updateClient
+      parameters:
+        - name: id
+          in: query
+          description: ID of client to be updated
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Client object with updated values
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Client'
+        required: true
+      responses:
+        '200':
+          description: Message updated
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Client with supplied ID not found
+            ERROR - INVALID_SCHEMA - Feature list object is malformed
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+    post:
+      tags:
+        - client
+      summary: Add a new client 
+      description: |
+        Updates the meta data of the client
+        
+        This can only be done by the PwC authorized user.
+      operationId: addClient
+      requestBody:
+        description: Client object with updated values
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Client'
+        required: true
+      responses:
+        '200':
+          description: Message updated
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Client with supplied ID not found
+            ERROR - INVALID_SCHEMA - Feature list object is malformed
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+  /client/{code}/feature/save:
+    put:
+      tags: 
+      - client
+      summary: Update clients feature access
+      description: |
+        Updates the features that client has access to.
+        
+        This can only be done by the PwC authorized user.
+      operationId: updateFeature
+      parameters:
+        - name: code
+          in: path
+          description: Unique code of the client to be updated
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Updated feature(s) available to client
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Feature'
+        required: true
+      responses:
+        '200':
+          description: OK - Feature list updated
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Client with supplied ID not found
+            ERROR - INVALID_SCHEMA - Feature list object is malformed
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+  /client/{code}/businessunit/save:
+    put:
+      tags: 
+      - client
+      summary: Update clients feature access
+      description: |
+        Edits the business units list mapped to client
+        
+        This can only be done by the PwC authorized user.
+      operationId: updateBusinessUnit
+      parameters:
+        - name: code
+          in: path
+          description: Unique code of the client for whom business unit is being updated
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: buID
+          in: query
+          description: ID of the business unit to update
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Updated business unit(s) for client
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessUnit'
+        required: true
+      responses:
+        '200':
+          description: OK - Business units updated
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Client with supplied ID not found
+            ERROR - INVALID_SCHEMA - Business Unit object is malformed
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+    post:
+      tags: 
+      - client
+      summary: Add new business unit to client
+      description: |
+        Adds a new business units to client
+        
+        This can only be done by the PwC authorized user.
+      operationId: addBusinessUnit
+      parameters:
+        - name: code
+          in: path
+          description: Unique code of the client to whom new business unitis being added
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: Updated business unit(s) for client
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessUnit'
+        required: true
+      responses:
+        '200':
+          description: OK - Business unit added
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Client with supplied ID not found
+            ERROR - INVALID_SCHEMA - Business Unit object is malformed
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+  /client/{code}/businessunit/{buID}/deactivate:
+    put:
+      tags: 
+      - client
+      summary: Update clients feature access
+      description: |
+        Deletes (soft) the business unit to prevent further use by setting isActive flag to false.
+        
+        This can only be done by the PwC authorized user.
+      operationId: deactivateBusinessUnit
+      parameters:
+        - name: code
+          in: path
+          description: Unique code of the client whose business unit is being deleted
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: buID
+          in: path
+          description: ID of the business unit to deactivate
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK - Business unit deleted/deactivated
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Client and/or bsuiness unit with supplied ID not found
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+  /client/{code}/businessunit:
+    get:
+      tags: 
+      - client
+      summary: Fetches all business unit(s) for the client
+      operationId: getAllBusinessUnit
+      description: |
+        Get the business usnits to be displaed on check in page in dropdown for user to select.
+        
+        This operation can be invoked by end user. 
+      parameters:
+        - name: code
+          in: path
+          description: Unique code of the client for which business unit(s)  needs to be fetched
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BusinessUnit'
+        '400':
+          description: ERROR - INVALID_KEY - Client with supplied ID not found
+  /client/{code}/basicinfo:
+    get:
+      tags: 
+      - client
+      summary: Fetches clients name and log to be displayed on checkin user interface
+      operationId: getClientInfo
+      description: |
+        Get the client logo and name to be displaed on check in page for user personalization.
+        
+        This operation can be invoked by end user.
+      parameters:
+        - name: code
+          in: path
+          description: Unique code of the client for which business unit(s)  needs to be fetched
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClientInfo'
+        '400':
+          description: ERROR - INVALID_KEY - Client with supplied ID not found
+  /client/{code}/deactivate:
+    put:
+      tags: 
+      - client
+      summary: Soft deletes a client 
+      description: |
+        Deletes (soft) the client to prevent further use by setting isActive flag to false.
+        
+        This can only be done by the PwC authorized user.
+      operationId: deactivateClient
+      parameters:
+        - name: code
+          in: path
+          description: Unique code of the client to be deleted
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK - Client deleted/deactivated
+        '400':
+          description: ERROR - INVALID_KEY - Client with supplied ID not found
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+  /client/{code}:
+    get:
+      tags: 
+      - client
+      summary: Fetches client details by client id
+      operationId: getClient
+      description: |
+        Pulls up the client meta information nased on clientId
+        
+        This operation can be invoked by Pwc Super user only.
+      parameters:
+        - name: code
+          in: path
+          description: Unique code of the client whose details are to be fetched
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientDetail'
+        '400':
+          description: ERROR - INVALID_KEY - Client with supplied ID not found
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+  /client/all:
+    get:
+      tags: 
+      - client
+      summary: Fetches all client basic information for all clients
+      description: |
+        Pulls up basic client information  and active sub menus itsm for all clients. 
+        
+        This operation can be invoked by Pwc Super user only.
+      operationId: getAllClient
+      responses:
+        '200':
+          description: OK - successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClientBasicInfo'
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+  /client/{code}/logo/upload:
+    put:
+      tags:
+      - client
+      summary: Updates client logo
+      description: |
+        Updates and/or sets the logo to be displayed on check in unser interface
+        
+        This can only be done by the PwC authorized user.
+      operationId: setClientLogo
+      parameters:
+        - name: code
+          in: path
+          description: Unique code of the client whose logo is to be updated/uploaded
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        description: base64 encoded string of the logo image 
+        content:
+          application/json:
+            schema:
+              type: string
+        required: true
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: ERROR - INVALID_KEY - Client with supplied ID not found
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+  /client/{code}/surveytemplate/{survertemplateid}/save:
+    put:
+      tags: 
+      - client
+      summary: Update clients survey template
+      description: This can only be done by the PwC authorized user
+      operationId: updateSurveyTemplate
+      parameters:
+        - name: code
+          in: path
+          description: Unique code assigned to client
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: survertemplateid
+          in: path
+          description: ID of survey template that needs to be set for client
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Business units updated
+        '400':
+          description: ERROR - INVALID_KEY - Client and/or SurveyTemplate with supplied ID not found
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+  /client/{code}/history:
+    get:
+      tags:
+        - client
+      summary: Fetches audit history of a client
+      description: |
+        Fetches client audit history for the client based on clientid. 
+        
+        This operation can be invoked by Pwc Super user only.
+      operationId: getAuditHistory
+      parameters:
+        - name: code
+          in: path
+          description: Unique code of the client
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditDetail'
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+  /client/{code}/consentcode:
+    put:
+      tags:
+        - client
+      summary: Generates unique conset code for client
+      description: |
+        Validates if a consent code exists and if not creates a new else generates error 
+        
+        This operation can be invoked by Pwc Super user only.
+      operationId: generateUniqueConsentCode
+      parameters:
+        - name: code
+          in: path
+          description: Unique code of the client
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Client with supplied id dose not exists
+            
+            ERROR - CLIENT_CONSENTCODE_EXISTS - Valid consent code already exists
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - pwc_superuser_token:
+            - 'read'
+            - 'write'
+    
+  /contract/{code}:
+    get:
+      tags:
+        - contract
+      summary: Fetch terms and condition page for the client to sign
+      operationId: getConsentForm
+      description: |
+        Validates client unique code and pulls up the terms and condition consent form for user to review and sign before being onboarded.
+        
+        This operation can be invoked by end user.
+      parameters:
+        - name: code
+          in: path
+          description: Unique code for the client
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK - Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentDetail'
+        '400':
+          description: ERROR - INVALID_KEY - Client unique code is invalid
+    post:
+      tags:
+        - contract
+      summary: Saves clients consent
+      operationId: saveConsent
+      description: |
+        Saves client consent in system and stores the screen grab of the bowser window as base64 encoded sctring for rerence
+        
+        This operation can be invoked by end user.
+      parameters:
+        - name: code
+          in: path
+          description: client code
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Consent response object
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Consent'
+        required: true
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Client unique code is invalid
+            
+            ERROR - INVALID_SCHEMA - Consent schema object is invalid
+            
+            ERROR - CONSNT_EXISTS - Consent already provided
+            
+  /contract/{clientId}/approve:
+    post:
+      tags:
+        - contract
+      summary: Approves clients contracts and onboards  client
+      operationId: approveContract
+      description: |
+        Approves client contract in system and generates client code and admin code
+        
+        This operation can be invoked by Pwc user only.
+      parameters:
+        - name: clientId
+          in: path
+          description: client code
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Consent response object
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                clientCode:
+                  type: string
+                adminCode:
+                  type: string
+        required: true
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Client  code is invalid
+            
+            ERROR - CONSNT_EXISTS - Consent already provided
+      security:
+        - pwc_superuser_token:
+            - 'write'
+            - 'read' 
+            
+  /login/{userCode}:
+    get:
+      tags:
+        - login
+      summary: logs in the end user for checkin
+      description: |
+        Validates the user code entered by user and retruns a JWT token to be stored in brower cookie
+        
+        This operation can be invoked by end user.
+      operationId: loginUser
+      parameters:
+        - name: userCode
+          in: path
+          description: User Code as entered by user
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK - End user logged in. Returns JWT key to be stored in brower cookie
+        '400':
+          description: ERROR - INVALID_KEY - User code is invalid
+  /login/admin/{clientCode}/{adminCode}:
+    get:
+      tags:
+        - login
+      summary: logs in the end user for checkin
+      description: |
+        Validates the user code entered by user and retruns a JWT token to be stored in brower cookie
+        
+        This operation can be invoked by end user.
+      operationId: loginAdmin
+      parameters:
+        - name: clientCode
+          in: path
+          description: Company Code as entered by user
+          required: true
+          schema:
+            type: string
+        - name: adminCode
+          in: path
+          description: Admin Code as entered by user
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK - Admin end user logged in. Returns JWT key to be stored in brower cookie
+        '400':
+          description: |
+            ERROR - INVALID_KEY - Company code is invalid
+            
+            ERROR - INVALID_KEY - Admin code is invalid
+  /login/idp:
+    get:
+      tags:
+        - login
+      summary: Authenticates PwC user aginst PwC IdAM. 
+      description: |
+        Calls the PwC IdAM server back with CLIENT ID and CLIENT SECRET KEY to retrieve the user detailas and set the cookie on client broser with encrypted JWT key 
+        
+        This operation can be invoked by PwC IdAM server. 
+      operationId: validatePwCUser
+      parameters:
+        - name: code
+          in: query
+          description: Id of client
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK - Successful
+        '400':
+          description: ERROR
+
+  /checkin:
+    post:
+      tags:
+        - checkin
+      summary: Saves the employee checkin
+      description: |
+        Saves user responses to checkin questionnaire 
+        
+        This operation can be invoked by end user. End user JWT key must be prvided as part of header
+      operationId: saveResponses
+      requestBody:
+        description: Survey response object
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Response'
+        required: true
+      responses:
+        '200':
+          description: OK - Employee check-in sucessfull
+        '400':
+          description: |
+            ERROR - INVALID_SCHEMA - Survey response object is invalid
+            
+            ERROR - CHKIN_INVALID_DATA - Response dose not conform with clients template and rules
+            
+            ERROR - CHKIN_EXPIRED_TOKEN - JWT token is expired. Please log in again
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - user_token:
+            - 'write'
+            - 'read'      
+            
+  /dashboard/checkin:
+    post:
+      tags:
+        - dashboard
+      summary: Gets checkin confirmation page metrics
+      description: |
+        Fetches metrics on other usres having similar responses in end users city
+        
+        This operation can be invoked by end user. End user JWT key must be prvided as part of header
+      operationId: userCheckinMetricsByLocByWorkability
+      requestBody:
+        description: Survey response object
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Response'
+        required: true
+      responses:
+        '200':
+          description: OK - Preformatted message based on checkin in response
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: |
+            ERROR - INVALID_SCHEMA - Survey response object is invalid
+            
+            ERROR - CHKIN_INVALID_DATA - Response dose not conform with clients template and rules
+            
+            ERROR - CHKIN_EXPIRED_TOKEN - JWT token is expired. Please log in again
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - client_admin_token:
+            - 'read'      
+  /dashboard/citylist/{startdate}/{enddate}:
+    get:
+      tags:
+        - dashboard
+      summary: Gets list
+      description: |
+        Fetches unique list of cities for all checing for given date range
+        
+        This operation can be invoked by client admin user. End user JWT key must be prvided as part of header
+      operationId: clityList
+      parameters:
+        - name: startdate
+          in: path
+          description: first date of checkin
+          required: true
+          schema:
+            type: string
+        - name: enddate
+          in: path
+          description: last date of checkin 
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK - Array of cities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dropdown'
+        '400':
+          description: ERROR - DSHBRD_INVALID_DATE - Start and/or end date is invalid
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - client_admin_token:
+            - 'read'   
+  /dashboard/{metricstype}/{cityid}/{buid}:
+    get:
+      tags:
+        - dashboard
+      summary: Gets metrics data for specified report based on parameters
+      description: |
+        Gets dashboard data for dashboard listed in path by city and business unit. to fetch data for all city and business unit send "ALL" for both parameters
+        
+        This operation can be invoked by client admin user. End user JWT key must be prvided as part of header
+      operationId: reportData
+      parameters:
+        - name: cityid
+          in: path
+          description: first date of checkin
+          required: true
+          schema:
+            type: string
+        - name: buid
+          in: path
+          description: last date of checkin 
+          required: true
+          schema:
+            type: string
+        - name: metricstype
+          in: path
+          description: last date of checkin 
+          required: true
+          schema:
+            type: string
+            enum:
+            - Overview
+            - ImpactType
+            - BusinessUnitTrends
+            - WorkMode
+            - Map
+            
+      responses:
+        '200':
+          description: OK - Array of cities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Metrics'
+        '400':
+          description: ERROR - DSHBRD_INVALID_REPORT_TYPE - metricstype dose not exists
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - client_admin_token:
+            - 'read'   
+
+  /register/{code}:
+    post:
+      tags:
+        - register
+      summary: Register a new company emplyee for checkin
+      description: |
+        Returns the unique user code for teh newly registerd user
+        
+        This operation can be invoked by end user.
+      parameters:
+        - name: code
+          in: path
+          description: client code of the company
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK - Returns the user code of the new user
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: ERROR - INVALID_KEY - User code is invalid
+
+  /helper/city/{name}:
+    get:
+      tags: 
+      - helper
+      summary: Fetches list of cities matching the search criteria. 
+      operationId: getCityList
+      description: |
+        Returns the key value pair of city code and city name based on the city name matching user entered text
+        
+        This operation can be invoked by end user. End user token needs to be passed in header.
+      parameters:
+        - name: name
+          in: path
+          description: At least first 3 character of city name
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK - Array of cities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dropdown'
+        '401':
+          description: ERROR - INVALID_CREDENTIAL - Authorization not provided or is invalid
+      security:
+        - user_token:
+            - 'write'
+            - 'read'    
+            
+  /healthcheck:
+    get:
+      tags:
+        - healthcheck
+      summary: Check heartbeat of the server.
+      description: |
+        Determines if the server is avaiable to process request. Required to support day-to-day operations
+      operationId: ping
+      responses:
+        '200':
+          description: OK
+        '500':
+          description: ERROR - INTERNAL_SERVER_ERROR - Server is not responding
+components:
+  schemas:
+    Message:
+      type: object
+      properties:
+        messageHeader:
+          type: string
+        messageBody:
+          type: string
+          format: int32
+        importanceLevel:
+          type: string
+          enum:
+            - high
+            - medium
+            - low
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+    MessageDetail:
+      type: object
+      properties:
+        messageHeader:
+          type: string
+        messageBody:
+          type: string
+          format: int32
+        importanceLevel:
+          type: string
+          enum:
+            - high
+            - medium
+            - low
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        isPublished:
+          type: boolean
+    ClientDetail:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        adminCode:
+          type: string
+        salesForceID:
+          type: string
+        logo:
+          type: string
+        isRestricted:
+          type: boolean
+        isExistingClient:
+          type: boolean
+        licenseTier:
+          type : string
+        industry:
+          type: string
+        expectedEnrollment:
+          type: integer
+          format: int64
+        surveyTemplate:
+          type: integer
+          format: int64
+        contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Contact'
+        businessUnits:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessUnit'
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/Feature'
+        consent:
+            $ref: '#/components/schemas/ConsentDetail'
+    ConsentDetail:
+      type: object
+      properties:
+        code:
+          type: string
+        file:
+          type: string
+        name:
+          type: string
+        isAccepted:
+          type: boolean
+        ipAddress:
+          type: string
+        acceptedDate:
+          type: string
+          format: date-time
+    Consent:
+      type: object
+      properties:
+        name:
+          type: string
+        file:
+          type: string
+        ipAddress:
+          type: string
+    Contact:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phoneNumber:
+          type: string
+        category:
+          type: string
+    BusinessUnit:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+      xml:
+        name: BusinessUnit
+    Feature:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+    ClientBasicInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        resgistrationDate:
+          type: string
+          format: date-time
+        licenseTier:
+          type: string
+        status:
+          type: string
+        email:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/Option'
+    Client:
+      type: object
+      properties:
+        name:
+          type: string
+        salesForceID:
+          type: string
+        logo:
+          type: string
+        isRestricted:
+          type: boolean
+        isExistingClient:
+          type: boolean
+        licenseTier:
+          type : string
+        industry:
+          type: string
+        expectedEnrollment:
+          type: integer
+          format: int64
+        surveyTemplate:
+          type: integer
+          format: int64
+        contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Contact'
+        businessUnits:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessUnit'
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/Feature'
+    Option:
+      type: object
+      properties:
+        menuName:
+          type: string
+        isActive:
+          type : boolean
+    Dropdown:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+    ClientInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        logo:
+          type: string
+    Response:
+      type: object
+      properties:
+        clientCode:
+          type: string
+        bysunessUnitId:
+          type: string
+        businessUnitName:
+          type: string
+        cityId:
+          type: string
+        city:
+          type: string
+        userCode:
+          type: string
+        responses:
+          type: object
+          properties:
+              questionId:
+                type: string
+    Metrics:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        count:
+          type: string
+        total:
+          type: string
+        subMetrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/Metrics'
+    AuditDetail:
+      type: object
+      properties:
+        name:
+          type: string
+        date:
+          type: string
+          format: date-time
+        note:
+          type: string
+    Error:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: string
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+        error:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+        data:
+          type: object
+  securitySchemes:
+    client_admin_token:
+      type: apiKey
+      name: jwt_key
+      in: header
+    user_token:
+      type: apiKey
+      name: jwt_key
+      in: header
+    pwc_superuser_token:
+      type: apiKey
+      name: jwt_key
+      in: header

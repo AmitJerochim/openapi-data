@@ -1,0 +1,506 @@
+openapi: 3.0.0
+info:
+  title: Magpie
+  description: |
+    The Magpie service manage lists of content specific to an individual user. There are two types of lists supported:
+      * User lists - general purposes list for any object in Skylark
+      * Watch list - a specific list to track watch progress across platforms and facillitate "Continue Watching" style functionality.
+    
+      All API requests must be authenticated with a user JWT (the recognition of which is specifically configured on a per isntance basis).
+      
+      In addition, optionally, an additional header (`x-user-profile`) may be passed to specify the profile wihtin the user account that the list applies for.  This is to allow for experiences whether within a single account, customers can create different profile, e.g. for different members of their family. When a profile value is supplied, the combination of this together with the identifier supplied in the JWT are referred to as the user. 
+      
+      An individual user may have multiple user lists, each of which has an identifying slug. The list of permissible slugs is configured on a per instance basis. 
+      
+      Watch lists allow users to track how far through the have watched pieces of content and be able to resume their playback from different devices. When entering an item into the list, the currently playback position and the total content length is stored.
+      
+      From these two pieces of informaion, a watch status is calculated according to the below rules
+      * `unwatched` - the user has watched less than the start threshold 
+      * `watched` - the user has watched more then the finish threshold
+      * `watching` - anything inbetween start and finish thresholds.
+      
+      These thresholds are in place to give a high quality user experience, avoiding cases when, for example, a user considers they have watched a programme, but actually left the session with 20 seconds of the credits still to run. 
+      
+      Each threshold consists of two criteria (both of which apply):
+      * Minimum time from start / maxium time from end
+      * Percentage of content viewed
+  version: "1.0.0"
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Ostmodern/magpie/1.0.0
+tags:
+  - name: User List
+    description: General lists of content
+  - name: Watch List
+    description: List of content that has been watched
+paths:
+  /userlists:
+    get:
+      tags:
+        - User List
+      summary: List of all lists
+      description: Get a list of lists available for the the user. If no lists or new user, an empty response is returned. 
+      parameters:
+        - in: header
+          name: x-user-profile
+          description: Identifier for a profile within the users accounts
+          schema:
+            type: string
+          required: false
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserListSummary'
+              example:
+                - slug: favourite-shows
+                  count: 18
+                - slug: hated-shows
+                  count: 1213
+        '401':
+          description: Not authorized
+      security:
+        - user_token: []
+  /userlists/{slug}:
+    get:
+      tags:
+        - User List
+      summary: Retrieve items in a list
+      description: Get the items of a specific list ordered by most recently updated first.
+      parameters:
+        - in: path
+          name: slug
+          schema:
+            type: string
+          required: true
+          description: Slug of the list to return
+          example: favourite-shows
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 12
+          description: Maximum number of items to return
+          example: 10
+        - in: query
+          name: object_uids
+          schema:
+            type: string
+          description: Comma separated list of object_uids. If supplied, only list items matching the object_uid will be returned.
+          example: chan_e56d45c512d54fa095a3b48e3736d7e6,tale_d24f225ea31d4eaabce683a4777af19c,bran_3e81cd4bb30a4889bcf974f13d8952cb
+        - in: header
+          name: x-user-profile
+          description: Identifier for a profile within the users accounts
+          schema:
+            type: string
+          required: false
+      responses:
+        '200':
+          description: Successful operation
+          
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserListEntry'
+              example:
+                - object_uid: chan_e56d45c512d54fa095a3b48e3736d7e6
+                  label: Remember to show to Geoff
+                  created: "2019-09-08T01:23:45Z"
+                  updated: "2019-11-08T01:23:45Z"
+                - object_uid: tale_d24f225ea31d4eaabce683a4777af19c
+                  created: "2019-10-08T01:23:45Z"
+                  updated: "2019-10-00T12:34:56Z"
+        '401':
+          description: Not authorized
+        '404':
+          description: No such list
+      security:
+        - user_token: []
+    delete:
+      tags:
+        - User List
+      summary: Delete all items from a list
+      description: Delete all the items in the list, effectively emptying the list.
+      parameters:
+        - in: path
+          name: slug
+          schema:
+            type: string
+          required: true
+          description: Slug of the list to return
+          example: favourite-shows
+        - in: header
+          name: x-user-profile
+          description: Identifier for a profile within the users accounts
+          schema:
+            type: string
+          required: false
+
+      responses:
+        '204':
+          description: Processed
+        '401':
+          description: Not authorized
+        '404':
+          description: No such list
+      security:
+        - user_token: []
+
+  /userlists/{slug}/{object_uid}:
+    get:
+      tags:
+        - User List
+      summary: Retrieve items in a list
+      description: Get the items of a specific list ordered by most recently updated first.
+      parameters:
+        - in: path
+          name: slug
+          schema:
+            type: string
+          required: true
+          description: Slug of the list to look for the object in
+          example: favourite-shows
+        - in: path
+          name: object_uid
+          schema:
+            type: string
+          required: true
+          description: Object UID for the entry
+          example: chan_e56d45c512d54fa095a3b48e3736d7e6
+        - in: header
+          name: x-user-profile
+          description: Identifier for a profile within the users accounts
+          schema:
+            type: string
+          required: false          
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListEntry'
+              example:
+                - object_uid: chan_e56d45c512d54fa095a3b48e3736d7e6
+                  label: Remember to show to Geoff
+                  created: "2019-09-08T01:23:45Z"
+                  updated: "2019-11-08T01:23:45Z"
+        '401':
+          description: Not authorized
+        '404':
+          description: No such list or item
+      security:
+        - user_token: []
+    put:
+      tags:
+        - User List
+      summary: Add item to a list
+      description: Adds an item to the list. As object_uid's can only appear once in a list, if there is already an item then this will be updated
+      parameters:
+        - in: path
+          name: slug
+          schema:
+            type: string
+          required: true
+          description: Slug of the list to return
+          example: favourite-shows
+        - in: path
+          name: object_uid
+          schema:
+            type: string
+          required: true
+          description: Object UID for the entry
+          example: chan_e56d45c512d54fa095a3b48e3736d7e6
+        - in: header
+          name: x-user-profile
+          description: Identifier for a profile within the users accounts
+          schema:
+            type: string
+          required: false
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserListEntry'
+      responses:
+        '204':
+          description: Processed`
+        '401':
+          description: Not authorized
+      security:
+        - user_token: []
+    delete:
+      tags:
+        - User List
+      summary: Delete item from a list
+      description: Deletes the entry in the specified list that matches the specified object_uid
+      parameters:
+        - in: path
+          name: slug
+          schema:
+            type: string
+          required: true
+          description: Slug of the list to return
+          example: favourite-shows
+        - in: path
+          name: object_uid
+          schema:
+            type: string
+          required: true
+          description: Object UID for the entry
+          example: chan_e56d45c512d54fa095a3b48e3736d7e6
+        - in: header
+          name: x-user-profile
+          description: Identifier for a profile within the users accounts
+          schema:
+            type: string
+          required: false
+      responses:
+        '204':
+          description: Processed
+        '401':
+          description: Not authorized
+        '404':
+          description: No such list or item
+      security:
+        - user_token: []
+
+  /watchlist:
+    get:
+      tags:
+        - Watch List
+      summary: Retrieve watchlist items
+      description: Get the items on the watchlist first.
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 12
+          description: Maximum number of items to return
+          example: 10
+        - in: query
+          name: status_list
+          schema:
+            type: string
+            default: watching
+          description: A comma separated list of the statuses to be included in the response. Acceptable values are any combination of; unwatched, watching, watched
+          example: watching,watched
+        - in: query
+          name: content_uids
+          schema:
+            type: string
+          description: Comma separated list of content_uids. If supplied, only list items matching the content_uid will be returned.
+          example: bran_3e81cd4bb30a4889bcf974f13d8952cb
+        - in: header
+          name: x-user-profile
+          description: Identifier for a profile within the users accounts
+          schema:
+            type: string
+          required: false
+      responses:
+        '200':
+          description: Successful operation
+          
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WatchListEntry'
+        '400':
+          description: Invalid input value 
+        '401':
+          description: Not authorized
+      security:
+        - user_token: []
+    delete:
+      tags:
+        - Watch List
+      summary: Delete all items from the watch list
+      description: Delete all the items in the list, effectively emptying the list.
+      
+
+      responses:
+        '204':
+          description: Processed
+        '401':
+          description: Not authorized
+      security:
+        - user_token: []
+
+  /watchlist/{content_uid}:
+    get:
+      tags:
+        - Watch List
+      summary: Retrieve watchlist item
+      description: Get the items on the watchlistt.
+      parameters:
+        - in: path
+          name: content_uid
+          schema:
+            type: string
+          description: content_uid of the specific item
+          required: true
+          example: epis_2192d341b3ae4ba78b333409e69314af
+        - in: header
+          name: x-user-profile
+          description: Identifier for a profile within the users accounts
+          schema:
+            type: string
+          required: false
+      responses:
+        '200':
+          description: Successful operation
+          
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/WatchListEntry'
+        '400':
+          description: Invalid input value 
+        '401':
+          description: Not authorized
+      security:
+        - user_token: []
+    put:
+      tags:
+        - Watch List
+      summary: Add / update an item on the watch list
+      description: Add / update an item on the watch list
+      parameters:
+        - in: path
+          name: content_uid
+          schema:
+            type: string
+          description: content_uid of the specific item
+          required: true
+          example: epis_2192d341b3ae4ba78b333409e69314af
+        - in: header
+          name: x-user-profile
+          description: Identifier for a profile within the users accounts
+          schema:
+            type: string
+          required: false          
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WatchListEntry'
+      responses:
+        '204':
+          description: Processed
+        '401':
+          description: Not authorized
+      security:
+        - user_token: []
+    delete:
+      tags:
+        - Watch List
+      summary: Delete an item from the watch list
+      description: Delete a specific item from the watch-list
+      parameters:
+        - in: path
+          name: content_uid
+          schema:
+            type: string
+          description: content_uid of the specific item
+          required: true
+          example: epis_2192d341b3ae4ba78b333409e69314af
+        - in: header
+          name: x-user-profile
+          description: Identifier for a profile within the users accounts
+          schema:
+            type: string
+          required: false          
+      responses:
+        '204':
+          description: Processed
+        '401':
+          description: Not authorized
+        '404':
+          description: Item not found
+      security:
+        - user_token: []
+
+
+
+components:
+  schemas:
+    UserListSummary:
+      type: object
+      properties:
+        slug:
+          type: string
+          description: Slug of the user list
+          
+        count:
+          type: integer
+          description: Count of items in the user list
+    UserListEntry:
+      type: object
+      properties:
+        object_uid:
+          type: string
+          description: Reference to the object being added to the list
+          example: bran_3e81cd4bb30a4889bcf974f13d8952cb
+        label:
+          type: string
+          description: Additional text to store alongside the label
+          example: User entered metadata
+        created:
+          type: string
+          format: date-time
+          description: When the item was created 
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the item was last updated 
+          readOnly: true
+    WatchListEntry:
+      type: object
+      properties:
+        content_uid:
+          type: string
+          description: Reference to the content object being added to the list
+          readOnly: true
+          example: epis_ba0f9d51a1924ae990d7b0c15f252d36
+        playhead_position:
+          type: integer
+          description: How far through watching the piece of content the user is in whole seconds
+          example: 1389
+        content_length:
+          type: integer
+          description: Total length of the content in whole seconds
+          example: 3600
+        watch_status:
+          type: string
+          enum: [unwatched,watching,watched]
+          description: The status of the playback (see notes)
+          readOnly: true
+        created:
+          type: string
+          format: date-time
+          description: When the item was created 
+          readOnly: true
+        updated:
+          type: string
+          format: date-time
+          description: When the item was last updated 
+          readOnly: true
+          
+  securitySchemes:
+    user_token:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

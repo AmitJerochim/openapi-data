@@ -1,0 +1,1410 @@
+openapi: 3.0.0
+info:
+  description: This API is for banks integrating with Token
+  version: "1.0.4"
+  title: Token Bank Integration API
+  contact:
+    email: service@token.io
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: accounts
+    description: Accounts Service - Implemented by bank to support access to account information.
+
+  - name: transfers
+    description: Transfers Service - Implemented by bank to support payment initiation.
+
+  - name: linking
+    description: Account Linking - Implemented by bank to support Token integration.
+
+  - name: consents
+    description: Consent Events - Implemented by bank to receive notifications on consent lifecycle envents.
+
+  - name: notifications
+    description: Notification Service - Implemented by bank to relay device notifications.
+
+  - name: storage
+    description: Storage Service - Implemented by bank to persist consent states and account lookup data.
+
+  - name: health
+    description: Health Check Endpoints.
+
+paths:
+
+################################################################################
+### ACCOUNTS
+
+  '/accounts':
+    post:
+      tags:
+        - accounts
+      summary: Retrieves the unique account identifier corresponding to the given bank account number.
+      operationId: createAccount
+      requestBody:
+        description: The bank account identifier.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BankAccount'
+      responses:
+        '201':
+          description: The bank account id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAccountResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        default:
+          description: Unexpected error
+      description: "The bank account ID is a unique identifier that is use to identify a specific account and will be used in subsequent calls to retrieve account details and transactions. This number is obtained by Token using the POST/accounts call.    "
+
+  '/accounts/{bankAccountId}/balance':
+    get:
+      tags:
+        - accounts
+      summary: Returns the current balance of the given account.
+      operationId: getAccountBalance
+      parameters:
+        - in: header
+          name: token-tpp-id
+          description: The TPP indentifier
+          schema:
+            type: string
+        - in: header
+          name: token-account-holder-id
+          description: The account holder indentifier
+          schema:
+            type: string
+        - in: path
+          name: bankAccountId
+          description: The bank account identifier.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The bank acccount balance.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Balance'
+        '404':
+          description: The specified account was not found.
+        default:
+          description: Unexpected error
+      description: "\n\n              "                                                                                          
+
+  '/accounts/{bankAccountId}/transactions':
+    get:
+      tags:
+        - accounts
+      summary: Returns the transactions that occurred in the given bank account
+      operationId: getAccountTransactions
+      parameters:
+        - in: path
+          name: bankAccountId
+          description: The bank account identifier.
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: limit
+          description: The number of results per page.
+          schema:
+            type: integer
+            minimum: 1
+        - in: query
+          name: offset
+          description: The result offset for pagination.
+          schema:
+            type: string
+        - in: query
+          name: startDate
+          description: A filter for start booking date of transactions
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: endDate
+          description: A filter for end booking date of transactions
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: The transaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionsPage'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The specified account was not found.
+        default:
+          description: Unexpected error
+
+  '/accounts/{bankAccountId}/transactions/{transactionId}':
+    get:
+      tags:
+        - accounts
+      summary: Returns the transactions that occurred in the given bank account by their unique IDs
+      operationId: getAccountTransactionForId
+      parameters:
+        - in: header
+          name: token-tpp-id
+          description: The TPP indentifier
+          schema:
+            type: string
+        - in: header
+          name: token-account-holder-id
+          description: The account holder indentifier
+          schema:
+            type: string
+        - in: path
+          name: bankAccountId
+          description: The bank account identifier.
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: transactionId
+          description: The transaction identifier.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The transaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The specified account or transaction was not found.
+        default:
+          description: Unexpected error
+
+  '/accounts/{bankAccountId}/destinations':
+    get:
+      tags:
+        - accounts
+      summary: Resolves the destinations for the given bank account.
+      operationId: getAccountTransferDestinations
+      parameters:
+        - in: path
+          name: bankAccountId
+          description: The bank account identifier.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of transfer destinations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferDestinations'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The specified account was not found.
+        default:
+          description: Unexpected error
+
+  '/accounts/{bankAccountId}/details':
+    get:
+      tags:
+        - accounts
+      summary: Resolves the details of the given bank account.
+      operationId: getAccountDetails
+      parameters:
+        - in: header
+          name: token-tpp-id
+          description: The TPP indentifier
+          schema:
+            type: string
+        - in: header
+          name: token-account-holder-id
+          description: The account holder indentifier
+          schema:
+            type: string
+        - in: path
+          name: bankAccountId
+          description: The bank account identifier.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Account details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDetails'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The specified account was not found.
+        default:
+          description: Unexpected error
+
+  '/accounts/{bankAccountId}':
+    delete:
+      tags:
+        - accounts
+      summary: Used when a PSU at a TPP unlinks their account.
+      operationId: deleteAccount
+      parameters:
+        - in: path
+          name: bankAccountId
+          description: The bank account identifier.
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        default:
+          description: Unexpected error
+
+
+################################################################################
+### TRANSFERS
+
+  '/transfers':
+    post:
+      tags:
+        - transfers
+      summary: Creates a transaction for a given transfer request.
+      operationId: createTransfer
+      parameters:
+        - in: header
+          name: token-tpp-id
+          description: The TPP indentifier
+          schema:
+            type: string
+        - in: header
+          name: token-account-holder-id
+          description: The account holder indentifier
+          schema:
+            type: string
+      requestBody:
+        description: The transfer request.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequest'
+      responses:
+        '200':
+          description: The transaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The specified account was not found.
+        default:
+          description: Unexpected error
+          
+  '/transfers/{transferId}/status':
+    get:
+      tags:
+        - transfers
+      summary: Retrieves the status of a given transfer by its unique ID.
+      operationId: getTransferStatusForId
+      parameters:
+        - in: path
+          name: transferId
+          description: The transfer ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The transfer status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionStatus'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The specified transfer was not found.
+        default:
+          description: Unexpected error
+
+
+################################################################################
+### LINKING
+
+  '/linking/authorizations/{accessToken}':
+    get:
+      tags:
+        - linking
+      summary: "Retrieves consents related to account services that are currently active. "
+      operationId: getBankAuthorizationForId
+      description: Exchanges OAuth Implicit Grant access token for bank authorization payload.
+      externalDocs:
+        description: Creating Bank Authorization- Instructions for Response Code 200
+        url: https://developer.token.io/rest-bankauth/
+      parameters:
+        - in: path
+          name: accessToken
+          description: The authorization ID.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The bank authorization.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankAuthorization'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The specified authorization was not found.
+        default:
+          description: Unexpected error
+
+
+################################################################################
+### EVENTS
+
+  '/consents/{tokenConsentId}/created':
+    put:
+      tags:
+        - consents
+      summary: Indicates a new consent has been created.
+      operationId: onConsentCreated
+      parameters:
+        - in: header
+          name: token-tpp-id
+          description: The TPP indentifier
+          schema:
+            type: string
+        - in: header
+          name: token-account-holder-id
+          description: The account holder indentifier
+          schema:
+            type: string
+        - in: path
+          name: tokenConsentId
+          description: The token consent identifier.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: The consent created.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Consent'
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        default:
+          description: Unexpected error
+      description: "This method is optional and need not be implemented. This is meant to notify you (the bank) when a new consent request has been initiated. "
+
+  '/consents/{tokenConsentId}/revoked':
+    put:
+      tags:
+        - consents
+      summary: Indicates a consent has been revoked.
+      operationId: onConsentRevoked
+      parameters:
+        - in: header
+          name: token-tpp-id
+          description: The TPP indentifier
+          schema:
+            type: string
+        - in: header
+          name: token-account-holder-id
+          description: The account holder indentifier
+          schema:
+            type: string
+        - in: path
+          name: tokenConsentId
+          description: The token consent identifier.
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        default:
+          description: Unexpected error
+      description: "This method is optional and need not be implemented. This is meant to notify you (the bank) when a consent has been revoked. "
+
+
+################################################################################
+### NOTIFICATIONS
+
+  '/notifications':
+    put:
+      tags:
+        - notifications
+      summary: Initiates a notification to the given subscriber.
+      operationId: createNotification
+      requestBody:
+        description: The notification.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Notification'
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        default:
+          description: Unexpected error
+    
+  '/notifications/{notificationId}':
+    delete:
+      tags:
+        - notifications
+      summary: Indicates the notification has been invalidated.
+      operationId: deleteNotification
+      parameters:
+        - in: path
+          name: notificationId
+          description: The notificaton id.
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No Content
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The specified notificaton was not found.
+        default:
+          description: Unexpected Error
+
+
+################################################################################
+### STORAGE
+
+  '/storage/entries':
+    put:
+      tags:
+        - storage
+      summary: Persists a key-value pair.
+      operationId: setValueForKey
+      requestBody:
+        description: The value.
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                key:
+                  type: string
+                value:
+                  type: string
+                  format: byte
+                category:
+                  type: string
+                  enum:
+                  - ACCOUNT_INFO
+                  - TOKEN_INFO
+      responses:
+        '201':
+          description: Created
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  previous:
+                    type: string
+                    format: byte
+        '204':
+          description: Not changed
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        default:
+          description: Unexpected error
+  
+  '/storage/entries/{key}':
+    get:
+      tags:
+        - storage
+      summary: Retrieves the value for the given key.
+      operationId: getValueForKey
+      parameters:
+        - in: path
+          name: key
+          description: The entry key.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  value:
+                    type: string
+                    format: byte
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The specified key was not found
+        default:
+          description: Unexpected error
+    
+  '/storage/entries/{keyToDelete}':
+    delete:
+      tags:
+        - storage
+      summary: Removes the value for the given key.
+      operationId: deleteValueForKey
+      parameters:
+        - in: path
+          name: keyToDelete
+          description: The entry key.
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: The specified key was not found.
+        default:
+          description: Unexpected error
+
+
+################################################################################
+### HEALTH
+
+  '/health':
+    get:
+      tags:
+        - health
+      summary: Used to retrieve the current state of the bank connection.  
+      operationId: getHealthCheck
+      parameters:
+        - in: query
+          name: bankId
+          description: The token bank identifier.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '503':
+          description: Service unavailable
+        default:
+          description: Unexpected error
+
+  
+################################################################################
+### COMPONENTS
+################################################################################
+  
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    BankAuthorization:
+      description: Bank authorization payload
+      type: object
+      required: 
+      - bankId
+      - accounts
+      properties:
+        bankId:
+          description: The bank identifier in the Token Network.
+          type: string
+        accounts:
+          description: An array of encrypted messages.
+          type: array
+          items:
+            $ref: '#/components/schemas/SealedMessage'
+     
+    SealedMessage:
+      description: Represents an encrypted message payload.
+      type: object
+      required: 
+      - ciphertext
+      - method
+      properties:
+        ciphertext:
+          description: Base64url encoded ciphertext.
+          type: string
+        method:
+          description: The encryption method used to generate the ciphertext.
+          oneOf:
+              - $ref: '#/components/schemas/NoopMethod'
+              - $ref: '#/components/schemas/RsaMethod'
+              - $ref: '#/components/schemas/RsaAesMethod'
+    
+    NoopMethod:
+      description: The method indicates that cleartext is used instead of encryption.
+      type: object
+    
+    RsaMethod:
+      description: The method indicates the message is encrypted using the public key of the recipient. The ciphertext can be decrypted only with the corresponding private key.
+      type: object
+      required: 
+      - keyId
+      - algorithm
+      - signature
+      - signatureKeyId
+      properties:
+        keyId:
+          description: The id of the key used for encryption.
+          type: string
+        algorithm:
+          description: RSA/ECB/OAEPWithSHA-256AndMGF1Padding.
+          type: string
+        signature:
+          description: Base64url encoded ciphertext signature.
+          type: string
+        signatureKeyId:
+          description: The id of the key used to sign.
+          type: string
+    
+    RsaAesMethod:
+      description: The message is encrypted with a self-generated symmetric key. That key is encrypted using the public key of the recipient and can only be decrypted with the corresponding private key.
+      type: object
+      required: 
+      - rsaKeyId
+      - rsaAlgorithm
+      - aesAlgorithm
+      - encryptedAesKey
+      - signature
+      - signatureKeyId
+      properties:
+        rsaKeyId:
+          description: The id of the key used for encryption.
+          type: string
+        rsaAlgorithm:
+          description: RSA/ECB/OAEPWithSHA-256AndMGF1Padding.
+          type: string
+        aesAlgorithm:
+          description: AES/CBC/PKCS5Padding.
+          type: string
+        encryptedAesKey:
+          description: Base64url encoded rsa-encrypted aes key.
+          type: string
+        signature: 
+          description: Base64url encoded ciphertext signature.
+          type: string
+        signatureKeyId:
+          type: string
+    
+    BankAccount:
+      description: Represents Token account identifier.
+      type: object
+      required: 
+      - account
+      properties:
+        account: 
+          description: The bank account identifier.
+          oneOf:
+          - $ref: '#/components/schemas/Custom'
+          - $ref: '#/components/schemas/Iban'
+          - $ref: '#/components/schemas/Domestic'
+      example: {"account": {"custom": {"bankId":"test", "payload":"0123456789"}}}
+    Custom:
+      description: Represents an account identifier in bank-custom format.
+      type: object
+      required: 
+      - bankId
+      - payload
+      properties:
+        bankId:
+          description: the Token bank identifier.
+          type: string
+        payload:
+          description: the bank-custom account identifier.
+          type: string
+    
+    Iban:
+      description: Represents an account using IBAN format.
+      type: object
+      required: 
+      - iban
+      properties:
+        iban:
+          description: The IBAN account number.
+          type: string
+        bic:
+          description: optional BIC number for this account.
+          type: string
+    
+    Domestic:
+      description: Represents an account in the regional format.
+      type: object
+      required: 
+      - bankCode
+      - accountNumber
+      - country
+      properties:
+        bankCode:
+          description: The bank identifier.
+          type: string
+        accountNumber:
+          description: The account identifier.
+          type: string
+        country:
+          description: 2-letter ISO 3166-1 alpha-2 country code
+          type: string
+          minLength: 2
+          maxLength: 2
+    
+    Balance:
+      description: Represents account balance.
+      type: object
+      required:
+      - current
+      - available
+      properties:
+        current:
+          $ref: '#/components/schemas/Money'
+        available:
+          $ref: '#/components/schemas/Money'
+        updatedAt:
+          description: The time of the balance
+          type: string
+          format: date-time
+    
+    CreateAccountResponse:
+      description: Create Account Response
+      required:
+      - accountId
+      properties:
+        accountId:
+          description: The id of the account.
+          type: string
+          example: {"accountId":"a:123567890"}
+    
+    AccountDetails:
+      description: Optional account details. Structure of the data is dependent on the underlying bank and is subject to change.
+      required:
+      - identifier
+      - accountType
+      properties:
+        identifier:
+          description: Bank account identifier.
+          type: string
+          example: "0532013000"
+        accountType:
+          description: Type of the account.
+          type: string
+          enum:
+          - CHECKING
+          - SAVING
+          - LOAN
+          - CARD
+          - OTHER
+        status:
+          description: Status of account. E.g., "Active/Inactive/Frozen/Dormant".
+          type: string
+          example: "Active"
+        metadata:
+          description: Additional account metadata.
+          type: array
+          items:
+            $ref: '#/components/schemas/Entry'
+          example: [{"key":"APY", "value":"0.0239"}]
+
+    TransferRequest:
+      description: Transfer operation request.
+      type: object
+      required:
+        - transferId
+        - transactionAmount
+        - source
+        - destinatons
+      properties:
+        transferId:
+          description: The Token transfer identifier.
+          type: string
+        transactionAmount:
+          $ref: '#/components/schemas/Money'
+        source:
+          $ref: '#/components/schemas/BankAccount'
+        destinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferDestinations'
+        description:
+          description: Optional transfer description.
+          type: string
+        tokenRefId:
+          description: Reference id of the token, set by the initiator.
+          type: string
+        tokenInitiatorId:
+          description: Id of the member requesting token creation.
+          type: string
+        transferRefId:
+          description: Transfer reference id.
+          type: string
+        metadata:
+          $ref: '#/components/schemas/TransferMetadata'
+
+    TransferResponse:
+      description: Transfer operation response.
+      type: object
+      required:
+      - transactionId
+      - status
+      - statusDescription
+      properties:
+        transactionId:
+          description: The transaction id as recorded by the bank.
+          type: string
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        statusDescription:
+          description: Human-readable status description. 
+          type: string
+
+    TransferMetadata:
+      description: Represents additional metadata related to a transfer.
+      type: object
+      properties:
+        purposeOfPayment:
+          description: Purpose of Payment for this transfer.
+          type: string
+          enum:
+          - OTHER
+          - PERSONAL_EXPENSES
+          - PURCHASE_OF_SHARES
+          - TRANSFER_TO_YOUR_OWN_ACCOUNT
+          - PURCHASE_OF_PROPERTY
+          - FAMILY_MAINTENANCE
+          - SAVINGS
+        paymentContext:
+          description: Optional payment context of this transfer.
+          type: string
+          enum:
+          - OTHER_CONTEXT
+          - BILL_PAYMENT
+          - ECOMMERCE_GOODS
+          - ECOMMERCE_SERVICES
+          - PERSON_TO_PERSON
+        merchantCategoryCode:
+          description: Optional ISO 18245 Merchant Category Code (MCC).
+          type: string
+        merchantCustomerId:
+          description: Optional unique merchant customer identifier.
+        deliveryAddress:
+          $ref: '#/components/schemas/Address'
+
+    Transaction:
+      description: Represents a transaction.
+      type: object
+      required:
+      - id
+      - type
+      - status
+      - amount
+      - description
+      properties:
+        id:
+          description: The transaction identifier.
+          type: string
+        type:
+          description: The transaction type.
+          type: string
+          enum: 
+          - DEBIT
+          - CREDIT
+        status:
+          $ref: '#/components/schemas/TransactionStatus'
+        amount:
+          $ref: '#/components/schemas/Money'
+        description:
+          description: The description of the transaction.
+          type: string
+        tokenId:
+          description: The token consent identifier.Points to the token, only set for Token transactions.
+          type: string
+        tokenTransferId:
+          description: The token transfer identifier. Points to the token transfer, only set for Token transactions.
+          type: string
+        createdAt:
+          description: The time of transaction.
+          type: string
+          format: date-time
+
+    TransactionStatus:
+      type: string
+      description: The transaction status.
+      enum:
+      - PROCESSING  # The transaction is being processed (e.g. marked for review, AML checks, etc.)
+      - SUCCESS # The transaction succeeded
+      - FAILURE_INSUFFICIENT_FUNDS  # The transaction failed due to insufficient funds
+      - FAILURE_INVALID_CURRENCY  # The transaction failed due to currency mismatch
+      - FAILURE_PERMISSION_DENIED # The transaction failed due to access violation
+      - FAILURE_INVALID_AMOUNT  # The transaction failed due to invalid amount
+      - FAILURE_EXPIRED # The transaction failed to complete within allotted time
+      - FAILURE_UNSUPPORTED_DESTINATION # The transaction failed because bank does not support requested destination
+      - FAILURE_GENERIC # The transaction has failed due to other reasons
+      - INITIATED # Not Recommended: The transaction has been initiated but the result is unknown, this may be the final status and may not get updated later
+  
+    TransactionsPage:
+      description: Represents a page of transactions.
+      type: object
+      required:
+      - transactions
+      properties:
+        offset:
+          description: The page offset.
+          type: string
+        transactions: 
+          description: A list of transactions.
+          type: array
+          items:
+            $ref: '#/components/schemas/Transaction'
+    
+    TransferDestinations:
+      description: A list of possible transfer destinations for a given customer.
+      type: object
+      required:
+      - destinations
+      - customerData
+      properties:
+        destinations: 
+          description: A list of transfer destinations.
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferDestination'
+        customerData:
+          $ref: '#/components/schemas/Customer'
+    
+    TransferDestination:
+      description: Represents payment scheme details for a given account.
+      type: object
+      required:
+      - destination
+      properties:
+        scheme:
+          description: The transfer destination details.
+          oneOf:
+          - $ref: '#/components/schemas/SEPA'
+          - $ref: '#/components/schemas/FPS'
+          - $ref: '#/components/schemas/SWIFT'
+          - $ref: '#/components/schemas/ACH'
+    
+    SEPA:
+      description: Single Euro Payments Area.
+      type: object
+      required:
+      - iban
+      properties:
+        iban:
+          description: International Bank Account Number.
+          type: string
+        bic:
+          description: Bank Identifier Code.
+          type: string
+    
+    FPS:
+      description: Faster Payments Service.
+      type: object
+      required:
+      - sortCode
+      - accountNumber
+      properties:
+        sortCode:
+          description: The sort code associated wth the account.
+          type: string
+        accountNumber:
+          description: The account number.
+          type: string
+    
+    SWIFT:
+      description: Society for Worldwide Interbank Financial Telecommunication.
+      type: object
+      required:
+      - accountNumber
+      - bic
+      properties:
+        accountNumber:
+          description: The account number.
+          type: string
+        bic:
+          description: Bank Identifier Code.
+          type: string
+    
+    ACH:
+      description: The Automated Clearing House Network.
+      type: object
+      required:
+      - accountNumber
+      - routingNumber
+      properties:
+        accountNumber: 
+          description: The account number.
+          type: integer
+        routingNumber:
+          description: The routing number.
+          type: integer
+    
+    Customer:
+      description: Represents account holder information.
+      type: object
+      required:
+      - legalNames
+      properties:
+        legalNames:
+          description: A list of names of primary account holders.
+          type: array
+          items: 
+            type: string
+        address:
+          $ref: '#/components/schemas/Address'
+    
+    Consent:
+      description: Represents a Token Consent.
+      type: object
+      required:
+      - id
+      - grantorId
+      - beneficiary
+      - initiatorId
+      - initiatorRefId
+      - consent
+      properties:
+        id:
+          type: string
+          description: The consent id; same as the corresponding token id.
+        grantorId:
+          description: The id of the Token member granting the consent.
+        beneficiary:
+          $ref: '#/components/schemas/TokenMember'
+        initiatorId:
+          description: The id of the member requesting consent (e.g. merchant, PISP or AISP).
+          type: string
+        initiatorRefId:
+          description: Reference id set by the member requesting consent.
+          type: string
+        consent:
+          oneOf:
+          - $ref: '#/components/schemas/InformationAccess'
+          - $ref: '#/components/schemas/PaymentInitiation'
+    
+    PaymentInitiation:
+      description: Encapsulates details of a payment initiation consent.
+      type: object
+      required:
+      - bankAccount
+      - currency
+      - lifetimeAmount
+      properties:
+        bankAccount:
+          $ref: '#/components/schemas/BankAccount'
+        currency:
+          description: The payment currency.
+          type: string
+          minLength: 3
+          maxLength: 3
+        lifetimeAmount:
+          description: The total lifetime amount of the consent.
+          type: string
+        amount:
+          description: The maximum acceptable range of a single charge request.
+          type: string
+        transferDestinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransferDestinations'
+    
+    InformationAccess:
+      description: Encapsulates details of an information access consent.
+      type: object
+      required:
+      - resourceAccess
+      properties:
+        resourceAccess:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceAccess'
+    
+    ResourceAccess:
+      description: Represents access to a resource.
+      type: object
+      required:
+      - bankAccount
+      - resources
+      properties:
+        bankAccount:
+          $ref: '#/components/schemas/BankAccount'
+        resources:
+          description: A list of resources.
+          type: array
+          items:
+            type: string
+            enum:
+            - ACCOUNT
+            - BALANCE
+            - TRANSACTIONS
+            - TRANSFER_DESTINATIONS
+            - FUNDS_CONFIRMATIONS
+    
+    TokenMember:
+      description: Represents a Token member.
+      type: object
+      required:
+      - memberId
+      properties:
+        memberId:
+          description: Token Member ID.
+          type: string
+        alias:
+          $ref: '#/components/schemas/Alias'
+        actingAs:
+          $ref: '#/components/schemas/ActingAs'
+    
+    Alias:
+      description: An Alias refers to a member in a "human-readable" way. In most cases an alias must be verified before it is useful.
+      type: object
+      required:
+        - value
+        - type
+      properties:
+        realm:
+          description: The realm of the alias. All aliases must be unique within a given realm.
+          type: string
+          example: "token"
+        value:
+          description: The value of the alias.
+          type: string
+          example: "user@example.com"
+        aliasType:
+          description: The type of the alias.
+          type: string
+          enum:
+          - EMAIL
+          - PHONE
+          - DOMAIN
+          - CUSTOM
+          example: EMAIL
+          
+    ActingAs:
+      description: If a token is being created on behalf of another party, this field contains a description of that entity.
+      type: object
+      required:
+      - displayName
+      properties:
+        displayName:
+          description: Name of beneficiary to be shown to user.
+          type: string
+        secondaryName:
+          description: Optional domain or email of the recipient to be shown to user, along with display_name
+          type: string
+        refId:
+          description: Optional reference id of the beneficiary. Opaque to Token.
+          type: string
+        logoUrl:
+          description: URL pointing to the beneficiary's logo
+          type: string
+    
+    Notification:
+      description: Represents a notification.
+      type: object
+      required:
+      - notificationId
+      - subscriber
+      - content
+      - status
+      properties:
+        notificationId:
+          description: A unique id given to this notification
+          type: string
+        subscriber:
+          $ref: '#/components/schemas/Subscriber'
+        content:
+          $ref: '#/components/schemas/NotificationContent'
+        status:
+          type: array
+          items:
+            enum:
+            - PENDING
+            - DELIVERED
+            - COMPLETED
+            - INVALIDATED
+    
+    NotificationContent:
+      description: The contents of a notification that was sent or will be sent.
+      type: object
+      required:
+      - type
+      - title
+      - body
+      - payload
+      - createdAt
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        payload:
+          type: string
+        locKey:
+          type: string
+        locArgs:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+    
+    Subscriber:
+      description: Represents a subscription to notifications.
+      type: object
+      required:
+      - subscriberId
+      - handler
+      - handlerInstructions
+      properties:
+        subscriberId:
+          description: The id of the subscription.
+          type: string
+        handler:
+          description: Determines who is handling/sending the notification.
+          type: string
+          example: "Token"
+        handlerInstructions:
+          description: Contains information on how to send notifications.
+          type: array
+          items:
+            $ref: '#/components/schemas/Entry'
+          example: [{"key":"apns-id", "value":"123e4567-e89b-12d3-a456-42665544000"}]
+    
+    Money:
+      description: Represents a monetary value.
+      type: object
+      required:
+      - currency
+      - value
+      properties:
+        currency:
+          description: ISO4217 - 3 letter currency code such as "USD" or "EUR".
+          type: string
+          minLength: 3
+          maxLength: 3
+        value:
+          description: Double amount in the string format.
+          type: string
+    
+    Entry:
+      description: Represents a key-value entry; used to define string metadata items.
+      type: object
+      required:
+      - key
+      - value
+      properties:
+        key:
+          description: The item key.
+          type: string
+        value:
+          description: The item value.
+          type: string
+    
+    Address:
+      description: Represents a postal address.
+      type: object
+      properties:
+        houseNumber:
+          description: The house number (may contain letters, dashes or other characters). Addresses describe ways to tag a single building with multiple addresses.
+          type: string
+        houseName:
+          description: The name of a house. This is sometimes used in some countries like England instead of (or in addition to) a house number.
+          type: string
+        flats:
+          description: The house numbers (range or list) of flats behind a door.
+          type: string
+        conscriptionNumber:
+          description: This special kind of house number relates to a settlement instead of a street. Conscription numbers were introduced in the Austrio-Hungarian Empire and are still in use in some parts of Europe, sometimes together with street-related house numbers which are also called orientation numbers.
+          type: string
+        street:
+          description: The name of the respective street.
+          type: string
+        place:
+          description: This is part of an address which refers to the name of some territorial zone (usually like island or square) instead of a street. Should not be used together with street.
+          type: string
+        postCode:
+          description: The postal code of the building/area.
+          type: string
+        city:
+          description: The name of the city as given in postal addresses of the building/area.
+          type: string
+        country:
+          description: The ISO 3166-1 alpha-2 two letter country code in upper case.
+          type: string
+          minLength: 2
+          maxLength: 2
+        full:
+          description: "Use this for a full-text, often multi-line address if you find the structured address fields unsuitable for denoting the address of this particular location. Examples: 'Fifth house on the left after the village oak, Smalltown, Smallcountry' or '1200 West Sunset Boulevard Suite 110A'. Beware that these strings can hardly be parsed by software."
+          type: string
+        hamlet:
+          description: The hamlet.
+          type: string
+        suburb:
+          description: If an address exists several times in a city. You have to add the name of the settlement. See Australian definition of suburb.
+          type: string
+        subdistrict:
+          description: The subdistrict.
+          type: string
+        district:
+          description: The district.
+          type: string
+        province:
+          description: The province. For Canada, uppercase two-letter postal abbreviations  (BC, AB, ON, QC, etc.) are used. In Russia a synonym region is widely used.
+          type: string
+        state:
+          description: The state. For the US, uppercase two-letter postal abbreviations (AK, CA, HI, NY, TX, WY, etc.) are used.
+          type: string
+          minLength: 2
+          maxLength: 2
+  responses:
+    UnauthorizedError:
+      description: Access token is missing or invalid
+
+security:
+  - bearerAuth: []

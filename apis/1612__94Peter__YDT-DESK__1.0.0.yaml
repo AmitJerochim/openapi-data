@@ -1,0 +1,1459 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: 通用版桌機 API
+
+servers:
+# Added by API Auto Mocking Plugin
+# Added by API Auto Mocking Plugin
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/94Peter/YDT-DESK/1.0.0
+  - url: https://desk-ydt.beta.hvac-cloud.org
+    description: 測試
+
+tags:
+  - name: auth
+    description: 驗證相關API
+  - name: dashboard
+    description: 儀錶版
+  - name: sensor
+    description: 感應器相關API
+  - name: log
+    description: 日誌
+  - name: equipment
+    description: 設備
+  - name: event
+    description: 即時事件
+  - name: ems
+    description: 溫度回置設定
+    
+paths:
+  /v1/app:
+    get:
+      tags: [auth]
+      summary: 版本更新
+      operationId: app-version
+      parameters:
+        - in: query
+          name: app-v
+          required: true
+          schema:
+            type: string
+          example: "1.3.4"
+          description: 版本
+        - in: query
+          name: lang
+          required: true
+          schema:
+            type: string
+            enum: ["zh-tw", "en", "zh-cn" ]
+          description: 語言
+          example: en
+        - in: query
+          name: lang-v
+          required: true
+          schema:
+            type: string
+          example: "2.1"
+          description: 語言版本
+      responses:
+        '304':
+          description: "無需更新"
+        '200':
+          description: "需要更新"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  appV:
+                    type: string
+                    description: app最新版本
+                  appURL:
+                    type: string
+                    description: app更新位置
+                  langV:
+                    type: string
+                    description: 語言包版本
+                  langURL:
+                    type: string
+                    description: 語言包更新位置
+                example:
+                  appV: "1.2.3"
+                  appURL: "https://itunes.apple.com/tw/app/%E6%9C%80%E5%9B%A7%E6%8C%91%E6%88%B02/id1352628621?mt=8&v0=WWW-GCTW-ITSTOP100-FREEAPPS&l=zh&ign-mpt=uo%3D4"
+                  langV: "1.1"
+                  langURL: "https://beta-api.ydt.dforcepro.com/lang/en@1.0.txt"
+  /v1/login:
+    post:
+      tags: [auth]
+      summary: 登入 (1-1)
+      operationId: login
+      parameters:
+        - in: header
+          name: System
+          required: true
+          schema:
+            type: string
+          example: "3a81577f23161668d2fb9a6bc1b0a54d"
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                account:
+                  type: string
+                  description: 使用者帳號
+                pwd:
+                  type: string
+                  description: 密碼
+              example:
+                account: gavin
+                pwd: "1234"
+      responses:
+        '200':
+          description: 回傳使用者Token，做API使用者驗證
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: 身份驗證
+                  name:
+                    type: string
+                    description: 帳號名稱
+                example:
+                  token: Dv+BBAEC/4IAAQwBEAAA/5P/ggAGAXMFaW50NjQEBgD8tMEGGgJpZAZzdHJpbmcMGgAYNWEwNmI2OTBhYzk1NzYwMDA5MjZiNTY3B2FjY291bnQGc3RyaW5nDAcABXBldGVyBG5hbWUGc3RyaW5nDAgABlBldGVyYQVncm91cAZzdHJpbmcMBwAFYWRtaW4Gc3lzdGVtBnN0cmluZwwFAANsenc=
+                  name: dforcepro
+        '400':
+          description: 無效的輸入
+        '404':
+          description: 使用者帳號或密碼錯誤
+        '500':
+          description: 伺服器發生錯誤
+  /v1/pwd:
+    post:
+      tags: [auth]
+      summary: 修改密碼 (4-1-1)
+      operationId: modify-pwd
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                new-pwd:
+                  type: string
+                  description: 新密碼
+                pwd:
+                  type: string
+                  description: 舊密碼
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: 密碼格式不符
+        '403':
+          description: 舊密碼錯誤
+        '404':
+          description: 無效的使用者
+  /v1/logout:
+    post:
+      tags: [auth]
+      summary: 登出
+      operationId: logout
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+  /v1/dashboard:
+    post:
+      tags: [dashboard]
+      summary: 儀表版
+      operationId: get-dashboard
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardQuery'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDashboard'
+        '400':
+          description: 參數錯誤
+        '401':
+          description: 未登入
+        '403':
+          description: 查詢無權限的設備
+        '404':
+          description: 無效的使用者
+        '500':
+          description: internal server error
+  /v1/sensor/{ID}/report:
+    get:
+      tags: [sensor]
+      summary: 取得感應器數據報表
+      operationId: get-sensor-report
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: ID
+          required: true
+          schema:
+            type: string
+          example: "5abdc47cf4e45e0001b520fa"
+          description: sensorID
+        - in: query
+          name: interval
+          required: true
+          schema:
+            type: string
+            enum: [day, week, month, year]
+          description: 報表類型
+        - in: query
+          name: time
+          required: true
+          schema:
+            type: string
+          example: "2018-04-06T18:25:43Z"
+          description: 報表時間
+        - in: query
+          name: download
+          required: false
+          schema:
+            type: string
+            enum: [pdf]
+          description: 下載報表類型
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSensorReport'
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '204':
+          description: No Content
+        '400':
+          description: Invalid Input
+        '403':
+          description: permission denied
+  /v1/project:
+    get:
+      tags: [project]
+      summary: 取得案場清單
+      operationId: get-project-list
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProjectArray'
+        '204':
+          description: No Content
+  /v1/equipment:
+    post:
+      tags: [equipment]
+      summary: 新增/俢改設備資訊
+      operationId: create-equipment
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: header
+          name: UpdateID
+          schema:
+            type: string
+          required: false
+          description: required when update
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EquipmentEdit'
+      responses:
+        '201':
+          description: 新增完畢
+        '400':
+          description: 資料格式錯誤
+        '403':
+          description: 案場或盒子權限錯誤
+        '404':
+          description: 案場或盒子不存在
+        '500':
+          description: 伺服器錯誤
+    get:
+      tags: [equipment]
+      summary: 取得設備清單eq
+      operationId: get-equipment-list
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: project-id
+          required: true
+          schema:
+            type: string
+          description: 案場編號
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEquipmentArray'
+        '204':
+          description: No Content
+        '403':
+          description: 案場不允許該使用者存取
+  /v1/equipment/{ID}:
+    get:
+      tags: [equipment]
+      summary: 取得設備詳情
+      operationId: get-equipment-detail
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: ID
+          required: true
+          schema:
+            type: string
+          description: 設備ID (根劇設備清單中的id帶入)
+        - in: query
+          name: use
+          required: false
+          schema:
+            type: string
+            enum: [edit, display, job]
+          example: job
+          description: 顯示狀態 (default:display; list:edit, display, job)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEquipmentJobDetail'
+        '201':
+          description: OK (顯示用，201實際為200)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEquipmentDisplay'
+        '403':
+          description: 案場不允許該使用者存取
+        '404':
+          description: 找不到該案場
+  /v1/equipment/tpl:
+    get:
+      tags: [equipment]
+      summary: 取得設定模版清單
+      operationId: get-equipment-tpl
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEquipmentTplAry'
+        '204':
+          description: 案場不允許該使用者存取
+        '401':
+          description: 沒有權限
+        '500':
+          description: internal server error
+  /v1/equipment/tpl/{ID}:
+    get:
+      tags: [equipment]
+      summary: 取得設備模板明細
+      operationId: get-equipment-tpl-detail
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: ID
+          schema:
+            type: string
+          required: true
+          description: 模版id
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEquipTplDetail'
+        '404':
+          description: Not Found
+        '500':
+          description: server error
+  /v1/log:
+    get:
+      tags: [log]
+      summary: 取得日誌
+      operationId: get-log
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [alarm, alert, job, setting]
+          description: 狀態
+        - in: query
+          name: start
+          required: false
+          schema:
+            type: string
+          example: "2018-03-31T18:25:43Z"
+          description: 起始日期
+        - in: query
+          name: end
+          required: false
+          schema:
+            type: string
+          example: "2018-04-03T18:25:43Z"
+          description: 起始日期
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+          description: 頁數
+        - in: query
+          name: equip-id
+          required: false
+          schema:
+            type: string
+          description: 設備ID
+        - in: query
+          name: project-id
+          required: false
+          schema:
+            type: string
+          description: 案場ID
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            maximum: 200
+          description: 分頁資料比數 (MAX:200)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetLogPagination'
+        '400':
+          description: 無效的輸入
+        '500':
+          description: 伺服器發生錯誤
+  /v1/event:
+    get:
+      tags: [event]
+      summary: 取得即時告警
+      operationId: get-event
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+          description: 頁數
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            maximum: 200
+          description: 分頁資料比數 (MAX:200)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEventPagination'
+        '204':
+          description: No Content
+        '400':
+          description: Invalid Input
+        '403':
+          description: permission denied
+  /v1/job:
+    post:
+      tags: [job]
+      summary: 建立保修單
+      operationId: create-job
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJob'
+      responses:
+        '200':
+          description: success
+        '400':
+          description: 無效的輸入
+        '500':
+          description: 伺服器發生錯誤
+    get:
+      tags: [job]
+      summary: 取得保修單
+      operationId: get-job
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: state
+          required: false
+          schema:
+            type: string
+            enum: [pending, inProgress, complete]
+          description: 狀態
+        - in: query
+          name: usage
+          required: false
+          schema:
+            type: string
+            enum: [history]
+          description: 用途(如果是history派工單時間為完工時間)
+        - in: query
+          name: start
+          required: false
+          schema:
+            type: string
+          example: "2018-03-31T18:25:43Z"
+          description: 起始日期
+        - in: query
+          name: end
+          required: false
+          schema:
+            type: string
+          example: "2018-04-03T18:25:43Z"
+          description: 起始日期
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+          description: 頁數
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            maximum: 200
+          description: 分頁資料比數 (MAX:200)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetJobPagination'
+        '400':
+          description: 無效的輸入
+        '500':
+          description: 伺服器發生錯誤
+  /v1/job/{ID}:
+    get:
+      tags: [job]
+      summary: 取得保修明細
+      operationId: get-job-detail
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: ID
+          required: true
+          schema:
+            type: string
+          description: jobID
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetJobDetail'
+        '400':
+          description: 無效的輸入
+        '500':
+          description: 伺服器發生錯誤
+    put:
+      tags: [job]
+      summary: 更新保修內容
+      operationId: update-job-detail
+      description: 若action為arrival則不需要帶requestBody
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: ID
+          required: true
+          schema:
+            type: string
+          description: jobID
+        - in: query
+          name: action
+          required: true
+          schema:
+            type: string
+            enum: ["arrival", "fixed"]
+          description: jobID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FixedJob'
+      responses:
+        '200':
+          description: success
+        '400':
+          description: 無效的輸入
+        '500':
+          description: 伺服器發生錯誤
+  /v1/ems:
+    post:
+      tags: [ems]
+      summary: 溫度回置設定
+      operationId: create-ems
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEMS'
+      responses:
+        '200':
+          description: success
+        '400':
+          description: 無效的輸入
+        '500':
+          description: 伺服器發生錯誤
+    get:
+      tags: [ems]
+      summary: 取得溫度回置設定
+      operationId: get-ems-list
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEMSList'
+        '400':
+          description: 無效的輸入
+        '500':
+          description: 伺服器發生錯誤
+  /v1/ems/{ID}:
+    put:
+      tags: [ems]
+      summary: 更新EMS設定
+      operationId: update-ems-detail
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: ID
+          required: true
+          schema:
+            type: string
+          description: emsID
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEMS'
+      responses:
+        '200':
+          description: success
+        '400':
+          description: 無效的輸入
+        '500':
+          description: 伺服器發生錯誤
+    delete:
+      tags: [ems]
+      summary: 刪除EMS設定
+      operationId: delete-ems
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: ID
+          required: true
+          schema:
+            type: string
+          description: emsID
+      responses:
+        '200':
+          description: success
+        '400':
+          description: 無效的輸入
+        '500':
+          description: 伺服器發生錯誤
+  /v1/ems/{ID}/summary:
+    get:
+      tags: [ems]
+      summary: 更新EMS設定
+      operationId: get-ems-summary
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: ID
+          required: true
+          schema:
+            type: string
+          description: emsID
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEMSSummary'
+        '400':
+          description: 無效的輸入
+        '500':
+          description: 伺服器發生錯誤
+components:
+  schemas:
+    GetEMSSummary:
+      type: object
+      properties:
+        projectName:
+          type: string
+        equips:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              value:
+                type: number
+    GetEMSList:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+          projectID:
+            type: string
+          equipIDs:
+            type: array
+            items:
+              type: string
+          equipNames:
+            type: array
+            items:
+              type: string
+          conf:
+            type: array
+            items:
+              type: object
+              properties:
+                time:
+                  type: integer
+                mins:
+                  type: integer
+                value:
+                  type: number
+    CreateEMS:
+      type: object
+      properties:
+        name:
+          type: string
+        projectID:
+          type: string
+        equipIDs:
+          type: array
+          items:
+            type: string
+        conf:
+          type: array
+          items:
+            type: object
+            properties:
+              time:
+                type: integer
+              mins:
+                type: integer
+              value:
+                type: number
+            
+    GetEquipTplDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        sensors:
+          type: array
+          items:
+            $ref: '#/components/schemas/sensorTpl'
+        controllers:
+          type: array
+          items:
+            $ref: '#/components/schemas/controllerTpl'
+    sensorTpl:
+      type: object
+      properties:
+        device:
+          type: integer
+        address:
+          type: integer
+        type:
+          type: string
+        unit:
+          type: string
+        display:
+          type: string
+        disableAlert:
+          type: boolean
+        upper:
+          type: number
+        lower:
+          type: number
+        frequency:
+          type: object
+          properties:
+            minutes:
+              type: integer
+            times:
+              type: integer
+    controllerTpl:
+      type: object
+      properties:
+        device:
+          type: integer
+        address:
+          type: integer
+        type:
+          type: string
+        unit:
+          type: string
+        display:
+          type: string
+        disableAlert:
+          type: boolean
+        upper:
+          type: number
+        lower:
+          type: number   
+    GetJobPagination:
+      type: object
+      properties:
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: 保修單ID
+              type:
+                type: string
+                enum: [maintain, preRepair, repair]
+                description: 保修類型
+              equipName:
+                type: string
+              sensorName:
+                type: string
+              timestamp:
+                type: integer
+              projectName:
+                type: string
+              state:
+                type: string
+                enum: ["pending", "inProgress", "complete"]
+              passSecond:
+                type: integer
+                description: 經過多少時間
+              isArrival:
+                type: boolean
+              isMistake:
+                type: boolean
+        allPages:
+          type: integer
+          description: 總頁數
+        page:
+          type: integer
+          description: 目前頁數
+        limit:
+          type: integer
+          description: 一頁幾筆
+        total:
+          type: integer
+    GetJobDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        createTime:
+          type: integer
+        startTime:
+          type: integer
+        completeTime:
+          type: integer
+        equipObj:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            model:
+              type: string
+        projectObj:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            address:
+              type: string
+            contact:
+              type: object
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+        sensorObj:
+          type: object
+          properties:
+            id:
+              type: string
+            display:
+              type: string
+        type:
+          type: string
+          enum: [maintain, preRepair, repair]
+        description:
+          type: string
+        isMistake:
+          type: boolean
+        state:
+          type: string
+          enum: ["pending", "inProgress", "complete"]
+    FixedJob:
+      type: object
+      properties:
+        description:
+          type: string
+        isMistake:
+          type: boolean
+    CreateJob:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [maintain, preRepair, repair]
+          description: 類別(maintain, preRepair, repair)
+        sensorID:
+          type: string
+        equipID:
+          type: string
+        reporter:
+          type: string
+          description: 通報人
+    EventList:
+      type: object
+      properties:
+        projectName:
+          type: string
+          description: 案場名稱
+        equipName:
+          type: string
+          description: 設備名稱
+        sensorName:
+          type: string
+          description: 感測器顯示名稱
+        sensorValue:
+          type: string
+          description: 感測器數值
+        alertTime:
+          type: string
+          description: 告警時間
+        type:
+          type: string
+          description: 感測器類別
+        value:
+          type: number
+          description: 感測器值
+        projectID:
+          type: string
+          description: 案場ID
+        equipmentID:
+          type: string
+          description: 設備ID
+        sensorID:
+          type: string
+          description: 感應器ID
+        permission:
+          type: string
+      example:
+        equipName: 茶水間
+        sensorName: 電壓
+        sensorValue: 90 V
+        projectName: dforcepro 5F
+        alertTime: 1520827540
+        type: temperature
+        value: 24.2
+        projectID: 5abdbefcb3f3b10001524ba8
+        equipmentID: 5ac4b555654ac2000108e84b
+        sensorID: 5ac4b555654ac2000108e94b
+        permission: buyer
+    GetEventPagination:
+      type: object
+      properties:
+        raws:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventList'
+        allPages:
+          type: integer
+          description: 總頁數
+        page:
+          type: integer
+          description: 目前頁數
+        limit:
+          type: integer
+          description: 一頁幾筆
+    GetLogPagination:
+      type: object
+      properties:
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              timestamp:
+                type: integer
+              equipName:
+                type: string
+              tag:
+                type: string
+              contnet:
+                type: string
+              value:
+                type: string
+              detail:
+                type: array
+                items:
+                  type: string
+              projectName:
+                type: string
+        allPages:
+          type: integer
+          description: 總頁數
+        page:
+          type: integer
+          description: 目前頁數
+        limit:
+          type: integer
+          description: 一頁幾筆
+        total:
+          type: integer
+    EquipmentEdit:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 設備名稱
+        model:
+          type: string
+          description: 型號
+        equipID:
+          type: string
+          description: 設備ID
+        box:
+          type: object
+          properties:
+            macAddress:
+              type: string
+            boxID:
+              type: string
+              description: boxID
+        projectID:
+          type: string
+          description: 案場ID
+        sensors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SensorInput'
+        controllers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SensorInput'
+        delSensors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SensorInput'
+        delControllers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SensorInput'
+        sensorFolder:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              sensors:
+                type: array
+                items:
+                  type: string
+        controlFolder:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              sensors:
+                type: array
+                items:
+                  type: string
+    SensorInput:
+      type: object
+      properties:
+        device:
+          type: string
+          description: 載具 (1~255)
+        address:
+          type: string
+          description: 位置 (1~255)
+        type:
+          type: string
+          description: 類別 (需再拿類別清單)
+        unit:
+          type: string
+          description: 單位 (需再拿單位清單)
+        disableAlart:
+          type: boolean
+          description: 關閉預警判斷 (true:關閉 false:開啟)
+        upper:
+          type: number
+          description: 警戒/限制上限
+        lower:
+          type: number
+          description: 警戒/限制下限
+        display:
+          type: string
+          description: 自定名稱
+        frequency:
+          type: object
+          properties:
+            minutes:
+              type: integer
+              description: 分鐘
+            times:
+              type: integer
+              description: 次數
+          description: 頻率
+        value:
+          type: number
+          description: 設定值 (sensor不需要帶)
+      example:
+        device: 1
+        address: 2
+        type: temprature
+        unit: °C
+        upper: 20
+        lower: 17
+        display: 庫溫
+        disableAlart: false
+        frequency:
+          minutes: 5
+          times: 3
+        value: 18
+    GetEquipmentTplAry:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+        example:
+          - id: "5c1b75fc51c78d7f3ea05fbd"
+            name: 模版1
+          - id: "5c3b601151c78d7f3eb51588"
+            name: 模版2
+    GetEquipmentDisplay:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        equipID:
+          type: string
+        model:
+          type: string
+        onlineState:
+          type: string
+          enum: ["green", "red", "yellow"]
+        permission:
+          type: string
+        boxMACaddress:
+          type: string
+        controllers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SensorInput'
+        sensors:
+          type: array
+          items:
+            $ref: '#/components/schemas/SensorInput'
+    GetEquipmentJobDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          description: 設備名稱
+        project:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            address:
+              type: string
+            contact:
+              type: object
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+        sensors:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              display:
+                type: string
+    GetEquipmentArray:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+            description: 設備名稱
+          model:
+            type: string
+            description: 型號
+          boxMACaddress:
+            type: string
+            description: 人機MACaddress
+          stats:
+            type: string
+            description: 設備狀態
+          isOnline:
+            type: boolean
+            description: 是否正常上線
+          onlineState:
+            type: string
+            enum: ["green", "yellow", "orange", "red"]
+            description: 連線狀態
+          alertCount:
+            type: integer
+            description: 告警次數
+          lastAlertTimestamp:
+            type: integer
+            description: 最近一次告警時間
+          permission:
+            type: string
+          sort:
+            type: integer
+    GetProjectArray:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+          boxCount:
+            type: integer
+          equipmentCount:
+            type: integer
+          permission:
+            type: string
+        example:
+          id: 5a06b690ac9576000926b567
+          name: "京聯網5F"
+          boxCount: 4
+          equipmentCount: 2
+          permission: buyer
+    GetDashboard:
+      type: array
+      items:
+        type: object
+        properties:
+          project:
+            type: string
+            description: 案場名稱
+          projectId:
+            type: string
+            description: 案場id
+          equip:
+            type: string
+            description: 設備名稱
+          equipId:
+            type: string
+            description: 設備id
+          onlineState:
+            type: string
+            enum: ["green", "yellow", "orange", "red"]
+            description: 連線狀態
+          alertCount:
+            type: integer
+            description: 預警數量
+          alarmCount:
+            type: integer
+            description: 告警數量
+          sensors:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                value:
+                  type: number
+                unit:
+                  type: string
+                type:
+                  type: string
+    DashboardQuery:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+            description: 設備id
+          s:
+            type: array
+            items:
+              type: string
+            description: sensor編碼
+    GetSensorReport:
+      type: object
+      properties:
+        sensor:
+          type: object
+          properties:
+            sensorid:
+              type: string
+            display:
+              type: string
+            unit:
+              type: string
+            type:
+              type: string
+            max:
+              type: number
+            min:
+              type: number
+            avg:
+              type: number
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp:
+                type: integer
+              max:
+                type: number
+              min:
+                type: number
+              avg:
+                type: number
+              valid:
+                type: boolean
+      example:
+        sensor:
+          sensorid: "5ae29a763c36b20001889cda"
+          display: 庫溫
+          unit: ˚C
+          type: temperature
+          max: 12.5
+          min: 10.4
+          avg: 11.6
+        rows:
+          - timestamp: 1520827560
+            max: 12.5
+            min: 10.4
+            avg: 11.6
+            valid: true
+          - timestamp: 152082740
+            max: 12.5
+            min: 10.4
+            avg: 11.6
+            valid: false
+
+  securitySchemes:
+    ApiKeyAuth:        # arbitrary name for the security scheme
+      type: apiKey
+      in: header       # can be "header", "query" or "cookie"
+      name: Auth-Token  # name of the header, query parameter or cookie

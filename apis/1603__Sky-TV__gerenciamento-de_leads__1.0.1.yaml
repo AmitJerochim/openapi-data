@@ -1,0 +1,430 @@
+openapi: 3.0.0
+info:
+  title: Gerenciamento de Leads
+  contact:
+    name: João Jacinto de Barros
+    email: joao.barros@terceiro-sky.com.br
+  version: "1.0.1"
+servers:
+- url: https://apis-b2b.sky.com.br/prd/management
+  variables: {}
+- url: http://localhost:1880/management
+  description: ''
+  variables: {}
+paths:
+  /leads:
+    post:
+      tags:
+      - Criação Lead
+      summary: Leads_POST
+      description: ''
+      operationId: LeadsPost
+      parameters: []
+      requestBody:
+        description: Criação de Lead
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadCreate'
+        required: true
+      responses:
+        201:
+          description: Created
+          headers: {}
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        503:
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnavailableError'
+        default:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnavailableError'
+      deprecated: false
+  /leads/{leadId}:
+    patch:
+      tags:
+      - Atualização Lead
+      summary: LeadsByLeadId_PATCH
+      description: ''
+      operationId: LeadsbyleadidPatch
+      parameters:
+      - name: leadId
+        in: path
+        required: true
+        style: simple
+        schema:
+          type: integer
+          format: int32
+      requestBody:
+        description: Atualização de Lead
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadUpdate'
+        required: true
+      responses:
+        204:
+          description: No content
+          headers: {}
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        404:
+          description: Resource Not Found
+        422:
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        503:
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnavailableError'
+        default:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnavailableError'
+      deprecated: false
+  /leads/dispatch/{partner}:
+    post:
+      tags:
+      - Enviar Lead para Parceiros de Telefonia (Conversational Sales)
+      summary: LeadsDispatchByPartner_POST
+      description: API responsável por enviar o lead para o parceiro de telefonia.
+      operationId: LeadsdispatchbypartnerPost
+      parameters:
+      - name: partner
+        in: path
+        description: Identificador do parceiro
+        required: true
+        style: simple
+        schema:
+          maxLength: 100
+          type: string
+          example: whisbi
+      requestBody:
+        description: Enviar Lead
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadSend'
+        required: true
+      responses:
+        200:
+          description: OK - Confirmar response com Whisbi
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadSendResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        404:
+          description: Resource Not Found
+        422:
+          description: Unprocessable Entity
+        503:
+          description: Service Unavailable
+        default:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnavailableError'
+      deprecated: false
+components:
+  schemas:
+    LeadCreate:
+      title: LeadCreate
+      required:
+      - person
+      - campain
+      type: object
+      properties:
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+        person:
+          $ref: '#/components/schemas/Person'
+        pointOfSales:
+          $ref: '#/components/schemas/PointOfSales'
+        campain:
+          $ref: '#/components/schemas/Campain'
+    LeadSend:
+      title: LeadSend
+      required:
+      - person
+      - leadId
+      type: object
+      properties:
+        person:
+          $ref: '#/components/schemas/Person4Send'
+        leadId:
+          type: string
+          description: Identificador do lead da Sky
+          example: 1001
+      description: Objeto com dados do lead para ser enviado para parceira de telefonia
+    LeadSendResponse:
+      title: LeadSendResponse
+      required:
+      - eventId
+      - telecomStatus
+      - pointOfSales
+      type: object
+      properties:
+        leadId:
+          maxLength: 100
+          type: string
+          description: Identificador do Lead na Sky
+          example: 1001
+        eventId:
+          maxLength: 100
+          type: string
+          description: Identficador do evento do fornecedor de telefonia.
+          example: 10111
+        telecomStatus:
+          maxLength: 100
+          type: string
+          description: Status da telefonia (conversationalSales) para o Lead
+          example: CAIXA POSTAL
+        pointOfSales:
+          $ref: '#/components/schemas/PointOfSales'
+      description: Objeto de resposta do envio do lead para empresa de telefonia
+    LeadUpdate:
+      title: LeadUpdate
+      required:
+      - pointOfSales
+      - telecomStatus
+      type: object
+      properties:
+        pointOfSales:
+          $ref: '#/components/schemas/PointOfSales'
+        telecomStatus:
+          type: string
+          description: Status da telefonia (conversationalSales) para o Lead
+          example: CAIXA POSTAL
+      description: Objeto para atualização parcial ou total de lead no Salesforce
+    BusinessError:
+      title: BusinessError
+      type: object
+      properties:
+        code:
+          type: string
+          example: 5555
+        message:
+          type: string
+          example: PDV não localizado
+        description:
+          type: string
+          example: PDV informado não existe na base, favor verificar
+    UnavailableError:
+      title: UnavailableError
+      type: object
+      properties:
+        target:
+          type: string
+          example: X-X-API
+        message:
+          type: string
+          example: Erro ao contactar o serviço/API X
+        description:
+          type: string
+          example: exception message?
+    BadRequest:
+      title: BadRequest
+      type: object
+      properties:
+        keyword:
+          type: string
+          description: Tipo do erro
+        dataPath:
+          type: string
+          description: Localizaçao do dado por json path
+        schemaPath:
+          type: string
+          description: Localizaçao do schema por json schema
+        params:
+          $ref: '#/components/schemas/Params'
+        message:
+          type: string
+          description: descrição amigavel da validação
+      example:
+        keyword: required
+        dataPath: ''
+        schemaPath: '#/required'
+        params:
+          missingProperty: person
+        message: should have required property 'person'
+    Address:
+      title: Address
+      required:
+      - city
+      - street
+      - postalCode
+      - state
+      type: object
+      properties:
+        city:
+          type: string
+          description: Cidade
+        street:
+          type: string
+          description: Nome e número da rua
+          example: São Paulo
+        postalCode:
+          type: string
+          description: CEP
+          example: 04718050
+        state:
+          type: string
+          description: Estado
+          example: SP
+      description: Objeto contendo dados de endereço
+    Campain:
+      title: Campain
+      required:
+      - source
+      - medium
+      type: object
+      properties:
+        offer:
+          maxLength: 200
+          type: string
+        product:
+          maxLength: 200
+          type: string
+        name:
+          maxLength: 200
+          type: string
+        term:
+          maxLength: 200
+          type: string
+        source:
+          maxLength: 200
+          type: string
+        medium:
+          maxLength: 200
+          type: string
+        creativeLine:
+          maxLength: 200
+          type: string
+        content:
+          maxLength: 200
+          type: string
+      description: Objeto com dados da campanha
+    Metadata:
+      title: Metadata
+      type: object
+      properties:
+        ip:
+          maxLength: 200
+          type: string
+        browser:
+          maxLength: 200
+          type: string
+        device:
+          maxLength: 200
+          type: string
+    Params:
+      title: Params
+      type: object
+      properties:
+        missingProperty:
+          type: string
+          description: nome da propriedade faltante
+    Person:
+      title: Person
+      required:
+      - lastName
+      - phone
+      type: object
+      properties:
+        firstName:
+          maxLength: 100
+          type: string
+        lastName:
+          maxLength: 100
+          type: string
+        address:
+          $ref: '#/components/schemas/Address'
+        phone:
+          $ref: '#/components/schemas/Phone'
+        email:
+          type: string
+    Person4Send:
+      title: Person4Send
+      required:
+      - lastName
+      - phone
+      type: object
+      properties:
+        firstName:
+          maxLength: 100
+          type: string
+        lastName:
+          maxLength: 100
+          type: string
+        phone:
+          $ref: '#/components/schemas/Phone'
+    Phone:
+      title: Phone
+      required:
+      - phoneNumber
+      type: object
+      properties:
+        phoneNumber:
+          maxLength: 15
+          type: string
+    PointOfSales:
+      title: PointOfSales
+      required:
+      - id
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identificador do PDV
+          example: V100
+        name:
+          type: string
+          description: Nome do PDV
+          example: SKY PDV
+  securitySchemes:
+    API-Key:
+      type: apiKey
+      name: X-API-Key
+      in: header
+security:
+- API-Key: []
+tags:
+- name: Criação Lead
+  description: Cria lead no SalesForce
+- name: Atualização Lead
+  description: ''

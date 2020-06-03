@@ -1,0 +1,754 @@
+openapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/cloud_group5/MyAnimeListAPI/1.0.3
+info:
+  description: |
+    This is an API to provide and add data regarding anime titles and users of myanimelist.net.
+    
+    The API is built around **7 main services**.
+    
+    **Top Recommendations**: Get a list of recommendations based on the users ratings.
+    
+    **Get Score**: Get a recommendation score for specific animes.
+    
+    **Add Ratings**: Add new ratings for animes and in return get an updated list of top recommended animes.
+    
+    **Anime Titles**: Get a list of anime titles and related data (e.g., studio, type of anime, genres) based on selected criteria (e.g., for a specific genre, current status). Authorized administrators can also add new animes.
+    
+    **Users Profile**: Get profile information about users of myanimelist.net (e.g., gender, age, viewing categories). Authorized administrators can add new user profiles.
+    
+    **User Viewing History**: Get a list of anime titles viewed by a specific user.
+    
+    **Top Lists**: Get a list of the highest rated animes for a specific genre.
+    
+  version: "1.0.3"
+  title: My Anime List Dataset API
+
+tags:
+  - name: admins
+    description: Secured Admin-only calls
+  - name: public
+    description: Operations available to all users
+  - name: authorized_users
+    description: Operations available only to afiliated users
+paths:
+  /animes:
+    get:
+      tags:
+        - public
+      summary: searches anime titles
+      operationId: getAnimes
+      description: |
+        By passing in the appropriate criteria, you can search for anime titles
+      parameters:
+        - in: query
+          name: title
+          description: pass an optional title to search a specific anime
+          required: false
+          schema:
+            type: string
+            example: Princess Tutu
+        - in: query
+          name: id
+          description: pass an optional search ID to search animes
+          required: false
+          schema:
+            type: integer
+            format: int64
+            example: 721
+        - in: query
+          name: genre
+          description: pass the genre of the animes to select
+          required: false
+          schema:
+            type: string
+            example: Fantasy
+        - in: query
+          name: status
+          description: pass the status of the animes to select
+          required: false
+          schema:
+            type: string
+            example: Currently Airing
+        - in: query
+          name: limit
+          description: maximum number of records to return
+          required: false
+          schema:
+            type: integer
+            format: int32
+          example: 20
+        - in: query
+          name: year_range
+          description: searches animes that started after a specified year
+          schema:
+            type: integer
+            format: int32
+          example: 2008
+        - in: query
+          name: year
+          description: searches animes that started in a specified year
+          schema:
+            type: integer
+            format: int32
+          example: 2018
+      responses:
+        '200':
+          description: Search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Animes'
+        '400':
+          description: Invalid input parameter
+        '404':
+          description: No information for the provided input parameters
+  /add_anime:
+    post:
+      tags:
+        - admins
+      summary: adds an anime title
+      operationId: addAnimes
+      description: Adds an ainme to the dataset
+      responses:
+        '201':
+          description: Anime created
+        '400':
+          description: Invalid input, object invalid
+        '409':
+          description: An existing title already exists
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POST_Animes'
+        description: Anime title to add
+  /users_profile:
+    get:
+      tags:
+        - public
+      summary: searches users profile
+      operationId: getUsersProfile
+      description: |
+        By passing in the appropriate criteria, you can search for users profiles
+      parameters:
+        - in: query
+          name: userID
+          description: pass an optional search ID to search a specific user
+          required: false
+          schema:
+            type: integer
+            format: int64
+            example: 37326
+        - in: query
+          name: gender
+          description: pass the gender of the users to select
+          required: false
+          schema:
+            type: string
+            example: Female
+        - in: query
+          name: location
+          description: pass the location of the users to select
+          required: false
+          schema:
+            type: string
+            example: Detroit, Michigan
+        - in: query
+          name: birth_date
+          description: pass the birth date of the users to select
+          required: false
+          schema:
+            type: string
+            format: date
+            example: '1991-08-01'
+        - in: query
+          name: join_date
+          description: pass the join date of the users to select
+          required: false
+          schema:
+            type: string
+            format: date
+            example: '2008-02-13'
+        - in: query
+          name: stats_episodes
+          description: pass the number of episodes of the users to select
+          required: false
+          schema:
+            type: object
+            properties:
+              min:
+                type: integer
+                format: int64
+              max:
+                type: integer
+                format: int64
+            example: {'min':0, 'max':1000}
+        - in: query
+          name: limit
+          description: maximum number of records to return
+          schema:
+            type: integer
+            format: int32
+            maximum: 50
+            example: 10
+      responses:
+        '200':
+          description: Search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Users_Profile'
+        '400':
+          description: Invalid input parameter
+        '404':
+          description: No information for the provided input parameters
+  /add_user:
+    post:
+      tags:
+        - admins
+      summary: adds a user profile
+      operationId: addUsersProfile
+      description: Adds a user profile to the dataset
+      responses:
+        '201':
+          description: User profile created
+        '400':
+          description: Invalid input, object invalid
+        '409':
+          description: An existing user already exists
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Users_Profile'
+        description: User profile to add
+  /user_history/{username}:
+    get:
+      tags:
+        - authorized_users
+      summary: searches user viewing history
+      operationId: getUserHistory
+      description: |
+        By passing aa username, returns the user's viewing history
+      parameters:
+        - in: path
+          name: username
+          description: The user name
+          required: true
+          schema:
+            type: string
+            example: karthiga
+      responses:
+        '200':
+          description: Search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Users_History'
+        '400':
+          description: Invalid input parameter
+        '404':
+          description: No information for the provided input parameters
+  /animes/top:
+    get:
+      tags:
+        - public
+      summary: get a list of top rated animes for a specific genre
+      operationId: getTopAnimes
+      description: |
+        Returns animes order by the highest to lowest average users' score. It is possible to filter this top by genre, status and year_range.
+      parameters:
+        - in: query
+          name: genre
+          description: pass the genre of the animes to select for top
+          required: false
+          schema:
+            type: string
+            example: Fantasy
+        - in: query
+          name: status
+          description: pass the status of the animes to select for top
+          required: false
+          schema:
+            type: string
+            example: Currently Airing
+        - in: query
+          name: limit
+          description: maximum number of records to return for top
+          required: false
+          schema:
+            type: integer
+            format: int32
+          example: 20
+        - in: query
+          name: year_range
+          description: searches top animes that started after a specified year
+          schema:
+            type: integer
+            format: int32
+          example: 2008
+      responses:
+        '200':
+          description: Search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Top_Animes'
+        '400':
+          description: Invalid input parameter
+        '404':
+          description: No information for the provided input parameters
+  /{userID}/ratings/top/{limit}:
+    get:
+      tags:
+        - authorized_users
+      summary: get a list of top anime recommendations
+      operationId: getTopRecommendations
+      description: |
+        get a list of top anime recommendations
+      parameters:
+        - in: path
+          name: userID
+          description: The user's ID
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 22354
+        - in: path
+          name: limit
+          description: maximum number of records to return for top
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 20
+      responses:
+        '200':
+          description: Search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recommendations'
+        '400':
+          description: Invalid input parameter
+        '404':
+          description: No information for the provided input parameters
+  /{userID}/ratings/{anime_id}:
+    get:
+      tags:
+        - authorized_users
+      summary: get the recommendation scores for a list of animes
+      operationId: getRecommendations
+      description: |
+        get the recommendation scores for a list of animes
+      parameters:
+        - in: path
+          name: userID
+          description: The user's ID
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 22354
+        - in: path
+          name: anime_id
+          description: IDs of animes that the user wants to get a rating
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 234
+      responses:
+        '200':
+          description: Search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recommendations'
+        '400':
+          description: Invalid input parameter
+        '404':
+          description: No information for the provided input parameters
+  /{userID}/add_ratings/{list_ratings}:
+    post:
+      tags:
+        - authorized_users
+      summary: add new ratings and get updated recommendation score
+      operationId: addRecommendations
+      description: |
+        add new ratings and get updated recommendation scores
+      parameters:
+        - in: path
+          name: userID
+          description: The user's ID
+          required: true
+          schema:
+            type: integer
+            format: int32
+          example: 22354
+        - in: path
+          name: list_ratings
+          description: a list with animes_id and ratings
+          required: true
+          schema:
+            type: array
+            items:
+              type: integer
+            example: [234, 8, 435,5]
+      responses:
+        '200':
+          description: Search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recommendations'
+        '400':
+          description: Invalid input parameter
+        '404':
+          description: No information for the provided input parameters
+components:
+  schemas:
+    Animes:
+      description: Model containing basic anime title info
+      type: object
+      required:
+        - title
+        - type
+        - source
+        - episodes
+        - status
+        - rating
+        - score
+        - studio
+        - genre
+        - duration_min
+        - aired_from_year
+      properties:
+        title:
+          description: The anime title
+          type: string
+          example: Princess Tutu
+        type:
+          description: Type of anime (e.g., TV, Movie, Special)
+          type: string
+          example: TV
+        source:
+          description: The source of the anime title (e.g., Manga, Game, Visual Novel)
+          type: string
+          example: Manga
+        episodes:
+          type: integer
+          format: int64
+          example: 38
+        status:
+          description: Current status (e.g., Currently airing, Finished airing)
+          type: string
+          example: Finished Airing
+        rating:
+          description: Official viewing rating in terms of age
+          type: string
+          example: PG13 - Teens 13 or older
+        score:
+          description: Average users' score of the anime (from 0 to 10)
+          type: number
+          format: float
+          example: 8.21
+        studio:
+          description: Studio that produced the anime
+          type: string
+          example: Production Reed
+        genre:
+          description: The genre(s) used to categorize the anime title
+          type: string
+          example: Comedy, Drama, Romance, Fantasy
+        duration_min:
+          description: Mean duration in minutes of each episode
+          type: number
+          format: float
+          example: 24.0
+        aired_from_year:
+          description: Year in which the anime started airing or was released
+          type: integer
+          format: int32
+          example: 2002
+    POST_Animes:
+      description: Model containing basic anime info to POST
+      type: object
+      required:
+        - anime_id
+        - title
+        - type
+        - source
+        - episodes
+        - status
+        - studio
+        - genre
+        - duration_min
+        - rating
+        - aired_from_year
+      properties:
+        anime_id:
+          description: The id of the anime title
+          type: integer
+          format: int64
+          example: 721
+        title:
+          description: The anime title
+          type: string
+          example: Princess Tutu
+        type:
+          description: Type of anime (e.g., TV, Movie, Special)
+          type: string
+          example: TV
+        source:
+          description: The source of the anime title (e.g., Manga, Game, Visual Novel)
+          type: string
+          example: Manga
+        episodes:
+          type: integer
+          format: int64
+          example: 38
+        status:
+          description: Current status (e.g., Currently airing, Finished airing)
+          type: string
+          example: Finished Airing
+        studio:
+          description: Studio that produced the anime
+          type: string
+          example: Production Reed
+        genres:
+          description: The genre(s) used to categorize the anime title
+          type: string
+          example: Comedy, Drama, Romance, Fantasy  
+        duration:
+          description: Mean duration in minutes of each episode
+          type: number
+          format: float
+          example: 24.0
+        rating:
+          description: Official viewing rating in terms of age
+          type: string
+          example: PG13 - Teens 13 or older
+        aired_from_year:
+          description: Year in which the anime started airing or was released
+          type: integer
+          format: int32
+          example: 2002
+    Top_Animes:
+      description: Model containing basic info for top animes
+      type: object
+      required:
+        - title
+        - score
+      properties:
+        title:
+          description: The anime title
+          type: string
+          example: Princess Tutu
+        score:
+          description: Average users' score of the anime (from 0 to 10)
+          type: number
+          format: float
+          example: 8.21
+    Users_Profile:
+        description: Model containing basic user profile info
+        type: object
+        required:
+          - username
+          - user_id
+          - watching
+          - completed
+          - on_hold
+          - dropped
+          - plan_to_watch
+          - gender
+          - location
+          - birth_date
+          - join_date
+          - mean_score
+          - stats_rewatched
+          - stats_episodes
+        properties:
+          username:
+            type: string
+            example: Damonashu
+          user_id:
+            type: integer
+            format: int64
+            example: 37326
+          watching:
+            description: Number of animes the user is currently watching
+            type: integer
+            format: int64
+            example: 45
+          completed:
+            description: Number of animes the user watched the full episodes
+            type: integer
+            format: int64
+            example: 195
+          on_hold:
+            description: Number of animes the user has on hold
+            type: integer
+            format: int64
+            example: 27
+          dropped:
+            description: Number of animes the user quit watching
+            type: integer
+            format: int64
+            example: 25
+          plan_to_watch:
+            description: Number of animes the user plans to watch in the future
+            type: integer
+            format: int64
+            example: 59
+          gender:
+            description: Gender of the user
+            type: string
+            example: Female
+          location:
+            description: City, state and/or country where the user lives
+            type: string
+            example: Detroit, Michigan
+          birth_date:
+            description: User's birth date
+            type: string
+            format: date
+            example: '1991-08-01'
+          join_date:
+            description: Date when the user joined the myanimelist community
+            type: string
+            format: date
+            example: '2008-02-13'
+          mean_score:
+            description: Mean of all the scores the user gave to animes
+            type: number
+            format: float
+            example: 6.15
+          stats_rewatched:
+            description: Number of animes the user rewatched
+            type: integer
+            format: int32
+            example: 6
+          stats_episodes:
+            description: Number of episodes the user rewatched
+            type: integer
+            format: int32
+            example: 4903
+    Users_History:
+        description: Model containing basic user viewing history info
+        type: object
+        required:
+          - username
+          - user_id
+          - anime_id
+          - anime_title
+          - watched_episodes
+          - start_date
+          - finish_date
+          - score
+          - status
+          - rewatching
+          - rewathed_episodes
+          - last_updated
+          - tags
+        properties:
+          username:
+            type: string
+            example: Damonashu
+          user_id:
+            type: integer
+            format: int64
+            example: 37326
+          anime_id:
+            type: integer
+            format: int64
+            example: 120
+          anime_name:
+            type: string
+            example: Princess Tutu
+          watched_episodes:
+            description: Number of episodes the user watched of a specific anime
+            type: integer
+            format: int64
+            example: 26
+          start_date:
+            description: Date when the user started watching a specific anime
+            type: string
+            format: date
+            example: '2008-02-13'
+          finish_date:
+            description: Date when the user finished watching a specific anime
+            type: string
+            format: date
+            example: '2008-12-03'
+          score:
+            description: Score given by the user to a specific anime
+            type: integer
+            format: int32
+            example: 7
+          status:
+            description: Current status of the specific anime (1-watching, 2-completed, 3-on hold, 4-dropped, 6-plan to watch)
+            type: integer
+            format: int32
+            example: 2
+          rewatching:
+            description: Number of times the user rewatched a specific anime
+            type: integer
+            format: int32
+            example: 1
+          rewathed_episodes:
+            description: Number of episodes the user rewatched of specific anime
+            type: integer
+            format: int64
+            example: 22
+          last_updated:
+            description: Last date and time the info was updated
+            type: string
+            format: date-time
+            example: '2013-02-03T10:52:53'
+          tags:
+            description: Tags used by the user for a specific anime
+            type: array
+            items:
+              type: string
+            example: ["Son Jung-Hyun", "Park Hyeong-Ki"]
+    Recommendations:
+        description: Model containing the information presented to the user regarding anime recommendations
+        type: object
+        required:
+          - title
+          - rating
+          - count
+        properties:
+          title:
+            description: Title of the anime
+            type: string
+            example: Princess Tutu
+          rating:
+            description: Recommendation score
+            type: number
+            example: 8.5
+          count:
+            description: Number of users that rated the anime
+            type: integer
+            format: int64
+            example: 22684

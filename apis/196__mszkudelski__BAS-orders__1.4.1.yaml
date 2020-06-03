@@ -1,0 +1,265 @@
+openapi: 3.0.0
+info:
+  description: |
+    There are four different orders' statuses:
+      - AWAITING: order submitted in BAS system, waits for request from WarBud API; could be requested and could be edited only if status is changed too
+      - PENDING: order got by WarBud API, waits for realization; could be edited
+      - ACCEPTED: order accepted to realize by WarBud; nothing could be done with such order
+      - REJECTED: order rejected and won't be realized; nothing could be done with such order
+  version: "1.4.1"
+  title: BAS24 Orders API
+  contact:
+    email: marek.szkudelski@sonalake.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+paths:
+  /orders-mgmt/orders:
+    get:
+      tags:
+        - orders
+      summary: get list of orders' ID's  
+      description: |
+        Endpoint returns array of orders, that are in AWAITING status
+      parameters:
+        - in: query
+          name: skip
+          description: number of records to skip for pagination
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - in: query
+          name: limit
+          description: maximum number of records to return
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 50
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrderID'
+                  totalCount:
+                    type: number
+                    example: 51
+        '400':
+          description: bad input parameter
+        '401':
+          description: missing or invalid authorization token
+  /orders-mgmt/orders/:id:
+    get:
+      tags:
+        - orders
+      summary: get order by ID  
+      description: |
+        Endpoint returns order by ID, that is in AWAITING status.
+        Getting order does not change its status
+      responses:
+        '200':
+          description: |
+            order with given ID returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: bad input parameter
+        '401':
+          description: missing or invalid authorization token
+        '403':
+          description: access denied, you have access only to orders with AWAITING status 
+        '404':
+          description: order not found
+    put:
+      tags:
+        - orders
+      summary: edit order  
+      description: |
+        Endpoint allows editing order, for example change status or add comment. Only AWAITING orders could be changed to PENDING.
+        Only PENDING orders could be edited. You could edit not every field 
+      requestBody:
+        description: response contains all editable fields
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderEdit'
+            examples:
+              OnlyId:
+                value: 
+                  id: 'd290f1ee-6c54-4b01-90e6-d701748f0851'
+              Status:
+                value:
+                  id: 'd290f1ee-6c54-4b01-90e6-d701748f0851'
+                  status: 'REJECTED'
+              Comment:
+                value:
+                  id: 'd290f1ee-6c54-4b01-90e6-d701748f0851'
+                  comment: 'Jeszcze nie gotowe'
+                  link: 'http://webcon.com/order/123'
+      responses:
+        '200':
+          description: response contains all editable fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderEdit'
+              example:
+                  id: 'd290f1ee-6c54-4b01-90e6-d701748f0851'
+                  status: 'PENDING'
+                  comment: 'Jeszcze nie gotowe'
+                  link: 'http://webcon.com/order/123'
+                
+        '400':
+          description: bad input parameter
+        '401':
+          description: missing or invalid authorization token
+        '403':
+          description: access denied, you have access to edit only PENDING orders
+        '404':
+          description: order not found
+components:
+  schemas:
+    OrderID:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        deliveryDate:
+          type: string
+          example: '15-11-2019'
+        products:
+          type: array
+          items: 
+            $ref: '#/components/schemas/OrderProduct'
+        deliveryType:
+          type: string
+          enum: [OWN, EQUIPMENT_DEPARTMENT, COURIER]
+        deliveryInfo:
+          type: object
+          nullable: true
+          oneOf: 
+            - $ref: '#/components/schemas/CourierDelivery'
+            - $ref: '#/components/schemas/EquipmentDepartmentDelivery'
+          description: |
+            if deliveryType is OWN_DELIVERY, then deliveryInfo would be null, because there is no fields specific for this delivery type
+        phoneNumber: 
+          type: string
+          example: '123-456-789'
+        contactPerson:
+          type: string
+          example: 'Jan Kowalski'
+        userEmail:
+          type: string
+          example: 'jan.kowalski@warbud.pl'
+        buildName:
+          type: string
+          example: 'Budowa'
+        buildNumber:
+          type: string
+          example: 'AS1234D'
+        deliveryComment:
+          type: string
+          example: "Komentarz"
+    OrderProduct:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "ETH-00151"
+        name:
+          type: string
+          example: 'SPRĘŻARKA DOOSAN'
+        quantity:
+          type: number
+          example: 5
+        returnDate:
+          type: string
+          nullable: true
+          example: '19-11-2019'
+          description: "pole może nie być zdefiniowane jeśli produkt jest na sprzedaż" 
+        isForSale:
+          type: boolean
+          example: false
+    CourierDelivery:
+      type: object
+      properties:
+        UPSClientNumber:
+          type: string
+          example: "566732AB890C"
+        address:
+            $ref: '#/components/schemas/Address'
+    EquipmentDepartmentDelivery:
+      type: object
+      properties:
+        loadingTime: 
+          type: number
+          example: 1571662558809
+          description: Date with time in timestamp format
+        unloadingTime: 
+          type: number
+          example: 1571662558809
+          description: Date with time in timestamp format
+        loadingAddress:
+            $ref: '#/components/schemas/Address'
+        deliveryAddress:
+            $ref: '#/components/schemas/Address'
+        vehicleType:
+          type: string
+          example: 'TRN-10001'
+          description: Unique code of vehicle
+        vehicleReturn:
+          type: boolean
+          example: true
+        expectedWorkTime:
+          type: string
+          example: 'Półtora dnia'
+    Address: 
+      type: object
+      properties:
+        city: 
+          type: string
+          example: 'Poznań'
+        street: 
+          type: string
+          example: 'Poznańska 1/1b'
+          description: Field contains also building number
+        postCode:
+          type: string
+          example: '61-123'
+    OrderEdit:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        status:
+          type: string
+          enum: ['ACCEPTED', 'REJECTED']
+        comment:
+          type: string
+          example: "Czekamy na skompletowanie sprzętu"
+        webconLink:
+          type: string
+          example: 'http://webcon.com/url'

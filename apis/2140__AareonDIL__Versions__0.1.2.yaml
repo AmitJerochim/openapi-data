@@ -1,0 +1,253 @@
+openapi: 3.0.1
+# Changelog
+# - Update swagger to be more generic
+info:
+  title: Rest-Service Import digital platform
+  description: Rest-Service Import digital platform REST functions
+  version: 0.1.2
+servers:
+  - url: https://versions-develop.dil.aareonit.fr
+  - url: https://versions-sprint.dil.aareonit.fr
+  - url: https://versions-develop.test.aareonit.fr
+  - url: https://versions.prod.aareonit.fr
+paths:
+  /v1/versions:
+    get:
+      summary: Get versions of services of all contexts
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/global_response'
+        '500':
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/global_errors'
+
+  /v1/versions/{context}:
+    get:
+      summary: Get versions of services of a context
+      parameters:
+        - name: context
+          in: path
+          description: Context name
+          required: true
+          schema:
+            type: string
+            description: >-
+              Name of the context we want to have the available versions.
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/context_response'
+        '404':
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/context_errors_not_found'
+        '500':
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/context_errors_internal_server_error'
+
+  /v1/versions/{context}/{service}:
+    get:
+      summary: Get versions of a service
+      parameters:
+        - name: context
+          in: path
+          description: Context name
+          required: true
+          schema:
+            type: string
+            description: >-
+              Name of the context we want to have the available versions.
+        - name: service
+          in: path
+          description: Service name
+          required: true
+          schema:
+            type: string
+            description: >-
+              Name of the service we want to have the available versions.
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/service_response'
+        '404':
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/service_errors_not_found'
+        '500':
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/service_errors_internal_server_error'
+
+components:
+  schemas:
+    #region templates
+    error_template:
+      type: object
+      required: ["title", "details"]
+      properties:
+        type:
+          type: string
+          description: Link to a description for this type of error
+          example: https:/www.aareon.fr/documentation/error/xxx
+        resource:
+          type: string
+          description: Link to the object the error relates to (if any)
+        reference:
+          type: string
+          description: External reference of the object the error relates to
+          example: ""
+        title:
+          type: string
+          description: Complete name of HTTP status
+          example: Internal server error
+        details:
+          type: string
+          description: Detail information related to the error
+          example: "An unexpected error occurs. Please contact your administrator."
+
+    error_not_found_template:
+      allOf:
+        - $ref: '#/components/schemas/error_template'
+        - type: object
+          required: ["title", "details"]
+          properties:
+            title:
+              example: Not found
+            details:
+              example: "Data is not found."
+
+    error_internal_server_error_template:
+      allOf:
+        - $ref: '#/components/schemas/error_template'
+        - type: object
+          required: ["title", "details"]
+          properties:
+            title:
+              example: Internal server error
+            details:
+              example: "An unexpected error occurs. Please contact your administrator."
+    #endregion
+
+    #region /versions
+    global_response:
+      type: object
+      additionalProperties:
+        allOf:
+          - $ref: '#/components/schemas/context_response'
+      example:
+        apireference:
+          persons:
+            - "1.1"
+            - "2.0"
+          real_estate:
+            - "1.7"
+        api:
+          businessclaim:
+            - "1.0"
+
+    global_error:
+      type: object
+      properties:
+        resource:
+          example: /v1/versions
+
+    global_errors:
+      type: array
+      items:
+        allOf:
+          - $ref: '#/components/schemas/error_template'
+          - $ref: '#/components/schemas/global_error'
+    #endregion
+
+    #region /versions/{context}
+    context_response:
+      type: object
+      description: >-
+        List of available services (and their versions) in a context.
+      additionalProperties:
+        $ref: '#/components/schemas/service_response'
+      example:
+        persons:
+          - "1.1"
+          - "2.0"
+        real_estate:
+          - "1.7"
+
+    context_error:
+      type: object
+      properties:
+        resource:
+          example: /v1/versions/{context}
+
+    context_errors_not_found:
+      type: array
+      items:
+        allOf:
+          - $ref: '#/components/schemas/error_not_found_template'
+          - $ref: '#/components/schemas/context_error'
+
+    context_errors_internal_server_error:
+      type: array
+      items:
+        allOf:
+          - $ref: '#/components/schemas/error_internal_server_error_template'
+          - $ref: '#/components/schemas/context_error'
+    #endregion
+
+    #region /versions/{context}/{service}
+    service_versions:
+      type: array
+      description: >-
+        List of available versions. As compatibility is kept while the major version is the same, there is no need to list all minor versions of a major version, only the last one is needed.
+      items:
+        type: string
+
+    service_response:
+      allOf:
+        - $ref: '#/components/schemas/service_versions'
+        - example:
+          - "1.1"
+          - "2.0"
+
+    service_error:
+      type: object
+      properties:
+        resource:
+          example: /v1/versions/{context}/{service}
+
+    service_errors_not_found:
+      type: array
+      items:
+        allOf:
+          - $ref: '#/components/schemas/error_not_found_template'
+          - $ref: '#/components/schemas/service_error'
+
+    service_errors_internal_server_error:
+      type: array
+      items:
+        allOf:
+          - $ref: '#/components/schemas/error_internal_server_error_template'
+          - $ref: '#/components/schemas/service_error'
+    #endregion

@@ -1,0 +1,1997 @@
+openapi: 3.0.0
+info:
+  title: Legito API
+  version: '1'
+  description: |
+    Legito features RESTful interface that allows to edit most of your enterprise settings via API.
+
+    # Quickstart
+    The most common use-case is to fill in data from your CRM and create a Word/PDF export of your document. To do this:
+    1. call POST `/document-version/data/{templateSuiteId}` to  create a new record for the document an fill in the initial data. To fill in the initial data, you will need to know the system names that are used in your document template.
+      ![System name image](https://www.legito.com/images/api/system_name.png)
+
+      example data for input element:
+      ~~~
+      [
+        {
+          "name": "first_party_name1",
+          "value": "John Doe"
+        }
+      ]
+      ~~~
+
+    2. Previous method returns metadata of created document record. Store document code from this metadata. It's a 40 character string eg.: `CaRDL6J7VOVqIrd7TazZyKd9pZWzxwiRylDtHdPc`
+    3. call GET `/document-version/download/{code}/` to download PDF/Word document
+
+    All of your calls need to be signed - please see the following section - Authentification.
+    For full description of different elements and supported values, also see our complete documentation
+
+    You can also see our [example source code on Github](https://github.com/legito/api-wrapper).
+
+    # Authentication
+
+    For authentication Legito API uses a Bearer authentication scheme with JSON Web Token (JWT).
+
+    In the JWT bearer authentication flow, your application posts a JWT to the Legito service, asserting its credentials and providing the data of the user that it wishes to impersonate (act on behalf of). Legito validates that the assertion is signed and that your application has the permission to act on behalf of the user.
+
+    ## Prerequisites
+
+    First you need to generate an API key and a private key in Legito aplication `My account -> Settings -> Developers -> API`.
+
+    ## Create a JWT token
+
+    To authenticate in the JWT bearer flow, you will need to create a [JWT](https://jwt.io/introduction/) token and include it in authorization header for each of API requests you send to Legito.
+
+    In its compact form, JSON Web Tokens consist of three parts separated by dots (.), which are:
+
+    - Header
+    - Payload
+    - Signature
+
+    ### Header
+    The header, shown below, specifies the type of the token and algorithm used for signing it. For a Legito service integration, the header structure should always have a type of `JWT` and use `HS256` as its algorithm.
+
+    ~~~
+    {
+      "alg": "HS256",
+      "typ": "JWT"
+    }
+    ~~~
+
+    ### Payload
+
+    The payload section contains the data for the claims that your application is making. Each legito JWT must contains the following set of claims, as shown below.
+
+    Claim | Description
+    ------------ | -------------
+    iss | API key (generated in prerequisites which idetifies your workspace.
+    iat | Timestamp when the JWT was issued, in Unix epoch time format.
+    exp | Timestamp when the JWT assertion will expire, in Unix epoch time format. Default and maximal value is one hour from issed time.
+
+    ~~~
+    {
+      "iss": "94afa3c5-a1d5-4657-a8a6-7f968820792c"
+      "iat": "1587459071"
+      "exp": "1587462671"
+    }
+    ~~~
+
+    ### Signature
+
+    The signature part of the JWT is a digital signature that enables Legito to verify that the JWT was created by your application and was not modified since it was created. The first two parts of the JWT are signed with your application's private key using `HS256` digital signature algorithm.
+
+    Secret to `HS256` algorithm is your generated `private key`
+
+    Example Signature
+    ~~~
+    HMACSHA256(
+      base64UrlEncode(header) +
+      "." +
+      base64UrlEncode(payload),
+      $privateKey
+    );
+    ~~~
+
+    ## Creation of authorization header
+
+    All of your API requests must include Authorization HTTP header with bearer scheme whitch contains JWT token
+
+    ~~~
+    Authorization: Bearer <jwtToken>
+    ~~~
+
+
+servers:
+  - description: Legito API v1
+    url: https://www.legito.com/api/v1
+tags:
+  - name: advancedStyle
+    description: Operations with advanced styles
+  - name: category
+    description: Operations with categories
+  - name: country
+    description: Operations with countries
+  - name: currency
+    description: Operations with currencies
+  - name: documentRecord
+    description: Operations with document records
+  - name: info
+    description: Operations with system info
+  - name: share
+    description: Operations with sharing of document records
+  - name: documentVersion
+    description: Operations with document versions
+  - name: templateSuite
+    description: Operations with template suite
+  - name: timezone
+    description: Operations with timezone
+  - name: user
+    description: Operations with users
+  - name: userGroup
+    description: Operations with user groups
+
+paths:
+  /advanced-style:
+    get:
+      tags:
+        - advancedStyle
+      summary:
+        Returns advanced styles list
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdvancedStyle'
+      security:
+        - legitoAuth: []
+
+
+  /category:
+    get:
+      tags:
+        - category
+      summary:
+        Returns category list
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+      security:
+        - legitoAuth: []
+
+
+  /country:
+    get:
+      tags:
+        - country
+      summary:
+        Returns country list
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Country'
+      security:
+        - legitoAuth: []
+
+
+  /currency:
+    get:
+      tags:
+        - currency
+      summary:
+        Returns currency list
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Currency'
+      security:
+        - legitoAuth: []
+
+
+  /document-record:
+    get:
+      tags:
+        - documentRecord
+      summary:
+        Returns document record list
+      parameters:
+        - name: limit
+          in: query
+          description: Limit of given records
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 1000
+        - name: offset
+          in: query
+          description: Offset of given records
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: templateSuiteId
+          in: query
+          description: Filter records to template suite ID
+          required: false
+          schema:
+            type: integer
+            nullable: true
+            default: null
+        - name: deleted
+          in: query
+          description: Filter deleted records
+          required: false
+          schema:
+            type: boolean
+            nullable: true
+            default: null
+          example: true
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentRecord'
+      security:
+        - legitoAuth: []
+
+  /document-record/{code}:
+    put:
+      tags:
+        - documentRecord
+      summary:
+        Updates existing document record
+      parameters:
+        - name: code
+          in: path
+          description: Document record code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+      requestBody:
+        description: Deparment record data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRecord'
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentRecord'
+      security:
+        - legitoAuth: []
+
+    delete:
+      tags:
+        - documentRecord
+      summary:
+        Removes document record
+      parameters:
+        - name: code
+          in: path
+          description: Document record code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+
+  /info:
+    get:
+      tags:
+        - info
+      summary:
+        Returns system info
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Info'
+      security:
+        - legitoAuth: []
+
+
+  /share/{code}:
+    get:
+      tags:
+        - share
+      summary:
+        Returns share lists for document record
+      parameters:
+        - name: code
+          in: path
+          description: Document record code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShareUser'
+                  userGroups:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShareUserGroup'
+      security:
+        - legitoAuth: []
+
+  /share/user/{code}:
+    post:
+      tags:
+        - share
+      summary:
+        Creates user share for document record
+      parameters:
+        - name: code
+          in: path
+          description: Document record code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+      requestBody:
+        description: Share user elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShareUser'
+              example:
+                - id: 11004
+                - email: 'janedee@legito.com'
+                  permission: LIST
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+  /share/user/{code}/{userIdOrEmail}:
+    delete:
+      tags:
+        - share
+      summary:
+        Removes user share from document record
+      parameters:
+        - name: code
+          in: path
+          description: Document record code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: userIdOrEmail
+          in: path
+          description: User ID or User email
+          required: true
+          schema:
+            type: string
+          example: 35149 | test@legito.com
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+  /share/user-group/{code}:
+    post:
+      tags:
+        - share
+      summary:
+        Creates user group share for document record
+      parameters:
+        - name: code
+          in: path
+          description: Document record code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+      requestBody:
+        description: Share document record elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShareUserGroup'
+              example:
+                - id: 12
+                - id: 34
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+  /share/user-group/{code}/{userGroupId}:
+    delete:
+      tags:
+        - share
+      summary:
+        Removes user group share from document record
+      parameters:
+        - name: code
+          in: path
+          description: Document record code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: userGroupId
+          in: path
+          description: User group ID
+          required: true
+          schema:
+            type: integer
+          example: 12
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+
+  /document-version/data/{code}:
+    get:
+      tags:
+        - documentVersion
+      summary:
+        Returns document version data elements list
+      parameters:
+        - name: code
+          in: path
+          description: Document version code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: listType
+          in: query
+          description: Type of list view or tree view
+          required: false
+          schema:
+            type: string
+            enum:
+              - list
+              - tree
+            default: list
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TemplateElementResponse'
+                example:
+                  - id: 10
+                    name: element_system_name
+                    type: Paragraph
+                    parentId: 9
+                    visible: true
+                    text: Some very exciting text...
+                  - id: 11
+                    name: element_system_name
+                    type: Markup
+                    parentId: 10
+                    text: Some very exciting text...
+                  - id: 12
+                    type: Text
+                    parentId: 10
+                    value: some input value
+
+      security:
+        - legitoAuth: []
+    put:
+      tags:
+        - documentVersion
+      summary:
+        Puts elements data into template and creates new document version
+      parameters:
+        - name: code
+          in: path
+          description: Document version code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+      requestBody:
+        description: Document elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/TemplateElementValue'
+              example:
+                - id: 17
+                  name: 'some_element'
+                  visible: true
+                - id: 18
+                  name: 'some_element'
+                  value: some_input value
+                - id: 19
+                  name: 'some_element'
+                  value:
+                    currency: 1
+                    number: '100 000 Kč'
+                    wordsEnable: 1
+                    textValue: 'one hundred thousand'
+                    textCurrency: 'czech crounds'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentVersion'
+      security:
+        - legitoAuth: []
+
+  /document-version/data/{templateSuiteId}:
+    post:
+      tags:
+        - documentVersion
+      summary:
+        Inserts elements data into template and creates new document version
+      parameters:
+        - name: templateSuiteId
+          in: path
+          description: Template suite ID
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        description: Document elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/TemplateElementValue'
+              example:
+                - id: 17
+                  name: 'some_element'
+                  visible: true
+                - id: 18
+                  name: 'some_element'
+                  value: some_input value
+                - id: 19
+                  name: 'some_element'
+                  value:
+                    currency: 1
+                    number: '100 000 Kč'
+                    wordsEnable: 1
+                    textValue: 'one hundred thousand'
+                    textCurrency: 'czech crounds'
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentVersion'
+      security:
+        - legitoAuth: []
+
+  /document-version/download/{code}/{format}:
+    get:
+      tags:
+        - documentVersion
+      summary:
+        Downloads document in base64 encoded file
+      parameters:
+        - name: code
+          in: path
+          description: Document version code
+          required: true
+          schema:
+            type: string
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        - name: format
+          in: path
+          description: Format of file
+          required: true
+          schema:
+            type: string
+            enum:
+              - docx
+              - pdf
+          example: docx
+        - name: templateId
+          in: query
+          description: Template ID - If template ID is not specified, all documents created from template suite from specified version will be downloaded.
+          required: false
+          schema:
+            type: string
+        - name: advancedStyleId
+          in: query
+          description: Advanced style ID - If no advanced style is specified, default advanced style will be used.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    filename:
+                      type: string
+                      description: File name with extension
+                    data:
+                      type: string
+                      description: base64 encoded content od file
+        '404':
+          description: Agreement instance was not found
+
+      security:
+        - legitoAuth: []
+
+
+  /template-suite:
+    get:
+      tags:
+        - templateSuite
+      summary:
+        Returns template suite list
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TemplateSuite'
+      security:
+        - legitoAuth: []
+
+
+  /timezone:
+    get:
+      tags:
+        - timezone
+      summary:
+        Returns timezone list
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Timezone'
+      security:
+        - legitoAuth: []
+
+
+  /user/:
+    get:
+      tags:
+        - user
+      summary:
+        Returns user list
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+      security:
+        - legitoAuth: []
+
+    post:
+      tags:
+        - user
+      summary:
+        Creates user with default permissions
+      requestBody:
+        description: User elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+              example:
+                - email: 'johndoe@legito.com'
+                  name: John Doe
+                - email: 'janedee@legito.com'
+                  name: Jane Dee
+                  caption: CEO
+                  sessionExpiration : 86400
+                  sessionDestroy: 0
+
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+      security:
+        - legitoAuth: []
+
+
+  /user/{userIdOrEmail}:
+    put:
+      tags:
+        - user
+      summary:
+        Updates user
+      parameters:
+        - name: userIdOrEmail
+          in: path
+          description: User ID od User email
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: User elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+            example:
+              name: John Doe
+              caption: CEO
+              sessionExpiration : 86400
+              sessionDestroy: 0
+
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+    delete:
+      tags:
+        - user
+      summary:
+        Removes user
+      parameters:
+        - name: userIdOrEmail
+          in: path
+          description: User ID od User email
+          required: true
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+
+  /user/permission/{userIdOrEmail}:
+    get:
+      tags:
+        - user
+      summary:
+        Returns user permission list
+      parameters:
+        - name: userIdOrEmail
+          in: path
+          description: User ID od User email
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
+        '404':
+          description: user was not found
+      security:
+        - legitoAuth: []
+    put:
+      tags:
+        - user
+      summary:
+        Puts user permission
+      parameters:
+        - name: userIdOrEmail
+          in: path
+          description: User ID od User email
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: Document elements data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Permission'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Permission'
+        '404':
+          description: user was not found
+      security:
+        - legitoAuth: []
+
+
+  /user-group:
+    get:
+      tags:
+        - userGroup
+      summary:
+        Returns user group list
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserGroup'
+      security:
+        - legitoAuth: []
+
+    post:
+      tags:
+        - userGroup
+      summary:
+        Inserts new user group
+      requestBody:
+        description: user group data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserGroup'
+            example:
+              name: Sales group
+
+      responses:
+        '201':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroup'
+        '403':
+          description: user group already exists
+      security:
+        - legitoAuth: []
+
+  /user-group/{userGroupId}:
+    put:
+      tags:
+        - userGroup
+      summary:
+        Updates existing user group
+      parameters:
+        - name: userGroupId
+          in: path
+          description: User group ID
+          required: true
+          schema:
+            type: integer
+          example: 12
+      requestBody:
+        description: user group data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserGroup'
+            example:
+              name: Sales group
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroup'
+      security:
+        - legitoAuth: []
+    delete:
+      tags:
+        - userGroup
+      summary:
+        Removes user group
+      parameters:
+        - name: userGroupId
+          in: path
+          description: User group ID
+          required: true
+          schema:
+            type: integer
+          example: 12
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+  /user-group/user/{userGroupId}:
+    post:
+      tags:
+        - userGroup
+      summary:
+        Adds user to user group
+      parameters:
+        - name: userGroupId
+          in: path
+          description: User group ID
+          required: true
+          schema:
+            type: integer
+          example: 12
+      requestBody:
+        description: User group users data
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/UserGroupUser'
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+  /user-group/user/{userGroupId}/{userIdOrEmail}:
+    delete:
+      tags:
+        - userGroup
+      summary:
+        Removes user from department
+      parameters:
+        - name: userGroupId
+          in: path
+          description: User group ID
+          required: true
+          schema:
+            type: integer
+          example: 12
+        - name: userIdOrEmail
+          in: path
+          description: User ID or User email
+          required: true
+          schema:
+            type: string
+          example: 35149 | test@legito.com
+
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+      security:
+        - legitoAuth: []
+
+
+components:
+  securitySchemes:
+    legitoAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AdvancedStyle:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Agreement temaplte ID
+          example: 18
+        name:
+          type: string
+          example: Some template
+        visible:
+          type: boolean
+          description: Is template visible
+          example: true
+
+    Country:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Country ID
+          example: 1
+        name:
+          type: string
+          description: Country name
+          example: Czech republic
+        code:
+          type: string
+          description: Country code
+          example: CZ
+        defaultLang:
+          type: string
+          description: Default system language for country
+          example: cs
+
+    Currency:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Currency ID
+          example: 4
+        currency:
+          type: string
+          description: Currency code
+          example: EUR
+        symbol:
+          type: string
+          example: '€'
+
+
+    DocumentRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Document record ID
+          example: 11000
+        code:
+          type: string
+          readOnly: true
+          description: Unique document record code
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        deleted:
+          type: boolean
+          readOnly: true
+          example: false
+        created:
+          type: string
+          readOnly: true
+          description: Creation date and time in ISO 8601
+          example: '2017-06-27T07:56:02+02:00'
+        externalDocument:
+          type: boolean
+          readOnly: true
+          description: True if document record is created as external document record
+        templateSuiteId:
+          type: integer
+          readOnly: true
+          description: Template suite ID
+        name:
+          type: string
+          example: Purchase Agreement
+        authorId:
+          type: integer
+          readOnly: true
+          description: Author user ID
+        ownerId:
+          type: integer
+          description: Owner user ID
+        workflowStatusId:
+          type: integer
+          readOnly: true
+          description: Current state ID
+          example: 10
+        locked:
+          type: boolean
+          readOnly: true
+          description: true if document is loceked
+        confidential:
+          type: boolean
+          example: false
+        notification:
+          type: boolean
+          example: true
+          description: true if date notifications is send to this document record
+        notificationAdvance:
+          type: integer
+          example: 2
+          description: number of days ofnotification advance
+        expirationDates:
+          type: array
+          items:
+            type: string
+          description: Expiration dates and time in ISO 8601
+          example:
+            - '2017-08-27T10:56:02+02:00'
+            - '2019-11-04T08:04:03+04:00'
+        dueDates:
+          type: array
+          items:
+            type: string
+          description: Due dates and time in ISO 8601
+          example:
+            - '2017-08-27T10:56:02+02:00'
+            - '2019-11-04T08:04:03+04:00'
+        deliveryDates:
+          type: array
+          items:
+            type: string
+          description: Delivery dates and time in ISO 8601
+          example:
+            - '2017-08-27T10:56:02+02:00'
+            - '2019-11-04T08:04:03+04:00'
+        signingDates:
+          type: array
+          items:
+            type: string
+          description: Signing dates and time in ISO 8601
+          example:
+            - '2017-08-27T10:56:02+02:00'
+            - '2019-11-04T08:04:03+04:00'
+        totalValue:
+          type: number
+          description: Total value of document rouded to two digits
+          nullable: true
+          example: 148756.56
+        totalValueCurrencyId:
+          type: integer
+          description: Total value of document currency
+          nullable: true
+          example: 2
+        categories:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/Category'
+        notes:
+          type: string
+          nullable: true
+          example: Some document notes...
+        externalLink:
+          type: string
+          nullable: true
+          example: https://example.com/something/
+        anonymized:
+          type: boolean
+          readOnly: true
+        documentVersions:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/DocumentVersion'
+        detailLink:
+          type: string
+          readOnly: true
+          description: relative link to document detail in default country and language setting
+          example: /CZ/cs/corporate/management/detail?originCode=yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+
+    DocumentVersion:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Document version ID
+          example: 11000
+        code:
+          type: string
+          readOnly: true
+          description: Unique document version code
+          example: yDWFbU2Ly1b4Vd1n7tGE0mrvyQqUBoRMQEJq8QjE
+        parentId:
+          type: integer
+          readOnly: true
+          description: Parent document version ID
+          example: 10999
+          nullable: true
+        deleted:
+          type: boolean
+          readOnly: true
+          example: false
+        templateSuiteId:
+          type: integer
+          readOnly: true
+          description: Template suite ID
+        created:
+          type: string
+          readOnly: true
+          description: Creation date and time in ISO 8601
+          example: '2017-06-27T07:56:02+02:00'
+        authorId:
+          type: integer
+          readOnly: true
+          description: Author user ID
+        localizationId:
+          type: integer
+          readOnly: true
+
+    AbstractTemplateElement:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Template element ID
+          example: 10
+        name:
+          type: string
+          description: Template element name
+          example: element_system_name
+
+    TemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/AbstractTemplateElement'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - Clause
+                - OwnClause
+                - Table
+                - TableCell
+                - Text
+                - Textinput
+                - Date
+                - Selectbox
+                - Money
+                - Link
+                - Radio
+                - Counter
+                - Title
+                - Calculation
+                - Image
+            parentId:
+              type: integer
+              description: Parent template element ID
+              example: 9
+          discriminator:
+            propertyName: type
+            mapping:
+              Paragraph: '#/components/schemas/ClauseTemplateElement'
+              PlusParagraph: '#/components/schemas/OwnClauseTemplateElement'
+              Table: '#/components/schemas/TableTemplateElement'
+              TableCell: '#/components/schemas/TableCellTemplateElement'
+              Markup: '#/components/schemas/TextTemplateElement'
+              Text: '#/components/schemas/TextinputTemplateElement'
+              Date: '#/components/schemas/DateTemplateElement'
+              Selectbox: '#/components/schemas/SelectTemplateElement'
+              Money: '#/components/schemas/MoneyTemplateElement'
+              Link: '#/components/schemas/LinkTemplateElement'
+              Radio: '#/components/schemas/QuestionTemplateElement'
+              Counter: '#/components/schemas/CounterTemplateElement'
+              Title: '#/components/schemas/TitleTemplateElement'
+              Calculation: '#/components/schemas/CalculationTemplateElement'
+
+    TemplateElementContainer:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - type: object
+          required:
+            - type
+          properties:
+            children:
+              type: array
+              items:
+                $ref: '#/components/schemas/TemplateElement'
+              example: [] #Only in tree
+
+    ClauseTemplateElementValue:
+      allOf:
+        - $ref: '#/components/schemas/AbstractTemplateElement'
+        - type: object
+          properties:
+            visible:
+              type: boolean
+
+    ClauseTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElementContainer'
+        - $ref: '#/components/schemas/ClauseTemplateElementValue'
+        - type: object
+          properties:
+            text:
+              type: string
+              example: "Some very exciting text..."
+
+    OwnClauseTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElementContainer'
+
+    TableTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElementContainer'
+
+    TableCellTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+
+    TextTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - type: object
+          properties:
+            text:
+              type: string
+              example: "Some very exciting text..."
+
+    TextTemplateElementValue:
+      allOf:
+        - $ref: '#/components/schemas/AbstractTemplateElement'
+        - type: object
+          properties:
+            value:
+              type: string
+              example: some input value
+
+    TextinputTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - $ref: '#/components/schemas/TextTemplateElementValue'
+
+    DateTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - type: object
+          properties:
+            value:
+              type: object
+              properties:
+                number:
+                  type: string
+                  description: Date in format YYYY-mm-dd
+                  example: 2018-02-09
+                monthByWord:
+                  type: boolean
+                  description: Is month shown in word format
+                  example: true
+
+    SelectTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - type: object
+          properties:
+            items:
+              type: object
+              properties:
+                option0:
+                  type: string
+                  example: Some option value
+                option1:
+                  type: string
+                  example: Other option value
+            value:
+              type: string
+              description: Value is property key from items
+              example: option1
+
+    MoneyTemplateElementValue:
+      allOf:
+        - $ref: '#/components/schemas/AbstractTemplateElement'
+        - type: object
+          required:
+            - number
+            - currency
+          properties:
+            value:
+              type: object
+              properties:
+                number:
+                  type: string
+                  description: Formated numeric value
+                  example: 100 000
+                currency:
+                  type: string
+                  enum:
+                    - CZK
+                    - GBP
+                    - USD
+                    - EUR
+                    - RUB
+                    - AUD
+                    - TRY
+                    - CHF
+                    - PLN
+                    - HUF
+                    - RSD
+                    - CAD
+                    - PKR
+                    - INR
+                wordsEnable:
+                  type: boolean
+                text:
+                  type: string
+                  description: Text value
+                  example: one hundred thousand
+                textCurrency:
+                  type: string
+                  description: Text value of currency
+                  example: Czech Crounds
+
+    MoneyTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - $ref: '#/components/schemas/MoneyTemplateElementValue'
+
+    LinkTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - type: object
+          properties:
+            target:
+              type: string
+              example: target_of_link
+
+    QuestionTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - type: object
+          properties:
+            items:
+              type: object
+              properties:
+                option0:
+                  type: string
+                  example: Some option value
+                option1:
+                  type: string
+                  example: Other option value
+            value:
+              type: string
+              description: Value is property key from items
+              example: option1
+
+    CounterTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - type: object
+          properties:
+            value:
+              type: string
+              example: some input value
+
+    TitleTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - type: object
+          properties:
+            text:
+              type: string
+              example: "Some very exciting text..."
+
+    CalculationTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - type: object
+          properties:
+            value:
+              type: string
+              example: some input value
+
+    ImageTemplateElement:
+      allOf:
+        - $ref: '#/components/schemas/TemplateElement'
+        - type: object
+          properties:
+            value:
+              type: object
+              properties:
+                image:
+                  type: string
+                  description: image in base64 format
+                  example: data:image/jpg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8U...
+                width:
+                  type: number
+                  example: 1920
+                  description: image height in pixels
+                  readOnly: true
+                height:
+                  type: number
+                  example: 1080
+                  description: image width in pixels
+                  readOnly: true
+                areaWidth:
+                  type: number
+                  example: 512
+                  description: image area width in pixels
+                  readOnly: true
+                areaHeight:
+                  type: number
+                  example: 150
+                  description: image area height in pixels
+                  readOnly: true
+
+    Info:
+      type: object
+      properties:
+        version:
+          type: string
+          description: Legito application version
+          example: 2020.04.0.0
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Group ID
+          example: 6
+        name:
+          type: string
+          description: Group name
+          example: Legal group
+
+    ShareUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: User ID
+          example: 11129
+        email:
+          type: string
+          example: johndoe@legito.com
+        permission:
+          type: string
+          description: Document permission
+          enum:
+            - LIST
+            - READ
+            - EDIT
+            - MANAGE
+          default: LIST
+
+    ShareUserGroup:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: User group ID
+          example: 12
+        name:
+          type: string
+          description: User group name
+          example: Sales group
+
+    TemplateSuite:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Template suite ID
+          example: 662
+        title:
+          type: string
+          example: Purchase Agreement
+        perex:
+          type: string
+          example: Some purchase agreement exciting perex text...
+        lawId:
+          type: integer
+          description: Law ID
+          example: 1
+        workflowId:
+          type: integer
+          description: Default workflow ID
+          example: 1
+
+    Timezone:
+      type: object
+      properties:
+        timezone:
+          type: string
+          description: PHP timezone name (http://php.net/manual/en/timezones.php)
+          example: Europe/Prague
+        code:
+          type: string
+          description: Timezone code
+          example: CZ
+        gmtOffset:
+          type: integer
+          description: Offset from Greenwich Mean Time
+          example: 1
+        dstOffset:
+          type: integer
+          description: Offset from Daylight saving time
+          example: 1
+        rawOffset:
+          type: integer
+          description: Raw offset
+          example: 1
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: User ID
+          example: 11129
+        email:
+          type: string
+          example: johndoe@legito.com
+        name:
+          type: string
+          description: Full name
+          example: John Doe
+        created:
+          type: string
+          description: Expiration date and time in ISO 8601
+          example: '2017-08-27T10:56:02+02:00'
+        caption:
+          type: string
+          description: Caption
+          example: CEO
+        timezone:
+          type: string
+          description: PHP timezone name (http://php.net/manual/en/timezones.php)
+          example: Europe/Prague
+        sessionExpiration:
+          type: integer
+          description: Session expiration time in secounds (it is refreshed when page is reloaded). 0 for unlimited.
+          default: 7200
+          example: 86400
+        sessionDestroy:
+          type: integer
+          description: Session destroy expiration time in secounds from user logged in. 0 for unlimited.
+          default: 0
+          example: 86400
+
+    UserGroup:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Deparment ID
+          example: 12
+        name:
+          type: string
+          description: Department name
+          example: Sales department
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserGroupUser'
+
+    UserGroupUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: User ID
+          example: 35149
+        email:
+          type: string
+          description: User email
+          example: test@legito.com
+        permission:
+          type: string
+          description: Document permission
+          enum:
+            - LIST
+            - READ
+            - EDIT
+            - MANAGE
+
+    Permission:
+      type: object
+      properties:
+        admin:
+          type: boolean
+          description: Is workspace admin
+          default: false
+        draftTemplates:
+          type: boolean
+          description: Can draft templates
+          default: false
+        viewConfidential:
+          type: boolean
+          description: Can view confidential
+          default: false
+        autoShare:
+          type: string
+          description: Auto-sharing permission
+          default: NONE
+          enum:
+            - MANAGE
+            - EDIT
+            - READ
+            - LIST
+            - NONE
+        download:
+          type: boolean
+          description: Can download document versions
+          default: true
+        downloadDocx:
+          type: boolean
+          description: Can download document versions in .docx
+          default: true
+        downloadPdf:
+          type: boolean
+          description: Can download document versions in .pdf
+          default: true
+        downloadHtml:
+          type: boolean
+          description: Can download document versions in .html
+          default: true
+        downloadHtm:
+          type: boolean
+          description: Can download document versions in .htm
+          default: true
+        downloadRtf:
+          type: boolean
+          description: Can download document versions in .rtf
+          default: true
+        downloadXml:
+          type: boolean
+          description: Can download document versions in .xml
+          default: true
+        downloadOdt:
+          type: boolean
+          description: Can download document versions in .odt
+          default: true
+        downloadTxt:
+          type: boolean
+          description: Can download document versions in .txt
+          default: true
+        viewTemplatesAll:
+          type: boolean
+          description: Have access to all template suites
+          default: true
+        viewTemplatesList:
+          type: array
+          description: Have access to template suites selected IDs only
+          items:
+            type: integer
+        viewTemplatesGroupAll:
+          type: boolean
+          description: Have access to template suites from all groups
+          default: true
+        viewTemplatesGroupList:
+          type: array
+          description: Have access to template suites from selected group IDs only
+          items:
+            type: integer
+        viewTemplatesCountryAll:
+          type: boolean
+          description: Have access to template suites from all countries
+          default: true
+        viewTemplatesCountryList:
+          type: array
+          description: Have access to template suites from selected countries IDs only
+          items:
+            type: integer
+        changeLang:
+          type: boolean
+          description: Can modify teplate language
+        userList:
+          type: string
+          description: Assign Owner / Share With
+          enum:
+            - corporate
+            - assigned
+            - department
+            - departmentAssigned
+        uploadFiles:
+          type: boolean
+          description: Can upload files
+          default: false
+        viewAnalytics:
+          type: boolean
+          description: Can view anylytics
+          default: false
+        manageAdvancedStyles:
+          type: boolean
+          description: Can manage advanced styles
+          default: false
+        shareLinkTemplate:
+          type: boolean
+          description: Can externally share templates
+          default: true
+        shareLinkDocument:
+          type: boolean
+          description: Can externally share documents
+          default: true
+        viewInternalDocument:
+          type: boolean
+          description: Can view internal documents
+          default: false
+        emailDocument:
+          type: boolean
+          description: Can email documents
+          default: true
+        modifyTextElements:
+          type: boolean
+          description: Can modify text elements
+          default: true
+        manageTags:
+          type: boolean
+          description: Can manage tags
+          default: false
+        manageScripts:
+          type: boolean
+          description: Can manage scrips
+          default: false
+        manageList:
+          type: boolean
+          description: Can manage settings
+          default: false
+        manageWorkflow:
+          type: boolean
+          description: Can manage workflows
+          default: false
+        signLegitoBiosign:
+          type: boolean
+          description: Can sign documents with Legito BioSign
+          default: false
+        signDocusign:
+          type: boolean
+          description: Can sign documents with DocuSign
+          default: false
+
+    TemplateElementResponse:
+      anyOf:
+        - $ref: '#/components/schemas/ClauseTemplateElement'
+        - $ref: '#/components/schemas/OwnClauseTemplateElement'
+        - $ref: '#/components/schemas/TableTemplateElement'
+        - $ref: '#/components/schemas/TableCellTemplateElement'
+        - $ref: '#/components/schemas/TextTemplateElement'
+        - $ref: '#/components/schemas/TextinputTemplateElement'
+        - $ref: '#/components/schemas/DateTemplateElement'
+        - $ref: '#/components/schemas/SelectTemplateElement'
+        - $ref: '#/components/schemas/MoneyTemplateElement'
+        - $ref: '#/components/schemas/LinkTemplateElement'
+        - $ref: '#/components/schemas/QuestionTemplateElement'
+        - $ref: '#/components/schemas/CounterTemplateElement'
+        - $ref: '#/components/schemas/TitleTemplateElement'
+        - $ref: '#/components/schemas/CalculationTemplateElement'
+        - $ref: '#/components/schemas/ImageTemplateElement'
+      discriminator:
+        propertyName: type
+
+    TemplateElementValue:
+      anyOf:
+        - $ref: '#/components/schemas/ClauseTemplateElementValue'
+        - $ref: '#/components/schemas/TextTemplateElementValue'
+        - $ref: '#/components/schemas/MoneyTemplateElementValue'
+
+      discriminator:
+        propertyName: type
+
+    SuccessResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          default: 200
+          example: 200
+        status:
+          type: string
+          default: OK
+          example: OK
+
+  examples:
+    ClauseTemplateElementValue:
+      value:
+        id: 17
+        name: 'some_element'
+        visible: true
+    TextinputTemplateElementValue:
+      value:
+        id: 18
+        name: 'some_element'
+        value: some_input value
+    MoneyTemplateElementValue:
+      value:
+        id: 19
+        name: 'some_element'
+        value:
+          currency: 1
+          number: '100 000 Kč'
+          wordsEnable: 1
+          textValue: 'one hundred thousand'
+          textCurrency: 'czech crounds'

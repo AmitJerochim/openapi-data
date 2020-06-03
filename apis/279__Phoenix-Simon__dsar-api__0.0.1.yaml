@@ -1,0 +1,426 @@
+openapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Phoenix-Simon/dsar-api/0.0.1
+
+info:
+  title: DSAR API
+  version: '0.0.1'
+  description: Provides endpoints and methods required to manage DSARs
+  contact:
+    email: simon.schoch@phoenixbs.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+
+tags:
+  - name: /auth/oauth2
+    description: OAuth2 operations
+  - name: /dsar
+    description: General DSAR operations
+  - name: /work/documents
+    description: iManage Work operations
+
+paths:
+  /auth/oauth2/login:
+    get:
+      tags:
+        - /auth/oauth2
+      summary: Login to the DSAR application via iManage Work
+      operationId: oauth2Login
+      description: >
+        Login to the DSAR application with OAuth2 leveraging iManage Work as an authorisation server. Implements the **Authorisation Code with PKCE** flow.
+      responses:
+        '200':
+          description: Already logged in
+        '301':
+          description: Redirected to iManage Work
+
+  /auth/oauth2/callback:
+    get:
+      tags:
+        - /auth/oauth2
+      summary: Callback for OAuth2 Authorisation Code with PKCE flow
+      operationId: oauth2Callback
+      description: >
+        Required as part of the **Authorisation Code with PKCE** flow. Called by the iManage Work server to verify a code challenge.
+      responses:
+        '301':
+          description: Redirected to iManage Work
+        '400':
+          description: Bad request
+
+  /auth/oauth2/authorised:
+    get:
+      tags:
+        - /auth/oauth2
+      summary: Redirect for OAuth2 Authorisation Code with PKCE flow
+      operationId: oauth2Authorised
+      description: >
+        Optional part of the **Authorisation Code with PKCE** flow. Redirected here by the auth/oauth2/callback endpoint after receiving an access token.
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad request
+
+  /dsar:
+    get:
+      tags:
+        - /dsar
+      summary: Gets all DSARs
+      operationId: getDsars
+      description: >
+        Gets all previously saved DSARs from the database.
+      parameters:
+        - in: query
+          name: skip
+          description: Number of records to skip for pagination
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - in: query
+          name: limit
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 50
+      responses:
+        '200':
+          description: DSAR requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dsar'
+        '500':
+          description: Error retrieving DSARs from the database
+
+    post:
+      tags:
+        - /dsar
+      summary: Adds a DSAR
+      operationId: addDsar
+      description: >
+        Adds a DSAR to the database.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Dsar'
+        description: DSAR to add
+      responses:
+        '201':
+          description: DSAR created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dsar'
+        '400':
+          description: Invalid DSAR
+        '500':
+          description: Error adding DSAR to the database
+
+  /dsar/{id}:
+    get:
+      tags:
+        - /dsar
+      summary: Gets a DSAR by UUID
+      operationId: getDsar
+      description: >
+        Gets a previously saved DSAR by UUID.
+      parameters:
+        - name: id
+          in: path
+          description: DSAR UUID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 'd290f1ee-6c54-4b01-90e6-d701748f0851'
+      responses:
+        '200':
+          description: DSAR found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dsar'
+        '404':
+          description: DSAR not found
+        '500':
+          description: Error getting DSAR
+
+    delete:
+      tags:
+        - /dsar
+      summary: Deletes a DSAR by ID
+      operationId: deleteDsar
+      description: >
+        Deletes a previously saved DSAR by ID.
+      parameters:
+        - name: id
+          in: path
+          description: DSAR UUID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 'd290f1ee-6c54-4b01-90e6-d701748f0851'
+      responses:
+        '200':
+          description: DSAR deleted
+        '500':
+          description: Error deleting DSAR
+
+    put:
+      tags:
+        - /dsar
+      summary: Updates a DSAR by ID
+      operationId: updateDsar
+      description: >
+        Updates a previously saved DSAR by ID.
+      parameters:
+        - name: id
+          in: path
+          description: DSAR UUID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: 'd290f1ee-6c54-4b01-90e6-d701748f0851'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Dsar'
+        description: DSAR values to update
+      responses:
+        '200':
+          description: DSAR updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dsar'
+        '400':
+          description: Invalid DSAR
+        '500':
+          description: Error deleting DSAR
+
+  /work/documents/search:
+    post:
+      tags:
+        - /work/documents
+      summary: Searches for documents in iManage Work
+      operationId: documentsSearch
+      description: >
+        Searches for documents in iManage Work.
+      parameters:
+        - in: query
+          name: skip
+          description: Number of records to skip for pagination
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - in: query
+          name: limit
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 50
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Documents_Search_Request'
+        description: iManage Work documents search request
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+        '400':
+          description: Invalid input, object invalid
+
+  /work/users:
+    get:
+      tags:
+        - /work/users
+      summary: Gets all users from iManage Work
+      operationId: getUsers
+      description: >
+        Gets users from iManage Work.
+      parameters:
+        - in: query
+          name: libraries
+          schema:
+            type: array
+            items:
+              type: string
+        - in: query
+          name: skip
+          description: Number of records to skip for pagination
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - in: query
+          name: limit
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input, object invalid
+
+components:
+  schemas:
+    Subject_Role:
+      type: string
+      enum:
+        - Supplier
+        - Former Employee
+        - Current Employee
+        - Candidate
+        - Client
+        - Other
+
+    Search_Versions:
+      type: string
+      enum:
+        - All
+        - Latest
+        - Most Relevant
+
+    Dsar:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 'd290f1ee-6c54-4b01-90e6-d701748f0851'
+        dsar_id:
+          type: string
+          example: 'DSAR-2341'
+        subject_name:
+          type: string
+          example: 'Simon Schoch'
+        subject_role:
+          $ref: '#/components/schemas/Subject_Role'
+        request_date:
+          type: string
+          format: date
+          example: '2017-07-21'
+        completion_date:
+          type: string
+          format: date
+          example: '2017-09-21'
+        approver:
+          type: string
+          example: 'Ray Burch'
+        manager:
+          type: string
+          example: 'Divya Gopal'
+        search_from_date:
+          type: string
+          format: date
+          example: '2017-01-31'
+        search_to_date:
+          type: string
+          format: date
+          example: '2018-01-31'
+        search_versions:
+          $ref: '#/components/schemas/Search_Versions'
+        search_libraries:
+          type: array
+          example: ['All', 'EMEA', 'APAC']
+          items:
+            type: string
+        include_emails:
+          type: boolean
+          example: True
+        search_terms:
+          type: array
+          example: ['Ray Burch', 'Raymond Burch', 'Raymond', 'Ray', 'Ray.Burch@phoenixbs.com', 'Raymond.Burch']
+          items:
+            type: string
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+
+    Document:
+      type: object
+      properties:
+        library:
+          type: string
+          example: 'EMEA'
+        docnum:
+          type: integer
+          format: int32
+          example: 3489323
+        version:
+          type: integer
+          format: int32
+          example: 1
+        matching_search_terms:
+          type: array
+          example: ['Ray Burch', 'Ray']
+          items:
+            type: string
+
+    Documents_Search_Request:
+      type: object
+      properties:
+        libraries:
+          type: array
+          example: ['EMEA', 'APAC']
+          items:
+            type: string
+        searchterms:
+          type: array
+          example: ['Ray Burch', 'Raymond Burch', 'Raymond', 'Ray', 'Ray.Burch@phoenixbs.com', 'Raymond.Burch']
+          items:
+            type: string
+
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+          example: 'RBURCH'
+        user_num:
+          type: integer
+          format: int32
+          example: 16
+        full_name:
+          type: string
+          example: 'Ray Burch'
+        email:
+          type: string
+          example: 'ray.burch@phoenixbs.com'
+        library:
+          type: string
+          example: 'EMEA'

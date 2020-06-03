@@ -1,0 +1,869 @@
+openapi: 3.0.2
+info:
+  description: |
+    This is the API used to book a taxi with GoMobile's system.
+  version: "0.0.8"
+  title: Booking Service
+  termsOfService: ''
+  contact:
+    email: developers@gomobile.no
+    
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/gomobile5/BookingService/0.0.1
+  - description: Sandbox server.
+    url: https://mivai-api-sandbox.azurewebsites.net/api/bookingservice/
+  - description: Production server.
+    url: https://api.prai.no/api/bookingservice/
+    
+tags:
+  - name: booking
+    description: Booking a trip.
+  - name: trip
+    description: Managing a trip.
+  - name: tracking
+    description: Tracking an active trip.
+  - name: data
+    description: Manage user data.
+    
+paths:
+  /priceRequest:
+    post:
+      tags:
+        - booking
+      summary: Returns offers for a given trip.
+      description: The offers can be accepted before they expire. If they're not accepted, they expire with no side effects.
+      parameters:
+        - in: header
+          name: Accept-Language
+          schema:
+            type: string
+          example: "nb-NO"
+          description: If a value is provided and the value matches a supported language, strings meant for the user are returned in the specified language. If no value is provided, or the value isn't supported, en-US is used instead. Only en-US and nb-NO are supported.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                clientName:
+                  type: string
+                  example: "John Doe"
+                  description: The name of the person who should be contacted (e.g. by the driver or support) if needed. Typically the person placing the order or the person traveling.
+                clientPhoneNumber:
+                  type: string
+                  example: "+4712345678"
+                  description: The phone number of the person who should be contacted (e.g. by the driver or support) if needed. Typically the person placing the order or the person traveling. The number should be prefixed with the country's calling code (+47 for Norway). If it's not included, the service may assume a country of origin or refuse the request.
+                userId:
+                  type: string
+                  maxLength: 40
+                  description: This arbitrary ID will be used to group data belonging to a single user, allowing the data to be retrieved and deleted.
+                legs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Leg'
+              description: A list of this trip's legs. The first describes where and when the trip starts (i.e. the pickup location), the last is the end, and any in between are intermediary stops. The intermediary stops are frequently useful, e.g. to indicate where another passenger should be picked up or dropped off. Currently, only trips with one or two legs are supported. One leg means that the passenger will direct the taxi once in the vehicle, while two legs means a normal trip from one location to another.
+      responses:
+        200:
+          description: A structured 3D array describing the available offers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductCategory'
+        400:
+          $ref: "#/components/responses/ErrorModel"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        403:
+          $ref: "#/components/responses/ErrorModel"
+        409:
+          $ref: "#/components/responses/ErrorModel"
+        429:
+          $ref: "#/components/responses/ErrorModel"
+        500:
+          $ref: "#/components/responses/ErrorModel"
+        503:
+          $ref: "#/components/responses/ErrorModel"
+  
+  /acceptOffer:
+    post:
+      tags:
+        - booking
+      summary: Accepts a price offer.
+      description: If a price offer is accepted before it expires, the trip is submitted to the taxi company. They will send a taxi and complete the ordered trip.
+      parameters: 
+        - in: header
+          name: Accept-Language
+          schema:
+            type: string
+          example: "nb-NO"
+          description: If a value is provided and the value matches a supported language, strings meant for the user are returned in the specified language. If no value is provided, or the value isn't supported, en-US is used instead. Only en-US and nb-NO are supported.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                offerId:
+                  type: string
+                  format: uuid
+                  example: "{95B0CDAE-40A5-41C9-B83D-E5ED18B0974C}"
+                  description: A GUID corresponding to the ID of the price offer that is accepted.
+                paymentMethod:
+                  $ref: '#/components/schemas/PaymentMethod'
+                messageToCar:
+                  type: string
+                  example: "I'll be waiting by the big tree."
+                  description: Can only be used if the price offer indicates that these messages are enabled. The message is forwarded to the taxi central and the driver. The message does not affect which vehicle or driver is selected.
+              description: Specifies which price offer has been accepted, how the trip will be paid for, and possibly a message to the driver.
+              required:
+                - offerId
+                - paymentMethod
+      responses:
+        200:
+          description: The trip is active.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tripId:
+                    type: string
+                    format: uuid
+                    example: "{95B0CDAE-40A5-41C9-B83D-E5ED18B0974C}"
+                    description: A GUID.
+                  bookingNumber:
+                    type: string
+                    example: "MFC1234"
+                    description: A string that identifies the trip with the taxi driver and taxi central. It is not universally unique. Booking numbers from two different taxi centrals could potentially collide, and even within a taxi central, the sequence will be reused at some point in time.
+                  
+        400:
+          $ref: "#/components/responses/ErrorModel"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        403:
+          $ref: "#/components/responses/ErrorModel"
+        409:
+          $ref: "#/components/responses/ErrorModel"
+        429:
+          $ref: "#/components/responses/ErrorModel"
+        500:
+          $ref: "#/components/responses/ErrorModel"
+        503:
+          $ref: "#/components/responses/ErrorModel"
+          
+  /trips/{tripId}/cancel:
+    get:
+      tags:
+        - trip
+      summary: Cancels a trip if it's allowed.
+      description: Not all trips can be canceled after the pickup time. Most taxi companies also require cancellation to occur some time in advance, e.g. 20 minutes before the pickup time. Other services may allow cancellation at at any time as long as the passenger hasn't been picked up.
+      parameters: 
+        - in: header
+          name: Accept-Language
+          schema:
+            type: string
+          example: "nb-NO"
+          description: If a value is provided and the value matches a supported language, strings meant for the user are returned in the specified language. If no value is provided, or the value isn't supported, en-US is used instead. Only en-US and nb-NO are supported.
+        - in: path
+          name: tripId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "{95B0CDAE-40A5-41C9-B83D-E5ED18B0974C}"
+          description: A GUID.
+      responses:
+        200:
+          description: The trip was canceled.
+        400:
+          $ref: "#/components/responses/ErrorModel"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        403:
+          $ref: "#/components/responses/ErrorModel"
+        409:
+          $ref: "#/components/responses/ErrorModel"
+        429:
+          $ref: "#/components/responses/ErrorModel"
+        500:
+          $ref: "#/components/responses/ErrorModel"
+        503:
+          $ref: "#/components/responses/ErrorModel"
+          
+  /trips/{tripId}/status:
+    get:
+      tags:
+        - trip
+      summary: Returns the status of a trip.
+      parameters: 
+        - in: header
+          name: Accept-Language
+          schema:
+            type: string
+          example: "nb-NO"
+          description: If a value is provided and the value matches a supported language, strings meant for the user are returned in the specified language. If no value is provided, or the value isn't supported, en-US is used instead. Only en-US and nb-NO are supported.
+        - in: path
+          name: tripId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "{95B0CDAE-40A5-41C9-B83D-E5ED18B0974C}"
+          description: A GUID.
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tripStatus:
+                    $ref: "#/components/schemas/TripStatus"
+          description: The current status of the trip.
+        400:
+          $ref: "#/components/responses/ErrorModel"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        403:
+          $ref: "#/components/responses/ErrorModel"
+        409:
+          $ref: "#/components/responses/ErrorModel"
+        429:
+          $ref: "#/components/responses/ErrorModel"
+        500:
+          $ref: "#/components/responses/ErrorModel"
+        503:
+          $ref: "#/components/responses/ErrorModel"
+          
+  /trips/{tripId}/report:
+    get:
+      tags:
+        - trip
+      summary: Returns information about a finished trip.
+      parameters: 
+        - in: header
+          name: Accept-Language
+          schema:
+            type: string
+          example: "nb-NO"
+          description: If a value is provided and the value matches a supported language, strings meant for the user are returned in the specified language. If no value is provided, or the value isn't supported, en-US is used instead. Only en-US and nb-NO are supported.
+        - in: path
+          name: tripId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "{95B0CDAE-40A5-41C9-B83D-E5ED18B0974C}"
+          description: A GUID.
+      responses:
+        200:
+          description: The final information of a trip.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transporterOrganizationNumber:
+                    type: string
+                    example: 990 090 793 MVA
+                  priceExcludingTax:
+                    type: integer
+                    description: The final price of the trip exluding tax given in the fundamental unit of the currency ($1 given as 100).
+                  taxBasisPoints:
+                    type: integer
+                    example: 1020
+                    description: The tax fraction that is added to the price given in basis points (10.2% given as 1020) as an integer.
+                  taxAmount:
+                    type: integer
+                    description: The tax amount that is added to the price given in the fundamental unit of the currency ($1 given as 100).
+                  priceTotal:
+                    type: integer
+                    description: The final price of the trip including the tax amount given in the fundamental unit of the currency ($1 given as 100).
+                  currency:
+                    type: string
+                    example: NOK
+                    description: The currency of the price (ISO-4217). There is, at the time of writing, no reason to expect anything other than NOK.
+                  start:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: When the trip started.
+                  stop:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: When the trip stopped.
+                  distance:
+                    type: number
+                    description: The distance driven in meters.
+                  duration:
+                    type: number
+                    description: The time driven in minutes.
+                  carId:
+                    type: string
+                    description: The id of the car (løyvenummer).
+                  driverId:
+                    type: string
+                    description: The id of the driver.
+          
+        400:
+          $ref: "#/components/responses/ErrorModel"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        403:
+          $ref: "#/components/responses/ErrorModel"
+        409:
+          $ref: "#/components/responses/ErrorModel"
+        429:
+          $ref: "#/components/responses/ErrorModel"
+        500:
+          $ref: "#/components/responses/ErrorModel"
+        503:
+          $ref: "#/components/responses/ErrorModel"
+  
+  /trips/{tripId}/rating:
+    post:
+      tags:
+        - trip
+      summary: Submits a user's rating of a trip. This may be sent to the taxi company and will contribute to the taxi company's overall rating.
+      parameters: 
+        - in: header
+          name: Accept-Language
+          schema:
+            type: string
+          example: "nb-NO"
+          description: If a value is provided and the value matches a supported language, strings meant for the user are returned in the specified language. If no value is provided, or the value isn't supported, en-US is used instead. Only en-US and nb-NO are supported.
+        - in: path
+          name: tripId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "{95B0CDAE-40A5-41C9-B83D-E5ED18B0974C}"
+          description: A GUID.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+                  example: "The taxi was was late."
+                service:
+                  type: integer
+                  example: 3
+        description: An optional textual comment from the user and a series of numbers describing the customer's satisfaction across a number of categories. Each number should fall in the range 1-5 (inclusive) if the customer provided a rating, 0 if not.
+      responses:
+        200:
+          description: The rating was submitted.
+        400:
+          $ref: "#/components/responses/ErrorModel"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        403:
+          $ref: "#/components/responses/ErrorModel"
+        409:
+          $ref: "#/components/responses/ErrorModel"
+        429:
+          $ref: "#/components/responses/ErrorModel"
+        500:
+          $ref: "#/components/responses/ErrorModel"
+        503:
+          $ref: "#/components/responses/ErrorModel"
+          
+  /trips/{tripId}/tracking:
+    get:
+      tags:
+        - tracking
+      summary: If the trip has been assigned a vehicle, this endpoint returns information about it.
+      parameters: 
+        - in: header
+          name: Accept-Language
+          schema:
+            type: string
+          example: "nb-NO"
+          description: If a value is provided and the value matches a supported language, strings meant for the user are returned in the specified language. If no value is provided, or the value isn't supported, en-US is used instead. Only en-US and nb-NO are supported.
+        - in: path
+          name: tripId
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "{95B0CDAE-40A5-41C9-B83D-E5ED18B0974C}"
+          description: A GUID.
+      responses:
+        200:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  carId:
+                    type: string
+                    nullable: True
+                    example: "M-123"
+                    description: The unique ID of the vehicle, visible on the vehicle's lamp ('løyvenummer').
+                  latitude:
+                    type: number
+                    nullable: True
+                    example: 58.128213
+                    description: The latitude of the vehicle.
+                  longitude:
+                    type: number
+                    nullable: True
+                    example: 7.944171
+                    description: The longitude of the vehicle.
+                  heading:
+                    type: number
+                    nullable: True
+                    example: 15.78
+                    description: The heading of the vehicle. North=0, East=90.
+                  updatedAt:
+                    type: string
+                    nullable: True
+                    format: date-time
+                    example: "2019-04-25T14:44:08.646Z"
+                    description: The time when this information was accurate.
+          description: Information about the vehicle associated with the trip.
+          
+        204:
+          description: No tracking information is available at this time. E.g. if the trip hasn't been assigned a vehicle.
+        400:
+          $ref: "#/components/responses/ErrorModel"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        403:
+          $ref: "#/components/responses/ErrorModel"
+        409:
+          $ref: "#/components/responses/ErrorModel"
+        429:
+          $ref: "#/components/responses/ErrorModel"
+        500:
+          $ref: "#/components/responses/ErrorModel"
+        503:
+          $ref: "#/components/responses/ErrorModel"
+          
+  /user/data:
+    get:
+      tags:
+        - data
+      summary: Returns all user data associated with a phone number.
+      parameters: 
+        - in: header
+          name: Accept-Language
+          schema:
+            type: string
+          example: "nb-NO"
+          description: If a value is provided and the value matches a supported language, strings meant for the user are returned in the specified language. If no value is provided, or the value isn't supported, en-US is used instead. Only en-US and nb-NO are supported.
+        - in: query
+          name: userId
+          required: true
+          schema:
+            type: string
+            maxLength: 40
+          example: "05b4fd3ded4cb88f8ed332df63"
+          description: The ID sent in the price request.
+      responses:
+        200:
+          description: The available data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserData'
+        400:
+          $ref: "#/components/responses/ErrorModel"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        403:
+          $ref: "#/components/responses/ErrorModel"
+        409:
+          $ref: "#/components/responses/ErrorModel"
+        429:
+          $ref: "#/components/responses/ErrorModel"
+        500:
+          $ref: "#/components/responses/ErrorModel"
+        503:
+          $ref: "#/components/responses/ErrorModel"
+    
+    delete:
+      tags:
+        - data
+      summary: Marks all user data associated with a phone number for deletion/anonymization.
+      parameters: 
+        - in: header
+          name: Accept-Language
+          schema:
+            type: string
+          example: "nb-NO"
+          description: If a value is provided and the value matches a supported language, strings meant for the user are returned in the specified language. If no value is provided, or the value isn't supported, en-US is used instead. Only en-US and nb-NO are supported.
+        - in: query
+          name: userId
+          required: true
+          schema:
+            type: string
+            maxLength: 40
+          example: "05b4fd3ded4cb88f8ed332df63"
+          description: The ID sent in the price request.
+      responses:
+        200:
+          description: The request succeeded.
+        400:
+          $ref: "#/components/responses/ErrorModel"
+        401:
+          $ref: "#/components/responses/UnauthorizedError"
+        403:
+          $ref: "#/components/responses/ErrorModel"
+        409:
+          $ref: "#/components/responses/ErrorModel"
+        429:
+          $ref: "#/components/responses/ErrorModel"
+        500:
+          $ref: "#/components/responses/ErrorModel"
+        503:
+          $ref: "#/components/responses/ErrorModel"
+components:
+  schemas:
+    Leg:
+      properties:
+        address:
+          $ref: '#/components/schemas/Address'
+        arriveAt:
+          type: string
+          format: date-time
+          description: At the time of writing, only the first leg supports arrival times. Places a constraint on when the taxi should be at the leg's address. For example, placing it on the first leg specifies when the passenger should be picked up, while placing it on the last leg specifies when the passenger should be dropped off. At least one arrival time must be specified.
+          example: "2019-04-02T10:10:30.685Z"
+        stopDuration:
+          type: string
+          format: time
+          description: |
+            A time span. At the time of writing, stop durations are not supported. The amount of time the taxi should spend waiting at the address of this leg. Leave at zero for the first and last leg. For example, a trip from A to C passing through B where the passenger will spend 5 minutes picking something up, should have the following durations: [0:00, 5:00, 0:00]. The service may round durations up to a larger value.
+          example: 00:10:00
+      required:
+        - address
+
+    Address:
+      properties:
+        streetName:
+          type: string
+          example: Husveien
+        houseNumber:
+          type: string
+          example: "13"
+        houseLetter:
+          type: string
+          example: B
+        district:
+          type: string
+          example: Kristiansand
+        zipCode:
+          type: string
+          example: "4620"
+        latitude:
+          type: number
+          example: 58.12809
+        longitude:
+          type: number
+          example: 7.944235
+        friendlyName:
+          type: string
+          description: Some places (e.g. airports) have a name in addition to the postal address.
+          example: Arrival Terminal Gardermoen Airport
+      required:
+        - streetName
+        - houseNumber
+        - district
+        - zipCode
+        - latitude
+        - longitude
+    
+    ProductCategory:
+      properties:
+        type:
+          $ref: '#/components/schemas/ProductCategoryType'
+        badgeUrl:
+          type: string
+          example: https://images.example.com/img001.svg
+        seatCount:
+          type: integer
+          minimum: 1
+          example: 4
+          description: The number of available seats. A regular taxi has 4 seats.
+        extraLuggage:
+          type: boolean
+          description: Whether extra luggage capacity is available.
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductCategorySegment'
+          description: |
+            The individual offers in this category are grouped by segment. Examples: electric vehicles, normal vehicles, companies that can't be ordered (at this time).
+      required:
+        - type
+        - seatCount
+        - extraLuggage
+        - segments
+    
+    ProductCategorySegment:
+      properties:
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceOffer'
+      required:
+        - offers
+        
+    PriceOffer:
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "{95B0CDAE-40A5-41C9-B83D-E5ED18B0974C}"
+          description: A GUID.
+        amount:
+          type: number
+          description: The price of the offer including tax.
+        fixedPrice:
+          type: boolean
+          description: Whether the price is guaranteed (true) or just an estimate (false).
+        taxPercentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        timeOfExpiration:
+          type: string
+          format: date-time
+          example: "2019-04-02T10:19:02.180Z"
+          description: The offer is invalid after this point in time.
+        companyDetails:
+          $ref: '#/components/schemas/CompanyDetails'
+        estimatedLegArrivalTimes:
+          type: array
+          items:
+            type: string
+            format: date-time
+            nullable: true
+          description: For each leg of the trip, an estimated arrival time may be provided.
+      required:
+        - id
+        - amount
+        - fixedPrice
+        - taxPercentage
+        - timeOfExpiration
+        - companyDetails
+        - messages
+        - estimatedLegArrivalTimes
+        
+    CompanyDetails:
+      properties:
+        name:
+          type: string
+          example: Taxi's R us
+        phoneNumber:
+          type: string
+          example: "+4712345678"
+          description: This is the company's support number. They accept bookings and can answer questions.
+        logoUrl:
+          type: string
+          example: "https://images.example.com/img001.svg"
+          description: The company's official logo. This will only be present if we are allowed to show the logo in the app.
+        rating:
+          type: number
+          minimum: 1
+          maximum: 5  
+          nullable: true
+          description: Provided if the company has a rating, the higher the better.
+        canAddMessageToCar:
+          type: boolean
+          description: true if a message can be sent to the car (typically regarding the pickup point).
+        supportedPaymentMethods:
+          type: array
+          items:
+            $ref: '#/components/schemas/PaymentMethod'
+          description: This determines which payment methods should be activated for this offer.
+      required:
+        - name
+        - phoneNumber
+        - logoUrl
+        - rating
+        - canOrderInApp
+        - canAddMessageToCar
+        - supportedPaymentMethods
+  
+    PaymentMethod:
+      type: string
+      enum: 
+        - inCar
+        - inCarTaximeter
+        - inApp
+      description: |
+        Payment methods:
+        * `inCar` - The payment is made in the vehicle (not in the app). The amount is a max-price, see below.
+        * `inCarTaximeter` - The payment is made in the vehicle (not in the app). The amount to pay is calculated by the vehicle taximeter
+        * `inApp` - The payment is made in app. The amount is a max-price, see below. The amount to charge the user is known at the end of the trip.
+        
+        For a max-price, the amount to pay is the price found in the price offer or a lower value. Many taxi companies are max-price companies. Legally, a max price company is not allowed to charge more than the taximeter shows (which is the upper limit permitted by law). Consequently, the actual amount to charge the user is only known after the trip has ended.
+    
+    ProductCategoryType:
+      type: string
+      enum: 
+        - taxi
+        - flexigo
+      description: |
+        Categories:
+        * `taxi` - A vehicle shows up and takes you from A to B
+        * `flexigo` - Similar to a pooled taxi service (multiple different trips sharing a vehicle).
+    
+    ErrorModel:
+      properties:
+        displayError:
+          type: string
+          example: "Du har blitt tilsendt for mange SMS-er i det siste. Vennligst vent en stund før du prøver igjen."
+          description: An error message meant to be shown to the user. The message is localized according to the language specified in the request. The display error is used to communicate a problem to the user and, if possible, suggests a solution. The messages are intended to be useful for any app/UI, not only GoMobile's taxi app.
+        developerMessage:
+          type: string
+          example: "Arrival times are currently only supported for the origin."
+          description: An error message meant for developers. It is not localized. The message may contain details irrelevant to a user. The message will most likely communicate an integration error or some other bug.
+      description: Describes an error. It may contain a display error and a developer message, but more often than not, only one of these.
+    
+    UserData:
+      properties:
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserOrder'
+        priceOffers:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserOffer'
+          
+    UserOrder:
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "{95B0CDAE-40A5-41C9-B83D-E5ED18B0974C}"
+        bookingNumber:
+          type: string
+          example: "ABC123"
+        phoneNumber:
+          type: string
+          example: "+4712345678"
+        name:
+          type: string
+          example: "John Doe"
+        pickupTime:
+          type: string
+          format: date-time
+          example: "2020-02-01T10:19:02.180Z"
+        numberOfPassengers:
+          type: integer
+          example: 1
+        from:
+          type: string
+          example: "Bosmyrkollen 2, 4620 Kristiansand"
+        to:
+          type: string
+          nullable: true
+          example: "Bosmyrkollen 2, 4620 Kristiansand"
+        status:
+          $ref: '#/components/schemas/TripStatus'
+        ratingValue:
+          type: integer
+          nullable: true
+          example: 5
+          description: If the order has a rating, a number from 0 to 5 inclusive.
+        ratingComment:
+          type: string
+          nullable: true
+          example: "Great trip!"
+        tripStart:
+          type: string
+          nullable: true
+          format: date-time
+          example: "2020-02-01T10:20:02.180Z"
+          description: Null unless the order has been completed.
+        tripStop:
+          type: string
+          nullable: true
+          format: date-time
+          example: "2020-02-01T10:29:32.180Z"
+          description: Null unless the order has been completed.
+        tripDistance:
+          type: number
+          nullable: true
+          example: 15.5
+          description: The number of kilometers traveled. Null unless the order has been completed.
+        tripDuration:
+          type: number
+          nullable: true
+          example: 9.5
+          description: The number of minutes traveled. Null unless the order has been completed.
+    
+    UserOffer:
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "{95B0CDAE-40A5-41C9-B83D-E5ED18B0974C}"
+        phoneNumber:
+          type: string
+          example: "+4712345678"
+        name:
+          type: string
+          example: "John Doe"
+        pickupTime:
+          type: string
+          format: date-time
+          example: "2020-02-01T10:19:02.180Z"
+        numberOfPassengers:
+          type: integer
+          example: 1
+        from:
+          type: string
+          example: "Bosmyrkollen 2, 4620 Kristiansand"
+        to:
+          type: string
+          nullable: true
+          example: "Bosmyrkollen 2, 4620 Kristiansand"
+      
+    TripStatus:
+      type: string
+      enum:
+       - unassigned
+       - assigned
+       - onItsWay
+       - arrived
+       - passengerOnBoard
+       - finished
+       - noshow
+       - bookingServiceFailed
+       - canceledByOperator
+       - canceledByProvider
+       - canceledByUser
+       - canceledBySystem
+       - canceledByUnknown
+      
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+      description: This key authorizes you with our service and ensures all settings are applied appropriately.
+
+  responses:
+    UnauthorizedError:
+      description: The API key is missing or invalid.
+    ErrorModel:
+      description: An error occurred.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorModel"
+
+security:
+  - ApiKeyAuth: []

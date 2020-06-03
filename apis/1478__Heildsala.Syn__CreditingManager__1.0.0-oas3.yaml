@@ -1,0 +1,115 @@
+openapi: 3.0.0
+info:
+  description: Manages creation of credit lines through crediting handlers
+  version: "1.0.0-oas3"
+  title: Credit Creation Manager
+  contact:
+    email: arnthor@vodafone.is
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: jobs
+    description: Available jobs for credit creation
+  - name: handlers
+    description: Available handlers for Credit processing
+paths:
+  /CreditHandlers:
+    get:
+      tags:
+        - handlers
+      summary: Create Credits from a specific source
+      operationId: getCreditHandlers
+      description: |
+        Returns all known CreditHandlers
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CreditHandler'
+        '400':
+          description: bad input parameter
+  /ProcessAllForHandler:
+    post:
+      tags:
+        - jobs
+      summary: Starts credit processing with given handler
+      operationId: startProcessing
+      description: Starts a new credit processing job
+      responses:
+        '200':
+          description: Job created
+        '404':
+          description: Handler not found
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Job'
+        description: Handler to use for credit source
+      callbacks:
+        finished:
+          '{$request.body#/callback}':   # The callback URL,
+                                        # Referes to to the passed in url
+            post:
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: Processing Finished For 997 Customers
+                        size:
+                          type: integer
+                          example: 997
+                      required:
+                        - message
+              responses:   # Expected responses to the callback message
+                '200':
+                  description: Your server returns this code if it accepts the callback
+                '500':
+                  description: Processing failed, reason given in message
+
+servers:
+  - url: 'https://virtserver.swaggerhub.com/arnthor/CreditingManager/1.0.0'
+components:
+  schemas:
+    CreditHandler:
+      type: object
+      required:
+        - name
+        - host
+        - priority
+      properties:
+        name:
+          type: string
+          example: My First Credit Handler
+        code:
+          type: string
+          example: first_handler
+        host:
+          type: string
+          format: url
+          example: 'https://example.com'
+        priority:
+          type: integer
+          example: 1
+    Job:
+      required:
+        - handlerCode
+        - callback
+      properties:
+        handlerCode:
+          type: string
+          example: first_handler
+        callback:
+          type: string
+          format: url
+          example: 'https://example.com/'

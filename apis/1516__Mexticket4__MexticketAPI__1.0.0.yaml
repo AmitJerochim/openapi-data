@@ -1,0 +1,1446 @@
+openapi: 3.0.0
+info:
+  title: Mexticket API
+  description: Contact us to get your API account code & token.<br/>
+  version: "1.0.0"
+  
+servers:
+# Added by API Auto Mocking Plugin
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Mexticket4/MexticketAPI/1.0.0
+  - url: https://b2b.mexticket.com/
+    description: Production
+    
+tags:
+  - name: Destinations
+  - name: Search
+  - name: Ticketnetwork
+  - name: Cart
+  - name: Payment
+  - name: Hotel-Richcontent
+  - name: Package
+      
+security:
+  - apiAccount: []
+    appToken:  []
+    
+paths:
+  /API/tour/autocomplete:
+    post:
+      tags:
+      - Destinations
+      summary: Retrive a list of destinations.
+      description: Retrive a list of destinations.<br/><br/>You may always use destination from this API in other search request
+      parameters:
+        - in: query
+          name: lang
+          description: In which language you want to receive the destinations
+          required: true
+          schema:
+            type: string
+            enum: ['en','fr','es']
+            default: 'en'
+        - in: query
+          name: code
+          description: Destination search query string
+          required: true
+          schema:
+            type: string
+            minLength: 3
+        - in: query
+          name: source
+          description: If you want a destination only available for b2b or b2c
+          required: false
+          schema:
+            type: string
+            enum: ['B2B','B2C']
+        - in: query
+          name: type
+          description: This parameter is required when source is used. Return destination only valid for Flight,hotel,addon,car
+          required: false
+          schema:
+            type: string
+            enum: ['FLT','HOT','ADD','CAR']
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Destinations'
+              example:
+                [{"value":"Montreal YUL Canada QC","id":"1005","code":"YUL","name":"Montreal","country":"Canada","state":"QC","lat":"45.50799942","lng":"-73.55300140","radius":"15","radius_add":"15","b2b":"1","airport":"Pierre Elliott Trudeau","b2c":"1","b2c_hot":"1","b2c_flt_hot":"1","b2b_hot":"1","b2b_add":"1","b2b_car":"1","b2c_car":"1"}]
+  /API/search/{type}:
+    post:
+      tags:
+      - Search
+      summary: Search request for flight/hotel/activites/car.
+      description: >
+        Search request for flight/hotel/activites/car.<br/>Parameter 'type' must be in the url and in the post parameters.<br/><br/>
+        Use API /API/cart/add to validate a product by adding it to your cart
+      parameters:
+        - in: path
+          name: type
+          description: Search type
+          required: true
+          schema:
+            type: string
+            enum: ['FLT','HOT','ADD','CAR','ITC']
+        - in: query
+          name: type
+          description: Search type
+          required: true
+          schema:
+            type: string
+            enum: ['FLT','HOT','ADD','CAR','ITC']
+        - in: query
+          name: language
+          description: search language
+          schema:
+            type: string
+            enum: ['en','fr','es']
+            default: 'en'
+        - in: query
+          name: passengers
+          description: > 
+            List of passengers age<br/>{"passengers":[[35,9]]}<br/>
+            [passengers] => Array // Mandatory<br/>
+            (<br/>
+                →[0] => Array // Mandatory , can have multiple occurrence for HOT & ITC, this is for room<br/>
+                →(<br/>
+                    →→[0] => 35 // Mandatory , age of each passenger<br/>
+                    →→[1] => 9<br/>
+                →)<br/>
+            )
+          required: true
+          schema:
+            type: array
+            items:
+              type: array
+              description: You can have more than 1 when you do a search request for multiple rooms
+              items:
+                type: integer
+                description: Passenger age
+        - in: query
+          name: departures
+          description: >
+            List of departure destination<br/>
+            [departures] => Array // Mandatory for FLT/ITC/CAR<br/>
+            (<br/>
+                →[0] => Array // Can have multiple occurrence for FLT/ITC<br/>
+                →(<br/>
+                    →→[code] => YUL // Mandatory for all type<br/>
+                    →→[latitude] => 45.50799942 // Mandatory for all except FLT<br/>
+                    →→[longitude] => -73.5530014 // Mandatory for all except FLT<br/>
+                    →→[rayon] => 20 // Mandatory for all except FLT<br/>
+                    →→[city] => Montreal // Mandatory only for ADD<br/>
+                →)<br/>
+            )
+          required: true
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: 3 letters destination code found in Destination API. Mandatory for all search type request
+                latitude:
+                  type: number
+                  description: Latitude of the destination found Destination API. Mandatory for all search type request
+                longitude:
+                  type: number
+                  description: Longitude of the destination found Destination API. Mandatory for all search type request
+                rayon:
+                  type: number
+                  description: Search radius of the destination found Destination API. Mandatory for all search type request except flight
+                city:
+                  type: string
+                  description: City name, Mandatory only for activites
+        - in: query
+          name: destinations
+          description: >
+            List of destinations<br/>
+            [destinations] => Array // Mandatory for all<br/>
+            (<br/>
+                →[0] => Array<br/>
+                →(<br/>
+                    →→[code] => LAS // Mandatory for all type<br/>
+                    →→[latitude] => 36.11460114 // Mandatory for all except FLT<br/>
+                    →→[longitude] => -115.17279816 // Mandatory for all except FLT<br/>
+                    →→[rayon] => 25 // Mandatory for all except FLT<br/>
+                    →→[city] => Las Vegas // Mandatory only for ADD<br/>
+                →)<br/>
+            )
+          required: true
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: 3 letters destination code found in Destination API. Mandatory for all search type request
+                latitude:
+                  type: number
+                  description: Latitude of the destination found Destination API. Mandatory for all search type request
+                longitude:
+                  type: number
+                  description: Longitude of the destination found Destination API. Mandatory for all search type request
+                rayon:
+                  type: number
+                  description: Search radius of the destination found Destination API. Mandatory for all search type request except flight
+                city:
+                  type: string
+                  description: City name, Mandatory only for activites
+        - in: query
+          name: dates
+          description: >
+            List of departure date<br/>
+            [dates] => Array // Mandatory for all<br/>
+            (<br/>
+                →[0] => Array<br/>
+                →(<br/>
+                    →→[date] => 20181209 // Mandatory for all<br/>
+                    →→[time] => 0900 // Mandatory for CAR, optional for FLT<br/>
+                →)<br/>
+                →[1] => Array<br/>
+                →(<br/>
+                    →→[date] => 20181215 // Mandatory for all<br/>
+                    →→[time] => 0900 // Mandatory for CAR, optional for FLT<br/>
+                →)<br/>
+            )
+          required: true
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                date:
+                  type: string
+                  description: date format - 20191016
+                time:
+                  type: string
+                  description: time format - 0900
+        - in: query
+          name: client_ref
+          description: Option for all / client_ref linked to your markup portal
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: currency
+          description: In which currency you want to receive prices, 3 letters code IATA (USD/CAD/EUR/MXN/...)
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: citizen_country
+          description: Mandatory for CAR, from where the client come from
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: property
+          description: Optional for ITC/HOT , only available if you have expedia hotel.<br/>0 = all<br/>1 = Hotel<br/>2 = Suite<br/>3 = resort<br/>4 = Vacation rental condo<br/>5 = Bed & Breakfast<br/>6 = all Inclusive
+          required: false
+          schema:
+            type: integer
+            enum: [0,1,2,3,4,5,6]
+        - in: query
+          name: win_hot_conn
+          description: optional for ITC/HOT, value = connector name (hotelbeds), if 1 hotel is returned 2 times by 2 connector only keep hotelbeds
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: hot_name
+          description: Optinal for HOT, only return hotel that match name criteria
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: service_class
+          description: Optional for FLT/ITC value  blank for economy, W for premium economy, C for business, F for first
+          required: false
+          schema:
+            type: string
+            enum: ['W','C','F']
+        - in: query
+          name: seats
+          description: Optional for FLT/ITC /  Return the number of seats available per segment. Set to 1 to get seat information.
+          required: false
+          schema:
+            type: integer
+            enum: [0,1]
+        - in: query
+          name: NoOvernite
+          description: Optional for FLT/ITC / Reject flights with an overnight. An overnight is defined as having to spend the night at a connection airport
+          required: false
+          schema:
+            type: integer
+            enum: [0,1]          
+        - in: query
+          name: NoUSA
+          description:  Optional for FLT/ITC / Reject fares involving a connection or a stop in the USA
+          required: false
+          schema:
+            type: integer
+            enum: [0,1]
+        - in: query
+          name: directonly
+          description:  Optional for FLT/ITC / Only return direct flights
+          required: false
+          schema:
+            type: integer
+            enum: [0,1]
+        - in: query
+          name: FlexDates
+          description:  Optional for FLT / Return fares for other dates than the requested one. Set to 1 to receive alternate dates 
+          required: false
+          schema:
+            type: integer
+            enum: [0,1]
+        - in: query
+          name: FlexDays
+          description:  Optional for FLT / + / - days before / after requested departure date 
+          required: false
+          schema:
+            type: integer
+            enum: [0,1]
+        - in: query
+          name: FlexMinStay
+          description:  Optional for FLT / Flex Dates minumum stay
+          required: false
+          schema:
+            type: integer
+            enum: [0,1]
+        - in: query
+          name: FlexMaxStay
+          description:  Optional for FLT /  Flex Dates maximum days
+          required: false
+          schema:
+            type: integer
+            enum: [0,1]
+        - in: query
+          name: airline
+          description: Optional for FLT/ITC / Specific airline or group of airlines. If more than one airline, separated by /
+          required: false
+          schema:
+            type: string
+            enum: ["9B","JP","EI","SU","AR","AM","ZI","AH","KC","AB","SB","AC","CA","YN","AF","AI","JM","WJ","KM","MK","9U","SW","NZ","AP","FJ","HM","TN","TS","AS","AZ","NH","AA","OZ","OS","AV","J2","UP","PG","JV","BD","BA","SN","5T","BW","CX","9M","CI","MU","CZ","DE","CO","CM","SS","CU","OK","DL","MS","LY","EK","ET","EY","GJ","BR","AY","7F","F9","GF","HR","HU","HA","YO","HX","IB","FI","IC","IR","JL","JU","9W","B6","KQ","IT","KL","KE","KU","LB","LR","LA","4M","JJ","XL","PZ","LO","LH","MH","MA","IG","X","ME","YX","OM","YM","NW","OA","WY","8P","LW","PK","PR","PD","PB","QF","QR","AT","RJ","S4","SV","SK","S7","SQ","SA","WN","JK","UL","LX","TA","TP","TG","UN","TU","TK","PS","UA","US","UT","HY","VN","VX","VS","DJ","8O","WS","WW","MF"]
+        - in: query
+          name: no_multi_airp
+          description: Optional for FLT/ITC / Reject fares where different airports are involved with a connection flight. For example arrive at JFK and depart from EWR. Set to 1 to reject
+          required: false
+          schema:
+            type: integer
+            enum: [0,1]
+        - in: query
+          name: max_cnx_time
+          description:  Optional for FLT/ITC / Maximum connecting time, in minutes
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: max_overnite_cnx_time
+          description:  Optional for FLT/ITC / Maximum overnight connecting time, in minutes
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: GDS
+          description:  Optional for FLT/ITC / G for Galileo, S for Sable, A for Amadeus
+          required: false
+          schema:
+            type: string
+            enum: ['G','S','A']
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SearchFlight'
+  /API/cart/create:
+    post:
+      tags:
+      - Cart
+      summary: Create a new shopping cart
+      description: Create a new shopping cart
+      parameters:
+        - in: query
+          name: name
+          required: false
+          schema:
+            type: string
+            description: Give an name to your cart
+        - in: query
+          name: agent_id
+          description: optional, link cart to a specific agent
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: profil_id
+          description: optional, link cart to a specific user profil
+          required: false
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  booking:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        description: booking id, keep this number if you want to add multiple items in the same cart
+  /API/cart/add:
+    post:
+      tags:
+      - Cart
+      summary: Add item in a shopping cart
+      description: Add item in a shopping cart. It's possible that the item may not add to the cart or the price may change while adding it to the cart
+      parameters: 
+        - in: query
+          name: type
+          description: What type of item you want to add in the cart
+          required: true
+          schema:
+            type: string
+            enum: ['FLT','HOT','ADD','CAR','TOUR','CIRCUIT']
+        - in: query
+          name: sid
+          description: Unique sid can be found in the response of /API/search/{type}
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: product_num
+          description: >
+            Index of the product. Can be found in the response of /API/search/{type}<br/><br/>
+            ['airfares]['airfare'][0]['index']<br/>
+            ['hotels]['hotel'][0]['index']<br/>
+            ['addons]['addon'][0]['index']<br/>
+            ['cars]['car']['index']<br/>
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: option_num
+          description: >
+            Must be an array of options. You will only send multiple options for hotel when you have multiple rooms.<br/><br/>
+            ['airfares]['airfare'][x]['options']['option'][y]['index']<br/>
+            ['hotels]['hotel'][x]['options']['option'][y]['index']<br/>
+            ['addons]['addon'][x]['options']['option'][y]['index']<br/>
+            ['cars]['car'][x]['options']['option'][y]['index']<br/>
+          required: true
+          schema:
+            type: array
+            items:
+              type: integer
+        - in: query
+          name: currency
+          description: In which currency you want to add the item into your shopping cart. (USD/CAD/EUR/MXN/...)
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: booking_id
+          description: If you want to add the item in a specific shopping cart, put the desired shopping cart id, otherwise a new shopping cart will be automatically created.
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: journeys
+          description: >
+            Mandatory for flight. Array of index for each flight journeys<br/><br/>
+            One way flight<br/>
+            ['airfares]['airfare'][x]['options']['option'][y]['itin']['journeys][0][z]['index']<br/><br/>
+            Flight with return<br/>
+            ['airfares]['airfare'][x]['options']['option'][y]['itin']['journeys][0][z]['index']<br/>
+            ['airfares]['airfare'][x]['options']['option'][y]['itin']['journeys][1][z]['index']<br/><br/>
+            Multicity flight<br/>
+            ['airfares]['airfare'][x]['options']['option'][y]['itin']['journeys][0][z]['index']<br/>
+            ['airfares]['airfare'][x]['options']['option'][y]['itin']['journeys][1][z]['index']<br/>
+            ['airfares]['airfare'][x]['options']['option'][y]['itin']['journeys][2][z]['index']<br/>
+            ...
+          required: false
+          schema:
+            type: array
+            items:
+              type: integer
+        - in: query
+          name: drop_off_location
+          description: Mandatory only for CAR, return office code
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: pickup_time
+          description: Optional, only for CAR, when you want to pickup the car, format 0900
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: dropoff_time
+          description: Optional, only for CAR, when you want to return the car, format 0900
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: ages
+          description: Mandatory only for Activities, age of each passenger for this activity
+          schema:
+            type: array
+            items:
+              type: integer
+        - in: query
+          name: tnGroupId
+          description: Mandatory only for ticketnetwork activities. the group ID
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  booking_id:
+                    type: integer
+                    description: Your shopping cart id
+                  product_id:
+                    type: integer
+                    description: Product id of the item in the cart
+                  product_total:
+                    type: number
+                    description: >
+                      Price of the product<br/><br/>
+                      !!!WARNING!!!<br/><br/>
+                      When adding item into the cart, the price may have changed from the search response
+                  total:
+                    type: number
+                    description: The total price of the shopping cart
+  /API/cart/get:
+    post:
+      tags:
+      - Cart
+      summary: Get all items in a shopping cart
+      description: Get all items in a shopping cart
+      parameters:
+        - in: query
+          name: booking_id
+          description: Booking id of the cart
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: showSerialize
+          description: Get the same format as search result
+          schema:
+            type: string
+      responses:
+        200:
+          description: ok
+          content:
+            application/json:
+              example:
+                {"total":5804.9,"title":"Lizeydi Manzano","created_at":{"date":"2019-11-03 14:08:29.000000","timezone_type":3,"timezone":"America Montreal"},"updated_at":{"date":"2019-11-03 14:10:48.000000","timezone_type":3,"timezone":"America Montreal"},"bookdate":"2019-11-03 14:08:29","agent_id":"629","profil_id":"0","b2c":"0","booking_id":"123456","products":[{"id":"331545","title":"ORIGINALLY QUOTED - Aeromexico","status":"HK","type":"FLT","total":"5804.90","product_id":"331545","sid":"8630a259b9ee8417e751d3d757ce159f15728080708372","confirmation_number":"XXXXXX","bookdate":"2019-11-03 14:10:47","checkin":"2019-11-04","checkout":null,"connector":"sabre","sellcurrency":"MXN","currency_roe":"19.4053","origcurrency":"USD","image":null,"nbpax":"1","norefund":"0","cancel_policies":[],"options":[{"title":"ORIGINALLY QUOTED - Aeromexico MZT - CPE","id":"375029","supplier_conf_number":"xxxxxxxxxxxxxxxx","nbpax":"1","price":"3825.95","taxes":"1978.95","total":"5804.90","special_requests":null,"passengers":[{"id":"906315","passenger_id":"120420","price":"3825.95","taxes":"1978.95","total":"5804.90","taxes_detail":[{"code":"XT","amt":"1178.10"},{"code":"surcharges","amt":"801.05"}],"age":"35","minage":null,"maxage":null}]}]}],"passengers":[{"id":"120420","booking_id":"xxxxx","firstname":"MIGUEL EUSEBIO","lastname":"ROOFUS SUMMERS ","title":"MR","type":"ADT","dob":"1984-01-01","email":"email@email.com","homephone":"xxxxxxxxxx","cellphone":"","city":"","state":"-1","country":"-1","zip":"","lang":"FR","sex":"m","passport":"","passport_issued_date":"2014-02-01","passport_expiry_date":"2034-02-01","passport_country":"","passport_city":"","price":3825.95,"taxes":1978.95,"total":5804.9,"products":[{"id":"331545","options":[{"id":"375029","passengers":[{"id":"906315","passenger_id":"120420"}]}]}]}]}
+  /API/cart/edit/passengers:
+    post:
+      tags:
+      - Cart
+      summary: Create/Edit passenger
+      description: Create or edit passengers in a cart. This step is mandatory in order to book a cart.
+      parameters: 
+        - in: query
+          name: booking_id
+          description: Booking id of the cart
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: passengers
+          description: list of passengers
+          required: true
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                firstname:
+                  type: string
+                lastname:
+                  type: string
+                title:
+                  type: string
+                  enum: ['MR','MS','MSTR','MISS']
+                sex:
+                  type: string
+                  enum: ['m','f']
+                dob:
+                  type: string
+                  description: Date of birth Y-m-d
+                email:
+                  type: string
+                homephone:
+                  type: string
+                cellphone:
+                  type: string
+                adress:
+                  type: string
+                city:
+                  type: string
+                state:
+                  type: string
+                country:
+                  type: string
+                zip:
+                  type: string
+                passport:
+                  type: string
+                passport_issued_date:
+                  type: string
+                passport_expiry_date:
+                  type: string
+                passport_country:
+                  type: string
+                passport_city:
+                  type: string
+                id:
+                  type: integer
+                  description: If you don't pass a passenger, a new passenger will be created, otherwise you will modify the selected passenger.
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  passengers:
+                    description: List of passengers
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: Passenger id
+                        booking_id:
+                          type: integer
+                          description: Booking id linked to the passenger
+                        firstname:
+                          type: string
+                          description: First name
+                        lastname:
+                          type: string
+                          description: Last name
+                        title: 
+                          type: string
+                          description: Passenger title
+                          enum: ['MR','MS','MSTR','MISS']
+                        type:
+                          type: string
+                          description: male or female
+                          enum: ['m','f']
+                        dob:
+                          type: string
+                          description: Date of birth Y-m-d
+                        email:
+                          type: string
+                          description: Passenger Email
+                        homephone:
+                          type: string
+                          description: homephone
+                        cellphone:
+                          type: string
+                          description: cellphone
+                        city:
+                          type: string
+                        state:
+                          type: string
+                        country:
+                          type: string
+                        zip:
+                          type: string
+                          description: Postal code / zipcode
+                        lang:
+                          type: string
+                          description: Passenger language
+                          enum: ['EN','FR']
+                        passport:
+                          type: string
+                        passport_issued_date:
+                          type: string
+                        passport_expiry_date:
+                          type: string
+                        passport_country:
+                          type: string
+                        passport_city:
+                          type: string
+                        price:
+                          type: number
+                          description: Total amount without taxes linked to that passengers in a cart
+                        taxes:
+                          type: number
+                          description: Total amount of taxes linked to that passengers in a cart
+                        total:
+                          type: number
+                          description: Total amount with taxes linked to that passengers in a cart
+  /API/cart/book:
+    post:
+      tags:
+      - Cart
+      summary: Book all items in a shopping cart
+      description: Book all items in a shopping cart
+      parameters: 
+        - in: query
+          name: booking_id
+          description: Booking id of the cart to book
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  booking_id:
+                    type: integer
+                    description: Your shopping cart id
+                  title:
+                    type: string
+                    description: Cart title
+                  products:
+                    type: array
+                    description: Array of products
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: Product id
+                        sid:
+                          type: string
+                          description: Sid from search results
+                        booking_id:
+                          type: integer
+                          description: Booking id
+                        status:
+                          type: string
+                          description: Product status
+                          enum: ['QT','RQ','HK','CX','QX','ER']
+                        type: # why
+                          type: string
+                          description: type of product
+                          enum: ['FLT','HOT','ADD','CAR']
+                        title:
+                          type: string
+                          description: Product title
+                        con_book_number:
+                          type: string
+                          description: When status is RQ or HK, this will be the product confirmation number
+                        error_msg:
+                          type: string
+                          description: Error message, if any, while booking the product
+  /API/cart/book/product:
+    post:
+      tags:
+      - Cart
+      summary: Book a single product in a shopping cart
+      description: Book a single product in a shopping cart
+      parameters: 
+        - in: query
+          name: booking_id
+          description: Booking id of the cart to book
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: product_id
+          description: Product id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  booking_id:
+                    type: integer
+                    description: Your shopping cart id
+                  title:
+                    type: string
+                    description: Cart title
+                  products:
+                    type: array
+                    description: Array of products
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: Product id
+                        sid:
+                          type: string
+                          description: Sid from search results
+                        booking_id:
+                          type: integer
+                          description: Booking id
+                        status:
+                          type: string
+                          description: Product status
+                          enum: ['QT','RQ','HK','CX','QX','ER']
+                        type: # why
+                          type: string
+                          description: type of product
+                          enum: ['FLT','HOT','ADD','CAR']
+                        title:
+                          type: string
+                          description: Product title
+                        con_book_number:
+                          type: string
+                          description: When status is RQ or HK, this will be the product confirmation number
+                        error_msg:
+                          type: string
+                          description: Error message, if any, while booking the product
+  /API/cart/cancel/product:
+    post:
+      tags:
+      - Cart
+      summary: Cancel a booked product in your cart
+      description: Cancel a booked product in your cart
+      parameters: 
+        - in: query
+          name: booking_id
+          description: Booking id of the cart to book
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: product_id
+          description: Product id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  booking_id:
+                    type: integer
+                    description: Your shopping cart id
+                  title:
+                    type: string
+                    description: Cart title
+                  products:
+                    type: array
+                    description: Array of products
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: Product id
+                        sid:
+                          type: string
+                          description: Sid from search results
+                        booking_id:
+                          type: integer
+                          description: Booking id
+                        status:
+                          type: string
+                          description: Product status
+                          enum: ['QT','RQ','HK','CX','QX','ER']
+                        type: # why
+                          type: string
+                          description: type of product
+                          enum: ['FLT','HOT','ADD','CAR']
+                        title:
+                          type: string
+                          description: Product title
+                        con_book_number:
+                          type: string
+                          description: When status is RQ or HK, this will be the product confirmation number
+                        error_msg:
+                          type: string
+                          description: Error message, if any, while booking the product
+  /API/cart/delete/product:
+    post:
+      tags:
+      - Cart
+      summary: Delete a product in your cart
+      description: Delete a product in your cart. You can't delete a product with status ('HK','RQ'), you must cancel it first
+      parameters: 
+        - in: query
+          name: booking_id
+          description: Booking id of the cart to book
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: product_id
+          description: Product id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  delete:
+                    type: string
+                    enum: ['Success']
+  /API/cart/payment:
+    post:
+      tags:
+      - Payment
+      summary: Do a payment
+      description: Do a partial/full payment of the cart total amount
+      parameters: 
+        - in: query
+          name: booking_id
+          description: Booking id of the cart to book
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: cc_num
+          description: Credit card number
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: cc_cvv
+          description: Credit card security number
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_firstname
+          description: Credit card holder first name
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_lastname
+          description: Credit card holder last name
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_adr
+          description: Credit card holder adress
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_city
+          description: Credit card holder city
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_country
+          description: Credit card holder country
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_state
+          description: Credit card holder state
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_zip
+          description: Credit card holder postal code / zipcode
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_description
+          description: Payment description
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: currency
+          description: Currency 3 letters code
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_month
+          description: Credit card expired month. Format (12 = december)
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_year
+          description: Credit card expired years (yyyy)
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_phone
+          description: Credit card holder phone number
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_email
+          description: Credit card holder email
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: cc_amount
+          description: If you don't submit the cc amount, the total remaining amount of the cart will be charge
+          schema:
+            type: number
+        - in: query
+          name: QT
+          description: If you submit QT=1 quoted products (status QT) will also be charge on the credit card, otherwise, only booked products ('RQ','HK') will be charge
+          schema:
+            type: string
+            enum: ['0','1']
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          description: Payment id
+                        status:
+                          type: string
+                          description: Payment status
+                          enum: ['PENDING','COMPLETED','FAILED','CANCELLED']
+                        firtname:
+                          type: string
+                          description: CC holder firstname
+                        lastname:
+                          type: string
+                          description: CC holder lastname
+                        adress:
+                          type: string
+                          description: CC holder adress
+                        city:
+                          type: string
+                          description: CC holder city
+                        country:
+                          type: string
+                          description: CC holder country
+                        state:
+                          type: string
+                          description: CC holder state
+                        zip:
+                          type: string
+                          description: CC holder zip / postal code
+                        email:
+                          type: string
+                          description: CC holder email
+                        phone:
+                          type: string
+                          description: CC holder phone
+                        cc_month:
+                          type: string
+                          description: CC expired month
+                        cc_year:
+                          type: string
+                          description: CC expired year
+                        description:
+                          type: string
+                          description: Payment description
+                        type:
+                          type: string
+                          description: type of transaction
+                          enum: ['charge','refund']
+                        cc_type:
+                          type: string
+                          description: type of credit card
+                          enum: ['VI','CA','AX']
+                        amount:
+                          type: number
+                          description: Transaction amount
+                        payment_date:
+                          type: string
+                          description: Payment date
+                        cc_num:
+                          type: string
+                          description: Masked Credit card number 1234********5678
+                        cc_auth:
+                          type: string
+                          description: Transaction auth number
+  /API/cart/refund:
+    post:
+      tags:
+      - Payment
+      summary: Refund a previous payment
+      description: Do a partial/full refund of a previous payment
+      parameters: 
+        - in: query
+          name: booking_id
+          description: Booking id of the cart to book
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: payment_id
+          description: Payment id to refund
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: cc_amount
+          description: If you don't submit an amount. The total remaining amount of the transaction will be refunded.
+          schema:
+            type: number
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    description: Payment id
+                  status:
+                    type: string
+                    description: Payment status
+                    enum: ['PENDING','COMPLETED','FAILED','CANCELLED']
+                  firtname:
+                    type: string
+                    description: CC holder firstname
+                  lastname:
+                    type: string
+                    description: CC holder lastname
+                  adress:
+                    type: string
+                    description: CC holder adress
+                  city:
+                    type: string
+                    description: CC holder city
+                  country:
+                    type: string
+                    description: CC holder country
+                  state:
+                    type: string
+                    description: CC holder state
+                  zip:
+                    type: string
+                    description: CC holder zip / postal code
+                  email:
+                    type: string
+                    description: CC holder email
+                  phone:
+                    type: string
+                    description: CC holder phone
+                  cc_month:
+                    type: string
+                    description: CC expired month
+                  cc_year:
+                    type: string
+                    description: CC expired year
+                  description:
+                    type: string
+                    description: Payment description
+                  type:
+                    type: string
+                    description: type of transaction
+                    enum: ['charge','refund']
+                  cc_type:
+                    type: string
+                    description: type of credit card
+                    enum: ['VI','CA','AX']
+                  amount:
+                    type: number
+                    description: Transaction amount
+                  payment_date:
+                    type: string
+                    description: Payment date
+                  cc_num:
+                    type: string
+                    description: Masked Credit card number 1234********5678
+                  cc_auth:
+                    type: string
+                    description: Transaction auth number
+  /API/cart/flight/PNR:
+    post:
+      tags:
+      - Cart
+      summary: Get flight PNR
+      description: Get flight PNR
+      parameters:
+        - in: query
+          name: booking_id
+          description: Booking id of the cart
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: locator
+          description: flight locator
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: getSerialize
+          description: get all xml flight data
+          schema:
+            type: integer
+            enum: [0,1]
+      responses:
+        200:
+          description: ok
+          content:
+            application/json:
+              example:
+                {"lines":{"line":[" 1.1ESTRELLA BERCOVICH ALBERTO"," 1 AM 266H 07NOV Q VSAMEX*HK1   850P 1035P  DCAM*IXKIVH  E"," 2 AM 646H 08NOV F MEXLAX*HK1   720A  925A  DCAM*IXKIVH  E"," 3 AM4629H 08NOV F LAXTUS*HK1   220P  448P  DCAM*IXKIVH  E","OPERATED BY SKYWEST DBA DELTA CONNECTION"," 4  OTH YY 02MAY J GK1  YUL HAVE A NICE TRIP BON VOYAGE","TKT TIME LIMIT","  1.T-04NOV-HD5I*A10","PHONES","  1.MEX9381605523-H-1.1","  2.MEX525585264422","  3.MEX9381605523-H-ALBERTO ESTRELLA BERCOVICH","  4.MEX-O XXXXXXXXXX","PASSENGER EMAIL DATA EXISTS  *PE TO DISPLAY ALL","INVOICED ","ADDRESS","    XXXXXXXX","    XXX PISO 14 XXXX JUAREZ DELEGACION CUAUHTEMOC","    CIUDAD DE MEXICO MEXICO","PRICE QUOTE RECORD EXISTS - SYSTEM","SECURITY INFO EXISTS *P3D OR *P4D TO DISPLAY","AA FACTS","  1.SSR OTHS 1S PLS ADV TKT BY 05NOV 1221 MEX OR PNR WILL BE CN","    L","  2.SSR OTHS 1S IF FARE RULE TL DIFFERS FROM AUTO TL","  3.SSR OTHS 1S MOST RESTRICTIVE TL WILL APPLY","  4.SSR OTHS 1S DUP WITH FENUKK PLS RSLV SUBJECT TO DEBIT MEMO","GENERAL FACTS","  2.SSR CTCE AM HK1 VICTOR.GARCIA  MARINSA.COM.MX","  3.SSR CTCM AM HK1 XXXXXXXXXX","  5.OSI YY ASCB C554V","  6.SSR OTHS AM CONVENIOS GARANTIZADOS","  7.SSR OTHS AM XXXXXX MEXTICKET","  8.SSR OTHS AM MARINSA","  9.SSR CTCE AM HK1 ALEX  MEXTICKET.COM.MX","REMARKS","  1. MEXTICKET","  2..","  3.H-BOOKING AGENCY - MEXTICKET","  4.H-AGENCY ADDRESS - MARIO PANI 400 SANTA FE  MEXICO CITY MEX","    ICO 05348","  5.H-AUTH-AMEX AX1009 04NOV 01321572893622261513       ","  6.H-  AUTH-APV 107565 000 MXN7000                     ","  7.H-  AUTH-CSC NOT SUPPLIED                           ","  8.H-  AUTH-AVS NOT SUPPORTED                          ","  9.H-XXAUTH xxxxx AXXXXXXXXXXXX1009 AM MXN7000 04NOV S"," 10.XXTAWHD5I04NOV009  OPTION DATE IS 04NOV","ACCOUNTING DATA","  1.  AM\u00c2\u00873326007386      54        5356     789 D215 D640 ONE C","      CAXXXXXXXXXXXX1009 1.1ESTRELLA BERCOVICH ALBERTO 1 F E","RECEIVED FROM - KARINA CABRERA","HD5I.S99J*AWS 1221 04NOV19 KCJYMK H","TKT TIME LIMIT","  1.T-04NOV-HD5I*A10","  2.TE XXXXXXXXXX-MX ESTRE A HD5I*A10 1253 04NOV I","                 PRICE QUOTE RECORD - DETAILS                  ","                                                               ","FARE NOT GUARANTEED UNTIL TICKETED                             ","                                                               ","PQ 1  IMNS12\u00c2\u0087PADT\u00c2\u0087RQ                                           ","                                                               ","BASE FARE       EQUIV AMT     TAXES FEES CHARGES          TOTAL","USD279.00       MXN5356         1644XT               MXN7000ADT","XT BREAKDOWN                                                   ","          215XO           640XD           357US           113YC","          135XY            76XA           108AY                ","ADT-01  HNNC0NMM C554V                                         ","LAST DAY TO PURCHASE 04NOV 2359                                ","VSA AM X MEX AM X LAX AM TUS279.00NUC279.00END ROE1.00","PRIVATE FARE APPLIED - CHECK RULES FOR CORRECT TICKETING       ","VALIDATING CARRIER - AM                                        ","CORP ID ACCNT CODE USED: MNS12                                 ","NONREF PENALTY APPLIES                                         ","01 O VSA AM 266H 07NOV  850P HNNC0NMM C554V  07NOV1907NOV19 NIL","02 X MEX AM 646H 08NOV  720A HNNC0NMM C554V  08NOV1908NOV19 NIL","03 X LAX AM4629H 08NOV  220P HNNC0NMM C554V  08NOV1908NOV19 NIL","     TUS                                                       ","CORPID  *                                                      ","FARE SOURCE - ATPC                                             ","                                                               ","BAG ALLOWANCE     -VSATUS-NIL AM                               ","1STCHECKED BAG FEE-VSATUS-MXN517 AM UP TO 50 POUNDS 23 KILOGRAM","S AND UP TO 81 LINEAR INCHES 208 LINEAR CENTIMETERS            ","2NDCHECKED BAG FEE-VSATUS-MXN948 AM UP TO 50 POUNDS 23 KILOGRAM","S AND OVER 80 LINEAR INCHES 203 LINEAR CENTIMETERS             ","CARRY ON ALLOWANCE                                             ","VSAMEX MEXLAX-02P 10KG AM                                      ","01 UP TO 22 POUNDS 10 KILOGRAMS AND UP TO 45 LINEAR INCHES 115 ","LINEAR CENTIMETERS                                             ","LAXTUS-01P DL                                                  ","01 CARRY ON HAND BAGGAGE                                       ","01 UP TO 45 LINEAR INCHES 115 LINEAR CENTIMETERS               ","CARRY ON CHARGES                                               ","LAXTUS-DL-CARRY ON FEES UNKNOWN-CONTACT CARRIER                ","ADDITIONAL ALLOWANCES AND OR DISCOUNTS MAY APPLY DEPENDING ON  ","FLYER-SPECIFIC FACTORS  E.G. FREQUENT FLYER STATUS MILITARY    ","CREDIT CARD FORM OF PAYMENT EARLY PURCHASE OVER INTERNET,ETC.  ","EMBARGOES-APPLY TO EACH PASSENGER                              ","LAXTUS-DL                                                      ","SPORTING EQUIPMENT POLE VAULT EQUIPMENT NOT PERMITTED          ","SPORTING EQUIPMENT CANOE KAYAK NOT PERMITTED                   ","HD5I S99J *AWS 1221 04NOV19                        PRICE-SYSTEM","                                                               "]},"sid":"99eb9170f8c4ebe7eac0f82328cf58b715728899751842","header":{"account":"xxx","START":null},"booking_output":{"air":{"locator":"XXXXXX","status":"HK"}}}
+  /API/ticketnetwork/map:
+    post:
+      tags:
+      - Ticketnetwork
+      summary: Load Ticketnetwork Map
+      description: > 
+        Show ticketnetwork map. [example](http://reslynx.com/documentations/ticketnetwork.html) : <br/></br>
+      parameters: 
+        - in: query
+          name: eventId
+          description: Ticketnetwork Event id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+  /API/ticketnetwork/price:
+    post:
+      tags:
+      - Ticketnetwork
+      summary: Load Ticketnetwork Map inventory prices
+      description: > 
+        Update ticket from ticketnetwork map. [example](http://reslynx.com/documentations/ticketnetwork.html) : <br/></br>
+      parameters: 
+        - in: query
+          name: sid
+          description: Sid from search request
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: product_num
+          description: activity index ['addons']['addons'][x]['index']
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: option_num
+          description: activity index ['addons']['addons'][x]['options']['option'][y]['index']
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: qty
+          description: Quantity needed
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: currency
+          description: In which currency you want your ticket
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              example:
+                [{"tgUserSec":"439","tgUserRow":"15","tgUserSeats":"","tgQty":"2","tgPrice":347.7,"tgID":536305541,"tgNotes":"Mobile Entry Tickets. Must have smart device on hand to enter event. Do not print these tickets.  Tickets will be ready for delivery by Nov 27, 2019.","tgMark":"1","tgType":1,"tgClientData":"","tgCType":"R"},{"tgUserSec":"C132","tgUserRow":"5","tgUserSeats":"1-3","tgQty":"2","tgPrice":1106.235,"tgID":538172433,"tgNotes":"Tickets will be ready for delivery by Aug 02, 2020.","tgMark":"1","tgType":1,"tgClientData":"","tgCType":"R"},{"tgUserSec":"STANDARD HOTEL","tgUserRow":"PACKAGE","tgUserSeats":"21-24","tgQty":"2","tgPrice":847.9,"tgID":541356498,"tgNotes":"Standard Hotel Package includes 2 nights at a hotel near the venue (check-in day before the game - check out day after the game) | Upper Level end zone or corner game ticket in sections 401-408, 417-438 or 447-460 (orders of three or more may be split) | Private pregame tailgate party hosted by a former Cowboys legend featuring all-inclusive Texas-style buffet, beer, margaritas, wine, soft drinks, games, giveaways, live entertainment and more located across the street from the stadium | Gift bundle (1 per person) | Ticket upgrades - additional hotel nights or specific days may be obtainable upon request | Rate is based on double occupancy | Orders for a quantity of one are subject to an additional charge |. ","tgMark":"1","tgType":5,"tgClientData":"","tgCType":"R"},{"tgUserSec":"DELUXE HOTEL","tgUserRow":"PACKAGE","tgUserSeats":"21-24","tgQty":"2","tgPrice":1299.3,"tgID":541356506,"tgNotes":"Deluxe Hotel Package includes 2 nights at a hotel near the venue (check-in day before the game - check out day after the game) | Roundtrip airport transfers | Lower Level end zone or corner game ticket in sections 101-103, 118-129 or 142-150 (orders of three or more may be split) | Private pregame tailgate party hosted by a former Cowboys legend featuring all-inclusive Texas-style buffet, beer, margaritas, wine, soft drinks, games, giveaways, live entertainment and more located across the street from the stadium | Gift bundle (1 per person) | Ticket upgrades - additional hotel nights or specific days may be obtainable upon request | Rate is based on double occupancy | Orders for a quantity of one are subject to an additional charge |. ","tgMark":"1","tgType":5,"tgClientData":"","tgCType":"R"}]
+  /API/hotel/richcontent:
+    post:
+      tags:
+      - Hotel-Richcontent
+      summary: Get hotel richcontent
+      description: > 
+        Get hotel richcontent
+      parameters: 
+        - in: query
+          name: connector
+          description: Hotel connector name. eg. hotelbeds
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: code
+          description: you can get this from hotel result - hotels.hotel[x].rich_content.rich_content_parms
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: language
+          description: In which language you want the richcontent
+          schema:
+            type: string
+            enum: ['en','fr','es']
+      responses:
+        200:
+          description: OK
+          content: 
+            application/json:
+              example: {"paragraph":[{"title":"Circus Circus Hotel Casino & Theme Park","line":[{"content":"Circus Circus Hotel, Casino & Theme Park is the best value on the Las Vegas Strip. The hallmark of Circus Circus lies under the legendary Big Top, where the world's greatest circus acts perform on the Midway Stage. A valid credit card or debit card is required upon arrival to register and a $25/night incidental deposit will be charged to guests (subject to change). *A mandatory Daily Resort Fee is payable by guests directly at the hotel for both Package and Land Only (L/O) rate plans. Resort fee includes: Property-wide high speed internet access (public spaces and in-room), unlimited local and toll free calls, airline boarding pass printing, and fitness center access for guests 18+. All features and applicable charges are subject to change."}]},{"title":"Address","line":[{"content":"2880 Las Vegas Boulevard South, Las Vegas,, LAS VEGAS, US, 89109"}]},{"title":"Rooms","line":[{"content":"Number of bedrooms","fee":"N"},{"content":"Living room","fee":"N"},{"content":"Bathroom","fee":"N"},{"content":"Disability-friendly bathroom","fee":"N"},{"content":"Shower","fee":"N"},{"content":"Bathtub","fee":"N"},{"content":"Hairdryer","fee":"N"},{"content":"Toiletries","fee":"N"},{"content":"Wi-fi","fee":"N"},{"content":"Internet access","fee":"N"},{"content":"Direct dial telephone","fee":"N"},{"content":"TV","fee":"N"},{"content":"Cable TV","fee":"N"},{"content":"Pay movies","fee":"N"},{"content":"Alarm clock","fee":"N"},{"content":"Tea and coffee making facilities ","fee":"N"},{"content":"Ironing set","fee":"N"},{"content":"Carpeted floors","fee":"N"},{"content":"Centrally regulated air conditioning","fee":"N"},{"content":"Individually adjustable air conditioning","fee":"N"},{"content":"Individually adjustable heating ","fee":"N"},{"content":"Safe","fee":"N"},{"content":"Wheelchair-accessible","fee":"N"},{"content":"Wake-up service","fee":"N"},{"content":"Desk","fee":"N"},{"content":"Smoking rooms","fee":"N"},{"content":"Smoke detector","fee":"N"},{"content":"Housekeeping","fee":"N"},{"content":"Cot on demand","fee":"N"},{"content":"Fitness room","fee":"N"},{"content":"Game room","fee":"N"},{"content":"Dining Area","fee":"N"}]},{"title":"Hotel/Services","line":[{"content":"Small pets allowed (under 5 kg)","fee":"N"},{"content":"Large pets allowed (over 5 kg)","fee":"N"},{"content":"Wheelchair-accessible","fee":"N"},{"content":"Car park","fee":"N"},{"content":"Garage","fee":"N"},{"content":"24-hour reception","fee":"N"},{"content":"Check-in hour 15:00:00","fee":"N"},{"content":"Check-out hour - 11:00:00","fee":"N"},{"content":"Mobile phone coverage","fee":"N"},{"content":"Wired Internet","fee":"N"},{"content":"Wi-fi","fee":"N"},{"content":"Local and international calls","fee":"N"},{"content":"Car hire","fee":"S"},{"content":"Secure parking","fee":"N"},{"content":"Valet parking","fee":"S"},{"content":"Room service","fee":"S"},{"content":"Laundry service","fee":"N"},{"content":"Multilingual staff","fee":"N"},{"content":"24-hour security","fee":"N"},{"content":"Bellboy service","fee":"N"},{"content":"Air conditioning in public areas","fee":"N"},{"content":"Smoke detector","fee":"N"},{"content":"Hotel safe","fee":"N"},{"content":"Currency exchange facilities","fee":"N"},{"content":"Cloakroom","fee":"N"},{"content":"Lift access","fee":"N"},{"content":"Newspaper stand","fee":"N"},{"content":"Shop","fee":"N"},{"content":"Gym","fee":"N"},{"content":"Newspapers","fee":"N"},{"content":"Luggage room","fee":"N"},{"content":"Dining area","fee":"N"},{"content":"Towels and bed linen","fee":"N"}]},{"title":"Meals","line":[{"content":"Breakfast","fee":"N"},{"content":"Breakfast buffet","fee":"N"},{"content":"Breakfast served to the table","fee":"N"},{"content":"Continental breakfast","fee":"N"},{"content":"Buffet lunch","fee":"N"},{"content":"\u00c0 la carte lunch","fee":"N"},{"content":"Buffet dinner","fee":"N"},{"content":"\u00c0 la carte dinner","fee":"N"},{"content":"Breakfast and dinner","fee":"N"},{"content":"Breakfast and lunch","fee":"N"},{"content":"Snacks","fee":"N"}]}],"pictures":{"picture":[{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_r_001.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_r_001.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_l_001.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_l_001.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_p_001.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_p_001.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_k_001.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_k_001.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_f_001.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_f_001.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_p_002.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_p_002.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_f_002.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_f_002.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_l_002.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_l_002.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_r_002.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_r_002.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_w_003.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_w_003.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_f_003.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_f_003.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_p_003.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_p_003.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_l_003.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_l_003.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_p_004.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_p_004.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_w_004.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_w_004.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_f_004.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_f_004.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_l_004.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_l_004.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_f_005.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_f_005.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_l_005.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_l_005.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_014.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_014.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_016.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_016.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_017.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_017.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_018.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_018.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_019.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_019.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_a_019.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_a_019.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_a_020.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_a_020.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_022.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_022.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_023.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_023.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_025.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_025.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_027.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_027.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_029.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_029.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_031.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_031.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_032.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_032.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_033.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_033.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_034.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_034.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_035.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_035.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_036.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_036.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_037.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_037.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_038.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_038.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_039.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_039.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_040.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_040.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_041.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_041.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_042.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_042.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_044.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_044.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_046.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_046.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_047.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_047.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_048.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_048.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_049.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_049.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_050.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_050.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_051.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_051.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_052.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_052.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_053.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_053.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_054.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_054.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_055.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_055.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_056.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_056.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_058.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_058.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_059.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_059.jpg"},{"thumb":"https://photos.hotelbeds.com/giata/small/01/013716/013716a_hb_ro_060.jpg","large":"https://photos.hotelbeds.com/giata/bigger/01/013716/013716a_hb_ro_060.jpg"}]}}
+  /API/tour/gettours:
+    post:
+      tags:
+      - Package
+      summary: Get packages informations
+      description: > 
+        Get 1 or all packages informations
+      parameters: 
+        - in: query
+          name: type
+          description: Package type
+          required: true
+          schema:
+            type: string
+            enum: ['autotour','circuit']
+        - in: query
+          name: canevas_id
+          description: id of package, leave blank to get all packages
+          schema:
+            type: integer
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              example: {"canevas":{"490":{"id":"490","title":"Paquete La Liga - Real Madrid vs Sevilla","description":"<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n\n</body>\n</html>","duree":"4","image":"https://www.mexticket.com/wp-content/uploads/2016/06/Paquetes-y-boletos-la-liga-real-madrid-1.jpg","dest":["MAD"],"airline":"","from_without_air":"0","from_with_air":"0","type":"autotour","enabled":"1","inExclusion":"<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n\n</body>\n</html>","OptionsS":"<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n\n</body>\n</html>","map_url":null,"exclusion":null,"sub_title":null,"country":["International"],"city":["MADRID"],"product_url":"https://www.mexticket.com/paquetes-y-boletos/paquete-la-liga-real-madrid-vs-sevilla/","client_id":"","commission_id":"","pickup_location":[""],"discount_discounts":null,"discount_dates":null,"discount_in_forces":null,"defaultDate":"20200116","nb_days":3,"checkin_from":"","checkin_to":"","jours":[{"id":"1504","canevas_id":"490","jour":"1","duree":"3","title":"Seleccionar Hotel","description":"","type":"HOT","dest":"MAD","latitude":"40.4378698","longitude":"-3.8196207","rayon":"100","created_at":"0000-00-00 00:00:00","updated_at":"0000-00-00 00:00:00","ordre":"1","optionel":"0","inv":"0","date_from":"","date_to":""},{"id":"1505","canevas_id":"490","jour":"3","duree":"1","title":"Real Madrid vs Sevilla","description":"","type":"ADD","dest":"MAD","latitude":"40.4378698","longitude":"-3.8196207","rayon":"50","created_at":"0000-00-00 00:00:00","updated_at":"2019-08-05 19:31:44","ordre":"2","optionel":"0","inv":"0","date_from":"20200119","date_to":"20200119"}],"ideal_checkin_date":"2020-01-17"}}}
+  /API/tour/search:
+    post:
+      tags:
+      - Package
+      summary: Search
+      description: Search package
+      parameters:
+        - in: query
+          name: canevas_id
+          description: Package id from gettours
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: checkin
+          description: Departure date (Ymd)
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: occupancy
+          description: Passengers age - example 35,14,6 equal 3 passengers one of 35 years old, one of 14 and one of 6.<br/> Multi room search - 35,5|35,35
+          schema:
+            type: string
+        - in: query
+          name: agent_type
+          description: type of agent
+          required: true
+          schema:
+            type: string
+            enum: ['external','internal']
+        - in: query
+          name: clientref
+          description: You can pass a clientref to apply special pricing.
+          schema:
+            type: string
+        - in: query
+          name: currency
+          description: curreny 3 letters code - USD/CAD...
+          schema:
+            type: string
+        - in: query
+          name: flt_departure
+          description: If you want a flight, what is the departure IATA code - YUL/LAS/JFK...
+          schema:
+            type: string
+        - in: query
+          name: length
+          description: In gettours results, for each days of the package, you get an 'jours' id and a length ['jours'][x]['id'] & ['jours'][x]['duree']. Let's say at day #2 of a package, you stay by default 3 nights at the hotel, you can overwrite the number of night here. Example 474=1|475=2 474 is the jours id ['jours'][x]['id'] the number after is the number of night use the separator | to specify multiple days
+          schema:
+            type: string
+        - in: query
+          name: car_age
+          description: If there is a car in your package. You need to put the driver age here
+          schema:
+            type: integer
+        - in: query
+          name: car_residence
+          description: If there is a car in your package. You need to pass the country code of the driver.
+          schema:
+            type: string
+        - in: query
+          name: car_checkin_time
+          description: If there is a car in your package. When will you pick it up. 09:30
+          schema:
+            type: string
+        - in: query
+          name: car_checkout_time
+          description: If there is a car in your package. When will you return it. 09:30
+          schema:
+            type: string
+        - in: query
+          name: agent_id
+          description: You can pass an agent id. the clientref linked to to agent agency will be used.
+          schema:
+            type: string
+        - in: query
+          name: checkout
+          description: Checkout date is automatically calculated but you can overwrite by passing a checkout date (Ymd)
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              example: {"days":{"day":[{"components":{"component":[{"jour":1,"ordre":0,"type":"FLT","sid":"77fb3fb2b3687dff798366122bbbc43415744493071095","header":{"search_type":"FLT","search_url":"","from_b2b_reslynx":0,"today":"20191122","site_num":"95","always_show_detail":null,"account":"MXT","agency":null,"CommStructure":{"FLT":0,"HOT":0,"ADD":0},"dest_dep_orig":"MAD","orig_dep":"MEX","dest_dep":"MAD","date_dep":"20200116","dow_dep":"Thursday","orig_ret":"MAD","dest_ret":"MEX","date_ret":"20200120","dow_ret":"Monday","lang":"en_US","nb_pax":2,"ages":{"pax":[{"age":"35","title":"ADT","title_name":"Adult"},{"age":"35","title":"ADT","title_name":"Adult"}]},"type":null,"onrequest":null,"audience":{"type":"B2C","with_avail":"Y"},"stars":1,"halfstars":2,"maxprice":99999,"nb_days_prior_to_dep":55,"pricing":"pax","pricing_wording":"per passenger","tax":"incl","tax_wording":"including taxes","pages_info":{"status":"DONE","nb_products_page":9999,"current_pages":1,"bestprice_from":1,"bestprice_to":9999,"allow_previous":0,"allow_next":0},"dflt_pub_mkup":".0","match_pub_min_profit":null,"optionnal_components":{"hotels":"NO","airfares":"NO","addons":"NO"},"ttl_nb_airfares_options":0,"orig_dep_name":"Mexico City","dest_dep_name":"Madrid","orig_ret_name":"Madrid","dest_ret_name":"Mexico City","origs":"MEX-MAD","dests":"MAD-MEX","origs_name":["Mexico City","Madrid"],"dests_name":["Madrid","Mexico City"],"dates":"20200116-20200120","FNRequestId":null,"client_ref":null,"full_content":1,"Epricer":0,"LowScans":null,"host":"mxt80.otfsystems.com","server":"hermes","display_format":null,"Tier3":null,"service_class":"","requested_airline":"","FeesInSurcharges":null,"session_time":1574449312,"search_time":1574449312,"FromSearch":1,"NoUSA":0,"ExcludeBASIC":null,"UseExactCodes":null,"B2B_check_mode":null},"bestprices":[],"segments":{"SEGMEXMAD20200116IB6400":{"carrier":"IB","fltnum":"6400","gateway":"MEX","dest":"MAD","depdate":"20200116","deptime":"1255","arrdate":"20200117","arrtime":"0620","stops":"0","stopsairports":"","equip":"346","operating_air":"IB","duration":"625","operating_air_name":"","human_readable":{"carrier":"Iberia Airlines of Spain","fltnum":"6400","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"12:55","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"06:20","stops":"0","equip":"346","operating_air":"Iberia Airlines of Spain"}},"SEGMADMEX20200120IB6403":{"carrier":"IB","fltnum":"6403","gateway":"MAD","dest":"MEX","depdate":"20200120","deptime":"1315","arrdate":"20200120","arrtime":"1835","stops":"0","stopsairports":"","equip":"346","operating_air":"IB","duration":"740","operating_air_name":"","human_readable":{"carrier":"Iberia Airlines of Spain","fltnum":"6403","gateway":"Barajas","gateway_city":"Madrid","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"13:15","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"18:35","stops":"0","equip":"346","operating_air":"Iberia Airlines of Spain"}},"SEGMEXMAD20200116AM1":{"carrier":"AM","fltnum":"1","gateway":"MEX","dest":"MAD","depdate":"20200116","deptime":"1845","arrdate":"20200117","arrtime":"1230","stops":"0","stopsairports":"","equip":"789","operating_air":"AM","duration":"645","operating_air_name":"","human_readable":{"carrier":"Aeromexico","fltnum":"1","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"18:45","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"12:30","stops":"0","equip":"789","operating_air":"Aeromexico"}},"SEGMADMEX20200120AM2":{"carrier":"AM","fltnum":"2","gateway":"MAD","dest":"MEX","depdate":"20200120","deptime":"1430","arrdate":"20200120","arrtime":"1955","stops":"0","stopsairports":"","equip":"789","operating_air":"AM","duration":"745","operating_air_name":"","human_readable":{"carrier":"Aeromexico","fltnum":"2","gateway":"Barajas","gateway_city":"Madrid","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"14:30","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"19:55","stops":"0","equip":"789","operating_air":"Aeromexico"}},"SEGMADMEX20200120AM22":{"carrier":"AM","fltnum":"22","gateway":"MAD","dest":"MEX","depdate":"20200120","deptime":"2300","arrdate":"20200121","arrtime":"0420","stops":"0","stopsairports":"","equip":"789","operating_air":"AM","duration":"740","operating_air_name":"","human_readable":{"carrier":"Aeromexico","fltnum":"22","gateway":"Barajas","gateway_city":"Madrid","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"23:00","arrdate":{"long":"2020/01/21","short":"21 JAN","dow":"Tuesday","desc":""},"arrtime":"04:20","stops":"0","equip":"789","operating_air":"Aeromexico"}},"SEGMEXMAD20200116IB6402":{"carrier":"IB","fltnum":"6402","gateway":"MEX","dest":"MAD","depdate":"20200116","deptime":"2025","arrdate":"20200117","arrtime":"1355","stops":"0","stopsairports":"","equip":"346","operating_air":"IB","duration":"630","operating_air_name":"","human_readable":{"carrier":"Iberia Airlines of Spain","fltnum":"6402","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"20:25","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"13:55","stops":"0","equip":"346","operating_air":"Iberia Airlines of Spain"}},"SEGMEXMAD20200116AM21":{"carrier":"AM","fltnum":"21","gateway":"MEX","dest":"MAD","depdate":"20200116","deptime":"2355","arrdate":"20200117","arrtime":"1725","stops":"0","stopsairports":"","equip":"789","operating_air":"AM","duration":"630","operating_air_name":"","human_readable":{"carrier":"Aeromexico","fltnum":"21","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"23:55","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"17:25","stops":"0","equip":"789","operating_air":"Aeromexico"}},"SEGMEXMIA20200116AA1302":{"carrier":"AA","fltnum":"1302","gateway":"MEX","dest":"MIA","depdate":"20200116","deptime":"1105","arrdate":"20200116","arrtime":"1514","stops":"0","stopsairports":"","equip":"319","operating_air":"AA","duration":"189","operating_air_name":"","human_readable":{"carrier":"American Airlines","fltnum":"1302","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Miami International","dest_city":"Miami","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"11:05","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"15:14","stops":"0","equip":"319","operating_air":"American Airlines"}},"SEGMIAMAD20200116BA4262":{"carrier":"BA","fltnum":"4262","gateway":"MIA","dest":"MAD","depdate":"20200116","deptime":"1910","arrdate":"20200117","arrtime":"0945","stops":"0","stopsairports":"","equip":"333","operating_air":"IB","duration":"515","operating_air_name":"","human_readable":{"carrier":"British Airways","fltnum":"4262","gateway":"Miami International","gateway_city":"Miami","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"19:10","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"09:45","stops":"0","equip":"333","operating_air":"Iberia Airlines of Spain"}},"SEGMIAMAD20200116IB6124":{"carrier":"IB","fltnum":"6124","gateway":"MIA","dest":"MAD","depdate":"20200116","deptime":"1910","arrdate":"20200117","arrtime":"0945","stops":"0","stopsairports":"","equip":"330","operating_air":"IB","duration":"515","operating_air_name":"","human_readable":{"carrier":"Iberia Airlines of Spain","fltnum":"6124","gateway":"Miami International","gateway_city":"Miami","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"19:10","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"09:45","stops":"0","equip":"330","operating_air":"Iberia Airlines of Spain"}},"SEGMEXDFW20200116AA390":{"carrier":"AA","fltnum":"390","gateway":"MEX","dest":"DFW","depdate":"20200116","deptime":"1235","arrdate":"20200116","arrtime":"1518","stops":"0","stopsairports":"","equip":"738","operating_air":"AA","duration":"163","operating_air_name":"","human_readable":{"carrier":"American Airlines","fltnum":"390","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Dallas Fort Worth International","dest_city":"Dallas-fort Worth","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"12:35","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"15:18","stops":"0","equip":"738","operating_air":"American Airlines"}},"SEGDFWMAD20200116BA1512":{"carrier":"BA","fltnum":"1512","gateway":"DFW","dest":"MAD","depdate":"20200116","deptime":"1645","arrdate":"20200117","arrtime":"0845","stops":"0","stopsairports":"","equip":"789","operating_air":"AA","duration":"540","operating_air_name":"","human_readable":{"carrier":"British Airways","fltnum":"1512","gateway":"Dallas Fort Worth International","gateway_city":"Dallas-fort Worth","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"16:45","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"08:45","stops":"0","equip":"789","operating_air":"American Airlines"}},"SEGDFWMAD20200116IB4607":{"carrier":"IB","fltnum":"4607","gateway":"DFW","dest":"MAD","depdate":"20200116","deptime":"1645","arrdate":"20200117","arrtime":"0845","stops":"0","stopsairports":"","equip":"772","operating_air":"AA","duration":"540","operating_air_name":"","human_readable":{"carrier":"Iberia Airlines of Spain","fltnum":"4607","gateway":"Dallas Fort Worth International","gateway_city":"Dallas-fort Worth","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"16:45","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"08:45","stops":"0","equip":"772","operating_air":"American Airlines"}},"SEGMADDFW20200120IB4608":{"carrier":"IB","fltnum":"4608","gateway":"MAD","dest":"DFW","depdate":"20200120","deptime":"1045","arrdate":"20200120","arrtime":"1450","stops":"0","stopsairports":"","equip":"789","operating_air":"AA","duration":"665","operating_air_name":"","human_readable":{"carrier":"Iberia Airlines of Spain","fltnum":"4608","gateway":"Barajas","gateway_city":"Madrid","dest":"Dallas Fort Worth International","dest_city":"Dallas-fort Worth","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"10:45","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"14:50","stops":"0","equip":"789","operating_air":"American Airlines"}},"SEGDFWMEX20200120AA2233":{"carrier":"AA","fltnum":"2233","gateway":"DFW","dest":"MEX","depdate":"20200120","deptime":"1654","arrdate":"20200120","arrtime":"1935","stops":"0","stopsairports":"","equip":"319","operating_air":"AA","duration":"161","operating_air_name":"","human_readable":{"carrier":"American Airlines","fltnum":"2233","gateway":"Dallas Fort Worth International","gateway_city":"Dallas-fort Worth","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"16:54","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"19:35","stops":"0","equip":"319","operating_air":"American Airlines"}},"SEGDFWMEX20200120AA2417":{"carrier":"AA","fltnum":"2417","gateway":"DFW","dest":"MEX","depdate":"20200120","deptime":"1913","arrdate":"20200120","arrtime":"2155","stops":"0","stopsairports":"","equip":"738","operating_air":"AA","duration":"162","operating_air_name":"","human_readable":{"carrier":"American Airlines","fltnum":"2417","gateway":"Dallas Fort Worth International","gateway_city":"Dallas-fort Worth","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"19:13","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"21:55","stops":"0","equip":"738","operating_air":"American Airlines"}},"SEGMADMIA20200120IB6123":{"carrier":"IB","fltnum":"6123","gateway":"MAD","dest":"MIA","depdate":"20200120","deptime":"1220","arrdate":"20200120","arrtime":"1630","stops":"0","stopsairports":"","equip":"330","operating_air":"IB","duration":"610","operating_air_name":"","human_readable":{"carrier":"Iberia Airlines of Spain","fltnum":"6123","gateway":"Barajas","gateway_city":"Madrid","dest":"Miami International","dest_city":"Miami","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"12:20","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"16:30","stops":"0","equip":"330","operating_air":"Iberia Airlines of Spain"}},"SEGMIAMEX20200120AA257":{"carrier":"AA","fltnum":"257","gateway":"MIA","dest":"MEX","depdate":"20200120","deptime":"1852","arrdate":"20200120","arrtime":"2135","stops":"0","stopsairports":"","equip":"319","operating_air":"AA","duration":"223","operating_air_name":"","human_readable":{"carrier":"American Airlines","fltnum":"257","gateway":"Miami International","gateway_city":"Miami","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"18:52","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"21:35","stops":"0","equip":"319","operating_air":"American Airlines"}},"SEGMEXMIA20200116AA1498":{"carrier":"AA","fltnum":"1498","gateway":"MEX","dest":"MIA","depdate":"20200116","deptime":"0645","arrdate":"20200116","arrtime":"1103","stops":"0","stopsairports":"","equip":"319","operating_air":"AA","duration":"198","operating_air_name":"","human_readable":{"carrier":"American Airlines","fltnum":"1498","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Miami International","dest_city":"Miami","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"06:45","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"11:03","stops":"0","equip":"319","operating_air":"American Airlines"}},"SEGMIAMAD20200116AA68":{"carrier":"AA","fltnum":"68","gateway":"MIA","dest":"MAD","depdate":"20200116","deptime":"1610","arrdate":"20200117","arrtime":"0630","stops":"0","stopsairports":"","equip":"772","operating_air":"AA","duration":"500","operating_air_name":"","human_readable":{"carrier":"American Airlines","fltnum":"68","gateway":"Miami International","gateway_city":"Miami","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"16:10","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"06:30","stops":"0","equip":"772","operating_air":"American Airlines"}},"SEGMADDFW20200120AA37":{"carrier":"AA","fltnum":"37","gateway":"MAD","dest":"DFW","depdate":"20200120","deptime":"1045","arrdate":"20200120","arrtime":"1450","stops":"0","stopsairports":"","equip":"789","operating_air":"AA","duration":"665","operating_air_name":"","human_readable":{"carrier":"American Airlines","fltnum":"37","gateway":"Barajas","gateway_city":"Madrid","dest":"Dallas Fort Worth International","dest_city":"Dallas-fort Worth","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"10:45","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"14:50","stops":"0","equip":"789","operating_air":"American Airlines"}},"SEGMEXDFW20200116AA1374":{"carrier":"AA","fltnum":"1374","gateway":"MEX","dest":"DFW","depdate":"20200116","deptime":"0750","arrdate":"20200116","arrtime":"1038","stops":"0","stopsairports":"","equip":"319","operating_air":"AA","duration":"168","operating_air_name":"","human_readable":{"carrier":"American Airlines","fltnum":"1374","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Dallas Fort Worth International","dest_city":"Dallas-fort Worth","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"07:50","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"10:38","stops":"0","equip":"319","operating_air":"American Airlines"}},"SEGDFWMAD20200116AA36":{"carrier":"AA","fltnum":"36","gateway":"DFW","dest":"MAD","depdate":"20200116","deptime":"1645","arrdate":"20200117","arrtime":"0845","stops":"0","stopsairports":"","equip":"789","operating_air":"AA","duration":"540","operating_air_name":"","human_readable":{"carrier":"American Airlines","fltnum":"36","gateway":"Dallas Fort Worth International","gateway_city":"Dallas-fort Worth","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"16:45","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"08:45","stops":"0","equip":"789","operating_air":"American Airlines"}},"SEGMEXEWR20200116UA1064":{"carrier":"UA","fltnum":"1064","gateway":"MEX","dest":"EWR","depdate":"20200116","deptime":"0905","arrdate":"20200116","arrtime":"1450","stops":"0","stopsairports":"","equip":"73G","operating_air":"UA","duration":"285","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"1064","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Newark Liberty International","dest_city":"Newark","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"09:05","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"14:50","stops":"0","equip":"73G","operating_air":"United Airlines"}},"SEGEWRMAD20200116UA51":{"carrier":"UA","fltnum":"51","gateway":"EWR","dest":"MAD","depdate":"20200116","deptime":"2015","arrdate":"20200117","arrtime":"0925","stops":"0","stopsairports":"","equip":"763","operating_air":"UA","duration":"430","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"51","gateway":"Newark Liberty International","gateway_city":"Newark","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"20:15","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"09:25","stops":"0","equip":"763","operating_air":"United Airlines"}},"SEGMADEWR20200120UA50":{"carrier":"UA","fltnum":"50","gateway":"MAD","dest":"EWR","depdate":"20200120","deptime":"1115","arrdate":"20200120","arrtime":"1355","stops":"0","stopsairports":"","equip":"763","operating_air":"UA","duration":"520","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"50","gateway":"Barajas","gateway_city":"Madrid","dest":"Newark Liberty International","dest_city":"Newark","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"11:15","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"13:55","stops":"0","equip":"763","operating_air":"United Airlines"}},"SEGEWRMEX20200120UA1065":{"carrier":"UA","fltnum":"1065","gateway":"EWR","dest":"MEX","depdate":"20200120","deptime":"1700","arrdate":"20200120","arrtime":"2140","stops":"0","stopsairports":"","equip":"73G","operating_air":"UA","duration":"340","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"1065","gateway":"Newark Liberty International","gateway_city":"Newark","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"17:00","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"21:40","stops":"0","equip":"73G","operating_air":"United Airlines"}},"SEGEWRMAD20200116LH7970":{"carrier":"LH","fltnum":"7970","gateway":"EWR","dest":"MAD","depdate":"20200116","deptime":"2015","arrdate":"20200117","arrtime":"0925","stops":"0","stopsairports":"","equip":"763","operating_air":"UA","duration":"430","operating_air_name":"","human_readable":{"carrier":"Lufthansa","fltnum":"7970","gateway":"Newark Liberty International","gateway_city":"Newark","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"20:15","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"09:25","stops":"0","equip":"763","operating_air":"United Airlines"}},"SEGEWRMEX20200121UA2251":{"carrier":"UA","fltnum":"2251","gateway":"EWR","dest":"MEX","depdate":"20200121","deptime":"0650","arrdate":"20200121","arrtime":"1115","stops":"0","stopsairports":"","equip":"73G","operating_air":"UA","duration":"325","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"2251","gateway":"Newark Liberty International","gateway_city":"Newark","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/21","short":"21 JAN","dow":"Tuesday","desc":""},"deptime":"06:50","arrdate":{"long":"2020/01/21","short":"21 JAN","dow":"Tuesday","desc":""},"arrtime":"11:15","stops":"0","equip":"73G","operating_air":"United Airlines"}},"SEGMADFRA20200120LH1115":{"carrier":"LH","fltnum":"1115","gateway":"MAD","dest":"FRA","depdate":"20200120","deptime":"1655","arrdate":"20200120","arrtime":"1930","stops":"0","stopsairports":"","equip":"32A","operating_air":"LH","duration":"155","operating_air_name":"","human_readable":{"carrier":"Lufthansa","fltnum":"1115","gateway":"Barajas","gateway_city":"Madrid","dest":"Frankfurt Main","dest_city":"Frankfurt","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"16:55","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"19:30","stops":"0","equip":"32A","operating_air":"Lufthansa"}},"SEGFRAMEX20200121LH498":{"carrier":"LH","fltnum":"498","gateway":"FRA","dest":"MEX","depdate":"20200121","deptime":"1335","arrdate":"20200121","arrtime":"1855","stops":"0","stopsairports":"","equip":"74H","operating_air":"LH","duration":"740","operating_air_name":"","human_readable":{"carrier":"Lufthansa","fltnum":"498","gateway":"Frankfurt Main","gateway_city":"Frankfurt","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/21","short":"21 JAN","dow":"Tuesday","desc":""},"deptime":"13:35","arrdate":{"long":"2020/01/21","short":"21 JAN","dow":"Tuesday","desc":""},"arrtime":"18:55","stops":"0","equip":"74H","operating_air":"Lufthansa"}},"SEGMEXEWR20200116UA2252":{"carrier":"UA","fltnum":"2252","gateway":"MEX","dest":"EWR","depdate":"20200116","deptime":"1100","arrdate":"20200116","arrtime":"1645","stops":"0","stopsairports":"","equip":"73G","operating_air":"UA","duration":"285","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"2252","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Newark Liberty International","dest_city":"Newark","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"11:00","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"16:45","stops":"0","equip":"73G","operating_air":"United Airlines"}},"SEGMADDFW20200120BA1513":{"carrier":"BA","fltnum":"1513","gateway":"MAD","dest":"DFW","depdate":"20200120","deptime":"1045","arrdate":"20200120","arrtime":"1450","stops":"0","stopsairports":"","equip":"789","operating_air":"AA","duration":"665","operating_air_name":"","human_readable":{"carrier":"British Airways","fltnum":"1513","gateway":"Barajas","gateway_city":"Madrid","dest":"Dallas Fort Worth International","dest_city":"Dallas-fort Worth","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"10:45","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"14:50","stops":"0","equip":"789","operating_air":"American Airlines"}},"SEGMADMIA20200120BA4261":{"carrier":"BA","fltnum":"4261","gateway":"MAD","dest":"MIA","depdate":"20200120","deptime":"1220","arrdate":"20200120","arrtime":"1630","stops":"0","stopsairports":"","equip":"333","operating_air":"IB","duration":"610","operating_air_name":"","human_readable":{"carrier":"British Airways","fltnum":"4261","gateway":"Barajas","gateway_city":"Madrid","dest":"Miami International","dest_city":"Miami","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"12:20","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"16:30","stops":"0","equip":"333","operating_air":"Iberia Airlines of Spain"}},"SEGMEXYYZ20200116AC1981":{"carrier":"AC","fltnum":"1981","gateway":"MEX","dest":"YYZ","depdate":"20200116","deptime":"1320","arrdate":"20200116","arrtime":"1845","stops":"0","stopsairports":"","equip":"319","operating_air":"AC","duration":"265","operating_air_name":"","human_readable":{"carrier":"Air Canada","fltnum":"1981","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Lester B Pearson International","dest_city":"Toronto","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"13:20","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"18:45","stops":"0","equip":"319","operating_air":"Air Canada"}},"SEGYYZMAD20200116AC836":{"carrier":"AC","fltnum":"836","gateway":"YYZ","dest":"MAD","depdate":"20200116","deptime":"2150","arrdate":"20200117","arrtime":"1120","stops":"0","stopsairports":"","equip":"763","operating_air":"AC","duration":"450","operating_air_name":"","human_readable":{"carrier":"Air Canada","fltnum":"836","gateway":"Lester B Pearson International","gateway_city":"Toronto","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"21:50","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"11:20","stops":"0","equip":"763","operating_air":"Air Canada"}},"SEGMADYYZ20200120AC837":{"carrier":"AC","fltnum":"837","gateway":"MAD","dest":"YYZ","depdate":"20200120","deptime":"1255","arrdate":"20200120","arrtime":"1540","stops":"0","stopsairports":"","equip":"763","operating_air":"AC","duration":"525","operating_air_name":"","human_readable":{"carrier":"Air Canada","fltnum":"837","gateway":"Barajas","gateway_city":"Madrid","dest":"Lester B Pearson International","dest_city":"Toronto","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"12:55","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"15:40","stops":"0","equip":"763","operating_air":"Air Canada"}},"SEGYYZMEX20200120AC1982":{"carrier":"AC","fltnum":"1982","gateway":"YYZ","dest":"MEX","depdate":"20200120","deptime":"1935","arrdate":"20200120","arrtime":"2335","stops":"0","stopsairports":"","equip":"319","operating_air":"AC","duration":"300","operating_air_name":"","human_readable":{"carrier":"Air Canada","fltnum":"1982","gateway":"Lester B Pearson International","gateway_city":"Toronto","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"19:35","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"23:35","stops":"0","equip":"319","operating_air":"Air Canada"}},"SEGMEXAMS20200116KL686":{"carrier":"KL","fltnum":"686","gateway":"MEX","dest":"AMS","depdate":"20200116","deptime":"2155","arrdate":"20200117","arrtime":"1510","stops":"0","stopsairports":"","equip":"74E","operating_air":"KL","duration":"615","operating_air_name":"","human_readable":{"carrier":"KLM Royal Dutch","fltnum":"686","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Schiphol","dest_city":"Amsterdam","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"21:55","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"15:10","stops":"0","equip":"74E","operating_air":"KLM Royal Dutch"}},"SEGAMSMAD20200117KL1707":{"carrier":"KL","fltnum":"1707","gateway":"AMS","dest":"MAD","depdate":"20200117","deptime":"2045","arrdate":"20200117","arrtime":"2325","stops":"0","stopsairports":"","equip":"73H","operating_air":"KL","duration":"160","operating_air_name":"","human_readable":{"carrier":"KLM Royal Dutch","fltnum":"1707","gateway":"Schiphol","gateway_city":"Amsterdam","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"deptime":"20:45","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"23:25","stops":"0","equip":"73H","operating_air":"KLM Royal Dutch"}},"SEGMADAMS20200120KL1700":{"carrier":"KL","fltnum":"1700","gateway":"MAD","dest":"AMS","depdate":"20200120","deptime":"1100","arrdate":"20200120","arrtime":"1335","stops":"0","stopsairports":"","equip":"73H","operating_air":"KL","duration":"155","operating_air_name":"","human_readable":{"carrier":"KLM Royal Dutch","fltnum":"1700","gateway":"Barajas","gateway_city":"Madrid","dest":"Schiphol","dest_city":"Amsterdam","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"11:00","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"13:35","stops":"0","equip":"73H","operating_air":"KLM Royal Dutch"}},"SEGAMSMEX20200120KL685":{"carrier":"KL","fltnum":"685","gateway":"AMS","dest":"MEX","depdate":"20200120","deptime":"1435","arrdate":"20200120","arrtime":"1925","stops":"0","stopsairports":"","equip":"74E","operating_air":"KL","duration":"710","operating_air_name":"","human_readable":{"carrier":"KLM Royal Dutch","fltnum":"685","gateway":"Schiphol","gateway_city":"Amsterdam","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"14:35","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"19:25","stops":"0","equip":"74E","operating_air":"KLM Royal Dutch"}},"SEGMEXIAD20200116UA1567":{"carrier":"UA","fltnum":"1567","gateway":"MEX","dest":"IAD","depdate":"20200116","deptime":"0940","arrdate":"20200116","arrtime":"1450","stops":"0","stopsairports":"","equip":"320","operating_air":"UA","duration":"250","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"1567","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"Washington Dulles International","dest_city":"Washington","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"09:40","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"14:50","stops":"0","equip":"320","operating_air":"United Airlines"}},"SEGIADEWR20200116UA1972":{"carrier":"UA","fltnum":"1972","gateway":"IAD","dest":"EWR","depdate":"20200116","deptime":"1730","arrdate":"20200116","arrtime":"1907","stops":"0","stopsairports":"","equip":"739","operating_air":"UA","duration":"97","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"1972","gateway":"Washington Dulles International","gateway_city":"Washington","dest":"Newark Liberty International","dest_city":"Newark","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"17:30","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"19:07","stops":"0","equip":"739","operating_air":"United Airlines"}},"SEGMEXIAH20200116UA1025":{"carrier":"UA","fltnum":"1025","gateway":"MEX","dest":"IAH","depdate":"20200116","deptime":"1005","arrdate":"20200116","arrtime":"1225","stops":"0","stopsairports":"","equip":"319","operating_air":"UA","duration":"140","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"1025","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"George Bush Intcntl Houston","dest_city":"Houston","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"10:05","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"12:25","stops":"0","equip":"319","operating_air":"United Airlines"}},"SEGIAHEWR20200116UA443":{"carrier":"UA","fltnum":"443","gateway":"IAH","dest":"EWR","depdate":"20200116","deptime":"1505","arrdate":"20200116","arrtime":"1935","stops":"0","stopsairports":"","equip":"739","operating_air":"UA","duration":"210","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"443","gateway":"George Bush Intcntl Houston","gateway_city":"Houston","dest":"Newark Liberty International","dest_city":"Newark","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"15:05","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"19:35","stops":"0","equip":"739","operating_air":"United Airlines"}},"SEGMADYYZ20200120UA8355":{"carrier":"UA","fltnum":"8355","gateway":"MAD","dest":"YYZ","depdate":"20200120","deptime":"1255","arrdate":"20200120","arrtime":"1540","stops":"0","stopsairports":"","equip":"763","operating_air":"AC","duration":"525","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"8355","gateway":"Barajas","gateway_city":"Madrid","dest":"Lester B Pearson International","dest_city":"Toronto","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"12:55","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"15:40","stops":"0","equip":"763","operating_air":"Air Canada"}},"SEGYYZORD20200120UA582":{"carrier":"UA","fltnum":"582","gateway":"YYZ","dest":"ORD","depdate":"20200120","deptime":"1741","arrdate":"20200120","arrtime":"1834","stops":"0","stopsairports":"","equip":"320","operating_air":"UA","duration":"113","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"582","gateway":"Lester B Pearson International","gateway_city":"Toronto","dest":"Chicago Ohare International","dest_city":"Chicago","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"17:41","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"18:34","stops":"0","equip":"320","operating_air":"United Airlines"}},"SEGORDMEX20200120UA1547":{"carrier":"UA","fltnum":"1547","gateway":"ORD","dest":"MEX","depdate":"20200120","deptime":"1935","arrdate":"20200120","arrtime":"2355","stops":"0","stopsairports":"","equip":"73G","operating_air":"UA","duration":"260","operating_air_name":"","human_readable":{"carrier":"United Airlines","fltnum":"1547","gateway":"Chicago Ohare International","gateway_city":"Chicago","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"19:35","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"23:55","stops":"0","equip":"73G","operating_air":"United Airlines"}},"SEGMEXATL20200116DL314":{"carrier":"DL","fltnum":"314","gateway":"MEX","dest":"ATL","depdate":"20200116","deptime":"1155","arrdate":"20200116","arrtime":"1608","stops":"0","stopsairports":"","equip":"738","operating_air":"DL","duration":"193","operating_air_name":"","human_readable":{"carrier":"Delta Air Lines","fltnum":"314","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"The William B Hartsfield Atlanta International","dest_city":"Atlanta","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"11:55","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"16:08","stops":"0","equip":"738","operating_air":"Delta Air Lines"}},"SEGATLCDG20200116DL8517":{"carrier":"DL","fltnum":"8517","gateway":"ATL","dest":"CDG","depdate":"20200116","deptime":"1735","arrdate":"20200117","arrtime":"0745","stops":"0","stopsairports":"","equip":"77W","operating_air":"AF","duration":"490","operating_air_name":"","human_readable":{"carrier":"Delta Air Lines","fltnum":"8517","gateway":"The William B Hartsfield Atlanta International","gateway_city":"Atlanta","dest":"Charles De Gaulle","dest_city":"Paris","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"17:35","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"07:45","stops":"0","equip":"77W","operating_air":"Air France"}},"SEGCDGMAD20200117DL8374":{"carrier":"DL","fltnum":"8374","gateway":"CDG","dest":"MAD","depdate":"20200117","deptime":"0935","arrdate":"20200117","arrtime":"1140","stops":"0","stopsairports":"","equip":"319","operating_air":"AF","duration":"125","operating_air_name":"","human_readable":{"carrier":"Delta Air Lines","fltnum":"8374","gateway":"Charles De Gaulle","gateway_city":"Paris","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"deptime":"09:35","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"11:40","stops":"0","equip":"319","operating_air":"Air France"}},"SEGMADATL20200120DL109":{"carrier":"DL","fltnum":"109","gateway":"MAD","dest":"ATL","depdate":"20200120","deptime":"1040","arrdate":"20200120","arrtime":"1455","stops":"0","stopsairports":"","equip":"76W","operating_air":"DL","duration":"615","operating_air_name":"","human_readable":{"carrier":"Delta Air Lines","fltnum":"109","gateway":"Barajas","gateway_city":"Madrid","dest":"The William B Hartsfield Atlanta International","dest_city":"Atlanta","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"10:40","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"14:55","stops":"0","equip":"76W","operating_air":"Delta Air Lines"}},"SEGATLMEX20200120DL359":{"carrier":"DL","fltnum":"359","gateway":"ATL","dest":"MEX","depdate":"20200120","deptime":"1652","arrdate":"20200120","arrtime":"1940","stops":"0","stopsairports":"","equip":"738","operating_air":"DL","duration":"228","operating_air_name":"","human_readable":{"carrier":"Delta Air Lines","fltnum":"359","gateway":"The William B Hartsfield Atlanta International","gateway_city":"Atlanta","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"16:52","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"19:40","stops":"0","equip":"738","operating_air":"Delta Air Lines"}},"SEGMEXATL20200116AF2337":{"carrier":"AF","fltnum":"2337","gateway":"MEX","dest":"ATL","depdate":"20200116","deptime":"1155","arrdate":"20200116","arrtime":"1608","stops":"0","stopsairports":"","equip":"738","operating_air":"DL","duration":"193","operating_air_name":"","human_readable":{"carrier":"Air France","fltnum":"2337","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"The William B Hartsfield Atlanta International","dest_city":"Atlanta","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"11:55","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"16:08","stops":"0","equip":"738","operating_air":"Delta Air Lines"}},"SEGATLCDG20200116AF681":{"carrier":"AF","fltnum":"681","gateway":"ATL","dest":"CDG","depdate":"20200116","deptime":"1735","arrdate":"20200117","arrtime":"0745","stops":"0","stopsairports":"","equip":"77W","operating_air":"AF","duration":"490","operating_air_name":"","human_readable":{"carrier":"Air France","fltnum":"681","gateway":"The William B Hartsfield Atlanta International","gateway_city":"Atlanta","dest":"Charles De Gaulle","dest_city":"Paris","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"17:35","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"07:45","stops":"0","equip":"77W","operating_air":"Air France"}},"SEGCDGMAD20200117AF1300":{"carrier":"AF","fltnum":"1300","gateway":"CDG","dest":"MAD","depdate":"20200117","deptime":"0935","arrdate":"20200117","arrtime":"1140","stops":"0","stopsairports":"","equip":"319","operating_air":"AF","duration":"125","operating_air_name":"","human_readable":{"carrier":"Air France","fltnum":"1300","gateway":"Charles De Gaulle","gateway_city":"Paris","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"deptime":"09:35","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"11:40","stops":"0","equip":"319","operating_air":"Air France"}},"SEGMADATL20200120AF3626":{"carrier":"AF","fltnum":"3626","gateway":"MAD","dest":"ATL","depdate":"20200120","deptime":"1040","arrdate":"20200120","arrtime":"1455","stops":"0","stopsairports":"","equip":"76W","operating_air":"DL","duration":"615","operating_air_name":"","human_readable":{"carrier":"Air France","fltnum":"3626","gateway":"Barajas","gateway_city":"Madrid","dest":"The William B Hartsfield Atlanta International","dest_city":"Atlanta","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"10:40","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"14:55","stops":"0","equip":"76W","operating_air":"Delta Air Lines"}},"SEGATLMEX20200120AF5884":{"carrier":"AF","fltnum":"5884","gateway":"ATL","dest":"MEX","depdate":"20200120","deptime":"1652","arrdate":"20200120","arrtime":"1940","stops":"0","stopsairports":"","equip":"738","operating_air":"DL","duration":"228","operating_air_name":"","human_readable":{"carrier":"Air France","fltnum":"5884","gateway":"The William B Hartsfield Atlanta International","gateway_city":"Atlanta","dest":"Licenciado Benito Juarez International","dest_city":"Mexico City","depdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"deptime":"16:52","arrdate":{"long":"2020/01/20","short":"20 JAN","dow":"Monday","desc":""},"arrtime":"19:40","stops":"0","equip":"738","operating_air":"Delta Air Lines"}},"SEGMEXATL20200116KL6345":{"carrier":"KL","fltnum":"6345","gateway":"MEX","dest":"ATL","depdate":"20200116","deptime":"1600","arrdate":"20200116","arrtime":"2021","stops":"0","stopsairports":"","equip":"738","operating_air":"DL","duration":"201","operating_air_name":"","human_readable":{"carrier":"KLM Royal Dutch","fltnum":"6345","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"The William B Hartsfield Atlanta International","dest_city":"Atlanta","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"16:00","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"20:21","stops":"0","equip":"738","operating_air":"Delta Air Lines"}},"SEGATLAMS20200116KL622":{"carrier":"KL","fltnum":"622","gateway":"ATL","dest":"AMS","depdate":"20200116","deptime":"2225","arrdate":"20200117","arrtime":"1225","stops":"0","stopsairports":"","equip":"772","operating_air":"KL","duration":"480","operating_air_name":"","human_readable":{"carrier":"KLM Royal Dutch","fltnum":"622","gateway":"The William B Hartsfield Atlanta International","gateway_city":"Atlanta","dest":"Schiphol","dest_city":"Amsterdam","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"22:25","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"12:25","stops":"0","equip":"772","operating_air":"KLM Royal Dutch"}},"SEGAMSMAD20200117KL1703":{"carrier":"KL","fltnum":"1703","gateway":"AMS","dest":"MAD","depdate":"20200117","deptime":"1330","arrdate":"20200117","arrtime":"1605","stops":"0","stopsairports":"","equip":"73J","operating_air":"KL","duration":"155","operating_air_name":"","human_readable":{"carrier":"KLM Royal Dutch","fltnum":"1703","gateway":"Schiphol","gateway_city":"Amsterdam","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"deptime":"13:30","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"16:05","stops":"0","equip":"73J","operating_air":"KLM Royal Dutch"}},"SEGMEXATL20200116DL368":{"carrier":"DL","fltnum":"368","gateway":"MEX","dest":"ATL","depdate":"20200116","deptime":"1600","arrdate":"20200116","arrtime":"2021","stops":"0","stopsairports":"","equip":"738","operating_air":"DL","duration":"201","operating_air_name":"","human_readable":{"carrier":"Delta Air Lines","fltnum":"368","gateway":"Licenciado Benito Juarez International","gateway_city":"Mexico City","dest":"The William B Hartsfield Atlanta International","dest_city":"Atlanta","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"16:00","arrdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"arrtime":"20:21","stops":"0","equip":"738","operating_air":"Delta Air Lines"}},"SEGATLAMS20200116DL9375":{"carrier":"DL","fltnum":"9375","gateway":"ATL","dest":"AMS","depdate":"20200116","deptime":"2225","arrdate":"20200117","arrtime":"1225","stops":"0","stopsairports":"","equip":"772","operating_air":"KL","duration":"480","operating_air_name":"","human_readable":{"carrier":"Delta Air Lines","fltnum":"9375","gateway":"The William B Hartsfield Atlanta International","gateway_city":"Atlanta","dest":"Schiphol","dest_city":"Amsterdam","depdate":{"long":"2020/01/16","short":"16 JAN","dow":"Thursday","desc":""},"deptime":"22:25","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"12:25","stops":"0","equip":"772","operating_air":"KLM Royal Dutch"}},"SEGAMSMAD20200117DL9607":{"carrier":"DL","fltnum":"9607","gateway":"AMS","dest":"MAD","depdate":"20200117","deptime":"1330","arrdate":"20200117","arrtime":"1605","stops":"0","stopsairports":"","equip":"73J","operating_air":"KL","duration":"155","operating_air_name":"","human_readable":{"carrier":"Delta Air Lines","fltnum":"9607","gateway":"Schiphol","gateway_city":"Amsterdam","dest":"Barajas","dest_city":"Madrid","depdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"deptime":"13:30","arrdate":{"long":"2020/01/17","short":"17 JAN","dow":"Friday","desc":""},"arrtime":"16:05","stops":"0","equip":"73J","operating_air":"KLM Royal Dutch"}}},"airfares":{"airfare":[{"carrier":"AM","index":1,"options":{"option":[{"type":"FLT","connector":"LiteR","conn_num":"1","status":"DONE","supplier":"AM","fare_carrier":"AM","plating_carrier":"AM","fare_basis":"RLXHSHEI/RLXHSHEI","bk_class":"V/V","fare_type":"PB","need_validate":1,"origin":{"engine":"sabre","carriers":"ANY","SLT_line":"YY!!YY!AA/DL/AC/UA/AS/TP/AZ/AF/OK/ET/KL/IB/SN/LY/DT/BA/G3/AV/AM/HR/TA/LH/CM/EQ/B6/SY/W2/AD/KQ/HX/DE/VW!PB!!!sabre!HD5I!HD5I!!19!!!!!!!","pcc":"HD5I"},"prices":{"total":{"cost":437.62,"wholesale":437.62,"retail":542.43,"minprice":437.62,"maxprice":542.43,"othertotal":872.49},"paxgroup":[{"qty":2,"fromage":12,"toage":999,"paxcode":"ADT","cost":218.81,"wholesale":218.81,"retail":271.21,"fare_type":"PB","othertotal":436.25,"otherdetail":{"tax":{"total":106.04,"details":{"detail":[{"code":"JD","amt":"464"},{"code":"OG","amt":"14"},{"code":"QV","amt":"76"},{"code":"XD","amt":"1092"},{"code":"XO","amt":"431"}]}},"surcharges":{"total":330.2,"details":{"detail":{"4":{"code":"surcharges","amt":6467.38}}}}},"pub":218.81,"maxprice":"5312.02","minprice":"4285.62"}],"optiondate":"20191125","currency":"USD","gateway_country":"MX","dest_country":"ES"},"itin":{"journeys":[[{"checkout":"20200116","dep_date":"20200116","orig":"MEX","segments":[{"key":"SEGMEXMAD20200116AM1","booking_class":"V","bags":"0PC","service_class":"ECONOMY","fare_basis":{"ADT":"RLXHSHEI"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"AM","cnx_time":0}],"dest":"MAD","checkin":"20200117","bookcode":{"ttl_amt":{"ADT":"12830"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.480072463768,"0":{"fare_basis":{"ADT":"RLXHSHEI"},"pax_code":{"ADT":null},"segment":"SEGMEXMAD20200116AM1"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":645,"index":1}],[{"checkout":"20200120","dep_date":"20200120","orig":"MAD","segments":[{"key":"SEGMADMEX20200120AM22","booking_class":"V","bags":"0PC","service_class":"ECONOMY","fare_basis":{"ADT":"RLXHSHEI"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"AM","cnx_time":0}],"dest":"MEX","checkin":"20200121","bookcode":{"ttl_amt":{"ADT":"12830"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.480072463768,"0":{"fare_basis":{"ADT":"RLXHSHEI"},"pax_code":{"ADT":null},"segment":"SEGMADMEX20200120AM22"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":740,"index":1}]]},"tkt_rules":"","tkt_des":null,"tour_code":null,"GT":"","FOP":null,"endo":null,"coupon":null,"osi":null,"override_tkt_deadline":null,"DPA_restr_flts":"","ApplyDPA":0,"GridLine":{"fares_id":"1386","contract_id":"","applies_to_all_segs":"","dest":"YY","fare_type":"PB","bk_class":"","fare_basis":"","commission":"","b2b_discount":"","b2b_mk_up":"","b2c_profit":"0.08","account_code":"","pax_code":"","pcc":"","gateways_force_book_price":"","cc_fees":"0","tkt_rules":"","routing":"","routing_classes":null,"restricted_flts":"","comment":null,"changes":null,"cxl":null,"DPA":"","DPA_restr_flts":"","tkt_des":null,"tour_code":null,"InstantDiscount":null,"DPA_mkup":"","GT":"","FOP":null,"endo":null,"coupon":null,"osi":null,"override_carrier":null,"break_itin":0,"spec_gateway":"","override_tkt_deadline":null,"connector":"LiteR","mk_up_table_orig_cl":"","mk_up_table_ident":"DB__273_1386_ ","ticketing_fees":"","retail_calculated_on_wholesale":"","blackout_outbound":null,"blackout_inbound":null,"return_from":"0000-00-00","return_to":"0000-00-00","DB_from":"YY","account":"MXT","orig_bk_class":"","force_book_price":"","with_land":0,"price_range_mkup":"[{\"price_from\":\"1\",\"price_to\":\"250\",\"markup\":\"0.11\"},{\"price_from\":\"251\",\"price_to\":\"500\",\"markup\":\"0.10\"},{\"price_from\":\"501\",\"price_to\":\"750\",\"markup\":\"0.09\"},{\"price_from\":\"751\",\"price_to\":\"1000\",\"markup\":\"0.08\"},{\"price_from\":\"1001\",\"price_to\":\"2000\",\"markup\":\"0.07\"},{\"price_from\":\"2001\",\"price_to\":\"3000\",\"markup\":\"0.065\"},{\"price_from\":\"3001\",\"price_to\":\"5000\",\"markup\":\"0.060\"},{\"price_from\":\"5001\",\"price_to\":\"7500\",\"markup\":\"0.055\"},{\"price_from\":\"7501\",\"price_to\":\"10000\",\"markup\":\"0.045\"},{\"price_from\":\"10001\",\"price_to\":\"1000000\",\"markup\":\".04\"}]","commission_combo":"","PB_profit_on_cost":1,"pub_no_tax":0,"markup_on_sell":0},"MkUpIdentifier":"DB__273_1386_ ","ticketing_fees":"","min_for_NAP":null,"DPA_mkup_cost":"","min_max":"/99999","min_max_cvt":null,"price_display":{"room_or_pax":"pax","item":[{"fare":"5312.02","tax":"8544.38","price":13856.4,"label":"Passenger 1"},{"fare":"5312.02","tax":"8544.38","price":13856.4,"label":"Passenger 2"}]},"index":1},{"type":"FLT","connector":"LiteR","conn_num":"1","status":"DONE","supplier":"AM","fare_carrier":"AM","plating_carrier":"AM","fare_basis":"RLXHSHEI/RLXHSHEI","bk_class":"V/V","fare_type":"PB","need_validate":1,"origin":{"engine":"sabre","carriers":"ANY","SLT_line":"YY!!YY!AA/DL/AC/UA/AS/TP/AZ/AF/OK/ET/KL/IB/SN/LY/DT/BA/G3/AV/AM/HR/TA/LH/CM/EQ/B6/SY/W2/AD/KQ/HX/DE/VW!PB!!!sabre!HD5I!HD5I!!19!!!!!!!","pcc":"HD5I"},"prices":{"total":{"cost":437.62,"wholesale":437.62,"retail":542.43,"minprice":437.62,"maxprice":542.43,"othertotal":872.49},"paxgroup":[{"qty":2,"fromage":12,"toage":999,"paxcode":"ADT","cost":218.81,"wholesale":218.81,"retail":271.21,"fare_type":"PB","othertotal":436.25,"otherdetail":{"tax":{"total":106.04,"details":{"detail":[{"code":"JD","amt":"464"},{"code":"OG","amt":"14"},{"code":"QV","amt":"76"},{"code":"XD","amt":"1092"},{"code":"XO","amt":"431"}]}},"surcharges":{"total":330.2,"details":{"detail":{"4":{"code":"surcharges","amt":6467.38}}}}},"pub":218.81,"maxprice":"5312.02","minprice":"4285.62"}],"optiondate":"20191125","currency":"USD","gateway_country":"MX","dest_country":"ES"},"itin":{"journeys":[[{"checkout":"20200116","dep_date":"20200116","orig":"MEX","segments":[{"key":"SEGMEXMAD20200116AM1","booking_class":"V","bags":"0PC","service_class":"ECONOMY","fare_basis":{"ADT":"RLXHSHEI"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"AM","cnx_time":0}],"dest":"MAD","checkin":"20200117","bookcode":{"ttl_amt":{"ADT":"12830"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.480072463768,"0":{"fare_basis":{"ADT":"RLXHSHEI"},"pax_code":{"ADT":null},"segment":"SEGMEXMAD20200116AM1"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":645,"index":1}],[{"checkout":"20200120","dep_date":"20200120","orig":"MAD","segments":[{"key":"SEGMADMEX20200120AM2","booking_class":"V","bags":"0PC","service_class":"ECONOMY","fare_basis":{"ADT":"RLXHSHEI"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"AM","cnx_time":0}],"dest":"MEX","checkin":"20200120","bookcode":{"ttl_amt":{"ADT":"12830"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.480072463768,"0":{"fare_basis":{"ADT":"RLXHSHEI"},"pax_code":{"ADT":null},"segment":"SEGMADMEX20200120AM2"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":745,"index":1}]]},"tkt_rules":"","tkt_des":null,"tour_code":null,"GT":"","FOP":null,"endo":null,"coupon":null,"osi":null,"override_tkt_deadline":null,"DPA_restr_flts":"","ApplyDPA":0,"GridLine":{"fares_id":"1386","contract_id":"","applies_to_all_segs":"","dest":"YY","fare_type":"PB","bk_class":"","fare_basis":"","commission":"","b2b_discount":"","b2b_mk_up":"","b2c_profit":"0.08","account_code":"","pax_code":"","pcc":"","gateways_force_book_price":"","cc_fees":"0","tkt_rules":"","routing":"","routing_classes":null,"restricted_flts":"","comment":null,"changes":null,"cxl":null,"DPA":"","DPA_restr_flts":"","tkt_des":null,"tour_code":null,"InstantDiscount":null,"DPA_mkup":"","GT":"","FOP":null,"endo":null,"coupon":null,"osi":null,"override_carrier":null,"break_itin":0,"spec_gateway":"","override_tkt_deadline":null,"connector":"LiteR","mk_up_table_orig_cl":"","mk_up_table_ident":"DB__273_1386_ ","ticketing_fees":"","retail_calculated_on_wholesale":"","blackout_outbound":null,"blackout_inbound":null,"return_from":"0000-00-00","return_to":"0000-00-00","DB_from":"YY","account":"MXT","orig_bk_class":"","force_book_price":"","with_land":0,"price_range_mkup":"[{\"price_from\":\"1\",\"price_to\":\"250\",\"markup\":\"0.11\"},{\"price_from\":\"251\",\"price_to\":\"500\",\"markup\":\"0.10\"},{\"price_from\":\"501\",\"price_to\":\"750\",\"markup\":\"0.09\"},{\"price_from\":\"751\",\"price_to\":\"1000\",\"markup\":\"0.08\"},{\"price_from\":\"1001\",\"price_to\":\"2000\",\"markup\":\"0.07\"},{\"price_from\":\"2001\",\"price_to\":\"3000\",\"markup\":\"0.065\"},{\"price_from\":\"3001\",\"price_to\":\"5000\",\"markup\":\"0.060\"},{\"price_from\":\"5001\",\"price_to\":\"7500\",\"markup\":\"0.055\"},{\"price_from\":\"7501\",\"price_to\":\"10000\",\"markup\":\"0.045\"},{\"price_from\":\"10001\",\"price_to\":\"1000000\",\"markup\":\".04\"}]","commission_combo":"","PB_profit_on_cost":1,"pub_no_tax":0,"markup_on_sell":0},"MkUpIdentifier":"DB__273_1386_ ","ticketing_fees":"","min_for_NAP":null,"DPA_mkup_cost":"","min_max":"/99999","min_max_cvt":null,"price_display":{"room_or_pax":"pax","item":[{"fare":"5312.02","tax":"8544.38","price":13856.4,"label":"Passenger 1"},{"fare":"5312.02","tax":"8544.38","price":13856.4,"label":"Passenger 2"}]},"index":2},{"type":"FLT","connector":"LiteR","conn_num":"1","status":"DONE","supplier":"AM","fare_carrier":"AM","plating_carrier":"AM","fare_basis":"RLXHSHEI/RLXHSHEI","bk_class":"V/V","fare_type":"PB","need_validate":1,"origin":{"engine":"sabre","carriers":"ANY","SLT_line":"YY!!YY!AA/DL/AC/UA/AS/TP/AZ/AF/OK/ET/KL/IB/SN/LY/DT/BA/G3/AV/AM/HR/TA/LH/CM/EQ/B6/SY/W2/AD/KQ/HX/DE/VW!PB!!!sabre!HD5I!HD5I!!19!!!!!!!","pcc":"HD5I"},"prices":{"total":{"cost":437.62,"wholesale":437.62,"retail":542.43,"minprice":437.62,"maxprice":542.43,"othertotal":872.49},"paxgroup":[{"qty":2,"fromage":12,"toage":999,"paxcode":"ADT","cost":218.81,"wholesale":218.81,"retail":271.21,"fare_type":"PB","othertotal":436.25,"otherdetail":{"tax":{"total":106.04,"details":{"detail":[{"code":"JD","amt":"464"},{"code":"OG","amt":"14"},{"code":"QV","amt":"76"},{"code":"XD","amt":"1092"},{"code":"XO","amt":"431"}]}},"surcharges":{"total":330.2,"details":{"detail":{"4":{"code":"surcharges","amt":6467.38}}}}},"pub":218.81,"maxprice":"5312.02","minprice":"4285.62"}],"optiondate":"20191125","currency":"USD","gateway_country":"MX","dest_country":"ES"},"itin":{"journeys":[[{"checkout":"20200116","dep_date":"20200116","orig":"MEX","segments":[{"key":"SEGMEXMAD20200116AM21","booking_class":"V","bags":"0PC","service_class":"ECONOMY","fare_basis":{"ADT":"RLXHSHEI"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"AM","cnx_time":0}],"dest":"MAD","checkin":"20200117","bookcode":{"ttl_amt":{"ADT":"12830"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.480072463768,"0":{"fare_basis":{"ADT":"RLXHSHEI"},"pax_code":{"ADT":null},"segment":"SEGMEXMAD20200116AM21"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":630,"index":1}],[{"checkout":"20200120","dep_date":"20200120","orig":"MAD","segments":[{"key":"SEGMADMEX20200120AM22","booking_class":"V","bags":"0PC","service_class":"ECONOMY","fare_basis":{"ADT":"RLXHSHEI"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"AM","cnx_time":0}],"dest":"MEX","checkin":"20200121","bookcode":{"ttl_amt":{"ADT":"12830"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.480072463768,"0":{"fare_basis":{"ADT":"RLXHSHEI"},"pax_code":{"ADT":null},"segment":"SEGMADMEX20200120AM22"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":740,"index":1}]]},"tkt_rules":"","tkt_des":null,"tour_code":null,"GT":"","FOP":null,"endo":null,"coupon":null,"osi":null,"override_tkt_deadline":null,"DPA_restr_flts":"","ApplyDPA":0,"GridLine":{"fares_id":"1386","contract_id":"","applies_to_all_segs":"","dest":"YY","fare_type":"PB","bk_class":"","fare_basis":"","commission":"","b2b_discount":"","b2b_mk_up":"","b2c_profit":"0.08","account_code":"","pax_code":"","pcc":"","gateways_force_book_price":"","cc_fees":"0","tkt_rules":"","routing":"","routing_classes":null,"restricted_flts":"","comment":null,"changes":null,"cxl":null,"DPA":"","DPA_restr_flts":"","tkt_des":null,"tour_code":null,"InstantDiscount":null,"DPA_mkup":"","GT":"","FOP":null,"endo":null,"coupon":null,"osi":null,"override_carrier":null,"break_itin":0,"spec_gateway":"","override_tkt_deadline":null,"connector":"LiteR","mk_up_table_orig_cl":"","mk_up_table_ident":"DB__273_1386_ ","ticketing_fees":"","retail_calculated_on_wholesale":"","blackout_outbound":null,"blackout_inbound":null,"return_from":"0000-00-00","return_to":"0000-00-00","DB_from":"YY","account":"MXT","orig_bk_class":"","force_book_price":"","with_land":0,"price_range_mkup":"[{\"price_from\":\"1\",\"price_to\":\"250\",\"markup\":\"0.11\"},{\"price_from\":\"251\",\"price_to\":\"500\",\"markup\":\"0.10\"},{\"price_from\":\"501\",\"price_to\":\"750\",\"markup\":\"0.09\"},{\"price_from\":\"751\",\"price_to\":\"1000\",\"markup\":\"0.08\"},{\"price_from\":\"1001\",\"price_to\":\"2000\",\"markup\":\"0.07\"},{\"price_from\":\"2001\",\"price_to\":\"3000\",\"markup\":\"0.065\"},{\"price_from\":\"3001\",\"price_to\":\"5000\",\"markup\":\"0.060\"},{\"price_from\":\"5001\",\"price_to\":\"7500\",\"markup\":\"0.055\"},{\"price_from\":\"7501\",\"price_to\":\"10000\",\"markup\":\"0.045\"},{\"price_from\":\"10001\",\"price_to\":\"1000000\",\"markup\":\".04\"}]","commission_combo":"","PB_profit_on_cost":1,"pub_no_tax":0,"markup_on_sell":0},"MkUpIdentifier":"DB__273_1386_ ","ticketing_fees":"","min_for_NAP":null,"DPA_mkup_cost":"","min_max":"/99999","min_max_cvt":null,"price_display":{"room_or_pax":"pax","item":[{"fare":"5312.02","tax":"8544.38","price":13856.4,"label":"Passenger 1"},{"fare":"5312.02","tax":"8544.38","price":13856.4,"label":"Passenger 2"}]},"index":3},{"type":"FLT","connector":"LiteR","conn_num":"1","status":"DONE","supplier":"AM","fare_carrier":"AM","plating_carrier":"AM","fare_basis":"RLXHSHEI/RLXHSHEI","bk_class":"V/V","fare_type":"PB","need_validate":1,"origin":{"engine":"sabre","carriers":"ANY","SLT_line":"YY!!YY!AA/DL/AC/UA/AS/TP/AZ/AF/OK/ET/KL/IB/SN/LY/DT/BA/G3/AV/AM/HR/TA/LH/CM/EQ/B6/SY/W2/AD/KQ/HX/DE/VW!PB!!!sabre!HD5I!HD5I!!19!!!!!!!","pcc":"HD5I"},"prices":{"total":{"cost":437.62,"wholesale":437.62,"retail":542.43,"minprice":437.62,"maxprice":542.43,"othertotal":872.49},"paxgroup":[{"qty":2,"fromage":12,"toage":999,"paxcode":"ADT","cost":218.81,"wholesale":218.81,"retail":271.21,"fare_type":"PB","othertotal":436.25,"otherdetail":{"tax":{"total":106.04,"details":{"detail":[{"code":"JD","amt":"464"},{"code":"OG","amt":"14"},{"code":"QV","amt":"76"},{"code":"XD","amt":"1092"},{"code":"XO","amt":"431"}]}},"surcharges":{"total":330.2,"details":{"detail":{"4":{"code":"surcharges","amt":6467.38}}}}},"pub":218.81,"maxprice":"5312.02","minprice":"4285.62"}],"optiondate":"20191125","currency":"USD","gateway_country":"MX","dest_country":"ES"},"itin":{"journeys":[[{"checkout":"20200116","dep_date":"20200116","orig":"MEX","segments":[{"key":"SEGMEXMAD20200116AM21","booking_class":"V","bags":"0PC","service_class":"ECONOMY","fare_basis":{"ADT":"RLXHSHEI"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"AM","cnx_time":0}],"dest":"MAD","checkin":"20200117","bookcode":{"ttl_amt":{"ADT":"12830"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.480072463768,"0":{"fare_basis":{"ADT":"RLXHSHEI"},"pax_code":{"ADT":null},"segment":"SEGMEXMAD20200116AM21"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":630,"index":1}],[{"checkout":"20200120","dep_date":"20200120","orig":"MAD","segments":[{"key":"SEGMADMEX20200120AM2","booking_class":"V","bags":"0PC","service_class":"ECONOMY","fare_basis":{"ADT":"RLXHSHEI"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"AM","cnx_time":0}],"dest":"MEX","checkin":"20200120","bookcode":{"ttl_amt":{"ADT":"12830"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.480072463768,"0":{"fare_basis":{"ADT":"RLXHSHEI"},"pax_code":{"ADT":null},"segment":"SEGMADMEX20200120AM2"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":745,"index":1}]]},"tkt_rules":"","tkt_des":null,"tour_code":null,"GT":"","FOP":null,"endo":null,"coupon":null,"osi":null,"override_tkt_deadline":null,"DPA_restr_flts":"","ApplyDPA":0,"GridLine":{"fares_id":"1386","contract_id":"","applies_to_all_segs":"","dest":"YY","fare_type":"PB","bk_class":"","fare_basis":"","commission":"","b2b_discount":"","b2b_mk_up":"","b2c_profit":"0.08","account_code":"","pax_code":"","pcc":"","gateways_force_book_price":"","cc_fees":"0","tkt_rules":"","routing":"","routing_classes":null,"restricted_flts":"","comment":null,"changes":null,"cxl":null,"DPA":"","DPA_restr_flts":"","tkt_des":null,"tour_code":null,"InstantDiscount":null,"DPA_mkup":"","GT":"","FOP":null,"endo":null,"coupon":null,"osi":null,"override_carrier":null,"break_itin":0,"spec_gateway":"","override_tkt_deadline":null,"connector":"LiteR","mk_up_table_orig_cl":"","mk_up_table_ident":"DB__273_1386_ ","ticketing_fees":"","retail_calculated_on_wholesale":"","blackout_outbound":null,"blackout_inbound":null,"return_from":"0000-00-00","return_to":"0000-00-00","DB_from":"YY","account":"MXT","orig_bk_class":"","force_book_price":"","with_land":0,"price_range_mkup":"[{\"price_from\":\"1\",\"price_to\":\"250\",\"markup\":\"0.11\"},{\"price_from\":\"251\",\"price_to\":\"500\",\"markup\":\"0.10\"},{\"price_from\":\"501\",\"price_to\":\"750\",\"markup\":\"0.09\"},{\"price_from\":\"751\",\"price_to\":\"1000\",\"markup\":\"0.08\"},{\"price_from\":\"1001\",\"price_to\":\"2000\",\"markup\":\"0.07\"},{\"price_from\":\"2001\",\"price_to\":\"3000\",\"markup\":\"0.065\"},{\"price_from\":\"3001\",\"price_to\":\"5000\",\"markup\":\"0.060\"},{\"price_from\":\"5001\",\"price_to\":\"7500\",\"markup\":\"0.055\"},{\"price_from\":\"7501\",\"price_to\":\"10000\",\"markup\":\"0.045\"},{\"price_from\":\"10001\",\"price_to\":\"1000000\",\"markup\":\".04\"}]","commission_combo":"","PB_profit_on_cost":1,"pub_no_tax":0,"markup_on_sell":0},"MkUpIdentifier":"DB__273_1386_ ","ticketing_fees":"","min_for_NAP":null,"DPA_mkup_cost":"","min_max":"/99999","min_max_cvt":null,"price_display":{"room_or_pax":"pax","item":[{"fare":"5312.02","tax":"8544.38","price":13856.4,"label":"Passenger 1"},{"fare":"5312.02","tax":"8544.38","price":13856.4,"label":"Passenger 2"}]},"index":4}]},"same_option":{"1V":[1,2],"21V":[3,4]}},{"carrier":"UALH","index":2,"options":{"option":[{"type":"FLT","connector":"LiteR","conn_num":"1","status":"DONE","supplier":"UALH","fare_carrier":"UALH","plating_carrier":"UA","fare_basis":"KLXNC76S/KLXNC76S/KLXNC76S/KLXNC76S","bk_class":"K/K/K/K","fare_type":"PB","need_validate":1,"origin":{"engine":"sabre","carriers":"ANY","SLT_line":"YY!!YY!AA/DL/AC/UA/AS/TP/AZ/AF/OK/ET/KL/IB/SN/LY/DT/BA/G3/AV/AM/HR/TA/LH/CM/EQ/B6/SY/W2/AD/KQ/HX/DE/VW!PB!!!sabre!HD5I!HD5I!!19!!!!!!!","pcc":"HD5I"},"prices":{"total":{"cost":437.66,"wholesale":437.66,"retail":543.73,"minprice":437.66,"maxprice":543.73,"othertotal":888.28},"paxgroup":[{"qty":2,"fromage":12,"toage":999,"paxcode":"ADT","cost":218.83,"wholesale":218.83,"retail":271.87,"fare_type":"PB","othertotal":444.14,"otherdetail":{"tax":{"total":444.14,"details":{"detail":[{"code":"YQ","amt":"2844"},{"code":"YQ","amt":"2844"},{"code":"JD","amt":"464"},{"code":"OG","amt":"14"},{"code":"QV","amt":"76"},{"code":"XD","amt":"1092"},{"code":"XO","amt":"399"},{"code":"AY","amt":"109"},{"code":"AY","amt":"109"},{"code":"XA","amt":"78"},{"code":"XA","amt":"78"},{"code":"XY","amt":"137"},{"code":"XY","amt":"137"},{"code":"YC","amt":"115"},{"code":"YC","amt":"115"},{"code":"XF","amt":"88"}]}}},"pub":218.83,"maxprice":"5324.80","minprice":"4286.00"}],"optiondate":"20191125","currency":"USD","gateway_country":"MX","dest_country":"ES"},"itin":{"journeys":[[{"checkout":"20200116","dep_date":"20200116","orig":"MEX","segments":[{"key":"SEGMEXEWR20200116UA1064","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"UA","cnx_time":325},{"key":"SEGEWRMAD20200116LH7970","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":null,"end_airport":null,"directionality":null}},"connector":"LiteR","plating_carrier":"UA","cnx_time":0}],"dest":"MAD","checkin":"20200117","bookcode":{"ttl_amt":{"ADT":"12985"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.481818181818,"0":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGMEXEWR20200116UA1064"},"1":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGEWRMAD20200116LH7970"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":1040,"index":1}],[{"checkout":"20200120","dep_date":"20200120","orig":"MAD","segments":[{"key":"SEGMADEWR20200120UA50","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"UA","cnx_time":185},{"key":"SEGEWRMEX20200120UA1065","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":null,"end_airport":null,"directionality":null}},"connector":"LiteR","plating_carrier":"UA","cnx_time":0}],"dest":"MEX","checkin":"20200120","bookcode":{"ttl_amt":{"ADT":"12985"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.481818181818,"0":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGMADEWR20200120UA50"},"1":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGEWRMEX20200120UA1065","MarriageGrp":"true"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":1045,"index":1}]]},"MkUpIdentifier":"DB__311_1451_ ","tkt_rules":"PB_DFLT","GridLine":{"fares_id":"1451","contract_id":"","applies_to_all_segs":"","dest":"YY","fare_type":"PB","bk_class":"","fare_basis":"","commission":"","b2b_discount":"","b2b_mk_up":".0","b2c_profit":".0","account_code":"","pax_code":"","pcc":"","gateways_force_book_price":"","cc_fees":"0","tkt_rules":"","routing":"","routing_classes":null,"restricted_flts":"","comment":null,"changes":null,"cxl":null,"DPA":"","DPA_restr_flts":"","tkt_des":null,"tour_code":null,"InstantDiscount":null,"DPA_mkup":"","GT":"","FOP":null,"endo":null,"coupon":null,"osi":null,"override_carrier":null,"break_itin":0,"spec_gateway":"","override_tkt_deadline":null,"connector":"LiteR","mk_up_table_orig_cl":"","mk_up_table_ident":"DB__311_1451_ ","ticketing_fees":"","retail_calculated_on_wholesale":"","blackout_outbound":null,"blackout_inbound":null,"return_from":"0000-00-00","return_to":"0000-00-00","DB_from":"YY","account":"MXT","orig_bk_class":"","force_book_price":"","with_land":0,"price_range_mkup":"[{\"price_from\":\"1\",\"price_to\":\"250\",\"markup\":\"0.11\"},{\"price_from\":\"251\",\"price_to\":\"500\",\"markup\":\"0.10\"},{\"price_from\":\"501\",\"price_to\":\"750\",\"markup\":\"0.09\"},{\"price_from\":\"751\",\"price_to\":\"1000\",\"markup\":\"0.08\"},{\"price_from\":\"1001\",\"price_to\":\"2000\",\"markup\":\"0.07\"},{\"price_from\":\"2001\",\"price_to\":\"3000\",\"markup\":\"0.065\"},{\"price_from\":\"3001\",\"price_to\":\"5000\",\"markup\":\"0.06\"},{\"price_from\":\"5001\",\"price_to\":\"7500\",\"markup\":\"0.055\"},{\"price_from\":\"7501\",\"price_to\":\"10000\",\"markup\":\"0.05\"}]","commission_combo":"","PB_profit_on_cost":1,"pub_no_tax":0,"markup_on_sell":0},"min_max":"/99999","min_max_cvt":null,"price_display":{"room_or_pax":"pax","item":[{"fare":"5324.80","tax":"8699.00","price":14023.8,"label":"Passenger 1"},{"fare":"5324.80","tax":"8699.00","price":14023.8,"label":"Passenger 2"}]},"index":1},{"type":"FLT","connector":"LiteR","conn_num":"1","status":"DONE","supplier":"UALH","fare_carrier":"UALH","plating_carrier":"UA","fare_basis":"KLXNC76S/KLXNC76S/KLXNC76S/KLXNC76S","bk_class":"K/K/K/K","fare_type":"PB","need_validate":1,"origin":{"engine":"sabre","carriers":"ANY","SLT_line":"YY!!YY!AA/DL/AC/UA/AS/TP/AZ/AF/OK/ET/KL/IB/SN/LY/DT/BA/G3/AV/AM/HR/TA/LH/CM/EQ/B6/SY/W2/AD/KQ/HX/DE/VW!PB!!!sabre!HD5I!HD5I!!19!!!!!!!","pcc":"HD5I"},"prices":{"total":{"cost":437.66,"wholesale":437.66,"retail":543.73,"minprice":437.66,"maxprice":543.73,"othertotal":888.28},"paxgroup":[{"qty":2,"fromage":12,"toage":999,"paxcode":"ADT","cost":218.83,"wholesale":218.83,"retail":271.87,"fare_type":"PB","othertotal":444.14,"otherdetail":{"tax":{"total":444.14,"details":{"detail":[{"code":"YQ","amt":"2844"},{"code":"YQ","amt":"2844"},{"code":"JD","amt":"464"},{"code":"OG","amt":"14"},{"code":"QV","amt":"76"},{"code":"XD","amt":"1092"},{"code":"XO","amt":"399"},{"code":"AY","amt":"109"},{"code":"AY","amt":"109"},{"code":"XA","amt":"78"},{"code":"XA","amt":"78"},{"code":"XY","amt":"137"},{"code":"XY","amt":"137"},{"code":"YC","amt":"115"},{"code":"YC","amt":"115"},{"code":"XF","amt":"88"}]}}},"pub":218.83,"maxprice":"5324.80","minprice":"4286.00"}],"optiondate":"20191125","currency":"USD","gateway_country":"MX","dest_country":"ES"},"itin":{"journeys":[[{"checkout":"20200116","dep_date":"20200116","orig":"MEX","segments":[{"key":"SEGMEXEWR20200116UA2252","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"UA","cnx_time":210},{"key":"SEGEWRMAD20200116LH7970","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":null,"end_airport":null,"directionality":null}},"connector":"LiteR","plating_carrier":"UA","cnx_time":0}],"dest":"MAD","checkin":"20200117","bookcode":{"ttl_amt":{"ADT":"12985"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.481818181818,"0":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGMEXEWR20200116UA2252"},"1":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGEWRMAD20200116LH7970"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":925,"index":1}],[{"checkout":"20200120","dep_date":"20200120","orig":"MAD","segments":[{"key":"SEGMADEWR20200120UA50","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"UA","cnx_time":1015},{"key":"SEGEWRMEX20200121UA2251","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":null,"end_airport":null,"directionality":null}},"connector":"LiteR","plating_carrier":"UA","cnx_time":0}],"dest":"MEX","checkin":"20200121","bookcode":{"ttl_amt":{"ADT":"12985"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.481818181818,"0":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGMADEWR20200120UA50"},"1":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGEWRMEX20200121UA2251","MarriageGrp":"true"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":1860,"index":1}]]},"MkUpIdentifier":"DB__311_1451_ ","tkt_rules":"PB_DFLT","GridLine":{"fares_id":"1451","contract_id":"","applies_to_all_segs":"","dest":"YY","fare_type":"PB","bk_class":"","fare_basis":"","commission":"","b2b_discount":"","b2b_mk_up":".0","b2c_profit":".0","account_code":"","pax_code":"","pcc":"","gateways_force_book_price":"","cc_fees":"0","tkt_rules":"","routing":"","routing_classes":null,"restricted_flts":"","comment":null,"changes":null,"cxl":null,"DPA":"","DPA_restr_flts":"","tkt_des":null,"tour_code":null,"InstantDiscount":null,"DPA_mkup":"","GT":"","FOP":null,"endo":null,"coupon":null,"osi":null,"override_carrier":null,"break_itin":0,"spec_gateway":"","override_tkt_deadline":null,"connector":"LiteR","mk_up_table_orig_cl":"","mk_up_table_ident":"DB__311_1451_ ","ticketing_fees":"","retail_calculated_on_wholesale":"","blackout_outbound":null,"blackout_inbound":null,"return_from":"0000-00-00","return_to":"0000-00-00","DB_from":"YY","account":"MXT","orig_bk_class":"","force_book_price":"","with_land":0,"price_range_mkup":"[{\"price_from\":\"1\",\"price_to\":\"250\",\"markup\":\"0.11\"},{\"price_from\":\"251\",\"price_to\":\"500\",\"markup\":\"0.10\"},{\"price_from\":\"501\",\"price_to\":\"750\",\"markup\":\"0.09\"},{\"price_from\":\"751\",\"price_to\":\"1000\",\"markup\":\"0.08\"},{\"price_from\":\"1001\",\"price_to\":\"2000\",\"markup\":\"0.07\"},{\"price_from\":\"2001\",\"price_to\":\"3000\",\"markup\":\"0.065\"},{\"price_from\":\"3001\",\"price_to\":\"5000\",\"markup\":\"0.06\"},{\"price_from\":\"5001\",\"price_to\":\"7500\",\"markup\":\"0.055\"},{\"price_from\":\"7501\",\"price_to\":\"10000\",\"markup\":\"0.05\"}]","commission_combo":"","PB_profit_on_cost":1,"pub_no_tax":0,"markup_on_sell":0},"min_max":"/99999","min_max_cvt":null,"price_display":{"room_or_pax":"pax","item":[{"fare":"5324.80","tax":"8699.00","price":14023.8,"label":"Passenger 1"},{"fare":"5324.80","tax":"8699.00","price":14023.8,"label":"Passenger 2"}]},"index":2},{"type":"FLT","connector":"LiteR","conn_num":"1","status":"DONE","supplier":"UALH","fare_carrier":"UALH","plating_carrier":"UA","fare_basis":"KLXNC76S/KLXNC76S/KLXNC76S/KLXNC76S","bk_class":"K/K/K/K","fare_type":"PB","need_validate":1,"origin":{"engine":"sabre","carriers":"ANY","SLT_line":"YY!!YY!AA/DL/AC/UA/AS/TP/AZ/AF/OK/ET/KL/IB/SN/LY/DT/BA/G3/AV/AM/HR/TA/LH/CM/EQ/B6/SY/W2/AD/KQ/HX/DE/VW!PB!!!sabre!HD5I!HD5I!!19!!!!!!!","pcc":"HD5I"},"prices":{"total":{"cost":437.66,"wholesale":437.66,"retail":544.99,"minprice":437.66,"maxprice":544.99,"othertotal":904.01},"paxgroup":[{"qty":2,"fromage":12,"toage":999,"paxcode":"ADT","cost":218.83,"wholesale":218.83,"retail":272.5,"fare_type":"PB","othertotal":452,"otherdetail":{"tax":{"total":452,"details":{"detail":[{"code":"YQ","amt":"2844"},{"code":"YQ","amt":"2844"},{"code":"RA","amt":"725"},{"code":"JD","amt":"332"},{"code":"OG","amt":"14"},{"code":"QV","amt":"76"},{"code":"XD","amt":"1092"},{"code":"XO","amt":"399"},{"code":"AY","amt":"109"},{"code":"XA","amt":"78"},{"code":"XY","amt":"137"},{"code":"YC","amt":"115"},{"code":"XF","amt":"88"}]}}},"pub":218.83,"maxprice":"5337.12","minprice":"4286.00"}],"optiondate":"20191125","currency":"USD","gateway_country":"MX","dest_country":"ES"},"itin":{"journeys":[[{"checkout":"20200116","dep_date":"20200116","orig":"MEX","segments":[{"key":"SEGMEXEWR20200116UA1064","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"UA","cnx_time":325},{"key":"SEGEWRMAD20200116LH7970","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":null,"end_airport":null,"directionality":null}},"connector":"LiteR","plating_carrier":"UA","cnx_time":0}],"dest":"MAD","checkin":"20200117","bookcode":{"ttl_amt":{"ADT":"13139"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.481818181818,"0":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGMEXEWR20200116UA1064"},"1":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGEWRMAD20200116LH7970"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":1040,"index":1}],[{"checkout":"20200120","dep_date":"20200120","orig":"MAD","segments":[{"key":"SEGMADFRA20200120LH1115","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":"MEX","end_airport":"MAD","directionality":"FROM"}},"connector":"LiteR","plating_carrier":"UA","cnx_time":1085},{"key":"SEGFRAMEX20200121LH498","booking_class":"K","bags":"1PC","service_class":"ECONOMY","fare_basis":{"ADT":"KLXNC76S"},"fare_component":{"ADT":{"begin_airport":null,"end_airport":null,"directionality":null}},"connector":"LiteR","plating_carrier":"UA","cnx_time":0}],"dest":"MEX","checkin":"20200121","bookcode":{"ttl_amt":{"ADT":"13139"},"PCC":"HD5I","account_code":"","SellCity":"YYZ","TktCity":"YYZ","fare_type":"PB","roe":19.481818181818,"0":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGMADFRA20200120LH1115"},"1":{"fare_basis":{"ADT":"KLXNC76S"},"pax_code":{"ADT":null},"segment":"SEGFRAMEX20200121LH498","MarriageGrp":"true"},"corpID":null,"connector":"LiteR","source":"157"},"ttl_duration":1980,"index":1}]]},"MkUpIdentifier":"DB__311_1451_ ","tkt_rules":"PB_DFLT","GridLine":{"fares_id":"1451","contract_id":"","applies_to_all_segs":"","dest":"YY","fare_type":"PB","bk_class":"","fare_basis":"","commission":"","b2b_discount":"","b2b_mk_up":".0","b2c_profit":".0","account_code":"","pax_code":"","pcc":"","gateways_force_book_price":"","cc_fees":"0","tkt_rules":"","routing":"","routing_classes":null,"restricted_flts":"","comment":null,"changes":null,"cxl":null,"DPA":"","DPA_restr_flts":"","tkt_des":null,"tour_code":null,"InstantDiscount":null,"DPA_mkup":"","GT":"","FOP":null,"endo":null,"coupon":null,"osi":null,"override_carrier":null,"break_itin":0,"spec_gateway":"","override_tkt_deadline":null,"connector":"LiteR","mk_up_table_orig_cl":"","mk_up_table_ident":"DB__311_1451_ ","ticketing_fees":"","retail_calculated_on_wholesale":"","blackout_outbound":null,"blackout_inbound":null,"return_from":"0000-00-00","return_to":"0000-00-00","DB_from":"YY","account":"MXT","orig_bk_class":"","force_book_price":"","with_land":0,"price_range_mkup":"[{\"price_from\":\"1\",\"price_to\":\"250\",\"markup\":\"0.11\"},{\"price_from\":\"251\",\"price_to\":\"500\",\"markup\":\"0.10\"},{\"price_from\":\"501\",\"price_to\":\"750\",\"markup\":\"0.09\"},{\"price_from\":\"751\",\"price_to\":\"1000\",\"markup\":\"0.08\"},{\"price_from\":\"1001\",\"price_to\":\"2000\",\"markup\":\"0.07\"},{\"price_from\":\"2001\",\"price_to\":\"3000\",\"markup\":\"0.065\"},{\"price_from\":\"3001\",\"price_to\":\"5000\",\"markup\":\"0.06\"},{\"price_from\":\"5001\",\"price_to\":\"7500\",\"markup\":\"0.055\"},{\"price_from\":\"7501\",\"price_to\":\"10000\",\"markup\":\"0.05\"}]","commission_combo":"","PB_profit_on_cost":1,"pub_no_tax":0,"markup_on_sell":0},"min_max":"/99999","min_max_cvt":null,"price_display":{"room_or_pax":"pax","item":[{"fare":"5337.12","tax":"8853.00","price":14190.12,"label":"Passenger 1"},{"fare":"5337.12","tax":"8853.00","price":14190.12,"label":"Passenger 2"}]},"index":3},{"type":"FLT","connector":"LiteR","conn_num":"1","status":"DONE","supplier":"UALH","fare_carrier":"UALH","plating_carrier":"UA","fare_basis":"KLXNC76S/KLXNC76S/KLXNC76S/KLXNC76S","bk_class":"K/K/K/K","fare_type":"PB","need_validate":1,"origin":{"engine":"sabre","carriers":"ANY","SLT_line":"YY!!YY!AA/DL/AC/UA/AS/TP/AZ/AF/OK/ET/KL/IB/SN/LY/DT/BA/G3/AV/AM/HR/TA/LH/CM/EQ/B6/SY/W2/AD/KQ/HX/DE/VW!PB!!!sabre!HD5I!HD5I!!19!!!!!!!","pcc":"HD5I"},"prices":{"total":{"cost":437.66,"wholesale":437.66,"retail":544.99,"minprice":437.66,"maxprice":544.99,"othertotal":904.01},"paxgroup":[{"qty":2,"fromage":12,"toage":999,"paxcode":"ADT","cost":218.83,"wholesale":218.83,"retail":272.5,"fare_type":"PB","othertotal":452,"otherdetail":{"tax":{"total":452,"details":{"detail":[{"code":"YQ","amt":"2844"},{"code":"YQ","amt":"2844"},{"code":"RA","amt":"725"},{"code":"JD","amt":"332"},{"code":"OG","amt":"14"},{"code":"QV","amt":"76"},{"code":"XD","amt":"1092"},{"code":"XO","amt":"399"},{"code":"AY","amt":"109"},{"code":"XA","amt":"78"},{"code":"XY","amt":"137"},{"code":"YC","amt":"115"},{"code":"XF","amt":"88"}]}}},"pub":218.83,"maxprice":"5337.12","minprice":"4286.00"}],"optiondate":"20191125","currency":"USD","gateway_country":"MX","dest_country":"ES"},"itin":{"journeys":[[{"checkout":"20200116","dep_date":"20200116","orig":"MEX","segments":[{"key"

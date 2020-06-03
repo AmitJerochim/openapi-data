@@ -1,0 +1,942 @@
+openapi: 3.0.0
+info:
+  description: |
+    This is the API for DEEPER system .
+    Endpoints: http://techops.deep.test.shopee.io/api
+  version: "1.0.1-oas3"
+  title: Deeper API
+  termsOfService: 'http://swagger.io/terms/'
+  contact:
+    email: zhouz@seagroup.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: StressTest
+    description: Stress Test Jobs
+  - name: SystemStatus
+    description: get services' status
+  - name: Environment
+    description: manage environment configuration
+paths:
+  /stress-test/record:
+    post:
+      tags:
+        - StressTest
+      summary: submit a traffic recording job
+      operationId: recordTraffic
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobId'
+        '405':
+          description: Invalid input
+      requestBody:
+        $ref: '#/components/requestBodies/Job'
+  /stress-test/play:
+    post:
+      tags:
+        - StressTest
+      summary: submit a stress test job
+      operationId: playTraffic
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobId'
+        '405':
+          description: Invalid input
+      requestBody:
+        $ref: '#/components/requestBodies/Job'
+  '/stress-test/job/{jobId}':
+    get:
+      tags:
+        - StressTest
+      summary: Get job by ID
+      description: Returns a single job
+      operationId: getJobById
+      parameters:
+        - name: jobId
+          in: path
+          description: ID of job to return
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Job not found
+  /stress-test/jobs:
+    get:
+      tags:
+        - StressTest
+      summary: Get stress test job list
+      description: Returns a list of jobs
+      operationId: getJobs
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Job'
+  /system-status/services:
+    get:
+      tags:
+        - SystemStatus
+      summary: Get service list
+      description: Returns a list of services
+      operationId: getServices
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: serviceType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [elasticsearch,hadoop,kubernetes,kibana]
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Service'
+
+    post:
+      tags:
+        - SystemStatus
+      summary: Add new service to be monitored
+      description: Add new service
+      operationId: postService
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceID'
+        '405':
+          description: Invalid input
+          
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - name
+                - type
+                - PIC
+                - endpoint
+              properties:
+                name:
+                  description: name of the service
+                  type: string
+                  example: elasticsearch-1
+                type:
+                  description: type of the service
+                  type: string
+                  enum: [elasticsearch,hadoop,kubernetes,kibana]
+                PIC:
+                  description: PIC
+                  type: string
+                  example: "duy.nguyen@shopee.com"                 
+                endpoint:
+                  description: api endpoint of the service
+                  type: string
+                  example: '10.10.120.10:9200/nodes'
+        description: Info of new service
+        required: true
+        
+  '/system-status/services/{serviceId}':
+    get:
+      tags:
+        - SystemStatus
+      summary: Get service by serviceId
+      description: 'Returns a service detail, including its SLO history'
+      operationId: getServiceById
+      parameters:
+        - name: serviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Service not found
+          
+    put:
+      tags:
+        - SystemStatus
+      summary: Update service by serviceId
+      description: Update service by ID
+      operationId: putService
+      parameters:
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceID'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: ServiceID not found
+        '405':
+          description: Invalid input
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - name
+                - type
+                - endpoint
+              properties:
+                name:
+                  description: name of the service
+                  type: string
+                  example: elasticsearch-1
+                type:
+                  description: type of the service
+                  type: string
+                  example: elasticsearch | hadoop | kubernetes | kibana..
+                endpoint:
+                  description: api endpoint of the service
+                  type: string
+                  example: '10.10.120.10:9200/nodes'
+        description: Info of service
+        required: true
+    delete:
+      tags:
+        - SystemStatus
+      summary: Delete service by serviceId
+      description: Delete service by ID
+      operationId: deleteService
+      parameters:
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: ServiceID not found
+
+  /slo:
+    get:
+      tags:
+        - SLO
+      summary: Get SLO list
+      description: Returns a list of SLOs
+      operationId: getSLOs
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SLOMonitor'
+
+    post:
+      tags:
+        - SLO
+      summary: Add new service to be monitored
+      description: Add new service
+      operationId: postSLO
+      responses:
+        '200':
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLOMonitor'
+        '405':
+          description: Invalid input
+          
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - name
+                - type
+                - endpoint
+              properties:
+                name:
+                  description: name of the service
+                  type: string
+                  example: elasticsearch-1
+                type:
+                  description: type of the service
+                  type: string
+                  enum: [elasticsearch,hadoop,kubernetes,kibana]
+                endpoint:
+                  description: api endpoint of the service
+                  type: string
+                  example: '10.10.120.10:9200/nodes'
+        description: Info of new service
+        required: true
+
+  /environment:
+    get:
+      summary: Get all environments
+      tags:
+        - Environment
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 10
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                type: object
+                properties:
+                  Environments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Environment'
+  '/environment/{envId}':
+    get:
+      summary: Get details of an environment
+      tags:
+        - Environment
+      parameters:
+        - name: envId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                type: object
+                properties:
+                  Environment:
+                    $ref: '#/components/schemas/Environment'
+    put:
+      summary: Update an environment
+      tags:
+        - Environment
+      parameters:
+        - name: envId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - Requester
+              properties:
+                IndexerImage:
+                  description: docker image of indexer
+                  type: string
+                  example: >-
+                    harbor.shopeemobile.com/shopee/searchindexer-indextool-multi_test-sg:origin_master
+                SearchServerImage:
+                  description: docker image of search server
+                  type: string
+                  example: >-
+                    harbor.shopeemobile.com/shopee/search-server-multi_test-sg:origin_master
+                ConfigURL:
+                  type: string
+                  example: qa.shopee.sg/search/serverconfig
+                Requester:
+                  description: owner of this environment
+                  type: string
+                  example: nguyenph@seagroup.com
+        required: true
+    delete:
+      summary: Delete an environment
+      tags:
+        - Environment
+      parameters:
+        - name: envId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+  /environment/qa/search/create:
+    post:
+      summary: create an qa search environment
+      tags:
+        - Environment
+      responses:
+        '200':
+          description: successful operation
+          content:
+            '*/*':
+              schema:
+                type: object
+                properties:
+                  Environment:
+                    $ref: '#/components/schemas/Environment'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              required:
+                - EnvName
+                - IndexerImage
+                - SearchServerImage
+                - ConfigURL
+                - Requester
+              properties:
+                EnvName:
+                  description: name of the env
+                  type: string
+                  example: qa-1
+                IndexerImage:
+                  description: docker image of indexer
+                  type: string
+                  example: >-
+                    harbor.shopeemobile.com/shopee/searchindexer-indextool-multi_test-sg:origin_master
+                SearchServerImage:
+                  description: docker image of search server
+                  type: string
+                  example: >-
+                    harbor.shopeemobile.com/shopee/search-server-multi_test-sg:origin_master
+                ConfigURL:
+                  type: string
+                  example: qa.shopee.sg/search/serverconfig
+                Requester:
+                  description: owner of this environment
+                  type: string
+                  example: nguyenph@seagroup.com
+        required: true
+        
+        
+externalDocs:
+  description: Find out more about Swagger
+  url: 'http://swagger.io'
+servers:
+  - url: 'https://virtserver.swaggerhub.com/zerray/Deeper/1.0.0'
+  - url: 'http://virtserver.swaggerhub.com/zerray/Deeper/1.0.0'
+components:
+  requestBodies:
+    Job:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Job'
+      description: the traffic recording job
+      required: true
+  schemas:
+    Job:
+      type: object
+      required:
+        - name
+        - serverList
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: search-stress-test
+        serverList:
+          type: array
+          items:
+            type: string
+            example: '127.0.0.1:9200'
+        protocol:
+          type: string
+          enum:
+            - HTTP
+        trafficPath:
+          type: string
+          description: path to the traffic data on HDFS
+          example: /stress_resource/elasticsearch
+        startTime:
+          type: integer
+          format: int32
+          description: timestamp of the starting time
+          example: 1567958400
+        timeLength:
+          type: integer
+          format: int32
+          description: time length in seconds
+          example: 86400
+        status:
+          type: string
+          description: job status
+          enum:
+            - pending
+            - running
+            - finished
+    JobId:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+    Service:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        name:
+          type: string
+          example: elasticsearch cluster 1
+        PIC:
+          type: string 
+          example: duy.nguyen@shopee.com
+        serviceType:
+          type: string
+          enum: [elasticsearch, kibana, kubernetes, hadoop]
+
+        endpoint:
+          type: string
+          example: '10.128.33.100:9200'
+        status:
+          type: string
+          enum:
+            - green
+            - yellow
+            - red
+        monInfo:
+          type: object
+          oneOf:
+          - $ref: '#/components/schemas/ElasticSearchMonInfo'
+          - $ref: '#/components/schemas/HadoopMonInfo'
+          - $ref: '#/components/schemas/KubernetesMonInfo'
+            
+        slo:
+          type: array
+          items:
+            $ref: '#/components/schemas/SLO'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/SLOReport'
+    ServiceID:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+
+    SLOMonitor:
+      type: object
+      required:
+        - name
+        - target
+        - status
+      properties:
+        name:
+          type: string
+          example: availability
+        target:
+          type: number
+          format: double
+          example: 99.99
+        status:
+          type: number
+          format: double
+          example: 99.95
+        date:
+          type: string
+          format: date
+          example: '2019-09-09'
+          
+    SLO:
+      type: object
+      required:
+        - id
+        - name
+        - target
+        - status
+      properties:
+        name:
+          type: string
+          example: availability
+        target:
+          type: number
+          format: double
+          example: 99.99
+        status:
+          type: number
+          format: double
+          example: 99.95
+        date:
+          type: string
+          format: date
+          example: '2019-09-09'
+
+    SLOReport:
+      type: object
+      required:
+        - id
+        - name
+        - serviceID
+        - SLOList
+      properties:
+        name:
+          type: string
+          example: SLO Report for Service Foo
+        serviceID:
+          type: string
+          example: SLO Report for Service Foo          
+        SLOList:
+          type: array
+          items:
+            $ref: '#/components/schemas/SLO'
+        date:
+          type: string
+          format: date
+          example: '2019-09-09'
+          
+    Environment:
+      type: object
+      required:
+        - Id
+        - Name
+        - Type
+      properties:
+        Id:
+          type: integer
+          format: int64
+          example: 1
+        Name:
+          type: string
+          example: search-test-default
+        Type:
+          type: string
+          enum:
+            - search-nonlive-env
+            - ads-nonlive-env
+        Status:
+          type: string
+          enum:
+            - running
+            - pending
+        CreatedTime:
+          type: string
+          format: datetime
+          example: '2019-09-09 12:00:00'
+        CreatedBy:
+          type: string
+          example: nguyenph@seagroup.com
+        ModifiedTime:
+          type: string
+          format: datetime
+          example: '2019-09-10 12:00:00'
+        ModifiedBy:
+          type: string
+          example: nguyenph@seagroup.com
+        Containers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Container'
+        Endpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/Endpoint'
+        Configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnvConfig'
+    Endpoint:
+      type: object
+      required:
+        - Name
+        - Endpoint
+      properties:
+        Name:
+          type: string
+          example: searchserver
+        Endpoint:
+          type: string
+          example: '10.129.144.33:31101'
+    Container:
+      type: object
+      required:
+        - name
+        - dockerImage
+      properties:
+        Name:
+          type: string
+          example: search-server
+        DockerImage:
+          type: string
+          example: 'harbor.shopeemobile.com/shopee/golang-base:1.13'
+    EnvConfig:
+      type: object
+      required:
+        - Key
+        - Value
+      properties:
+        Key:
+          type: string
+          example: dbConfigUrl
+        Value:
+          type: string
+    ElasticSearchMonInfo:
+      type: object
+      properties:
+        Name:
+          type: string
+          example: SHOPEE-ITEM-VN-PH-SG-MY-sg3
+        Status:
+          type: string
+          enum:
+            - green
+            - yellow
+            - red
+        ClusterUUID:
+          type: string
+          example: ELHOcZQEQJeM9j8EhftagA
+        Endpoint:
+          type: string
+          example: '10.128.33.100:9200'
+        Nodes:
+          type: integer
+          example: 30
+        DocumentCount:
+          type: integer
+          example: 4500000
+        IndicesCount:
+          type: integer
+          example: 23
+        MemUsed:
+          type: integer
+          example: 566367641600
+        MemTotal:
+          type: integer
+          example: 566367641600
+        DiskUsed:
+          type: integer
+          example: 9663676451600
+        DiskTotal:
+          type: integer
+          example: 522566367641600          
+        TotalShards:
+          type: integer
+          example: 100
+ 
+    HadoopMonInfo:
+      type: object
+      required:
+        - name
+      properties:
+        Name:
+          type: string
+          example: hadoop-cluster-1
+        AppsSubmitted:
+          type: integer
+          format: int32
+        AppsCompleted:
+          type: integer
+          format: int32
+        AppsPending:
+          type: integer
+          format: int32
+        AppsRunning:
+          type: integer
+          format: int32
+        AppsFailed:
+          type: integer
+          format: int32
+        AppsKilled:
+          type: integer
+          format: int32
+        ReservedMB:
+          type: integer
+          format: int64
+        AvailableMB:
+          type: integer
+          format: int64
+        AllocatedMB:
+          type: integer
+          format: int64
+        TotalMB:
+          type: integer
+          format: int64
+        ReservedVirtualCores:
+          type: integer
+          format: int64
+        AvailableVirtualCores:
+          type: integer
+          format: int64
+        AllocatedVirtualCores:
+          type: integer
+          format: int64
+        TotalVirtualCores:
+          type: integer
+          format: int64
+        TotalNodes:
+          type: integer
+          format: int32
+        ActiveNodes:
+          type: integer
+          format: int32
+        LostNodes:
+          type: integer
+          format: int32
+        UnhealthyNodes:
+          type: integer
+          format: int32
+        DecommissionedNodes:
+          type: integer
+          format: int32
+
+    KubernetesMonInfo:
+      type: object
+      required:
+        - name
+      properties:
+        Name:
+          type: string
+          example: k8s-test-env
+        Nodes:
+          type: integer
+          format: int64
+          example: 10
+          minimum: 1
+        Status:
+          type: string
+          enum:
+            - green
+            - yellow
+            - red
+    PrometheusMonInfo:
+      type: object
+      required:
+        - name
+      properties:
+        Name:
+          type: string
+          example: prometheus-1
+        Healthy:
+          type: boolean
+          example: true
+        Ready:
+          type: boolean
+          example: false

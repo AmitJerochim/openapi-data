@@ -1,0 +1,1090 @@
+openapi: 3.0.0
+info:
+  title: Dataflow Kit Web Scraper
+  description:
+    Render Javascript driven pages, while we internally manage Headless Chrome
+    and proxies for you. 
+
+
+    - Build a custom web scraper with our Visual point-and-click toolkit.
+
+    - Scrape the most popular Search engines result pages (SERP).
+
+    - Convert web pages to PDF and capture screenshots.
+    
+    
+    Dataflow Kit API needs to be authenticated by passing a secret API Key to all API requests to the server as the `api_key` query parameter. 
+    
+    The API Key can be found in the [DFK Dashboard](https://account.dataflowkit.com) after _free registration_.
+  contact:
+    url: https://dataflowkit.com/
+  version: '1.0'
+  termsOfService: https://dataflowkit.com/terms
+servers:
+  - url: 'https://api.dataflowkit.com/v1'
+    description: Production server
+
+paths:
+  /fetch:
+    post:
+      tags:
+        - fetch
+      summary: Download web page content
+      description: Use fetch endpoint to download web pages. 
+      
+      operationId: fetch
+      requestBody:
+        description: >
+          - _Base fetcher type_ is the right choice for fetching server-side rendered pages. It takes fewer resources and works faster than rendering HTML with _Chrome fetcher_
+        
+          - But for rendering Angular, React, and Vue.js web sites, you should always specify _Chrome fetcher type_. In this case, headless chrome fetcher renders dynamic Javascript content in the same way as real web browsers would do it.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/fetchrequest'
+        required: true
+      responses:
+        '200':
+          description: Returns utf8 encoded web page content.
+          content:
+            text/html; charset=utf-8:
+              example: |-
+                <html>
+                    <head></head>
+                    <body>{
+                    &#34;ip&#34;: &#34;178.171.21.156&#34;,
+                    &#34;city&#34;: &#34;Singapore&#34;,
+                    &#34;region&#34;: null,
+                    &#34;region_code&#34;: null,
+                    &#34;country&#34;: &#34;SG&#34;,
+                    &#34;country_code&#34;: &#34;SG&#34;,
+                    &#34;country_code_iso3&#34;: &#34;SGP&#34;,
+                    &#34;country_capital&#34;: &#34;Singapore&#34;,
+                    &#34;country_tld&#34;: &#34;.sg&#34;,
+                    &#34;country_name&#34;: &#34;Singapore&#34;,
+                    &#34;continent_code&#34;: &#34;AS&#34;,
+                    &#34;in_eu&#34;: false,
+                    &#34;postal&#34;: &#34;18&#34;,
+                    &#34;latitude&#34;: 1.2929,
+                    &#34;longitude&#34;: 103.8547,
+                    &#34;timezone&#34;: &#34;Asia/Singapore&#34;,
+                    &#34;utc_offset&#34;: &#34;+0800&#34;,
+                    &#34;country_calling_code&#34;: &#34;+65&#34;,
+                    &#34;currency&#34;: &#34;SGD&#34;,
+                    &#34;currency_name&#34;: &#34;Dollar&#34;,
+                    &#34;languages&#34;: &#34;cmn,en-SG,ms-SG,ta-SG,zh-SG&#34;,
+                    &#34;country_area&#34;: 692.7,
+                    &#34;country_population&#34;: 4701069.0,
+                    &#34;asn&#34;: &#34;AS9009&#34;,
+                    &#34;org&#34;: &#34;M247 Ltd&#34;
+                }</body>
+                </html>
+            text/plain; charset=utf-8:
+              example: #Link to a file in Dataflow Kit Storage.
+                https://dfk-storage-ny3.nyc3.digitaloceanspaces.com/5e5d2864ebb755000188c2c5/ipapi.co_2020-05-06_19%3A32.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=KMGZH6JMEM75FTB4EEVL%2F20200506%2Fnyc3%2Fs3%2Faws4_request&X-Amz-Date=20200506T193209Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=86675afdbabc18027cb1d78cb6faf35df2137940b6b8e9e526006bb66afbfae7
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        
+      deprecated: false
+  /serp:
+    post:
+      tags:
+        - serp
+      summary: Collect search results from search engines
+      description: 
+        To crawl search engine result pages, you can use `/serp` endpoint. SERP collection service extracts a list of organic results, news, images, and more.  Specify configuration parameters, such as country or languages, to customize output SERP data.
+      
+        The following search engines are supported
+        
+            
+        - google
+        
+        - google-image
+        
+        - google-news
+        
+        - google-shopping
+        
+        - bing
+        
+        - duckduckgo
+        
+        - baidu
+        
+        - yandex
+        
+        
+      operationId: serp
+      requestBody:
+        description: >
+          <h2>Search parameters</h2>
+        
+        
+          > In most cases, you don't need to customize parameters by hand. Use <a href="https://dataflowkit.com/serp" target="_blank">SERP extraction Code generator</a>. It is the easiest way to generate a payload for launching in the Dataflow kit cloud.
+          
+          
+          <h3>URL GET parameters</h3>
+          
+          
+          ||||
+          
+          |-|-|-|
+          
+          |q| Parameter defines encoded search term. You can use anything that you would use in a regular Search engines search. (e.g. for Google, <ul> <li><code>link:dataflowkit.com</code>,</li> <li><code>site:twitter.com Bratislava</code>,</li><li><code>inurl:view/view.shtml</code>, etc.)</li></ul> See The Complete List of 42 Advanced <a href="https://ahrefs.com/blog/google-advanced-search-operators/" target="_blank">Google Search Operators</a>|<ul> <li><code>q</code> parameter is used by google, Bing, DuckDuckGo.</li><li> <code>text</code> is used as query holder by Yandex SE.</li><li> Chineese Baidu uses <code>wd</code> for this purpose.</li></ul>|
+          
+          |tbm| <code>tbm</code> is a special Google parameter used to differentiate between search types| 
+          <ul> <li><code>tbm=isch</code> - Google Images,</li> <li> <code>tbm=nws</code> - Google News</li> <li><code>tbm=shop</code> - Google Shopping</li> </ul>|
+          
+          |lr|Restricts the search to documents written in a particular languages.|<ul><li>Google uses <code>lang_{two-letter lang code}</code> to specify languages and <code>&#124;</code> as a delimiter. (e.g., <code>lang_sk&#124;lang_de</code> will only search Slovak and German pages). See the <a href="https://developers.google.com/custom-search/v1/cse/list">full list</a> of possible values for Google. </li><li>For Bing specify <code>setLang=en</code> parameter.</li><li> In Yandex use <code>lang=ca</code> parameter</li></ul>|
+          
+          |gl|Specify the country to search from. It's a two-letter country code. (e.g., <code>sk</code> for Slovakia, or <code>us</code> for the United States).| For Google see the <a href="https://developers.google.com/custom-search/docs/xml_results_appendices#countryCodes">Country Codes</a> page for a list of valid values. For Bing <code>cc=at</code> parameter is used.|
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/serprequest'
+        required: true
+      responses:
+        '200':
+          description: Returns data in the one of the follwing formats - JSON, JSON Lines, CSV, MS Excel, XML
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                [
+                  {
+                      "description_text": "Dataflow kit visits the web on your behalf, processes Javascript driven pages in the cloud, return rendered HTML, capture screenshot or save as PDF. Dataflow Kit services. Headless Chrome as a service. We automate dynamic web content download using the Headless Chrome browser. ...",
+                      "link_href": "https://dataflowkit.com/",
+                      "link_text": "Turn Websites into structured data /Dataflow kit"
+                  },
+                  {
+                      "description_text": "Dataflow kit (\"DFK\") is a Web Scraping framework for Gophers. It extracts data from web pages, following the specified CSS Selectors. You can use it in many ways for data mining, data processing or archiving.",
+                      "link_href": "https://github.com/slotix/dataflowkit",
+                      "link_text": "GitHub - slotix/dataflowkit: Extract structured data from ..."
+                  },
+                  {
+                      "description_text": "The Department of Health - Abu Dhabi (DoH - Abu Dhabi) leverages the DataFlow Group's specialized Primary Source Verification (PSV) solutions to screen the credentials of professionals working within Abu Dhabi's healthcare sector. As the regulative body of the healthcare sector in Abu Dhabi, DoH - Abu Dhabi ensures excellence for the ...",
+                      "link_href": "https://corp.dataflowgroup.com/verification-services/start-your-verification/healthcare/department-of-health-abu-dhabi/",
+                      "link_text": "Department of Health - Abu Dhabi - Dataflow Group"
+                  },
+                  {
+                      "description_text": "Dataflow Kit was added by slotix in Apr 2020 and the latest update was made in May 2020. The list of alternatives was updated Apr 2020. It's possible to update the information on Dataflow Kit or report it as discontinued, duplicated or spam.",
+                      "link_href": "https://alternativeto.net/software/dataflow-kit/",
+                      "link_text": "Dataflow Kit Alternatives and Similar Websites and Apps ..."
+                  },
+                  {
+                      "description_text": "Dataflow Kit Reloaded. We are so excited to introduce a new, completely re-implemented Dataflow Kit. In particular, we supplement our legacy custom web scraper with more focused and more understandable web services for our users.",
+                      "link_href": "https://blog.dataflowkit.com/",
+                      "link_text": "Dataflow Kit Blog"
+                  },
+                  {
+                      "description_text": "The Dubai Health Authority (DHA) leverages the DataFlow Group's specialized Primary Source Verification (PSV) solutions to screen the credentials of professionals working within Dubai's healthcare sector. The DHA is led by a mission to ensure access to health services, maintain and enhance the quality of these services, improve the health ...",
+                      "link_href": "https://corp.dataflowgroup.com/verification-services/start-your-verification/healthcare/dubai-health-authority/",
+                      "link_text": "Dubai Health Authority - Dataflow Group"
+                  },
+                  {
+                      "description_text": "Dataflow Kit Reloaded. We are so excited to introduce a new, completely re-implemented Dataflow Kit. In particular, we supplement our legacy custom web scraper with more focused and more understandable web services for our users.",
+                      "link_href": "https://blog.dataflowkit.com/reloaded/",
+                      "link_text": "Dataflow Kit Reloaded."
+                  },
+                  {
+                      "description_text": "The Dataflow Kit API allows embedding free COVID-19 live statistics web widget into sites. Methods provide data for the USA, Spain, or the World. Developers can access live statistics data through the DFK COVID-19 API for free. They can build widgets, mobile apps, or integrate them into other applications.",
+                      "link_href": "https://www.programmableweb.com/api/dataflow-kit-rest-api-v1",
+                      "link_text": "Dataflow Kit REST API v1 | ProgrammableWeb"
+                  },
+                  {
+                      "description_text": "Description. Dataflow kit is a Scraping framework for Gophers. DFK extracts structured data from web pages, following the specified extractors. It can be used in many ways for data mining, data processing or archiving.",
+                      "link_href": "https://go.libhunt.com/dataflowkit-alternatives",
+                      "link_text": "Dataflow kit Alternatives - Go Text Processing | LibHunt"
+                  },
+                  {
+                      "description_text": "Point, click and extract. Work on any interactive site Scrape a website behind a login form Extract data from multiple pages. Scrape infinite scrolled pages. Crawl details; Extract and follow lin",
+                      "link_href": "https://www.startupranking.com/dataflow-kit",
+                      "link_text": "Dataflow Kit - Fast extraction of structured data from ..."
+                  }
+                ]
+            application/x-ndjson:
+              example: |
+                {"description_text":"We offer Dataflow kit Proxies service to get around content download restrictions from specific websites or send requests through proxies to obtain country-specific versions of target websites. Just specify the target country from 100+ supported global locations to send your web/ SERPs scraping API requests.","link_href":"https://dataflowkit.com/","link_text":"Turn Websites into structured data /Dataflow kit"}
+                {"description_text":"Dataflow kit. Dataflow kit (\"DFK\") is a Web Scraping framework for Gophers. It extracts data from web pages, following the specified CSS Selectors.","link_href":"https://github.com/slotix/dataflowkit","link_text":"GitHub - slotix/dataflowkit: Extract structured data from ..."}
+                {"description_text":"The Department of Health - Abu Dhabi (DoH - Abu Dhabi) leverages the DataFlow Group's specialized Primary Source Verification (PSV) solutions to screen the credentials of professionals working within Abu Dhabi's healthcare sector. As the regulative body of the healthcare sector in Abu Dhabi, DoH - Abu Dhabi ensures excellence for the ...","link_href":"https://corp.dataflowgroup.com/verification-services/start-your-verification/healthcare/department-of-health-abu-dhabi/","link_text":"Department of Health - Abu Dhabi - Dataflow Group"}
+                {"description_text":"Dataflow Kit Reloaded. We are so excited to introduce a new, completely re-implemented Dataflow Kit. In particular, we supplement our legacy custom web scraper with more focused and more understandable web services for our users.","link_href":"https://blog.dataflowkit.com/","link_text":"Dataflow Kit Blog"}
+                {"description_text":"Coronavirus Developer Resource Center. COVID-19 APIs, SDKs, coverage, open source code and other related dev resources »","link_href":"https://www.programmableweb.com/api/dataflow-kit-covid-19-tracking","link_text":"Dataflow Kit COVID-19 Tracking API | ProgrammableWeb"}
+                {"description_text":"Dataflow Kit Reloaded. We are so excited to introduce a new, completely re-implemented Dataflow Kit. In particular, we supplement our legacy custom web scraper with more focused and more understandable web services for our users.","link_href":"https://blog.dataflowkit.com/reloaded/","link_text":"Dataflow Kit Reloaded."}
+                {"description_text":"The Dubai Health Authority (DHA) leverages the DataFlow Group's specialized Primary Source Verification (PSV) solutions to screen the credentials of professionals working within Dubai's healthcare sector. The DHA is led by a mission to ensure access to health services, maintain and enhance the quality of these services, improve the health ...","link_href":"https://corp.dataflowgroup.com/verification-services/start-your-verification/healthcare/dubai-health-authority/","link_text":"Dubai Health Authority - Dataflow Group"}
+                {"description_text":"Dataflow Kit Extract information from web sites with a visual point-and-click toolkit. Turn websites into useful data. Automate data workflows on the web, process, and transform data at any scale.","link_href":"https://alternativeto.net/software/dataflow-kit/","link_text":"Dataflow Kit Alternatives and Similar Websites and Apps ..."}
+                {"description_text":"The Dataflow Kit API allows embedding free COVID-19 live statistics web widget into sites. Developers can access live statistics data through the DFK COVID-19 API for free. They can build widgets, mobile apps, or integrate them into other applications.","link_href":"https://www.programmableweb.com/api/dataflow-kit-0","link_text":"Dataflow Kit API | ProgrammableWeb"}
+                {"description_text":"Coronavirus info widgets. Embed free COVID-19 live statistics web widget into your site.","link_href":"https://covid-19.dataflowkit.com/","link_text":"COVID-19 Coronavirus live statistics"}
+            text/csv:
+              example: |
+                link_href,link_text,description_text
+                https://dataflowkit.com/,Turn Websites into structured data /Dataflow kit,"Dataflow kit visits the web on your behalf, processes Javascript driven pages in the cloud, return rendered HTML, capture screenshot or save as PDF. Dataflow Kit services. Headless Chrome as a service. We automate dynamic web content download using the Headless Chrome browser. ..."
+                https://github.com/slotix/dataflowkit,GitHub - slotix/dataflowkit: Extract structured data from ...,"Dataflow kit (""DFK"") is a Web Scraping framework for Gophers. It extracts data from web pages, following the specified CSS Selectors. You can use it in many ways for data mining, data processing or archiving."
+                https://corp.dataflowgroup.com/verification-services/start-your-verification/healthcare/department-of-health-abu-dhabi/,Department of Health - Abu Dhabi - Dataflow Group,"The Department of Health - Abu Dhabi (DoH - Abu Dhabi) leverages the DataFlow Group's specialized Primary Source Verification (PSV) solutions to screen the credentials of professionals working within Abu Dhabi's healthcare sector. As the regulative body of the healthcare sector in Abu Dhabi, DoH - Abu Dhabi ensures excellence for the ..."
+                https://blog.dataflowkit.com/,Dataflow Kit Blog,"Dataflow Kit Reloaded. We are so excited to introduce a new, completely re-implemented Dataflow Kit. In particular, we supplement our legacy custom web scraper with more focused and more understandable web services for our users."
+                https://www.programmableweb.com/api/dataflow-kit-covid-19-tracking,Dataflow Kit COVID-19 Tracking API | ProgrammableWeb,"Coronavirus Developer Resource Center. COVID-19 APIs, SDKs, coverage, open source code and other related dev resources »"
+                https://blog.dataflowkit.com/reloaded/,Dataflow Kit Reloaded.,"Dataflow Kit Reloaded. We are so excited to introduce a new, completely re-implemented Dataflow Kit. In particular, we supplement our legacy custom web scraper with more focused and more understandable web services for our users."
+                https://corp.dataflowgroup.com/verification-services/start-your-verification/healthcare/dubai-health-authority/,Dubai Health Authority - Dataflow Group,"The Dubai Health Authority (DHA) leverages the DataFlow Group's specialized Primary Source Verification (PSV) solutions to screen the credentials of professionals working within Dubai's healthcare sector. The DHA is led by a mission to ensure access to health services, maintain and enhance the quality of these services, improve the health ..."
+                https://alternativeto.net/software/dataflow-kit/,Dataflow Kit Alternatives and Similar Websites and Apps ...,"Popular Alternatives to Dataflow Kit for Web, Windows, Mac, Linux, Software as a Service (SaaS) and more. Explore 25 websites and apps like Dataflow Kit, all suggested and ranked by the AlternativeTo user community."
+                https://www.programmableweb.com/api/dataflow-kit-0,Dataflow Kit API | ProgrammableWeb,"The Dataflow Kit API allows embedding free COVID-19 live statistics web widget into sites. Developers can access live statistics data through the DFK COVID-19 API for free. They can build widgets, mobile apps, or integrate them into other applications."
+                https://covid-19.dataflowkit.com/,COVID-19 Coronavirus live statistics,Coronavirus info widgets. Embed free COVID-19 live statistics web widget into your site.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+              
+      deprecated: false
+  /parse:
+    post:
+      tags:
+        - parse
+      summary: Extract structured data from web pages
+      description: |
+        Dataflow kit uses CSS selectors to find HTML elements in web pages for later data extraction.
+        
+        Open [visual point-and-click toolkit](https://dataflowkit.com/dfk) and click desired elements on a page to specify extracting data. 
+        
+        
+         Then you can send generated payload to `/parse` endpoint. We crawl web pages and extract data like text, links, or images for you following the specified rules. 
+        
+        
+        Extracted data is returned in CSV, MS Excel, JSON, JSON(Lines) or XML format.
+        
+        
+        
+      operationId: parse
+      requestBody:
+        description: >
+          ### Field types and attributes
+            
+          - **Text**. Extract human-readable text from the selected element and all its child elements. HTML tags are stripped, and only text returned.
+              
+          - **Link**. Capture link `href` attribute and link text. Or specify a special _Path_ option for website navigation. When Path option is true, all other selectors ignored, and no results from the current page returned.
+              
+          - **Image**. Image type extracts `src` (URL) and `alt` attributes of an image
+          
+          
+          
+          ***
+          
+          ### Filters
+          
+          Filters are used to manipulate text data when extracting.
+          
+          
+          Here is the list of available filters
+          
+          
+          
+          - **Trim** removes leading and trailing white spaces from the _field text or attribute_
+          
+          
+          - **Normal** leaves the case and capitalization of text/ attribute exactly as is.
+          
+          
+          - **UPPERCASE** makes all of the letters in the Field's text/ attribute uppercase.
+          
+          
+          - **lowercase** makes all of the letters in the Field's text/ attribute lowercase.
+          
+          
+          - **Capitalize** capitalizes the first letter of each word in the Field's text/ attribute
+          
+          
+          - **Concatinate** joins text array element into a single string
+          
+          
+          ***
+          
+          ### Regular Expressions
+          
+          
+          For more advanced text formatting regular expression can be used.
+          Some useful examples are listed below
+          
+      
+          
+          | Input text | Regex | Result |
+          
+          | ---------- | ----- | ------ |
+          
+          | price- 10.99€ | <code>[0-9]+\.[0-9]+</code> | 10.99 |
+          
+          | phone- 0 (944) 244-18-22 | <code>\w+</code> | 09442441822 |
+          
+          
+          
+          ***
+          
+          ### Details. Chaining.
+          
+          The Link field type serves as a navigation link to a details page containing more data.
+  
+          A special _Path_ option is used for navigation only. When the Path option specified, no results from the current page returned. But grouped results from details pages will be pulled instead.
+          You can use chaining functionality of Dataflow Kit scraper to retrieve all the detail page data at the same time.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/parserequest'
+        required: true
+      responses:
+        '200':
+          description: Returns data in the one of the follwing formats - JSON, JSON Lines, CSV, MS Excel, XML
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                [
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/1",
+                    "Name_text": "Ethan Aguirre",
+                    "Number_text": "1",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-1.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/2",
+                    "Name_text": "Melodie Holder",
+                    "Number_text": "2",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-2.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/3",
+                    "Name_text": "Meghan Reyes",
+                    "Number_text": "3",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-3.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/4",
+                    "Name_text": "Lane Vinson",
+                    "Number_text": "4",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-4.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/5",
+                    "Name_text": "Philip Tillman",
+                    "Number_text": "5",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-5.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/6",
+                    "Name_text": "Theodore Mcclain",
+                    "Number_text": "6",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-6.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/7",
+                    "Name_text": "Neville Kane",
+                    "Number_text": "7",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-7.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/8",
+                    "Name_text": "Lila Vazquez",
+                    "Number_text": "8",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-8.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/9",
+                    "Name_text": "Ulysses Peters",
+                    "Number_text": "9",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-9.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/10",
+                    "Name_text": "Camden Young",
+                    "Number_text": "10",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-10.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/1",
+                    "Name_text": "Ethan Aguirre",
+                    "Number_text": "1",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-1.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/2",
+                    "Name_text": "Melodie Holder",
+                    "Number_text": "2",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-2.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/3",
+                    "Name_text": "Meghan Reyes",
+                    "Number_text": "3",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-3.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/4",
+                    "Name_text": "Lane Vinson",
+                    "Number_text": "4",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-4.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/5",
+                    "Name_text": "Philip Tillman",
+                    "Number_text": "5",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-5.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/6",
+                    "Name_text": "Theodore Mcclain",
+                    "Number_text": "6",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-6.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/7",
+                    "Name_text": "Neville Kane",
+                    "Number_text": "7",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-7.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/8",
+                    "Name_text": "Lila Vazquez",
+                    "Number_text": "8",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-8.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/9",
+                    "Name_text": "Ulysses Peters",
+                    "Number_text": "9",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-9.svg"
+                  },
+                  {
+                    "Name_href": "https://test.dataflowkit.com/persons/10",
+                    "Name_text": "Camden Young",
+                    "Number_text": "10",
+                    "Picture_alt": "",
+                    "Picture_src": "https://test.dataflowkit.com/static/img/avataaars-10.svg"
+                  }
+                ]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      deprecated: false
+  /convert/url/pdf:
+    post:
+      tags:
+        - url-to-pdf
+      summary: Save web page as PDF
+      description: Automate URL to PDF Conversion right in your application. 
+      
+        
+        Specify request parameters like URL, Proxy, and actions to render web pages to PDF using Headless Chrome.
+        
+        
+        Get resulted PDF even from websites blocked in your area for some reason utilizing our worldwide pool of proxies.
+        
+        
+        Simulate real-world human interaction with the page. For example, before saving a web page to PDF, you may need to scroll it.
+
+      operationId: url-to-pdf
+      requestBody:
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/url2pdfrequest'
+        required: true
+      responses:
+        '200':
+          description: A PDF file.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            text/plain; charset=utf-8:
+              example: #Link to a file in Dataflow Kit Storage.
+                https://dfk-storage-ny3.nyc3.digitaloceanspaces.com/5e5d2864ebb755000188c2c5/url_pdf2020-05-06_20%3A00.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=KMGZH6JMEM75FTB4EEVL%2F20200506%2Fnyc3%2Fs3%2Faws4_request&X-Amz-Date=20200506T200046Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=737740ad471acf45120709a07de7440287e1daa17599a44b8668f6586030e6be
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      deprecated: false
+  /convert/url/screenshot:
+    post:
+      tags:
+        - url-to-screenshot
+      summary: Capture web page Screenshots.
+      description: Automate URL to Screenshot Conversion right in your application. 
+      
+        
+        Specify request parameters like URL, Proxy, and actions to convert web pages to screenshots using Headless Chrome.
+        
+        
+        Get resulted pictures in JPG or PNG formats even from websites blocked in your area for some reason utilizing our worldwide pool of proxies.
+        
+        
+        Simulate real-world human interaction with the page. For example, before capturing a web page, you may need to scroll it.
+
+      operationId: url-to-screenshot
+      requestBody:
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/url2screenshotrequest'
+        required: true
+      responses:
+        '200':
+          description: Returns jpg or png file.
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            text/plain; charset=utf-8:
+              example: #Link to a file in Dataflow Kit Storage.
+                https://dfk-storage-ny3.nyc3.digitaloceanspaces.com/5e5d2864ebb755000188c2c5/url_screenshot2020-05-06_20%3A02.jpeg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=KMGZH6JMEM75FTB4EEVL%2F20200506%2Fnyc3%2Fs3%2Faws4_request&X-Amz-Date=20200506T200305Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=1c1c39fab3e9b0a8806fc4fd6690b335758d12a926a635c08c7301f87ff9279b
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      deprecated: false
+  
+    
+components:
+  schemas:
+    fetchrequest:
+      example:
+              proxy: country-any
+              type: base
+              url: 'https://ipapi.co/json/'
+              actions:
+              - waitFor: 
+                  waitForSelector: ":root"
+              output: buffer
+      title: Fetch request
+      required:
+        - type
+        - url
+      type: object
+      properties:
+        url:
+          type: string
+          description:   Specify URL to download.
+        type:
+          type: string
+          description: If set to `base`, the Base fetcher is used for downloading web page content. Use `chrome` for fetching content with a Headless chrome browser. If omitted `base` fetcher is used by default.
+          enum: 
+            - base
+            - chrome
+        proxy:
+          type: string
+          description: Specify proxy by adding [country ISO code](https://en.wikipedia.org/wiki/ISO_3166-2) to `country-` value to send requests through a proxy in the specified country. Use `country-any` to use random geo-targets.
+          example: "country-sk"
+        waitDelay: 
+          type: number
+          description:
+            Specify a wait delay (in seconds). This may be useful if certain elements of the web site need to be 
+            rendered after the initial page load. _(Chrome fetcher type only)_
+        actions:
+          type: array
+          description: 
+            Use actions to automate manual workflows while rendering web pages. They simulate real-world human interaction with pages. _(Chrome fetcher type only)_
+          default: []
+          items:
+            $ref: '#/components/schemas/action'
+        output:
+          description: 
+            If set to _file_, the content of downloaded HTML is uploaded to Dataflow Kit Storage first. Then the link to this file is returned. Overwise, downloaded content is returned in the response body.
+          type: string
+          enum: 
+            - buffer
+            - file
+          default: buffer
+          
+    serprequest:
+      example:
+        name: duckduckgo
+        request:
+          url: https://duckduckgo.com/?q=Dataflow+kit&ia=web
+          proxy: country-any
+          type: chrome
+        fields:
+        - name: link
+          selector: ".result__a"
+          attrs:
+          - href
+          - text
+          type: 2
+          filters:
+          - name: trim
+        - name: description
+          selector: ".js-result-snippet"
+          attrs:
+          - text
+          type: 1
+          filters:
+          - name: trim
+        commonParent: div[id].result
+        format: json
+      title: SERP request
+      required:
+        - name
+        - url
+        - proxy
+        - type
+        - format
+      type: object
+      properties:
+        name:
+          type: string
+          description: Collection name.
+        url:
+          type: string
+          description: url holds the link to a Search Engine to use, and other optional parameters like languages or country.
+        type:
+          type: string
+          description: For SERP requests you should _always_ use `chrome` type to fetch content with a Headless chrome browser
+          example:
+            chrome
+        proxy:
+          type: string
+          description: Always specify proxy for sending SERP requests. Add choosen [country ISO code](https://en.wikipedia.org/wiki/ISO_3166-2) to `country-` value to send requests through a proxy in the specified country. Use `country-any` to use random geo-targets.
+          example: "country-any"
+        fields:
+          type: array
+          description: >
+            Specify CSS selectors (patterns) used to gather data from Search Engine Result Pages.
+            
+            
+            Ready-to-use payloads for collecting search results from the most popular Search Engines are available. These payloads are customizable, though.
+          items:
+            $ref: '#/components/schemas/field'
+        pageNum:
+          description: Specify number of pages to crawl.
+          default: 1
+          type: integer
+        format:
+          title: Format
+          description: Extracted data is returned either in CSV, MS Excel, JSON, JSON(Lines) or XML format.
+          type: string
+          enum:
+            - csv
+            - json
+            - jsonl
+            - excel
+            - xml 
+    
+    parserequest:
+      example:
+        name: test.dataflowkit.com
+        request:
+          url: https://test.dataflowkit.com/persons/page-0
+          type: chrome
+          proxy: country-any
+        fields:
+        - name: Number
+          selector: ".badge-primary"
+          attrs:
+          - text
+          type: 1
+          filters:
+          - name: trim
+        - name: Name
+          selector: "#cards a"
+          attrs:
+          - href
+          - text
+          type: 2
+          filters:
+          - name: trim
+        - name: Picture
+          selector: ".card-img-top"
+          attrs:
+          - src
+          - alt
+          type: 0
+          filters:
+          - name: trim
+        paginator:
+          nextPageSelector: ".page-link"
+          pageNum: 2
+        path: false
+        format: json
+      title: Parse request
+      required:
+        - name
+        - url
+        - proxy
+        - type
+        - fields
+        - format
+      type: object
+      properties:
+        name:
+          type: string
+          description: Collection name.
+        request:
+          $ref: '#/components/schemas/fetchrequest'
+        commonParent:
+          type: string
+          description: Specifies common ancestor block for a set of fields used to extract data from a web page. _(CSS Selector)_
+          example: .common-block
+        fields:
+          type: array
+          description: >
+            Define a  set of fields used to extract data from a web page. A Field represents a given chunk of extracted data from every block on each page.
+          items:
+            $ref: '#/components/schemas/field'
+        paginator:
+          title: Paginator
+          description: Specify _Next link_ paginator on pages containing a link pointing to the next page. The next page link is extracted from a document by querying href attribute of a given element's CSS selector.
+          type: object
+          properties:
+            nextPageSelector: 
+              type: string
+              example: .page-link
+            pageNum: 
+              type: integer
+              example: 10
+        path:
+          title: Path
+          description: Path is a special parameter specifying navigation pages only. It collects information from detailed pages. No results from the current page return. Defaults to false.
+          default: false
+          type: boolean
+        format:
+          title: Format
+          description: Extracted data is returned either in CSV, MS Excel, JSON, JSON(Lines) or XML format.
+          type: string
+          enum:
+            - csv
+            - json
+            - jsonl
+            - excel
+            - xml
+
+    url2pdfrequest:
+      example:
+        url: https://dataflowkit.com
+        paperSize: A4
+        landscape: false
+        printBackground: false
+        printHeaderFooter: false
+        scale: 1
+        pageRanges: ''
+        marginTop: 0.4
+        marginLeft: 0.4
+        marginRight: 0.4
+        marginBottom: 0.4
+        waitDelay: 0.5
+      title: URL to PDF request
+      required:
+        - url
+      type: object
+      properties:
+        url:
+          type: string
+          description: The full URL address (including HTTP/HTTPS) of a web page that you want to save as PDF
+        proxy:
+          type: string
+          description: Specify proxy by adding [country ISO code](https://en.wikipedia.org/wiki/ISO_3166-2) to `country-` value to send requests through a proxy in the specified country. Use `country-any` to use random geo-targets.
+          example: "country-any"
+        landscape:
+          description:
+            Paper orientation. Parameter landscape = false means portrait orientation. Set landscape to true for landscape page oriantation.
+          type: boolean
+          default: false
+        paperSize:
+          description: Page size parameter consists of the most popular page formats.
+          type: string
+          enum:
+            - A3
+            - A4
+            - A5
+            - A6
+            - Letter
+            - Legal
+            - Tabloid
+          default: A4
+        printBackground:
+          description: Print background graphics in the PDF.
+          type: boolean
+          default: false
+        pageRanges:
+          description: Specify page ranges to convert. Defaults to the empty value, which means convert all pages. 
+          type: string
+          example: 
+            '1-4, 6, 10-12'
+        scale:
+          description: By default, PDF document content is generated according to dimensions of the original web page content. Using the `scale` parameter, you can specify a custom zoom factor from 0.1 to 5.0 of the webpage rendering.
+          default: 1
+          type: number
+        printHeaderFooter:
+          description: printHeaderFooter  parameter consists of the date, name of the web page, the page URL, and how many pages the document you are printing. 
+          default: false
+          type: boolean
+        marginTop:
+          description: Top Margin of the PDF (in inches)
+          default: 0.4
+          type: number
+        marginLeft:
+          description: Left Margin of the PDF (in inches)
+          default: 0.4
+          type: number
+        marginRight:
+          description: Right Margin of the PDF (in inches)
+          default: 0.4
+          type: number
+        marginBottom:
+          description: Bottom Margin of the PDF (in inches)
+          default: 0.4
+          type: number
+        waitDelay:
+          description: Specify a wait delay (in seconds). This may be useful if certain elements of the web site need to be rendered after the initial page load.
+          type: number
+          default: 0.5
+        actions:
+          type: array
+          description: 
+            Use actions to automate manual workflows while rendering web pages. They simulate real-world human interaction with pages.
+          default: []
+          items:
+            $ref: '#/components/schemas/action'
+        output:
+          description: 
+            If set to _file_, the resulted PDF is uploaded to Dataflow Kit Storage first. Then the link to this file is returned. Overwise, PDF content is returned in the response body.
+          type: string
+          enum: 
+            - buffer
+            - file
+          default: buffer
+    
+    url2screenshotrequest:
+      example:
+        url: https://dataflowkit.com
+        width: 1920
+        height: 1080
+        scale: 1
+        format: jpeg
+        quality: 80
+        waitDelay: 0.5
+      title: URL to Screenshot request
+      required:
+        - url
+      type: object
+      properties:
+        url:
+          type: string
+          description: The full URL address (including HTTP/HTTPS) of a web page that you want to capture
+        proxy:
+          type: string
+          description: Specify proxy by adding [country ISO code](https://en.wikipedia.org/wiki/ISO_3166-2) to `country-` value to send requests through a proxy in the specified country. Use `country-any` to use random geo-targets.
+          example: "country-any"
+        fullPage:
+          description: takes a screenshot of a full web page. It ignores offsetX, offsety, width and height argument values.
+          type: boolean
+          default: false
+        width:
+          description: Rectangle width in device independent pixels (dip).
+          default: 800
+          type: integer
+        height:
+          description: Rectangle height in device independent pixels (dip).
+          default: 600
+          type: integer
+        offsetx:
+          description: X offset in device independent pixels (dip).
+          default: 0
+          type: integer
+        offsety:
+          description: Y offset in device independent pixels (dip).
+          default: 0
+          type: integer
+        printBackground:
+          description: Print background graphics in the PDF.
+          type: boolean
+          default: false
+        clipSelector:
+          description: Captures a screenshot of specified CSS element on a web page.
+          type: string
+          example: '#css-element'
+        format:
+          description: Sets the Format of output image
+          type: string
+          enum:
+            - png
+            - jpeg
+          default:
+            png
+        quality:
+          description: Sets the Quality of output image. Compression quality from range [0..100] (jpeg only).
+          default: 80
+          type: integer
+        scale:
+          description: Image scale factor. range [0.1 .. 3]
+          default: 1
+          type: number
+        waitDelay:
+          description: Specify a wait delay (in seconds). This may be useful if certain elements of the web site need to be rendered after the initial page load.
+          type: number
+          default: 0.5
+        actions:
+          type: array
+          description: 
+            Use actions to automate manual workflows while rendering web pages. They simulate real-world human interaction with pages.
+          default: []
+          items:
+            $ref: '#/components/schemas/action'
+        output:
+          description: 
+            If set to _file_, the resulted screenshot is uploaded to Dataflow Kit Storage first. Then the link to this file is returned. Overwise, web site screenshot is returned in the response body.
+          type: string
+          enum: 
+            - buffer
+            - file
+          default: buffer
+    
+    field:
+      title: Field
+      type: object
+      required:
+        - name
+        - selector
+        - attrs
+        - type
+      properties: 
+        name: 
+          type: string
+          description: Field name is used to aggregate results.
+        selector:
+          type: string
+          description: Selector represents a CSS selector for data extraction within the given block.
+          example: '#cards a'
+        type:
+          description: Selector type. ( 0 - image, 1 - text, 2 - link)
+          type: integer
+          enum:
+            - 0
+            - 1
+            - 2
+        attrs:
+          description: A set of attributes to extract from a Field. Find more information about attributes
+          type: array
+          items:
+            type: string
+            enum:
+              - text
+              - href
+              - src
+              - alt
+        filters:
+          description: Filters are used to pre-processing of text data when extracting.
+          type: array
+          items:
+            anyOf:
+              - type: object
+                properties:
+                  name: 
+                    type: string
+                    enum: 
+                      - trim
+                      - normal
+                      - uppercase
+                      - lowercase
+                      - capitalize
+                      - concatinate
+              - type: object
+                properties:
+                  name:
+                    type: string
+                    example: regex
+                  param:
+                    type: string
+                    example: '[\\d.]+'    
+        details:
+          description: Details themself represent independent Parse request that extracts data from linked pages.
+          allOf:
+            - $ref: '#/components/schemas/parserequest'
+        
+    
+    action:
+      title: Action
+      type: object
+      anyOf:
+        - type: object
+          title: input
+          description: Specify `Input CSS Selector` and `Input Text` to perform search queries, or fill forms.
+          properties:
+            inputSelector:
+              example: '#search-form-editbox'
+              type: string
+            inputText:  
+              example: dataflow kit 
+              type: string
+        - title: click
+          type: object
+          description: Click on an element with the specified `CSS Selector`.
+          properties:
+            clickSelector:
+              example: '.click-me'
+              type: string
+        - title: waitFor
+          description: Wait for the specific DOM elements you want to manipulate.
+          type: object
+          properties: 
+            waitForSelector:
+              example: :root
+              type: string
+        - title: scroll
+          description: Scroll a page down to load more content, simulating user interaction with infinite scrolled pages. Or specify the element's CSS Selector to click for loading more content.
+          type: object
+          properties:
+            paginate: 
+              example: 3
+              type: integer
+            element: 
+              type: string
+              example: '.page-link'
+  responses:
+    NotFound:
+      description: The specified resource was not found
+      content:
+        text/plain; charset=utf-8:
+          example:
+            404. Not found
+    Unauthorized:
+      description: Unauthorized. `api_key` parameter is missed or incorrect
+      content:
+        text/plain; charset=utf-8:
+          examples:
+            invalid:
+              summary: Invalid API key
+              value: Invalid API key
+            No_api:
+              summary: No API Key provided
+              value: No API Key provided       
+
+
+# 1) Define the key name and location
+  securitySchemes:
+    ApiKeyAuth:        # arbitrary name for the security scheme
+      type: apiKey
+      in: query
+      name: api_key  # name of the header, query parameter or cookie
+# 2) Apply the API key globally to all operations
+security:
+  - ApiKeyAuth: []     # use the same name as under securitySchemes
+tags:
+  - name: fetch
+    description: ''
+  - name: serp
+    description: ''

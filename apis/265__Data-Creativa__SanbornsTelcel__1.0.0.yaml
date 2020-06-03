@@ -1,0 +1,317 @@
+openapi: 3.0.0
+info:
+  version: "1.0.0"
+  title: Web Service de Círculo Plus Sanborns
+  description: |
+ 
+   Web Service de Círculo Plus Sanborns para registrar usuarios de Telcel en la plataforma.
+
+    ## Transport Layer Security (TLS)
+
+    Esta es la forma de encriptación que el web service estará usando. Todas las peticiones serán usando el tipo de autenticación OAuth2. 
+
+    ## OAuth2: Access Tokens
+
+    Para poder hacer uso del web service se necesita un `CLIENT_ID` y un `CLIENT_SECRET` que se le proporcionará al cliente siguiendo estos pasos:
+
+    #### 1. Codificar el CLIENT_ID y el CLIENT_SECRET
+    
+    * Se deberá concatenar el `CLIENT_ID` y un `CLIENT_SECRET` separado por dos puntos ":" en una sola cadena de texto.
+    * La cadena de texto obtenida se deberá codificar con base 64.
+    * El resultado se usará en el header Authorization en la modalidad Basic para solicitar un `ACCESS_TOKEN`.
+
+    *Basic Authentication Scheme: <https://tools.ietf.org/html/rfc2617#section-2*>
+
+    Ejemplo de las credenciales del cliente:
+
+    ```yaml
+    CLIENT_ID: 111
+    CLIENT_SECRET: GC0vJWLw7iEJ77DRdyO
+    CREDENTIALS: 111:GC0vJWLw7iEJ77DRdyO
+    BASE64d_ENCODED_CREDENTIALS: MTExOkdDMHZKV0x3N2lFSjc3RFJkeU8=
+    ```
+
+    #### 2. Obtener un ACCESS_TOKEN
+    
+    Para obtener un `ACCESS_TOKEN` el cliente deberá realizar una petición tipo `POST` a la url: `https://circuloplussanborns.com/oauth/token` con el encabezado de autorización tipo `basic` con las credenciales del paso anterior.
+    
+    Además se deberá incluir en el cuerpo de la petición el tipo de autorización: `grant_type=client_credentials`.
+    
+    *Access Token Request: <https://tools.ietf.org/html/rfc6749#section-4.4.2*>
+    
+    #### 3. Autenticar peticiones con el access token
+    
+    Una vez generado el token se pueden hacer peticiones al web service con el encabezado de autorización tipo Bearer.
+    
+    # Validar usuarios
+    
+    Se envía una petición tipo `POST` a la url: `https://circuloplussanborns.com/api/users` con el encabezado de autorización tipo bearer.
+    
+    **Campos Requeridos:**
+    
+    Los siguientes campos son requeridos y obligatorios al momento de hacer una petición para obtener una respuesta exitosa.
+    
+    | Campo          | &emsp; Descripción                                                  |
+    | -------------- | --------------------------------------------------------------------|
+    | `phone`        | &emsp; Número telefónico del usuario Telcel                         |
+    | `telcel_id`    | &emsp; Identificador del usuario Telcel                             |
+    | `club_id`      | &emsp; Identificador del club
+
+    # Dar de Baja usuarios
+    
+    Se envía una petición tipo `DELETE` a la url: `https://circuloplussanborns.com/api/users/{telcelUserID}` con el encabezado de autorización tipo bearer, donde el parametro `{telcelUserID}` es el identificador del usuario Telcel.
+
+
+paths:
+  /oauth/token:
+    post:
+      tags:
+        - URIs
+      summary: "(Obtener un access token)"
+      parameters:
+        - in: header
+          name: "Authorization: Basic"
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: Encabezado de autorización tipo Basic usando las credenciales codificadas
+          example: 
+            Authorization: "Basic MTExOkdDMHZKV0x3N2lFSjc3RFJkeU8="
+      requestBody:
+        description: Cuerpo de la petición
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              properties:
+                grant_type: 
+                  type: string
+                  example: client_credentials
+              required:
+                - grant_type
+      responses:
+        '201':
+          $ref: '#/components/responses/accessToken'
+        '400':
+          description: bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+              examples:
+                TLS request:
+                  value:
+                    error: "invalid_request"
+                    message: "Transport layer security (TLS) is required"
+                    hint: "User 'https' for all requests"
+                Bad request:
+                  value:
+                    error: "invalid_request"
+                    message: "The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed."
+
+  /api/users:
+    post:
+      summary: "(Autenticar peticiones con el access token)"
+      tags: 
+        - URIs
+      parameters:
+        - in: header
+          name: "Authorization: Bearer"
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: Encabezado de autorización tipo Bearer usando el access token
+          example: 
+            Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjQ5MTVmM2RiZjljNmQ1M2VlOGNjOD..."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/user'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                login: "https://circuloplussanborns.com.com/login/1?signature=661c78cafbcb33ab04ec948b69cfed50306fa4b26f7e923df27de96dbb4014a9"
+        '408':
+          $ref: '#/components/responses/timeOut'
+        '422':
+          description: Unproccessable Entity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code:
+                          type: string
+              examples:
+                phone required:
+                  value:
+                    message: "Error de validación de datos"
+                    errors: [
+                      phone: "El teléfono es requerido"
+                      ]
+                phone format:
+                  value:
+                    message: "Error de validación de datos"
+                    errors: [
+                      phone: "El teléfono proporcionado es inválido"
+                      ]
+                phone unique:
+                  value:
+                    message: "Error de validación de datos"
+                    errors: [
+                      phone: "Teléfono debe de ser único"
+                      ]
+                telcel_id required:
+                  value:
+                    message: "Error de validación de datos"
+                    errors: [
+                      telcel_id: "El ID del usuario Telcel es requerido"
+                      ]
+                telcel_id format:
+                  value:
+                    messag: "Error de validación de datos"
+                    errors: [
+                      telcel_id: "EL ID del usuario Telcel es inválido"
+                      ]
+                club_id required:
+                  value:
+                    messag: "Error de validación de datos"
+                    errors: [
+                      club_id: "EL ID del club es requerido"
+                      ]
+                club_id format:
+                  value:
+                    messag: "Error de validación de datos"
+                    errors: [
+                      club_id: "club_id tiene que ser un valor numérico"
+                      ]
+
+  /api/users/{telcelUserId}:
+    delete:
+      summary: "(Darjde baja usuarios con el access token)"
+      tags: 
+        - URIs
+      parameters:
+        - in: header
+          name: "Authorization: Bearer"
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: Encabezado de autorización tipo Bearer usando el access token
+          example: 
+            Authorization: "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjQ5MTVmM2RiZjljNmQ1M2VlOGNjOD..."
+        - in: path
+          name: telcelUserId
+          required: true
+          schema:
+            type: string
+          example: "rzLyMLsam2"
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                deleted:
+                  value:
+                    message: "Borrado"
+                already deleted:
+                  value:
+                    message: "El usuario ya fue borrado"
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                message: "Error de validación de datos"
+                errors: "No encontrado"
+
+# Components
+components:
+  responses:
+    accessToken:
+      description: Created
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/accessToken'
+
+    timeOut:
+      description: Request Timeout
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/timeOut'
+
+  schemas:
+    accessToken:
+      type: object
+      properties:
+        token_type:
+          type: string
+        expires_in:
+          description: el token tendrá una validez de 3600 segundos (1 hora)
+          type: integer
+        access_token:
+          type: string
+      example:
+        token_type: "Bearer"
+        expires_in: 3600
+        access_token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjQ5MTVmM2RiZjljNmQ1M2VlOGNjOD"
+
+    user:
+      type: object
+      properties:
+        phone:
+          type: string
+        telcel_id:
+          type: string
+        club_id:
+          type: integer
+      required:
+        - phone
+        - telcel_id
+        - club_id
+      example:
+         phone: "5588888888"
+         telcel_id: "1234567890"
+         club_id: 777
+
+    timeOut:
+      type: object
+      properties:
+        message:
+          type: string
+      example:
+        message: "La petición tardó más de lo esperado, vuelve a intentarlo"

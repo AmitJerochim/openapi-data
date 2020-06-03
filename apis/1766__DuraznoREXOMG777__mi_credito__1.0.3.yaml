@@ -1,0 +1,765 @@
+openapi: 3.0.1
+servers:
+- url: https://micredito.swagger.io/v2
+- url: http://micredito.swagger.io/v2
+tags:
+- name: 18.216.89.85
+  description: mi-credito, los principales endpoints que rigen a los usuarios de la aplicación.
+- name: 18.222.208.11
+  description: mi-credito-venues, el endpoit para solicitar las sucursales.
+- name: 18.219.80.193
+  description: mi-credito-catalog, el catalogo de rangos que manejan los créditos.
+paths:
+  /venues:
+    get:
+      tags:
+      - 18.222.208.11
+      summary: Regresa las sucursales cercana a una ubicación.
+      description: Se requiere enviar latitud y longitud para poder regresar sucursales
+        cercanas al usuario. Este servicio es utilizado para mostar los pins en el mapa de la aplicación.
+        Incluye la información necesaria para mostrar el mensaje de dialogo al seleccionar un pin del mapa.
+      operationId: getVenues
+      parameters:
+      - name: authenticationToken
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: latitude
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: longitude
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Venue'
+        405:
+          description: No existen sucursales dentro de un radio de 10 kilometros.
+  /venues/principal:
+    get:
+      tags:
+      - 18.222.208.11
+      summary: Recuperar la información de la sucursal principal.
+      description: Obtienes la información p.
+      operationId: getPrincipalVenue
+      parameters:
+      - name: authenticationToken
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: application
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Venue'
+        405:
+          description: No existen sucursales dentro de un radio de 10 kilometros.        
+  
+  /catalogs/amounts:
+    get:
+      tags:
+      - 18.219.80.193
+      summary: Montos y plazos minimos y máximos para la solicitud de créditos.
+      description: Permite recuperar los rangos de montos al mommento de solicitar los créditos, así como el rango de los plazos para el mismo.
+      operationId: getCreditAmounts
+      parameters:
+      - name: authenticationToken
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiCreditAmountResponse'
+  /catalogs/rates:
+    get:
+      tags:
+      - 18.219.80.193
+      summary: Tasas de crédito en pares tasa - plazo.
+      description: Permite recuperar la información para el cálculo de los pagos mensuales segun la tasa anual, plazo y el monto solicitado.
+      operationId: getCreditCatalog
+      parameters:
+      - name: authenticationToken
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiCreditRatesResponse'
+  /catalogs/terms:
+    get:
+      tags:
+      - 18.219.80.193
+      summary: Términos y Condiciones.
+      description: Permite recuperar la información de los términos y condiciones de la aplicación especificada..
+      operationId: getCreditTerms
+      parameters:
+      - name: authenticationToken
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: application
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiCreditRatesResponse'
+  /users/register:
+    post:
+      tags:
+      - 18.216.89.85
+      summary: Activación de cuenta de usuario en la plataforma.
+      description: Permite la activación de la cuenta de usuario por medio de las credenciales dadas en el correo electrónico al momento de registrarse en la entidad de crédito. La activación de manera correcta envía un correo al usuario con su contraseña temporal auto-generada.
+      operationId: activateUser
+      requestBody:
+        description: Datos de número de cliente y correo electrónico para activar su usuario en la plataforma.
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+        required: true
+      responses:
+        200:
+          description: Un correo electrónico ha sido enviado a la dirección proporcionada
+            con la contraseña para ingresar a su cuenta.
+  /users/login:
+    post:
+      tags:
+      - 18.216.89.85
+      summary: Inicio de sesión del usuario en la plataforma.
+      description: Inicio de sesión en la plataforma ingresando número de usuario y contraseña.
+      operationId: loginUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLogin'
+        required: true
+      responses:
+        200:
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiUserLoginResponse'
+        405:
+          description: Usuario y/o contraseña incorrecta
+  /users/{clientNumber}/password-recovery:
+    get:
+      tags:
+      - 18.216.89.85
+      summary: Solicitar correo electrónica para reinicio de contraseña.
+      description: Al enviar el número de cliente, se validará que el usuario existe para enviarle un correo electrónico con un enlace a la página web para el cambio de contraseña.
+      operationId: requestPasswordRecovery
+      parameters:
+      - name: clientNumber
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: La contraseña será enviada al correo electrónico registrado al solicitar el crédito
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Message'
+        405:
+          description: El número de cliente es incorrecto.
+  /users/{clientNumber}/tokens:
+    post:
+      tags:
+      - 18.216.89.85
+      summary: Actualización de firebase token.
+      description: Permite agregar o actualizar los 'tokens' de dispositivo asociado a un cliente.
+      operationId: updateToken
+      parameters:
+      - name: authenticationToken
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: clientNumber
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Token'
+      responses:
+        200:
+          description: Operación exitosa
+  /users/{clientNumber}/credits:
+    post:
+      tags:
+      - 18.216.89.85
+      summary: Solicitud de un crédito
+      description: Permite la solicitud de un crédito en estatus 'placed', permitiéndole a la entidad autorizar la solicitud de crédito.
+      operationId: addCredit
+      parameters:
+      - name: authenticationToken
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: clientNumber
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/CreditRequest'
+        required: true
+      responses:
+        200:
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Credit'
+    get:
+      tags:
+      - 18.216.89.85
+      summary: Regresa los créditos asociados a un usuario
+      description: Recupera los créditos que están asociados al usuario sin importar el estatus, incluyendo los pagos asociados a cada crédito.
+      operationId: getCredits
+      parameters:
+      - name: authenticationToken
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: clientNumber
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        200:
+          description: Operación exitosa
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiCreditsResponse'
+
+components:
+  schemas:
+    ApiUserLoginResponse:
+      required:
+        - meta
+        - response
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/Message'
+        response:
+          $ref: '#/components/schemas/UserResponse'
+    ApiCreditAmountResponse:
+      required:
+        - meta
+        - response
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/Message'
+        response:
+          $ref: '#/components/schemas/CreditAmount'
+    ApiCreditRatesResponse:
+      required:
+        - meta
+        - response
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/Message'
+        response:
+          $ref: '#/components/schemas/CreditCatalog'
+    ApiCreditsResponse:
+      required:
+        - meta
+        - response
+      type: object
+      properties:
+        meta:
+          $ref: '#/components/schemas/Message'
+        response:
+          type: array
+          items:
+            $ref: '#/components/schemas/Credit'
+    Message:
+      required:
+        - statusCode
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          format: int64
+        message:
+          type: string
+    Credit:
+      required:
+      - accountNumber
+      type: object
+      properties:
+        accountNumber:
+          type: integer
+          format: int64
+        name:
+          type: string
+        annualRate:
+          type: number
+          format: double
+        amountGranted:
+          type: number
+          format: double
+        amountGrantedWithInterest:
+          type: number
+          format: double
+        months:
+          type: integer
+          format: int32
+        nextPaymentAmount:
+          type: number
+          format: double
+        nextPaymentDate:
+          type: string
+          format: date-time
+        paidAmount:
+          type: number
+          format: double
+        paidAmountWithInterest:
+          type: number
+          format: double
+        paidPercentage:
+          type: number
+          format: double
+        remainingAmount:
+          type: number
+          format: double
+        remainingAmountWithInterest:
+          type: number
+          format: double
+        coverUrl:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: string
+          description: Estatus del crédito
+          enum:
+          - placed
+          - approved
+          - denied
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+      xml:
+        name: Credit
+    Notification:
+      required:
+      - content
+      - id
+      - resourceType
+      - resourceUrl
+      - title
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        content:
+          type: string
+        date:
+          type: string
+          format: date-time
+        resourceUrl:
+          type: string
+        resourceType:
+          type: string
+          description: Tipo de notificación
+          enum:
+          - image
+          - video
+        status:
+          type: string
+          description: Estatus de la notificación
+          enum:
+          - read
+          - unread
+      xml:
+        name: Notification
+    NotificationRequest:
+      required:
+      - content
+      - resourceType
+      - resourceUrl
+      - title
+      - clients
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        resourceUrl:
+          type: string
+        resourceType:
+          type: string
+          description: Tipo de notificación
+          enum:
+          - image
+          - video
+        clients:
+          type: array
+          items:
+            type: string
+      xml:
+        name: NotificationRequest
+    UserRegister:
+      required:
+      - clientNumber
+      - email
+      type: object
+      properties:
+        clientNumber:
+          type: integer
+          format: int32
+          example: 1234567
+        email:
+          type: string
+          example: example@domain.com
+    UserPasswordReset:
+      required:
+      - newPassword
+      - token
+      type: object
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+    UserLogin:
+      required:
+      - clientNumber
+      - password
+      type: object
+      properties:
+        clientNumber:
+          type: integer
+          format: int32
+          example: 1234567
+        password:
+          type: string
+    User:
+      required:
+      - clientNumber
+      - email
+      - password
+      type: object
+      properties:
+        clientNumber:
+          type: integer
+          format: int32
+          example: 1234567
+        email:
+          type: string
+        name:
+          type: string
+        firstLastName:
+          type: string
+        secondLastName:
+          type: string
+        password:
+          type: string
+        avatarUrl:
+          type: string
+        authenticationToken:
+          type: string
+        firebaseToken:
+          type: string
+        deviceID:
+          type: string
+      xml:
+        name: User
+    UserUpdate:
+      required:
+      - clientNumber
+      - email
+      - password
+      type: object
+      properties:
+        clientNumber:
+          type: integer
+          format: int32
+          example: 1234567
+        email:
+          type: string
+        name:
+          type: string
+        firstLastName:
+          type: string
+        secondLastName:
+          type: string
+        avatarUrl:
+          type: string
+        firebaseToken:
+          type: string
+        deviceID:
+          type: string
+      xml:
+        name: UserUpdate
+    UserLoginResponse:
+      type: object
+      properties:
+        clientNumber:
+          type: integer
+          format: int32
+          example: 1234567
+        email:
+          type: string
+        name:
+          type: string
+        firstLastName:
+          type: string
+        secondLastName:
+          type: string
+        avatarUrl:
+          type: string
+        authenticationToken:
+          type: string
+      xml:
+        name: UserLoginResponse
+    UserResponse:
+      type: object
+      properties:
+        clientNumber:
+          type: integer
+          format: int32
+          example: 1234567
+        email:
+          type: string
+        name:
+          type: string
+        firstLastName:
+          type: string
+        secondLastName:
+          type: string
+        avatarUrl:
+          type: string
+        agreement:
+          type: integer
+      xml:
+        name: UserResponse
+    Payment:
+      required:
+      - amount
+      - date
+      - id
+      - rate
+      - status
+      type: object
+      properties:
+        id:
+          type: string
+          example: 1
+        amount:
+          type: number
+          format: double
+        interest:
+          type: number
+          format: double
+        total:
+          type: number
+          format: double
+        date:
+          type: string
+          format: date-time
+        status:
+          type: string
+          description: Estatus de un pago
+          enum:
+          - paid
+          - pending
+          - next
+          - expired
+      xml:
+        name: Payment
+    Venue:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phoneNumber:
+          type: string
+        email:
+          type: string
+        address:
+          type: object
+          properties:
+            country:
+              type: string
+            address:
+              type: string
+            city:
+              type: string
+            latitude:
+              type: string
+            postalCode:
+              type: string
+            neighborhood:
+              type: string
+            state:
+              type: string
+            longitude:
+              type: string
+    PaymentUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Estatus de un pago
+          enum:
+          - paid
+          - pending
+          - next
+          - expired
+    NotificationUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Estatus de una notificación
+          enum:
+          - read
+          - unread
+    CreditAmount:
+      type: object
+      properties:
+          minAmount:
+            type: integer
+            format: double
+          maxAmount:
+            type: integer
+            format: double
+          minMonth:
+            type: integer
+            format: int32
+          maxMonth:
+            type: integer
+            format: int32
+    CreditCatalog:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        time:
+          type: integer
+          format: int32
+        rate:
+          type: integer
+          format: double
+    CreditRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          format: double
+        months:
+          type: integer
+          format: int32
+        annualRate:
+          type: integer
+          format: double
+        monthPay:
+          type: integer
+          format: double
+    Token:
+      type: object
+      properties:
+        deviceOs:
+          type: string
+        firebaseToken: 
+          type: string
+    ApiResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          format: int32
+        message:
+          type: string
+  securitySchemes:
+    micredito_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: http://micredito.swagger.io/oauth/dialog
+          scopes:
+            write:payments: Modificar información de pagos
+            read:payments: Leer información de pagos
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
+info:
+  contact:
+    url: http://high-flyers.mx/
+    email: hola@high-flyers.mx
+    name: High Flyers
+  version: "1.0.3"
+  title: Mi Crédito API

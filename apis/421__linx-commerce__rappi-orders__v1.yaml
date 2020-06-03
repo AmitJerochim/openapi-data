@@ -1,0 +1,635 @@
+openapi: 3.0.0
+
+info:
+  version: "v1"
+  title: Rappi - Orders | v1.1.1
+  description: |
+    Rappi Orders
+    <br />
+    
+    ## **General** ##
+    
+    Rappi’s order integration API allows a retailer to work with Rappi as a delivery service
+    and as a platform to sell its products to Rappi’s customers. If a retailer wishes to work
+    with Rappi, it must develop a system that uses the integration API exposed here.
+    The system developed by the retailer will interact in two distinct ways with Rappi. The
+    first way is by consuming a REST API that will be provided by Rappi, used to
+    communicate modifications made by the retailer to its orders. The second way is by the
+    retailer exposing a REST API to Rappi, that will allow Rappi to communicate with the
+    partner in a webhook manner. This retailer’s API will be used by Rappi to notify the
+    retailer about new orders and modification events.
+    Rappi’s API specification and the requirements to be followed by the retailer’s API will
+    be explained in more detail further ahead. In the given details, each expected JSON
+    body or response is going to be specified using the JSON Schema in its Draft-07
+    reference. In the same way, each time a timestamp be sent by or to Rappi, it shall be a 
+    string following the format ISO-8601 (“YYYY-MM-DDTHH:mm:ss.sssZ”).
+    
+    ## **Internal modifications (from Rappi to Linx)** ##
+    
+    These modifications events come from Rappi’s system. Each time a relevant
+    modification is made to a retailer’s order, Rappi will inform the retailer of the changes by
+    consuming the API that the retailer must provide. Most of these changes relate to the
+    status of the order through its lifecycle.
+    
+    The retailer’s API must be protected by a secret token. This token will be provided to the
+    retailer by Rappi. The retailer must store the given token in a secure place and shall be
+    sent in the Authorization header from each request. If a request arrives without the
+    expected token in the Authorization header, the request must be refused with a 401
+    HTTP status.
+    
+    If the retailer or Rappi suspects that the token has been compromised, Rappi will issue
+    a new token. Consequently, it is recommended that the retailer implements an easy way
+    to change the token without interfering with its operation. It is recommended to store the
+    token in an environment variable or a secure database.
+    
+    It is expected from the retailer to provide a base URL, which will be used to append the
+    different endpoint’s routes. For example, if the base URL provided is
+    [www.myretailer.com/api](www.myretailer.com/api), Rappi will try to send the information for a new order to
+    [www.myretailer.com/api/orders](www.myretailer.com/api/orders) with a POST HTTP request. Whenever an order id is to
+    be sent by Rappi, either in the URL path or in the request body, the id sent will be
+    Rappi’s order id, not the one assigned by the retailer.
+
+    ## **External modifications (from Linx to Rappi)** ##
+    
+    These modifications allow the retailer to modify the status or some details of its orders.
+    In order to perform the modifications in Rappi’s systems, the retailer must make use of
+    the REST API provided by Rappi.
+    
+    This API is protected using JWT authentication. The retailer shall use a sign-in service
+    to obtain its authentication token, that must be used whenever the Rappi’s API is
+    consumed. This token has an expiration time of twelve hours; each time the token
+    expires the retailer must request a new one by consuming the sign in service again.
+    
+    The sign in service requires the retailer’s username and secret. Both will be provided by
+    Rappi. It is the responsibility of the retailer to keep its username and secret securely
+    stored. If it is suspected that any security breach happened, the partner must inform
+    Rappi in order to generate a new secret as soon as possible. Any indication of the
+    misuse of the API will be put to review and may result in the suspension of the retailer’s
+    access to Rappi’s services.
+servers:
+  - url: 'http://microservices.dev.rappi.com/'
+    description: Sandbox
+  - url: 'https://services.rappi.com.br/'
+    description: Production
+    
+tags:
+- name: from Rappi to Linx
+  description: >
+    from Rappi to Linx
+    
+- name: from Linx to Rappi
+  description: >
+    from Linx to Rappi
+
+paths:
+          
+  /orders:
+    post:
+      tags:
+        - from Rappi to Linx
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          description: 'Rappi’s token: Corresponds to the password (**secret**) provided by Rappi.'
+          schema:
+            type: string
+      summary: Create new order
+      description: >
+        This endpoint will be consumed by Rappi when a user places a new order for the retailer. <br /><br />
+        
+        **IMPORTANT**<br />
+        
+        Orders with a card payment method can only be paid on the APP. But some orders can be paid in cash at the time of delivery. Anyway, all orders must be integrated with the paid status.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  retail_order_id:
+                    type: string
+                    description: Retail order id
+                    example: 313745123
+        '4XX':
+          description: Client error (4XX) response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message
+                    example: "Product not found"
+                  code:
+                    type: integer
+                    description: Error code
+                    example: 404
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
+          
+  '/orders/{orderId}/delivery':
+    put:
+      tags:
+        - from Rappi to Linx
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          description: 'Rappi’s token: Corresponds to the password (**secret**) provided by Rappi.'
+          schema:
+            type: string
+        - in: path
+          name: orderId
+          required: true
+          description: 'Rappi’s order_id'
+          schema:
+            type: string
+      summary: Order assigned to delivery boy
+      description: >
+        This endpoint will be consumed by Rappi after a delivery boy is assigned to the order. This endpoint can be consumed multiple times, each time it is consumed it signifies that the delivery boy was updated.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderDeliveryRequest'
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '4XX':
+          description: Client error (4XX) response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message
+                    example: "Order not found"
+                  code:
+                    type: integer
+                    description: Error code
+                    example: 404
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
+          
+  '/orders/{orderId}/taken':
+    post:
+      tags:
+        - from Rappi to Linx
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          description: 'Rappi’s token: Corresponds to the password (**secret**) provided by Rappi.'
+          schema:
+            type: string
+        - in: path
+          name: orderId
+          required: true
+          description: 'Rappi’s order_id'
+          schema:
+            type: string
+      summary: Order taken by delivery boy
+      description: >
+        This endpoint will be consumed by Rappi after the order’s delivery boy confirms that the order is taken at the store.
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '4XX':
+          description: Client error (4XX) response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message
+                    example: "Order not found"
+                  code:
+                    type: integer
+                    description: Error code
+                    example: 404
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
+          
+  '/orders/{orderId}/finish':
+    post:
+      tags:
+        - from Rappi to Linx
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          description: 'Rappi’s token: Corresponds to the password (**secret**) provided by Rappi.'
+          schema:
+            type: string
+        - in: path
+          name: orderId
+          required: true
+          description: 'Rappi’s order_id'
+          schema:
+            type: string
+      summary: Finish an order
+      description: >
+        This endpoint will be consumed by Rappi after the delivery boy successfully delivers the order to the customer.
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '4XX':
+          description: Client error (4XX) response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message
+                    example: "Order not found"
+                  code:
+                    type: integer
+                    description: Error code
+                    example: 404
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
+          
+  '/orders/{orderId}/cancel':
+    post:
+      tags:
+        - from Rappi to Linx
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          description: 'Rappi’s token: Corresponds to the password (**secret**) provided by Rappi.'
+          schema:
+            type: string
+        - in: path
+          name: orderId
+          required: true
+          description: 'Rappi’s order_id'
+          schema:
+            type: string
+      summary: Cancel an order
+      description: >
+        This endpoint will be consumed by Rappi when one of the retailer’s orders is cancelled, either by the client or by support.
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '4XX':
+          description: Client error (4XX) response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message
+                    example: "Order not found"
+                  code:
+                    type: integer
+                    description: Error code
+                    example: 404
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
+          
+  '/api/cpgops-integrations/retailers/sign-in':
+    post:
+      tags:
+        - from Linx to Rappi
+      summary: Sign in
+      description: >
+        This service must be used to obtain and refresh the retailers JWT token.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SigninRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZXRhaWxlciI6ImNvdG8iLCJpYXQiOjE1NjcwOTA1ODAsImV4cCI6MTU2NzEzMzc4MCwiaXNzIjoiUmFwcGkifQ.hO6-isST7fXVWNbdhyoGkskSgpBpFmxR3p8lizweCuY"
+                  expiresIn:
+                    type: number
+                    example: 43200
+        '4XX':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message
+                    example: "Retailer not found"
+                  code:
+                    type: integer
+                    description: Error code
+                    example: 404
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
+          
+  '/api/cpgops-integrations/orders/events':
+    post:
+      tags:
+        - from Linx to Rappi
+      parameters:
+        - in: header
+          name: Authorization
+          required: true
+          description: 'Retailer’s JWT token'
+          schema:
+            type: string
+      summary: External modification events endpoint
+      description: >
+        Rappi’s REST API for external modifications events consists of only one endpoint. Depending of the content sent by the retailer, different modifications can be made to an order. This end point is detailed below.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZXRhaWxlciI6ImNvdG8iLCJpYXQiOjE1NjcwOTA1ODAsImV4cCI6MTU2NzEzMzc4MCwiaXNzIjoiUmFwcGkifQ.hO6-isST7fXVWNbdhyoGkskSgpBpFmxR3p8lizweCuY"
+                  expiresIn:
+                    type: number
+                    example: 43200
+        '4XX':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Error message
+                    example: "Retailer not found"
+                  code:
+                    type: integer
+                    description: Error code
+                    example: 404
+        5XX:
+          $ref: '#/components/responses/UnexpectedError'
+
+components:
+
+  responses:
+    Created:
+      description: Created
+    NoContent:
+      description: No content (success)
+    NotFound:
+      description: The specified resource was not found
+    Unauthorized:
+      description: Unauthorized
+    BadRequest:
+      description: Bad request.
+    UnexpectedError:
+      description: Unexpected error.
+
+  schemas:
+    Address:
+      type: object
+      description: This object contains information relevant to the order’s address.
+      properties:
+        zip_code:
+          type: string
+          description:  Order’s zip code.
+          example: '12345-678'
+        street_address:
+          type: string
+          description: Client provided delivery address.
+          example: Alameda Campinas
+        description:
+          type: string
+          description: Provided address description.
+          example: Próximo a Linx
+        number:
+          type: string
+          description: Provided address number.
+          example: 22
+        city:
+          type: string
+          description: Provided address city.
+          example: "São Paulo"
+        region:
+          type: string
+          description: Provided address region.
+          example: "SP"
+    Delivery:
+      type: object
+      description: This object contains information relevant to the order’s delivery.
+      properties:
+        departure_time:
+          type: string
+          description: The expected time at which the order’s delivery boy will arrive to pick up the order.
+          example: "2019-02-18 20:33:38"
+        delivery_time:
+          type: string
+          description: The expected time at which the order should arrive to its client.
+          example: "2019-02-18 22:53:38"
+    Client:
+      type: object
+      description: This object contains the relevant information of the order’s client.
+      properties:
+        identification:
+          type: string
+          description: The identification number of the client.
+          example: 684832754
+        first_name:
+          type: string
+          description: The client’s first name.
+          example: Oscar
+        last_name:
+          type: string
+          description: The client’s last name.
+          example: Cruz
+        phone:
+          type: string
+          description: The client’s phone number.
+          example: 3137541258
+    Product:
+      type: object
+      description: This is a list in which each item corresponds to one product requested by the client in its order
+      properties:
+        id:
+          type: string
+          description: The order product’s id inside Rappi’s system. This is the id to be sent by the retailer to remove the product from the order or to modify its units.
+          example: 12323
+        retail_id:
+          type: string
+          description: The retailer’s product SKU.
+          example: "12323123"
+        quantity:
+          type: integer
+          description: The quantity of the product requested by the user. If the product is weightable for example, the quantity corresponds to the product’s weight.
+          example: 1
+        units:
+          type: integer
+          description: The amount of units of the product requested by the client.
+          example: 4
+        units_type:
+          type: string
+          description: String that specifies the units type. If the product is weightable that is specified here.
+          example: null
+        value:
+          type: integer
+          description: The value of the product in the specified amount.
+          example: 12323
+    OrderRequest:
+      type: object
+      properties:
+        order_id:
+          type: integer
+          description: The identification of the order inside Rappi’s system.
+          example: 123123132
+        total_value:
+          type: number
+          description: The total value of the order.
+          example: 12323.89
+        retail_store_id:
+          type: integer
+          description: The identification of the retailer’s store inside Rappi’s system.
+          example: 123
+        order_preference:
+          type: string
+          description: The selected preference by the order’s client concerning the treatment of problems with its order. This value will either be “update_products” or “cancel_order”. If update_products is sent, it signifies that the client agrees to receive the order partially with lower quantity of any stocked-out products or to remove the product entirely from the order. If cancel_order is sent it means that the client prefers that the order is cancelled if there is stockout.
+          enum:
+            - update_products
+            - cancel_order
+          example: cancel_order
+        client:
+          $ref: '#/components/schemas/Client'
+        delivery:
+          $ref: '#/components/schemas/Delivery'
+        address:
+          $ref: '#/components/schemas/Address'
+        products:
+          $ref: '#/components/schemas/Product'
+          
+    OrderDeliveryRequest:
+      type: object
+      properties:
+        order_id:
+          type: integer
+          description: Rappi’s order_id
+          example: 123123
+        vehicle_type:
+          type: string
+          description: The type of vehicle of the delivery boy.
+          example: "Moto"
+        carrier_name:
+          type: string
+          description: The delivery boy’s name.
+          example: "Raul Fonseca"
+        carried_id:
+          type: integer
+          description: Rappi’s identification for the delivery boy
+          example: 12323
+        identification_id:
+          type: string
+          description: The personal identification of the delivery boy
+          example: "12312312321"
+        departure_time:
+          type: string
+          description: The expected arrival time of the delivery boy to get the order.
+          example: "2019-02-18 20:33:38"
+        delivery_time:
+          type: string
+          description: The expected time in which the delivery boy finally hands the order to its client.
+          example: "2019-02-18 22:33:38"
+    SigninRequest:
+      type: object
+      properties:
+        retailer:
+          type: string
+          description: Corresponds to the username provided by Rappi.
+          example: "retailerUser"
+        secret:
+          type: string
+          description: Corresponds to the password provided by Rappi.
+          example: "jkAjsRs$%6s"
+    EventRequest:
+      type: object
+      properties:
+        event:
+          type: string
+          description: Corresponds to the external modification event type. The possible values will be explained below.
+          example: "invoice_created"
+          enum:
+            - invoice_created
+            - order_cancelled
+#            - order_delivered
+        timestamp:
+          type: string
+          description: timestamp of the moment the modification is generated in the retailer’s system.
+          example: "2019-02-09T12:38:05+00:00"
+        payload:
+          type: object
+          description: object that contains the necessary information to perform the modification.
+          properties:
+            <invoice_created_payload>:
+              type: object
+              description: Submit billing report payload properties.
+              properties:
+                total:
+                  type: number
+                  description: The total value of the order.
+                  example: 12000
+                invoice:
+                  type: string
+                  description:  A URL for the order’s invoice. Could redirect to an image or a document file.
+                  example: "http://www.retailer.com/billing_report/53234"
+                order_id:
+                  type: number
+                  description: Rappi’s order_id
+                  example: 12
+            <order_cancelled_payload>:
+              type: object
+              description: Cancel order payload properties.
+              properties:
+                order_id:
+                  type: number
+                  description: Rappi’s order_id
+                  example: 12
+                cancelation_reason:
+                  type: string
+                  description: Optional field that allows the retailer to specify the origin of the order’s cancellation.
+                  example: "insufficient_stocks"
+            <order_integrated>:
+              type: object
+              description: Integrated order payload properties. 
+              properties:
+                order_id:
+                  type: number
+                  description: Rappi’s order_id
+                  example: 12

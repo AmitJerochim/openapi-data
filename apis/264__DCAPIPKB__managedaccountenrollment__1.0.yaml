@@ -1,0 +1,247 @@
+openapi: 3.0.0
+info:
+  version: '1.0'
+  title: 'Professional Managed Account Enrollment'
+  description: 'API for professional Managed account enrollment in DC plans.'
+  termsOfService: 'http://alight.com/terms'
+  contact:
+    name: Alight Api Support Mailbox
+    email: alight.ApiSupport@alight.com
+paths:
+  /managedaccountenrollment/professionalManagedAccount/feeSchedule:
+    get:
+      description: This returns the professional managment account fee details . It call third party vendor Financial Engine API and fetch the details from there.  
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: alightPersonSessionToken
+          in: header
+          description: alight Person Session Token
+          schema:
+            type: string
+          required: true
+        - name: alightRequestHeader
+          in: header
+          description: alight Request Header. Please use systemTickets array to log FeSessionToken in alightRequestHeader if there is already a session created with FE. You can get this FeSessionToken from previous request alightResponseHeader to FE.
+          schema:
+            type: object
+          required: true
+      responses:
+        200:
+          description: fee structure details
+          headers:
+            alightPersonSessionToken:
+              schema:
+                type: string
+            alightResponseHeader:
+              schema:
+                type: object
+              description: systemTickets array in response header will be containing feSessionToken which need to be used in any further API call to FE. In same systemTickets array will also have x-amzn-requestid key which will unique id coming from FE side for each request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeeDetails'     
+      tags:
+        - Professional Managed Account enrollment
+  /managedaccountenrollment/professionalManagedAccount/legalDocumentLinks:
+    get:
+      description: This returns the professional managment account legal documents links.  
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: alightPersonSessionToken
+          in: header
+          description: Person Session Token
+          schema:
+            type: string
+          required: true
+        - name: alightRequestHeader
+          in: header
+          description: Request Header. Please use systemTickets array to log FeSessionToken in alightRequestHeader if there is already session created for that. You can get this FeSessionToken from previous request alightResponseHeader to FE
+            
+          schema:
+            type: string
+          required: true 
+        - name: context
+          in: query
+          description: Specify context for Managed Accounts or Online Advice. MA or OA
+          schema:
+            type: string
+          required: true  
+      responses:
+        200:
+          description: fee structure details
+          headers:
+            alightPersonSessionToken:
+              schema:
+                type: string
+            alightResponseHeader:
+              schema:
+                type: object
+              description: systemTickets array in response header will be contain feSessionToken which need to be used in any further API call to FE. In same systemTickets array will also have x-amzn-requestid key which will unique id coming from FE side for each request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LegalDocuments'
+        500:
+           description: Unsucessful request. Please see responsebody for specfic error which occured at FE side
+      tags:
+        - Professional Managed Account enrollment
+  /managedaccountenrollment/personProfessionalManagedAccountEnrollment:
+    post:
+      description: Enrolls ppt in professional managed account at third party side
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: alightPersonSessionToken
+          in: header
+          description: Person Session Token
+          schema:
+            type: string
+          required: true
+        - name: alightRequestHeader
+          in: header
+          description: Request Header. Please use systemTickets array to log FeSessionToken in alightRequestHeader if there is already session created for that. You can get this FeSessionToken from previous request alightResponseHeader to FE. 
+          schema:
+            type: string
+          required: true
+      responses:
+        201:
+          description: Successfully added enrollment data
+          headers:
+            alightPersonSessionToken:
+              schema:
+                type: string
+            alightResponseHeader:
+              schema:
+                type: object
+              description: systemTickets array in response header will be contain feSessionToken which need to be used in any further API call to FE. In same systemTickets array will also have x-amzn-requestid key which will unique id coming from FE side for each request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enrollment'
+        500:        
+          description: Error during enrollment
+          headers:
+            alightPersonSessionToken:
+              schema:
+                type: string
+            alightResponseHeader:
+              schema:
+                type: object
+              description: systemTickets array in response header will be contain feSessionToken which need to be used in any further API call to FE. In same systemTickets array will also have x-amzn-requestid key which will unique id coming from FE side for each request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentError'      
+      tags:
+        - Professional Managed Account enrollment
+components:
+  schemas:
+    FeeDetails:
+      type: object
+      properties:
+        feeScheduleTiers:
+          type: array
+          description: Contains data required for the business process
+          items: 
+            $ref: '#/components/schemas/FeeScheduleTier'
+        lowerThanIndustryPercentValue:
+          type: string
+          description: Whole number that expresses how the highest basis point rate on the sponsor fee schedule compares to the market fee schedule (where market fee schedule defaults to 100 basis points but is configurable via setting market-fee-basis-points at the provider level). In other words, how much lower than market fee schedule is the sponsor fee schedule? RoundingMode CEILING always rounds to a whole number, in multiples of 5. The whole number and percent sign is returned as a string.
+          example: "70%" 
+    FeeScheduleTier:
+      type: object
+      required: 
+        - lowAum
+      properties:           
+        lowerRangeAmount:
+          type: number
+          format: double
+          description: lower balance in the fee tier.
+          example: 0.01
+        higherRangeAmount:
+          type: number
+          format: double
+          description: higher balance in the fee tier. Zero means no boundary.
+          example: 15000.01  
+        ratePeriodFrequency:
+          type: string
+          description: Sample rate period frequency. MONTHLY is default, but is configurable via setting comm_fee_example_period at sponsor level. MONTHLY, QUARTER, ANNUAL
+          example: "MONTHLY"
+        sampleAmount:
+          type: number
+          format: double
+          description: $10000 is default, but is configurable via setting comm_fee_example_balance at sponsor level
+          example: 10000.00
+        sampleFeePerPeriod:
+          type: number
+          description: Result, in dollars, of calculating (sampleAmount x feeRate)/ratePeriodFrequency .CEILING always rounds up to the next cent. This will be based upon ratePeriodFrequency.
+          example: 8.34 
+        feeRate:
+          type: number
+          format: double
+          description: Always represents basis points and not dollars; error response code 500 is returned if in dollars. Supports values to the ten thousandths place. 
+          example: 0.0045
+    LegalDocuments:
+      type: object
+      properties:
+        legalDocuments:
+          type: array
+          description: Contains data required for the business process
+          items: 
+            $ref: '#/components/schemas/LegalDocument'
+    LegalDocument:
+      type: object
+      required: 
+        - id
+      properties:           
+        id:
+          type: string
+          description: identifier for the document
+          example: "doc.ma-terms"
+        url:
+          type: string
+          description: URL location of the document.
+          example: "https://legaldocs.feitest.io/Master/FEA_ProfManagement_Terms.pdf"
+        caption:
+          type: string
+          description: title of the document
+          example: "Terms & Conditions"
+    Enrollment:
+      type: object
+      properties:           
+        messageCode:
+          type: string
+          description: code for sucessfull enrollement. It can be ENROLL or 
+                       ENROLL_PLUS_INVESTMENT_OBJECTIVE_SET_TO_INCOME
+          example: "ENROLL"
+        message:
+          type: string
+          description: message from third party after election.
+          example: "user enrolled"
+        confirmationNumber:
+          type: string
+          description: confirmation number from third party
+          example: "236044290"      
+    EnrollmentError:
+      type: object
+      properties:           
+        status:
+          type: string
+          description: code for unsucessfull enrollement. It can be
+                       SPONSOR_NOT_ACTIVE_MA_SPONSOR or PLAN_OWNER_NOT_IN_PRODUCTION or
+                       NO_ACCOUNT_ALLOWS_MA or many other value which can help in identify the reason.
+          example: "HOLD_PREVENTING_DEFAULT"
+        message:
+          type: string
+          description: message from third party after unsucessfull enrollement.
+          example: "client have a hold preventing deafult "
+        errorCode:  
+          type: string
+          description:  alight code for unsucessfull enrollement. 
+          example: "TPE00101"
+# Added by API Auto Mocking Plugin
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/DCAPIPKB/managedaccountenrollment/1.0

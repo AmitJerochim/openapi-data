@@ -1,0 +1,1453 @@
+openapi: 3.0.0
+info:
+  title: Spendies Backend API
+  version: '1.0'
+  description: 'This RESTful API is for accessing the back-end functionality of Spendies,  such as registering and verifying accounts, and creating and retrieving wallets, transaction requests, and performing transaction fullfilments.'
+  termsOfService: 'https://spendies.app/terms/'
+  contact:
+    email: connect@spendies.app
+    name: Spendies API Team
+    url: 'https://spendies.app'
+  license:
+    name: Licence usage - Apache 2.0
+    url: 'https://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: Account Management
+    description: Resources in this group are related to account management.
+  - name: Wallet Management
+    description: Resources in this group are related to wallet management.
+  - name: Transaction Management
+    description: Resources in this group are related to transaction management.
+  - name: Settlement Management
+    description: Resources in this group are related to settlement management.
+security:
+  - apiKeyAuth: []
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: 'https://virtserver.swaggerhub.com/robertvanmolken/SpendiesAPI/1.0'
+  - description: Development Review API
+    url: 'https://13234693-review-develop-3zknud.206.189.240.85.nip.io'
+paths:
+  /accounts:
+    post:
+      tags:
+        - Account Management
+      summary: Provides registration capability for creating a new user account.
+      description: Register a new account to access the front-end application and create new transaction requests.
+      operationId: create-account
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/CreateAccountRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/CreateAccountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+  /accounts/verify:
+    post:
+      tags:
+        - Account Management
+      summary: Provides KYC capability for existing accounts for verifying email and phone number.
+      description: To allow other people to pay a user back in FIAT currency we need to perform a 2-phase KYC enquiry. This operation sends a verification code to given email address or phone number to authorize this capability.
+      operationId: verify-account
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/VerifyAccountRequest'
+      responses:
+        '204':
+          description: Verification code send
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags:
+        - Account Management
+      summary: Provides KYC capability for storing account email and phone number.
+      description: After sending a verification code to the given email or phone number the user needs to complete the process by calling this operation with the received verification code.
+      operationId: validate-account
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/VerifyCodeParam'
+      responses:
+        '201':
+          $ref: '#/components/responses/ResourceLocationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+  /accounts/bankcheck:
+    post:
+      tags:
+        - Account Management
+      summary: Provides KYC capability for existing accounts for verifying their bank.
+      description:  To allow other people to pay a user back in FIAT currency we need to perform a 2-phase KYC enquiry. This operation creates a settlement to validate identity of person through its bank. 
+      operationId: verify-bank
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/VerifyBankRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/InitBankCheckResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+  '/accounts/bankcheck/callback':
+    post:
+      tags:
+        - Account Management
+      summary: Provides callback capability for processing account KYC status.
+      description: Process the account status update from third party KYC services.
+      operationId: validate-bank
+      security: []
+      parameters:
+        - in: query
+          name: accountId
+          required: true
+          schema:
+            $ref: '#/components/schemas/AccountId'
+          description: The account ID
+        - in: query
+          name: provider
+          required: false
+          schema:
+            type: string
+            example: nocks
+          description: Provider who executed KYC service
+      requestBody:
+        description: Reference uuid of KYC transaction
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+              format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/ProcessCallbackResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /accounts/me:
+    get:
+      tags:
+        - Account Management
+      summary: Provides retrieval capability for returning the account information of logged in user.
+      description: Retrieve the account information of the user that is logged in.
+      operationId: retrieve-account
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/RetrieveAccountResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags:
+        - Account Management
+      summary: Provides registration capability for updating the account information of logged in user.
+      description: Store the new account information of the user that is logged in.
+      operationId: update-account
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateAccountRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/RetrieveAccountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+  /auth/magiclink:
+    post:
+      tags:
+        - Account Management
+      summary: Provides authentication capability for returning accounts by creating a new magic link.
+      description: Submit request for receiving new magic authentication link based on given device/account information to get access to the application.
+      operationId: request-magiclink
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/MagicLinkRequest'
+      responses:
+        '204':
+          description: Magic link send
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+  /auth/magiclink/callback:
+    get:
+      tags:
+        - Account Management
+      summary: Provides autorization capability for returning accounts by creating a new auth token.
+      description: Create/retrieve a new API authorization token based on given magic link  details to give user account access to the application.
+      operationId: verify-magiclink
+      parameters:
+        - $ref: '#/components/parameters/MagicLinkParam'
+        - $ref: '#/components/parameters/SignatureParam'
+      responses:
+        '201':
+          $ref: '#/components/responses/AuthenticateResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+  /wallets:
+    get:
+      tags:
+        - Wallet Management
+      summary: Provides retrieval capability for returning wallets beloning to the authenticated account.
+      description: Retrieve a list of wallets that belong to the current account based on  the value of the authorization cookie.
+      operationId: retrieve-wallets
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/RetrieveWalletsResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Wallet Management
+      summary: Provides registration capability for creating new wallets for the authenticated account.
+      description: Register a new wallet which can be used in setting up transactions or use  in outstanding transactions.
+      operationId: create-wallet
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/CreateWalletRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/CreateWalletResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        default:
+          $ref: '#/components/responses/InternalServerError'
+  '/wallets/{walletId}':
+    get:
+      tags:
+        - Wallet Management
+      summary: Provides retrieval capability for returning wallet details.
+      description: Retrieve a list of wallets that belong to the current account based on  the value of the authorization cookie.
+      operationId: get-wallet
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: walletId
+          required: true
+          schema:
+            $ref: '#/components/schemas/WalletId'
+          description: The wallet ID
+      responses:
+        '200':
+          $ref: '#/components/responses/RetrieveWalletResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Wallet Management
+      summary: Provides removal capability for deleting a wallet for the authenticated account.
+      description: Remove a wallet for the authenticated account so it can no longer be  used when creating new transactions.
+      operationId: remove-wallet
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: walletId
+          required: true
+          schema:
+            $ref: '#/components/schemas/WalletId'
+          description: Id of the wallet
+      responses:
+        '204':
+          description: Successful wallet removal
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /transactions:
+    get:
+      tags:
+        - Transaction Management
+      summary: Provides retrieval capability for returning transaction requests beloning to the authenticated account.
+      description: Retrieve the details of requested transactions in order to display them on screen.
+      operationId: get-transactions
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+          description: Limit the amount of results
+        - in: query
+          name: start
+          required: false
+          schema:
+            type: integer
+          description: Starting point of returned results
+      responses:
+        '200':
+          $ref: '#/components/responses/RetrieveTransactionsResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Transaction Management
+      summary: Provides registration capability for creating new transactions by the authenticated account.
+      description: Register a new transaction request that can be send by a shareble link to  (non) users of spendies.
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      operationId: create-transaction
+      responses:
+        '201':
+          $ref: '#/components/responses/CreateTransactionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      requestBody:
+        description: New transaction request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Transaction'
+  '/transactions/{transactionId}':
+    get:
+      tags:
+        - Transaction Management
+      summary: Provides retrieval capability for returning public transaction request details.
+      description: Retrieve the details of a transaction request in order to settle the amount of digital currency.
+      operationId: get-transaction
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - in: path
+          name: transactionId
+          required: true
+          schema:
+            $ref: '#/components/schemas/TransactionId'
+          description: The transaction request ID
+      responses:
+        '200':
+          $ref: '#/components/responses/RetrieveTransactionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Transaction Management
+      summary: Provides removal capability for deleting a transaction request for the authenticated account.
+      description: Remove a transaction request for the authenticated account so it can no  longer be viewed and shared.
+      operationId: remove-transaction
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: transactionId
+          required: true
+          schema:
+            $ref: '#/components/schemas/TransactionId'
+          description: The transaction request ID
+      responses:
+        '204':
+          description: Successful wallet removal
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  '/transactions/{transactionId}/details':
+    get:
+      tags:
+        - Transaction Management
+      summary: Provides retrieval capability for returning transaction request details for authenticated accounts.
+      description: Retrieve the details of a transaction request in order to setlle the amount of crypto currency.
+      operationId: get-transaction-details
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: transactionId
+          required: true
+          schema:
+            $ref: '#/components/schemas/TransactionId'
+          description: The transaction request ID
+      responses:
+        '200':
+          $ref: '#/components/responses/RetrieveTransactionResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /settlements:
+    get:
+      tags:
+        - Settlement Management
+      summary: Provides retrieval capability for returning transaction settlements beloning to the authenticated account.
+      description: Retrieve the details of transaction settlements displaying it's status.
+      operationId: get-settlements
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: transactionId
+          required: true
+          schema:
+            type: string
+          description: ID of transaction
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+          description: Limit the amount of results
+        - in: query
+          name: start
+          required: false
+          schema:
+            type: integer
+          description: Starting point of returned results
+      responses:
+        '200':
+          $ref: '#/components/responses/RetrieveSettlementsResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Settlement Management
+      summary: Provides registration capability for creating new settlements by receiving party.
+      description: Register a new settlement request that initiates a payment setllement process.
+      security:
+        - apiKeyAuth: []
+      operationId: create-settlement
+      responses:
+        '201':
+          $ref: '#/components/responses/CreateSettlementResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      requestBody:
+        description: New settlement request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettlementCreate'
+  '/settlements/{settlementId}':
+    get:
+      tags:
+        - Settlement Management
+      summary: Provides retrieval capability for returning settlement details.
+      description: Retrieve the details of a settlement in order to check its status.
+      operationId: get-settlement
+      security:
+        - apiKeyAuth: []
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: settlementId
+          required: true
+          schema:
+            $ref: '#/components/schemas/SettlementId'
+          description: The settlement request ID
+      responses:
+        '200':
+          $ref: '#/components/responses/RetrieveSettlementResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  '/settlements/{settlementId}/status':
+    get:
+      tags:
+        - Settlement Management
+      summary: Provides retrieval capability for returning settlement status.
+      description: Retrieve the status of a settlement.
+      operationId: get-settlement-status
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - in: path
+          name: settlementId
+          required: true
+          schema:
+            $ref: '#/components/schemas/SettlementId'
+          description: The settlement request ID
+      responses:
+        '200':
+          $ref: '#/components/responses/SettlementStatusResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  '/settlements/{settlementId}/callback':
+    post:
+      tags:
+        - Settlement Management
+      summary: Provides callback capability for processing settlement status.
+      description: Process the settlement status update from third party payment services.
+      operationId: process-callback
+      security: []
+      parameters:
+        - in: path
+          name: settlementId
+          required: true
+          schema:
+            $ref: '#/components/schemas/SettlementId'
+          description: The settlement request ID
+        - in: query
+          name: provider
+          required: false
+          schema:
+            type: string
+            example: nocks
+          description: Provider who executed settlement
+      requestBody:
+        description: Reference uuid of PSP transaction
+        required: true
+        content:
+          text/plain:
+            schema:
+              type: string
+              format: uuid
+      responses:
+        '200':
+          $ref: '#/components/responses/ProcessCallbackResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntityError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            statusCode:
+              type: integer
+              description: The status code as a number
+            name:
+              type: string
+              description: 'The name of the error as a "bumpy case", i.e. NotFound or  InternalServerError.'
+            message:
+              type: string
+              description: 'The traditional error message, which should be kept short and  all single line'
+            code:
+              type: string
+              description: The application error code
+            details:
+              type: array
+              items:
+                type: object
+              description: The application error details
+          required:
+            - statusCode
+            - name
+    Account:
+      type: object
+      properties:
+        signature:
+          type: string
+          format: byte
+          description: Account signature
+          example: eyAiZGV2aWNlSWQiOiAiMmI2ZjBjYzkwNGQxMzdiZTJlMTczMDIzNWY1NjY0MDk0YjgzMTE4NiIgfQ==
+        name:
+          type: string
+          description: Given name of account
+          example: Jasper
+      required:
+        - signature
+        - name
+    AccountCreate:
+      type: object
+      properties:
+        account:
+          $ref: '#/components/schemas/Account'
+        wallet:
+          $ref: '#/components/schemas/Wallet'
+      required:
+        - account
+    AccountResult:
+      type: object
+      properties:
+        token:
+          $ref: '#/components/schemas/AuthToken'
+      required:
+        - token
+    AccountUpdate:
+      type: object
+      properties:
+        signature:
+          type: string
+          format: byte
+          description: Account signature
+          example: eyAiZGV2aWNlSWQiOiAiMmI2ZjBjYzkwNGQxMzdiZTJlMTczMDIzNWY1NjY0MDk0YjgzMTE4NiIgfQ==
+        name:
+          type: string
+          description: Given name of account
+          example: Jasper
+        email:
+          type: string
+          format: email
+          description: Email address of account
+          example: jasper@example.com
+      required:
+        - signature
+    AccountKYC:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address of account
+          example: jasper@example.com
+        phone:
+          type: string
+          pattern: '^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$'
+          description: Phone number of account
+          example: +31 610 111 213
+      required:
+        - phone
+    AccountInfo:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of account
+          example: Jasper
+        email:
+          type: string
+          format: email
+          description: Email address of account
+          example: jasper@example.com
+        phone:
+          type: string
+          pattern: '^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$'
+          description: Phone number of account
+          example: +31 610 111 213
+        authLevel:
+          type: integer
+          format: int32
+          description: Authorisation level of account
+          enum:
+            - 0
+            - 1
+            - 2
+            - 3
+        wallets:
+          type: array
+          items:
+            $ref: '#/components/schemas/WalletWithId'
+      required:
+        - name
+        - authLevel
+    BankCheck:
+      type: object
+      properties:
+        method:
+          type: string
+          enum:
+            - ideal
+          example: ideal
+          description: Method of Verification
+        issuer:
+          type: string
+          example: RABONL2U
+          description: Settle verification through issuer
+      required:
+        - method
+        - issuer
+    BankCheckResult:
+      type: object
+      properties:
+        redirectUrl:
+          type: string
+          format: uri
+          example: 'https://provider.com/transaction/9eb08ee6-edea-4de0-8403-399698d0e32'
+          description: URL to check bank
+      required:
+        - redirectUrl
+    TokenPayload:
+      type: object
+      properties:
+        iss:
+          type: string
+          description: Name of service provider
+          example: spendies
+        sub:
+          type: string
+          description: Subscription (account id)
+          example: 2ddbddabb77e79d10da7e291a515ed29f2ecc97b
+        dev:
+          type: string
+          description: Unique id of device
+          example: 2644b25202d2561d6194078a6b50d339
+        exp:
+          type: integer
+          format: int64
+          description: Expire after time
+          example: 1573147302
+        iat:
+          type: integer
+          format: int64
+          description: Issued at time
+          example: 1557418902
+      required:
+        - iss
+        - sub
+        - dev
+    Signature:
+      type: object
+      properties:
+        uniqueId:
+          type: string
+          description: Unique id of device
+          example: 2644b25202d2561d6194078a6b50d339
+        userAgent:
+          type: string
+          description: User agent of browser
+          example: 'Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143'
+        ipAddress:
+          type: string
+          format: ipv4
+          description: IP Address of device
+          example: 89.20.162.146
+      required:
+        - uniqueId
+        - userAgent
+        - ipAddress
+    TokenRequest:
+      type: object
+      properties:
+        signature:
+          type: string
+          format: byte
+          description: Account signature
+          example: eyAiZGV2aWNlSWQiOiAiMmI2ZjBjYzkwNGQxMzdiZTJlMTczMDIzNWY1NjY0MDk0YjgzMTE4NiIgfQ==
+        email:
+          type: string
+          format: email
+          description: Email address of account
+          example: jasper@example.com
+        phone:
+          type: string
+          pattern: '^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$'
+          description: Phone number of account
+          example: +31 610 111 213
+      required:
+        - signature
+    Wallet:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Display name of wallet
+          example: Ethereum
+        address:
+          type: string
+          description: Address of wallet
+          example: '0x026FE98b9Bc1Cc16ED443ee5350A397c6b2Ef040'
+        currency:
+          type: string
+          description: Currency of wallet
+          example: ETH
+        preferred:
+          type: boolean
+          description: Set as preferred wallet
+          example: true
+          default: true
+      required:
+        - name
+        - address
+        - currency
+    WalletResult:
+      type: object
+      properties:
+        walletId:
+          $ref: '#/components/schemas/WalletId'
+      required:
+        - walletId
+    WalletWithId:
+      allOf:
+        - type: object
+          properties:
+            walletId:
+              $ref: '#/components/schemas/WalletId'
+          required:
+            - walletId
+        - $ref: '#/components/schemas/Wallet'
+    TransactionResult:
+      type: object
+      properties:
+        transactionId:
+          $ref: '#/components/schemas/TransactionId'
+      required:
+        - transactionId
+    TransactionWithId:
+      allOf:
+        - type: object
+          properties:
+            transactionId:
+              $ref: '#/components/schemas/TransactionId'
+          required:
+            - transactionId
+        - $ref: '#/components/schemas/Transaction'
+    SettlementResult:
+      type: object
+      properties:
+        settlementId:
+          $ref: '#/components/schemas/SettlementId'
+        paymentUrl:
+          type: string
+          format: uri
+          example: 'https://provider.com/transaction/9eb08ee6-edea-4de0-8403-399698d0e32'
+          description: URL to settle payment
+      required:
+        - settlementId
+        - paymentUrl
+    SettlementWithId:
+      allOf:
+        - type: object
+          properties:
+            settlementId:
+              $ref: '#/components/schemas/SettlementId'
+          required:
+            - settlementId
+        - $ref: '#/components/schemas/Settlement'
+    SettlerRecipient:
+      type: object
+      properties:
+        name:
+          type: string
+          example: John
+          description: Name of recipient
+        address:
+          type: string
+          example: '0x026FE98b9Bc1Cc16ED443ee5350A397c6b2Ef040'
+          description: Wallet address of recipient
+        links:
+          $ref: '#/components/schemas/LinkedData'
+      required:
+        - address
+    LinkedData:
+      type: object
+      properties:
+        linkedAccount:
+          $ref: '#/components/schemas/AccountId'
+        linkedWallet:
+          $ref: '#/components/schemas/WalletId'
+        linkedSettlement:
+          $ref: '#/components/schemas/SettlementStatus'
+    Transaction:
+      type: object
+      properties:
+        method:
+          type: string
+          enum:
+            - request
+            - sent
+          example: request
+          description: Type of transaction
+        dateInitiated:
+          type: string
+          format: date-time
+          example: '2019-01-31T09:00:00Z'
+          description: Initiated date of transaction
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        reasonForTransaction:
+          type: string
+          example: An awesome Crypto night
+          description: Reason for transaction request
+        targetCurrency:
+          type: string
+          example: ETH
+          description: Target (crypto) currency to be paid in
+        targetAmount:
+          type: number
+          format: float
+          example: 0.09562086
+          description: Target (crypto) amount to be paid
+        sourceCurrency:
+          type: string
+          example: EUR
+          description: Source (fiat) currency used for conversion
+        sourceAmount:
+          type: number
+          format: double
+          example: 9.65
+          description: Source (fiat) amount to be converted
+        expectedSettlements:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 1
+          description: Amount of expected settlements
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlerRecipient'
+          uniqueItems: true
+          description: List of recipients
+        settlers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettlerRecipient'
+          uniqueItems: true
+          description: List of settlers
+      required:
+        - method
+        - dateInitiated
+        - status
+        - reasonForTransaction
+        - targetCurrency
+        - targetAmount
+        - expectedSettlements
+    StatusEnum:
+      type: string
+      enum:
+        - 'open'
+        - 'pending'
+        - 'cancelled'
+        - 'paid'
+        - 'completed'
+        - 'expired'
+        - 'refunded'
+        - 'settled'
+      example: pending
+      description: Status of tx / settlement
+    Settlement:
+      type: object
+      properties:
+        method:
+          type: string
+          enum:
+            - ideal
+            - crypto
+          example: ideal
+          description: Method of settlement
+        dateInitiated:
+          type: string
+          format: date-time
+          example: '2019-01-31T10:00:00Z'
+          description: Initiated date of settlement
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        issuer:
+          type: string
+          example: RABONL2U
+          description: Settle transaction through issuer
+        currency:
+          type: string
+          example: EUR
+          description: Currency to settle in
+        amount:
+          type: number
+          format: float
+          example: 30.5
+          description: Amount to be settled
+        linkedTx:
+          $ref: '#/components/schemas/TransactionId'
+        linkedOrder:
+          $ref: '#/components/schemas/OrderId'
+      required:
+        - method
+        - dateInitiated
+        - status
+        - issuer
+        - currency
+        - amount
+    SettlementCreate:
+      type: object
+      properties:
+        transaction:
+          $ref: '#/components/schemas/TransactionId'
+        method:
+          type: string
+          enum:
+            - ideal
+            - crypto
+          example: ideal
+          description: Method of settlement
+        dateInitiated:
+          type: string
+          format: date-time
+          example: '2019-01-31T10:00:00Z'
+          description: Initiated date of settlement
+        issuer:
+          type: string
+          example: RABONL2U
+          description: Settle transaction through issuer
+        currency:
+          type: string
+          example: EUR
+          description: Currency to settle in
+        amount:
+          type: number
+          format: float
+          example: 30.5
+          description: Amount to be settled
+      required:
+        - transaction
+        - method
+        - dateInitiated
+        - issuer
+        - currency
+        - amount
+    SettlementStatus:
+      type: object
+      properties:
+        settlementId:
+          $ref: '#/components/schemas/SettlementId'
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+      required:
+        - settlementId
+        - status
+    AccountId:
+      type: string
+      description: ID of Account
+      example: 241d137e7201fe1d94fca7b9ea021f3e3fe08933
+    TransactionId:
+      type: string
+      description: ID of Transaction
+      example: 3ab35386c0c7fe155e93024bf80e3c574c5818b5
+    OrderId:
+      type: string
+      description: ID of external Order
+      example: f15c0b1a-6205-4425-b772-ccffdf13ad92
+    SettlementId:
+      type: string
+      description: ID of Settlement
+      example: 59d68b9b058a4c104ceaf596cf6ce4033cc0a7f4
+    WalletId:
+      type: string
+      description: ID of Wallet
+      example: 1a50672c16f80cbc9bc067102014b2a16103fdd9
+    AuthToken:
+      type: string
+      description: Authorization token
+      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+  parameters:
+    MagicLinkParam:
+      name: mlv
+      in: query
+      description: The magic link value (mlv) send to user via email or phone
+      required: true
+      schema:
+        type: string
+    SignatureParam:
+      name: ct-signature
+      in: header
+      description: Account signature
+      required: true
+      schema:
+        format: byte
+        type: string
+      example: eyAiZGV2aWNlSWQiOiAiMmI2ZjBjYzkwNGQxMzdiZTJlMTczMDIzNWY1NjY0MDk0YjgzMTE4NiIgfQ==
+    VerifyCodeParam:
+      name: ct-verify-code
+      in: header
+      description: Verification code to validate account
+      required: true
+      schema:
+        type: integer
+        format: int32
+        pattern: '[\d]{6}'
+  requestBodies:
+    CreateAccountRequest:
+      description: Create a new user account
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AccountCreate'
+    UpdateAccountRequest:
+      description: Update the account information of a user
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AccountUpdate'
+    VerifyAccountRequest:
+      description: Verify a user account through its device
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AccountKYC'
+    VerifyBankRequest:
+      description: Verify a user account through its bank
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BankCheck'
+    MagicLinkRequest:
+      description: Request Authentication Link
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TokenRequest'
+    CreateWalletRequest:
+      description: Create a new wallet for a user
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Wallet'
+  responses:
+    BadRequestError:
+      description: 'Error: Bad request'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 400
+            name: BadRequestError
+            message: The request body is invalid
+    UnprocessableEntityError:
+      description: 'Error: Unprocessable Entity'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 422
+            name: UnprocessableEntityError
+            message: The request body is invalid
+            code: VALIDATION_FAILED
+            details:
+              path: .account
+              code: required
+              message: should have required property 'name'
+              missingProperty: name
+    UnauthorizedError:
+      description: 'Error: Unauthorized'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 401
+            name: UnauthorizedError
+            message: Missing or bad authentication
+    ForbiddenError:
+      description: 'Error: Forbidden'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 403
+            name: ForbiddenError
+            message: No permission to access this resource
+    NotFoundError:
+      description: 'Error: Not Found'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 404
+            name: NotFoundError
+            message: Resource XXX not found
+    InternalServerError:
+      description: 'Error: Internal Server Error'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            statusCode: 500
+            name: InternalServerError
+            message: Not Implemented
+    AuthenticateResponse:
+      description: Successful authentication
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AccountResult'
+    CreateAccountResponse:
+      description: Successful account creation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AccountResult'
+    RetrieveAccountResponse:
+      description: Users account information
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AccountInfo'
+    CreateWalletResponse:
+      description: Successful wallet creation
+      headers:
+        Location:
+          schema:
+            format: uri
+            type: string
+            example: /wallets/0548f80ad6ce34bed266
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WalletResult'
+      links:
+        GetWalletByWalletId:
+          $ref: '#/components/links/GetWalletByWalletId'
+    RetrieveWalletResponse:
+      description: Single wallet result
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Wallet'
+    RetrieveWalletsResponse:
+      description: List of wallets result
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/WalletWithId'
+    CreateTransactionResponse:
+      description: Successful transaction creation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TransactionResult'
+      links:
+        GetTransactionByTransactionId:
+          $ref: '#/components/links/GetTransactionByTransactionId'
+    CreateSettlementResponse:
+      description: Successful settlement creation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SettlementResult'
+    InitBankCheckResponse:
+      description: Successful initiated bank check
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BankCheckResult'
+    ProcessCallbackResponse:
+      description: Successful processed callback
+      content:
+        application/json:
+          schema:
+            anyOf:
+              - type: string
+              - type: number
+              - type: integer
+              - type: boolean
+              - type: array
+                items: {}
+              - type: object
+            nullable: true
+            example: {}
+            description: 'Can be any value, including `null`.'
+        text/plain:
+          schema:
+            type: string
+    ResourceLocationResponse:
+      description: Successful updated
+      headers:
+        Location:
+          description: The link to resource
+          schema:
+            format: uri
+            type: string
+            example: /accounts/me
+    RetrieveTransactionResponse:
+      description: Single transaction request result
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Transaction'
+    RetrieveTransactionsResponse:
+      description: List of transaction requests result
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/TransactionWithId'
+    RetrieveSettlementResponse:
+      description: Single transaction settlement result
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Settlement'
+    SettlementStatusResponse:
+      description: Status of settlement
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SettlementStatus'
+    RetrieveSettlementsResponse:
+      description: List of transaction settlements result
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/SettlementWithId'
+  links:
+    GetWalletByWalletId:
+      description: 'The `walletId` value returned in the response can be used as the `walletId` parameter in `GET /wallets/{walletId}`.'
+      operationId: get-wallet
+      parameters:
+        walletId: '$response.body#/walletId'
+    GetTransactionByTransactionId:
+      description: 'The `transactionId` value returned in the response can be used as the `transactionId` parameter in `GET /transactions/{transactionId}`.'
+      operationId: get-transaction
+      parameters:
+        transactionId: '$response.body#/transactionId'
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: CT-Api-Key
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

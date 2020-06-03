@@ -1,0 +1,378 @@
+openapi: 3.0.1
+info:
+  title: SecuMailer Public API
+  description: |
+    The SecuMailer Public API allows you to send email messages securely via our service. Next to that you are able to register new organizations / domains via the account API call. Each organization needs to implement a specific set of DNS records in order to use the SecuMailer service. If you supply SecuMailer with a webhook url you will be notified of these settings when creating a new organization / domain. If you can't support a webhook you can do a get call on the account endpoint and get the required DNS settings. Only after applying the DNS settings are you able to send email via the SecuMailer platform.
+    
+    The information you will receive from the account endpoint is divided into two sections: DNS settings for receiving email (MX records) and DNS settings for sending email (TXT records). The receiving email settings are for a subdomain of the organizations email domain and don't interfere with the regular email flow of an organization. These records are needed to receive out-of-band non-delivery receipts and are not used to facilitate mailboxes. The sending DNS records apply SPF, DKIM and DMARC policies to the email that is sent via the SecuMailer platform and demonstrate proof of ownership of the domain to the SecuMailer platform.
+  
+    You will have received two API keys from SecuMailer in order to be able to use the service. One key for the SecuMailer acceptance environment and a key for the production environment. Both environments provide the same functionality and allow you to send to real recipients. 
+  version: "1.1.0"
+  contact:
+    name: API Support
+    email: support@secumailer.com
+servers:
+  - url: https://test-public-api.secumail.nl/
+    description: Acceptance Environment for SecuMailer Public API
+  - url: https://public-api.secumail.nl/
+    description: Production Environment for SecuMailer Public API
+
+paths:
+  
+  /message:
+    post:
+      operationId: setMessage
+      description: Sends a secure email. Each email must have a sender, recipient(s) and a MIME encoded, escaped email message.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+            example: >
+                { "sender": "sender@example.com", "recipient": ["recipient@example.net"], "body": "From: \"Test Sender\" <sender@example.com>\r\nTo: Test Recipient <recipient@example.net>\r\nMessage-ID: <HE1PR03MB15630A98B97B714C5E9CADCF9F920@HE1PR03MB1563.eurprd03.prod.outlook.com>\r\nDate: Fri, 7 Jun 2019 17:20:19 +0000\r\nSubject: Example\r\nContent-Type: multipart\/mixed;\r\n        boundary=\"_004_6a168860dad6479d9ef568358d518ee5_\"\r\nMIME-Version: 1.0\r\n\r\n--_004_6a168860dad6479d9ef568358d518ee5_\r\nContent-Type: multipart\/alternative;\r\n        boundary=\"_000_6a168860dad6479d9ef568358d518ee5_\"\r\n\r\n--_000_6a168860dad6479d9ef568358d518ee5_\r\nContent-Type: text\/plain; charset=\"iso-8859-1\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n\r\n\r\n--_000_6a168860dad6479d9ef568358d518ee5_\r\nContent-Type: text\/html; charset=\"iso-8859-1\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n<html>\r\n<head>\r\n<meta http-equiv=3D\"Content-Type\" content=3D\"text\/html; charset=3Diso-8859-=\r\n1\">\r\n<style type=3D\"text\/css\" style=3D\"display:none;\"><!-- P {margin-top:0;margi=\r\nn-bottom:0;} --><\/style>\r\n<\/head>\r\n<body dir=3D\"ltr\">\r\n<div id=3D\"divtagdefaultwrapper\" style=3D\"font-size:12pt;color:#000000;font=\r\n-family:Calibri,Helvetica,sans-serif;\" dir=3D\"ltr\">\r\n<p><br>\r\n<\/p>\r\n<\/div>\r\n<\/body>\r\n<\/html>\r\n\r\n--_000_6a168860dad6479d9ef568358d518ee5_--\r\n\r\n--_004_6a168860dad6479d9ef568358d518ee5_\r\nContent-Type: application\/vnd.ms-excel; name=\"data.csv\"\r\nContent-Description: data.csv\r\nContent-Disposition: attachment; filename=\"data.csv\"; size=532;\r\n        creation-date=\"Sun, 01 Jul 2018 17:20:49 GMT\";\r\n        modification-date=\"Sun, 01 Jul 2018 17:20:49 GMT\"\r\nContent-Transfer-Encoding: base64\r\n\r\ndGltZSxEZWxpdmVyZWQsU3VwcHJlc3NlZCxEcm9wcGVkLFBvc3RzIHZpYSBSb3V0ZXMKU2F0IE1h\r\neSAxOSAyMDE4IDAyOjAwOjAwIEdNVCswMjAwIChXZXN0LUV1cm9wYSAoem9tZXJ0aWpkKSksMTAs\r\nMCwxOCwwClN1biBNYXkgMjAgMjAxOCAwMjowMDowMCBHTVQrMDIwMCAoV2VzdC1FdXJvcGEgKHpv\r\nbWVydGlqZCkpLDUsMCw0LDAKTW9uIE1heSAyMSAyMDE4IDAyOjAwOjAwIEdNVCswMjAwIChXZXN0\r\nLUV1cm9wYSAoem9tZXJ0aWpkKSksOCwwLDQsMApUdWUgTWF5IDIyIDIwMTggMDI6MDA6MDAgR01U\r\nKzAyMDAgKFdlc3QtRXVyb3BhICh6b21lcnRpamQpKSwzMSwwLDQsMApXZWQgTWF5IDIzIDIwMTgg\r\nMDI6MDA6MDAgR01UKzAyMDAgKFdlc3QtRXVyb3BhICh6b21lcnRpamQpKSwzMCwwLDAsMApUaHUg\r\nTWF5IDI0IDIwMTggMDI6MDA6MDAgR01UKzAyMDAgKFdlc3QtRXVyb3BhICh6b21lcnRpamQpKSw0\r\nMSwwLDEsMApGcmkgTWF5IDI1IDIwMTggMDI6MDA6MDAgR01UKzAyMDAgKFdlc3QtRXVyb3BhICh6\r\nb21lcnRpamQpKSwzNywwLDAsMA==\r\n\r\n--_004_6a168860dad6479d9ef568358d518ee5_--\r\n" }
+      responses:
+        200:
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content: {}
+        201:
+          description: Created
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Created'
+        400:
+          description: Bad Request
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content: {}
+        500:
+          description: Internal Server Error
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content: {}
+      security:
+      - api_key: []
+    
+    options:
+      responses:
+        200:
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empty'
+  
+  /account:
+    post:
+      description: Creates a new account for an organization
+      operationId: setAccount
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Account'
+            example:
+              {
+                "domain": "example.com", 
+                "reseller":"info@reseller.org"
+              }
+        required: true
+      responses:
+        200:
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content: {}
+        400:
+          description: Bad Request
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content: {}
+        500:
+          description: Internal Server Error
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content: {}
+      security:
+      - api_key: []
+    
+    get:
+      description: Retrieves DNS configuration for an organization
+      operationId: getAccount
+      parameters:
+        - in: query
+          name: domain
+          required: true
+          schema:
+            $ref: '#/components/schemas/Domain'
+        - in: query
+          name: reseller
+          required: true
+          schema:
+            $ref: '#/components/schemas/Reseller'
+      responses:
+        200:
+          description: OK
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        400:
+          description: Bad Request
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content: {}
+        404:
+          description: Not Found
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content: {}
+        500:
+          description: Internal Server Error
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+          content: {}
+      security:
+      - api_key: []
+
+    options:
+      responses:
+        200:
+          description: 200 response
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Empty'
+  
+components:
+
+  schemas:
+
+    Empty:
+      title: Empty Schema
+      type: object
+
+    Account:
+      description: An account consists of an apex domain and a reseller identifier.
+      required:
+      - domain
+      - reseller
+      type: object
+      properties:
+        domain:
+          $ref: '#/components/schemas/Domain'
+        reseller:
+          $ref: '#/components/schemas/Reseller'
+
+    Domain:
+      description: Sender apex (root) domain
+      type: string
+      example: example.com
+
+    Reseller:
+      description: Reseller identifier
+      type: string
+      example: info@reseller.org
+
+    AccountResponse:
+      description: Definition of the DNS records needed to connect with SecuMailer.
+      type: object
+      properties:
+        domain: 
+          $ref: '#/components/schemas/Domain'
+        status:
+          type: string
+          enum: ['Pending','Success','Failed','TemporaryFailure','NotStarted']
+        mail_from:
+          $ref: '#/components/schemas/Record'
+        ses:
+          $ref: '#/components/schemas/Record'
+        mx:
+          $ref: '#/components/schemas/Record'
+        spf:
+          $ref: '#/components/schemas/Record'
+        dmarc:
+          $ref: '#/components/schemas/Record'
+        dkim:
+          $ref: '#/components/schemas/Dkim'
+      example:
+          {
+            "domain": "example.com",
+            "mx": {
+              "value": "10 feedback-smtp.eu-west-1.amazonses.com",
+              "hostname": "secumailer.example.com",
+              "type": "MX"
+            },
+            "spf": {
+              "value": "v=spf1 include:amazonses.com ~all",
+              "hostname": "secumailer.example.com",
+              "type": "TXT"
+            },
+            "dmarc": {
+              "value": "v=DMARC1; p=quarantine; rua=mailto:8c831832697b686@rep.dmarcanalyzer.com; ruf=mailto:8c831832697b686@for.dmarcanalyzer.com; pct=0; fo=1",
+              "hostname": "secumailer.example.com",
+              "type": "TXT"
+            },
+            "ses": {
+              "hostname": "_amazonses.example.com",
+              "value": "RsDYehqnkyd6xPZ8i7i5dKawKrOWlveYmN1q6ahL9Gw=",
+              "status": "Success",
+              "type": "TXT"
+            },
+            "mail_from": {
+              "hostname": "secumailer.example.com",
+              "value": "secumailer.example.com",
+              "status": "Success"
+            },
+            "dkim": {
+              "enabled": true,
+              "status": "Success",
+              "records": [{
+                "hostname": "iqsoatpttzwavc2yb3hq75ediqpjeeku._domainkey.example.com",
+                "value": "iqsoatpttzwavc2yb3hq75ediqpjeeku.dkim.amazonses.com",
+                "type": "CNAME"
+              }, {
+                "hostname": "lfcu2hicdak2vaqpbj3ugi3fphg7wpid._domainkey.example.com",
+                "value": "lfcu2hicdak2vaqpbj3ugi3fphg7wpid.dkim.amazonses.com",
+                "type": "CNAME"
+              }, {
+                "hostname": "h2oen5nn35wue2xedvcitxnsxydpatst._domainkey.example.com",
+                "value": "h2oen5nn35wue2xedvcitxnsxydpatst.dkim.amazonses.com",
+                "type": "CNAME"
+              }],
+            },
+            "status": "Success"
+          }
+    
+    Dkim:
+      description: DKIM configuration
+      type: object
+      properties:
+        enabled: 
+          type: boolean
+          default: false
+          description: Whether the DKIM setting is active
+        status:
+          type: string
+          enum: ['Pending','Success','Failed','TemporaryFailure','NotStarted']
+          description: Status of the DKIM configuration
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/Record'
+
+    Record:
+      description: Definition of a DNS record.
+      required:
+      - hostname
+      - value
+      type: object
+      properties:
+        type:
+          type: string
+          enum: ['TXT', 'MX', 'CNAME']
+          description: Either a TXT, MX or CNAME record
+        hostname:
+          type: string
+          description: Hostname of the DNS record
+        value:
+          type: string
+          description: Value of the DNS record
+        status:
+          type: string
+          enum: ['Pending','Success','Failed','TemporaryFailure']
+          description: status of the record
+
+    Message:
+      description: Definition of an email message.
+      required:
+      - sender
+      - recipient
+      - body
+      type: object
+      properties:
+        sender:
+          $ref: '#/components/schemas/Address'
+        recipient:
+          $ref: '#/components/schemas/Recipient'
+        body:
+          $ref: '#/components/schemas/Body'
+
+    Address:
+      description: Email address in RFC 2822 format.
+      type: string
+      format: email
+      
+    Recipient:
+      description: One or more recipient email address(es)
+      type: array
+      items:
+        $ref: '#/components/schemas/Address'
+    
+    Body:
+      description: MIME message, formatted as escaped text.
+      type: string
+      
+    Created:
+      description: ISO 8601 datetime at which the resource was created.
+      required:
+      - CreationDateTime
+      type: object
+      properties:
+        CreationDateTime:
+          type: string
+          format: date-time
+
+  securitySchemes:
+    api_key:
+      type: apiKey
+      name: x-api-key
+      in: header

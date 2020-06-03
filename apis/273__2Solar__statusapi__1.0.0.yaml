@@ -1,0 +1,231 @@
+openapi: 3.0.0
+info:
+  title: Status API
+  description: >-
+    This endpoints will give you the ability to fetch all sources and statuses
+    an also create request logs for the given request id.
+  contact:
+    email: support@2solar.nl
+  version: "1.0.0"
+servers:
+  - url: 'https://virtserver.swaggerhub.com/2Solar/statusapi/1.0.0'
+    description: SwaggerHub API Auto Mocking
+  - url: 'https://app.2solar.nl/api'
+    description: Real endpoint (Warning! This will effect your real data)
+paths:
+  /status:
+    get:
+      summary: All sources and statuses
+      description: >
+        This endpoint will give you the ability to fetch all sources and
+        statuses that can be used for the Person POST API or the Status PATCH
+        API.
+      operationId: getStatuses
+      responses:
+        '200':
+          description: All sources and statuses.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusesGet'
+        '401':
+          description: Invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unauthorized'
+        '500':
+          description: 'An error has occurred, please take contact with us.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FiveHundredError'
+      security:
+        - bearerAuth: []
+    put:
+      summary: Create a new request log
+      description: Adds an item to the system
+      operationId: addInventory
+      requestBody:
+        description: Add a new request log
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusPut'
+      responses:
+        '200':
+          description: Success message when creating new log.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusPutSuccess'
+        '401':
+          description: Invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unauthorized'
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/inline_response_422'
+              examples:
+                NoPermissionForKey:
+                  summary: No permission for key
+                  value:
+                    error: No permissions set for changing Client Status ID
+                NoPermission:
+                  summary: No permission
+                  value:
+                    error: No permission to set this Client Status ID
+                    available_statuses:
+                      '34567': offerte maken
+                      '45678': geen opdracht
+                ClientStatusIdRequired:
+                  summary: Client status id required
+                  value:
+                    error: Client Status Id is required
+                InvalidRequestId:
+                  summary: Invalid request id
+                  value:
+                    error: Request Id is Invalid
+        '500':
+          description: 'An error has occurred, please take contact with us.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FiveHundredError'
+      security:
+        - bearerAuth: []
+components:
+  schemas:
+    StatusesGet:
+      required:
+        - client_statuses
+        - original_client_statuses
+      type: object
+      properties:
+        original_client_statuses:
+          uniqueItems: true
+          type: array
+          format: array
+          example:
+            '12345': bron 1
+            '23456': bron 2
+          items:
+            type: string
+        client_statuses:
+          uniqueItems: true
+          type: array
+          format: array
+          example:
+            '34567': offerte maken
+            '45678': geen opdracht
+          items:
+            type: string
+    StatusPut:
+      required:
+        - client_status_id
+        - request_id
+      type: object
+      properties:
+        request_id:
+          type: integer
+          example: 999999
+        client_status_id:
+          type: integer
+          example: 23456
+        update_status:
+          type: boolean
+          description: >-
+            This will tell the system to also change the current state of the
+            request
+          example: false
+        description:
+          type: string
+          example: description that will be added to the request log
+    StatusPutSuccess:
+      required:
+        - success
+      type: object
+      properties:
+        success:
+          type: string
+          format: string
+          example: Status Log Saved
+    NoPermissionForKey:
+      required:
+        - error
+      type: object
+      properties:
+        error:
+          type: string
+          format: string
+          example: No permissions set for changing Client Status ID
+    NoPermission:
+      required:
+        - available_statuses
+        - error
+      type: object
+      properties:
+        error:
+          type: string
+          format: string
+          example: No permission to set this Client Status ID
+        available_statuses:
+          uniqueItems: true
+          type: array
+          format: array
+          example:
+            '34567': offerte maken
+            '45678': geen opdracht
+          items:
+            type: string
+    ClientStatusIdRequired:
+      required:
+        - error
+      type: object
+      properties:
+        error:
+          type: string
+          format: string
+          example: Client Status Id is required
+    InvalidRequestId:
+      required:
+        - error
+      type: object
+      properties:
+        error:
+          type: string
+          format: string
+          example: Request Id is Invalid
+    Unauthorized:
+      required:
+        - error
+      type: object
+      properties:
+        error:
+          type: string
+          format: string
+          example: Unauthorized
+    FiveHundredError:
+      required:
+        - error
+      type: object
+      properties:
+        error:
+          type: string
+          format: string
+          example: An error has occurred
+    inline_response_422:
+      oneOf:
+        - $ref: '#/components/schemas/NoPermissionForKey'
+        - $ref: '#/components/schemas/NoPermission'
+        - $ref: '#/components/schemas/ClientStatusIdRequired'
+        - $ref: '#/components/schemas/InvalidRequestId'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer

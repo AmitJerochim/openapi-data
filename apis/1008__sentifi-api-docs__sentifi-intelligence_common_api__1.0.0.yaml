@@ -1,0 +1,282 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Sentifi Intelligence - Common API
+  description: |
+    Common API documentation
+tags:
+  - name: Isin to Sentifi ID
+    description: >
+      Get the Sentifi IDs (topic-ids) for a list of ISINs supported in the
+      Sentifi universe
+  - name: All Event IDs (impact-ids)
+    description: |
+      Get a list of all Event IDs (impact-ids)
+  - name: 'All Sector, Industry, Region, Country, Commodity, Currency IDs'
+    description: Get all IDs with their respective name
+servers:
+  - url: 'https://apis.sentifi.com/v1'
+paths:
+  /intelligence/neids-search:
+    get:
+      tags:
+        - Isin to Sentifi ID
+      summary: Search for a company topic-id by their ISIN
+      parameters:
+        - name: isins
+          in: query
+          description: list of ISIN
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponseSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/neIdInfo'
+        default:
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+  /intelligence/markets/events:
+    get:
+      tags:
+        - All Event IDs (impact-ids)
+      summary: Get all impact-ids with their respective name
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponseSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/eventInfo'
+        default:
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+  /intelligence/markets/option/ids:
+    get:
+      tags:
+        - 'All Sector, Industry, Region, Country, Commodity, Currency IDs'
+      summary: Get all IDs with their respective name
+      parameters:
+        - name: types
+          in: query
+          description: |
+            Without parameter this will return all IDs
+
+            For specific IDs, use one or multiple of following items:
+
+            sector,industry,region,country,commodity,currency
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponseSuccess'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          sectors:
+                            $ref: '#/components/schemas/sectorInfo'
+                          industries:
+                            $ref: '#/components/schemas/industryInfo'
+                          regions:
+                            $ref: '#/components/schemas/regionInfo'
+                          countries:
+                            $ref: '#/components/schemas/countryInfo'
+                          commodities:
+                            $ref: '#/components/schemas/commoditiesInfo'
+                          currencies:
+                            $ref: '#/components/schemas/currenciesInfo'
+        default:
+          description: error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponseError'
+security:
+  - BearerAuth: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    neIdInfo:
+      type: object
+      properties:
+        neId:
+          type: integer
+          format: int64
+          description: Internal topic ID
+        isin:
+          type: string
+          description: Company ISIN
+        legalName:
+          type: string
+          description: |
+            Legal Name of the Company
+    eventInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Internal impact-id / event-id
+        name:
+          type: string
+          description: |
+            Name of the (Impact)Event
+    sectorInfo:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            format: int64
+            example: 1399
+            description: Sector ID
+          name:
+            type: string
+            example: Basic Materials
+            description: Sector Name
+    industryInfo:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            format: int64
+            example: 1479
+            description: Industry ID
+          name:
+            type: string
+            example: Agricultural Inputs
+            description: Industry Name
+          sector:
+            type: object
+            properties:
+              id:
+                type: integer
+                format: int64
+                example: 1399
+                description: Sector ID
+              name:
+                type: string
+                example: Basic Materials
+                description: Sector Name
+    regionInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+          description: Region Code
+        name:
+          type: string
+          example: Asia Developed
+          description: Region Name
+    countryInfo:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+            format: int64
+            example: 72019
+            description: Country ID
+          name:
+            type: string
+            example: Afghanistan
+            description: Country Name
+          regions:
+            type: object
+            properties:
+              id:
+                type: integer
+                format: int64
+                example: 2
+                description: Region ID
+              name:
+                type: string
+                example: Asia Emerging
+                description: Region Name
+    commoditiesInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1794598
+          description: Commodity ID
+        name:
+          type: string
+          example: Aluminium
+          description: Commodity Name
+    currenciesInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 509
+          description: Currency ID
+        name:
+          type: string
+          example: Chinese Yuan
+          description: Currency Name
+    ApiResponseSuccess:
+      type: object
+      properties:
+        data:
+          type: object
+        extra:
+          type: object
+          properties:
+            updatedTime:
+              type: string
+              format: date-time
+              description: Date and time when the query was executed in UTC
+    ApiResponseError:
+      type: object
+      properties:
+        extra:
+          type: object
+          properties:
+            updatedTime:
+              type: string
+              format: date-time
+            errorCode:
+              type: integer
+            errorMessage:
+              type: string

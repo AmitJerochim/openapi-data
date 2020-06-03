@@ -1,0 +1,398 @@
+openapi: 3.0.0
+info:
+  description: CelerX Match and Tournament APIs
+  version: "1.1.1"
+  title: Tournament APIs
+  contact:
+    email: yan@celer.network
+  
+paths:
+  /tournaments:
+    get:
+      tags:   
+        - 'celerXClient.refreshAllTournaments(page:Int, size:Int)' 
+        - 'celerXClient.refreshTournaments(status:Int, page:Int, size:Int)'
+      summary: request and refresh tournaments with pagination
+      operationId: requestTournaments
+      description: Returns a list of tournaments
+      parameters:
+        - in: query
+          name: status
+          description: >-
+            Status could be 0 → inactive, 1 → active, 2 → ended. If no status is
+            provided, the API will return all tournaments
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: page
+          description: Number of records to skip for pagination
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - in: query
+          name: pageSize
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 50
+      responses:
+        '200':
+          description: A JSONArray of tournaments matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Tournament'
+        '400':
+          description: bad input parameter
+  /tournament:
+    get:
+      tags:
+        - 'celerXClient.refreshTournament(tournamentId:String)'
+      summary: 'Get tournament by tournamentId, and refresh status'
+      operationId: requestAndRefreshTournament
+      description: Returns a refreshed tournament
+      parameters:
+        - in: query
+          name: tournamentId
+          description: tournamentId is a uuid
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A tournament leaderboard, based on tournamentId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tournament'
+        '400':
+          description: bad input parameter
+  /tournamentLeaderboard:
+    get:
+      tags:
+        - 'celerXClient.refreshTournamentLeaderboard(tournamentId:String)'
+      summary: 'Get a refreshed tournament leaderboard by tournamentId'
+      operationId: requestTournamentLeaderboard
+      description: Returns a refreshed tournament leaderboard
+      parameters:
+        - in: query
+          name: tournamentId
+          description: tournamentId is a uuid
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A tournament matching given tournamentId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Leaderboard'
+        '400':
+          description: bad input parameter
+  /tickets:
+    get:
+      tags:
+        - 'celerXClient.refreshMatchesByTournament(tournamentId:String)'
+        - 'celerXClient.refreshMatchesByAppId(appId:String)'
+        - 'celerXClient.refreshMatchesByToken(token:String)'
+        - 'celerXClient.refreshAllMatches()'
+      summary: 'Get a refreshed list of tickets by tournamentId, appId or token, related to the current user'
+      operationId: requestTournamentMatches
+      description: Returns a refreshed tournament matches, related to the current user
+      responses:
+        '200':
+          description: A list of tournament matches related to the current user, based on tournamentId
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+        '400':
+          description: bad input parameter
+
+servers:
+  - url: 'https://virtserver.swaggerhub.com/CelerX/Tournament/1.1.1'
+components:
+  schemas:
+    Tournament:
+      type: object
+      required:
+        - tournamentId
+        - appId
+        - title
+        - description
+        - promotionalImageUrl
+        - startTime
+        - endTime
+        - rankType
+        - rankTypeDescription
+        - tokenSymbol
+        - entryFee
+        - prizePoolAmount
+        - prizeDistributionPercentages
+        - status
+      properties:
+        tournamentId:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        appId:
+          type: string
+          example: 0000-64
+        title:
+          type: string
+          example: Amazing Tournament
+        description:
+          type: string
+          example: Join the tournament to win grand prize!
+        promotionalImageUrl:
+          type: string
+          format: uri
+          example: >-
+            https://celerx.app/static/download-88fd075395d03dbd1ea0b49a77a0d641.png
+        startTime:
+          type: integer
+          format: int64
+          example: 1568159358120
+        endTime:
+          type: integer
+          format: int64
+          example: 1568617200000
+        rankType:
+          type: integer
+          format: int32
+          example: 6
+          description: >-
+            could be 
+            1 → reserved for GT in a money leaderboard, 
+            2 → reserved for ETH in a money leaderboard, 
+            3 → reserved for CELR in a money leaderboard,
+            4 → reserved for DAI in a money leaderboard,
+            5 → reserved for USD in a money leaderboard,
+            6 → use the best score in a tournament,
+            7 → use the total sum of scores in a tournament,
+            8 → use the average score in a tournament,
+            9 → use the latest score in a tournament 
+        rankTypeDescription:
+          type: string
+          example: >-
+            The final ranking will use your best score in this tournament. The
+            more you participate, the more chances you will win!
+          description: describe the rankingType on UI
+        tokenSymbol:
+          type: string
+          example: DAI
+          description: the symbol of the token or currency
+        entryFee:
+          type: number
+          format: double
+          example: 0.01
+          description: The entry fee for playing one match of this tournament
+        prizePoolAmount:
+          type: number
+          format: double
+          example: 1000
+          description: the total prize pool amount
+        prizeDistributionPercentages:
+          type: array
+          items:
+            type: number
+            format: float
+          example:
+            - 45.5
+            - 20.5
+            - 15.5
+            - 6
+            - 5.5
+            - 2.5
+            - 2.5
+            - 1.2
+            - 0.8
+          description: 'the distribution of prize pool, in percentage'
+        maxPlayerNumber:
+          type: integer
+          format: int64
+          example: 10000
+          description: >-
+            the maximum number of participants allowed in this tournament. This
+            is an optional value. If maxPlayerNumber does not exist, it means
+            that the tournament does not have an upper limit on the number of
+            participants
+        status:
+          type: integer
+          format: int32
+          example: 1
+          description: 'could be 0 → inactive, 1 → active, 2 → ended'
+    Ticket:
+      type: object
+      required:
+       - username
+       - fullName
+       - ethAddress
+       - avatarUrl
+       - index
+       - score
+       - rank
+       - ticketId
+       - ticketStatus
+      properties:
+        username:
+          type: string
+          example: yan23
+        fullName:
+          type: string
+          example: Yan Zhang
+        ethAddress:
+          type: string
+          example: "0x1c23a"
+        avatarUrl:
+          type: string
+          example: "https://image.com/image123.jpg"
+        index:
+          type: integer
+          format: int32
+          example: 1
+        score:
+          type: integer
+          format: int64
+          example: 1888
+        ticketId:
+          type: string
+          format: uuid
+          example: 6c54f1ee-6c54-4b01-90e6-d701748f90e6
+        ticketStatus:
+          type: integer
+          format: int32
+          example: 2
+    Match:
+      type: object
+      required:
+       - matchStatus
+       - sharedRandomSeed
+       - appId
+       - currentPlayer
+       - initiated
+       - lastUpdated
+      properties:
+        matchId:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        matchStatus:
+          type: integer
+          format: int32
+          example: 6  
+        sharedRandomSeed:
+          type: number
+          format: double
+          example: 0.81739652
+          description: The random seed shared between opponents
+        appId:
+          type: string
+          example: 0000-64
+        bucket:
+          $ref: '#/components/schemas/Bucket'  
+        currentPlayer:
+           $ref: '#/components/schemas/Ticket' 
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ticket'
+        tournamentId:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851    
+        initiated:
+          type: integer
+          format: int64
+          example: 1568159358120
+        lastUpdated:
+          type: integer
+          format: int64
+          example: 1568617200000
+    Leaderboard:
+      type: object
+      required:
+        - currentPlayerRanking
+        - allPlayersRankings
+      properties:
+        currentPlayerRanking:
+          $ref: '#/components/schemas/Ranking'
+        allPlayersRankings:
+          type: array
+          items:
+             $ref: '#/components/schemas/Ranking'
+    Ranking:
+      type: object
+      required:
+        - score
+        - username
+        - fullName
+        - ethAddress
+        - rankingNumber
+        - avatarUrl
+      properties:
+        score:
+          type: number
+          format: double
+          example: 82.35
+        username:
+          type: string
+          example: "yan23" 
+        fullName:
+          type: string
+          example: "Yan Zhang"
+        ethAddress:
+          type: string
+          example: "0x3c6272a12b341b0f12345ba1b341b0f12345bd0a"
+        avatarUrl:
+          type: string
+          example: "https://image.com/image123.jpg" 
+        rankingNumber:
+          type: integer
+          format: int64
+          example: 102
+    Bucket:
+      type: object
+      required:
+       - id
+       - title
+       - description
+       - token
+       - entryFee
+       - prize
+       - maxPlayerNumber
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d290f1ee-6c54-4b01-90e6-d701748f0851
+        title:
+          type: string
+          example: Rookie
+        description:
+          type: string
+          example: Ramp up your skills
+        token:
+          type: string
+          example: DAI
+        entryFee:
+          type: number
+          format: double
+          example: 1.5
+        prize: 
+          type: number
+          format: double
+          example: 2.5
+        maxPlayerNumber: 
+          type: integer
+          format: int32
+          example: 2

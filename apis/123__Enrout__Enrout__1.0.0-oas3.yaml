@@ -1,0 +1,1554 @@
+openapi: 3.0.0
+info:
+  description: |
+    Enrout Delivery Developer API provides all of the tools, functionality, and
+    data to interact with the Enrout Realtime Service in new and creative ways.
+    # Process
+    * Create a session
+    * Get trip price
+    * Dispatch request
+    
+    ### Associates (Vendor) API
+      The Enrout Developer API allows you to create third party pickup locations. These Third party pickup locations are referred to as *VENDORS*. This is useful for developers looking to integrate our delivery platform with an Online Mall where they may have various vendors under them. Under Associate Requests, every delivery destination has its own price and contacts. This is mainly useful for mass dispatching
+    ### Regular API
+      The Regular Requests are top level request initiated between the Developer Directly and Enrout, no **third parties** are involved in this request. This is similar to a request initiated on the **Enrout Mobile App**. All pickups and delivery locations are priced at once.
+      
+  version: "1.0.0-oas3"
+  title: Enrout Developer API
+  contact:
+    email: info@enroutdelivery.com
+tags:
+  - name: applications
+    description: Creation and managing of dev applications
+  - name: associates
+    description: Managing third-party pickup location and details
+  - name: sessions
+    description: Creating and making requests
+  - name: pricing
+    description: Get Pricing for Each Session
+  - name: requests
+    description: Dispatch a request
+paths:
+
+  /sessions/create-session:
+    post:
+      tags: 
+        - sessions
+      summary: Initiate Request
+      description: The Enrout Partner acting as a client sends a create-session request to the Enrout R-API request to initiate a request, a request Id is created and the next step is to call the pricing API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Session'
+              
+      responses:
+        '200':
+          description: Session Created
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  code:
+                    type: number
+                    example: 200
+                  requestId:
+                    type: string
+                    example: 3045756a-9b35-42e1-9cce-5a756f53a0b2
+                  message:
+                    type: string
+                    example: Application successfully created
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'
+  '/sessions/delete-session/{requestId}':
+    delete:
+      tags: 
+        - sessions
+      summary: Delete session
+      description: Destroys an ***UNPRICED*** session
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema:
+             type: string
+             format: uuid
+             example: "3045756a-9b35-42e1-9cce-5a756f53a0b2"
+             
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Associate Pickup Removed
+                  code:
+                    type: number
+                    example: 200
+                  pickupId:
+                    type: string
+                    example: c7158287-e74e-498d-81b7-89e97948d012
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'                            
+        
+  /pricing/session:
+    post:
+      tags:
+        - pricing
+      summary: Calculates price between goe points per created session
+      requestBody:
+        required: true
+        description: The Enrout Partner acting as the cleint invokes a pricing request to get the pricing of geopoints involved. For requestType ***VENDOR*** use **PricingVendor** and for ***REGULAR*** use **PricingRegular**
+        content: 
+          application/json:
+            schema:
+             allOf:
+              - $ref: '#/components/schemas/PricingVendor'
+              - $ref: '#/components/schemas/PricingRegular'
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Fare calculation completed
+                  isSurgeCharge:
+                    type: boolean
+                    example: false
+                  fare:
+                    type: string
+                    example: 5
+                  pricingCode:
+                    type: string
+                    example: 5ec1c66669a02414e56140b1
+                  typeCode:
+                    type: string
+                    example: MD
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'
+  /pricing/anonymous:
+    post:
+      tags:
+        - pricing
+      summary: Calculates price between goe points anonymously
+      requestBody:
+        required: true
+        description: Calculates the price between two geolocations; origin and destination
+        content: 
+          application/json:
+            schema:
+             allOf:
+              - $ref: '#/components/schemas/PricingAnonymous'
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Fare calculation completed
+                  isSurgeCharge:
+                    type: boolean
+                    example: false
+                  fare:
+                    type: string
+                    example: 5
+                  pricingCode:
+                    type: string
+                    example: 5ec1c66669a02414e56140b1
+                  typeCode:
+                    type: string
+                    example: MD
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'
+  /pricing/associate:
+    post:
+      tags:
+        - pricing
+      summary: Calculates price between goe points per associate
+      requestBody:
+        required: true
+        description: Calculates the price between the associate's location and the designated destination
+        content: 
+          application/json:
+            schema:
+             allOf:
+              - $ref: '#/components/schemas/PricingAssociate'
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Fare calculation completed
+                  isSurgeCharge:
+                    type: boolean
+                    example: false
+                  fare:
+                    type: string
+                    example: 5
+                  pricingCode:
+                    type: string
+                    example: 5ec1c66669a02414e56140b1
+                  typeCode:
+                    type: string
+                    example: MD
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'              
+                
+  /requests/make-request:
+    post:
+      tags:
+        - requests
+      summary: 'Dispatching request'
+      description: The Enrout Partner acting as the cleint invokes a pricing request to get the pricing of geopoints involved. For requestType VENDOR use MakeRequestVendor and for Regular use MakeRequestRegular
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/MakeRequestRegular'
+                - $ref: '#/components/schemas/MakeRequestVendor'
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Processing Request
+                  shareCode:
+                    type: string
+                    example: 3D3dfd
+                  url:
+                    type: string
+                    example: https://vendor.enroutdelivery.com/#/share?code=3D3dfd
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'
+  /requests/get-requests:
+    get:
+      tags:
+        - requests
+      description: Returns a list of all trip requests created by the developer
+      summary: Gets all trips requests
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Developer Associate Pickup Created
+                  code:
+                    type: number
+                    example: 200
+                  payload:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Request'
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'                            
+  '/requests/get-request/{requestId}':
+    get:
+      tags:
+        - requests
+      summary: Gets a single Trips Request
+      description: Returns a single trip request created by the developer
+      parameters:
+        - name: requestId
+          in: path
+          description: Session's Request Id of trip made
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  code:
+                    type: number
+                    example: 200
+                  payload:
+                    $ref: '#/components/schemas/Request'
+                      
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'        
+  '/requests/get-requests/associate/{associateId}':
+    get:
+      tags:
+        - requests
+      summary: Gets all Trip Request by AssociateId
+      description: Returns a trips requested by associateId
+      parameters:
+        - name: associateId
+          in: path
+          description: Third Party AssociateId
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  code:
+                    type: number
+                    example: 200
+                  payload:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Request'
+                      
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'                      
+  '/requests/get-requests/status/{status}':
+    get:
+      tags:
+        - requests
+      summary: Gets all Trips Request by Status
+      description: Returns a trips requested by status
+      parameters:
+        - name: status
+          in: path
+          description: Status of requests
+          required: true
+          schema:
+            type: string
+            enum: ['COMPLETED', 'CANCELLED', 'CANCELLED_R', 'ONGOING', 'PENDING', 'DELAYED', 'NOT_FOUND']
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  code:
+                    type: number
+                    example: 200
+                  payload:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Request'
+                      
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'                                    
+  '/requests/get-requests/application/{applicationId}':
+    get:
+      tags:
+        - requests
+      summary: Gets all Trips Request by applicationId
+      description: Returns a trips request by applicationId
+      parameters:
+        - name: applicationId
+          in: path
+          description: Application ID of origin application
+          required: true
+          schema:
+            type: string
+            format: uuid
+            enum: ['COMPLETED', 'CANCELLED', 'CANCELLED_R', 'ONGOING', 'PENDING', 'DELAYED', 'NOT_FOUND']
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  code:
+                    type: number
+                    example: 200
+                  payload:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Request'
+                      
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'                                                  
+  '/requests/get-requests/search':
+    post:
+      tags:
+        - requests
+      summary: Search for trips
+      description: Returns a list of trips by search parameters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: COMPLETED
+                  enum: ['COMPLETED', 'CANCELLED', 'CANCELLED_R', 'ONGOING', 'PENDING', 'DELAYED', 'NOT_FOUND']
+                applicationId:
+                  type: string
+                  example: "28d7ec5b-d715-4997-a4d7-753f37a1242f"
+                  format: uuid
+                associateId:
+                  type: string
+                  example: "MTU5MDA3MTYxNTcwNzI4ZDdlYzViLW"
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  code:
+                    type: number
+                    example: 200
+                  payload:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Request'
+                      
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'                                                                
+  '/requests/cancel-request/{requestId}':
+    put:
+      tags:
+        - requests
+      summary: Cancel a request
+      description: Cancel a trip request by requestId
+      parameters:
+        - name: requestId
+          in: path
+          description: Trip Request ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  code:
+                    type: number
+                    example: 200
+                  message:
+                    type: string
+                    example: Request has been cancelled
+                      
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'                                                                            
+  # /applications/add-application:
+  #   post:
+  #     tags:
+  #       - applications
+  #     summary: Creates an application
+  #     requestBody:
+  #       required: true
+  #       content:
+  #         application/json:
+  #           schema:
+  #             $ref: '#/components/schemas/AddApplicationRequest'
+  #     responses:
+  #       '200':
+  #         description: item created
+  #         content:
+  #           'application/json':
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 status:
+  #                   type: string
+  #                   example: true
+  #                 message:
+  #                   type: string
+  #                   example: Application successfully created
+  #       '400':
+  #         description: 'invalid input, object invalid'
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/Err400'
+            
+  #       '500':
+  #         description: Internal Server Error
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/Err500'
+                    
+  /applications/get-applications:
+    get:
+      tags:
+        - applications
+      summary: Gets all developer applications
+      description: Returns a list of all applications created by the developer
+      responses:
+        '200':
+          description: item created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: true
+                  applications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Application'
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'
+                    
+  '/applications/get-application/{appId}':
+    get:
+      tags:
+        - applications
+      summary: Gets a single developer application
+      description: Returns a single application created by the developer
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          description: requestId is returned when a session is created
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: true
+                  application:
+                    $ref: '#/components/schemas/Application'
+                      
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'
+  
+  /associates/add-associate-pickup:
+    post:
+      tags:
+        - associates
+      summary: Adds an associate pickup location
+      description: Creates an associate pickup locations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssociatePickup'
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Associate Pickup Created
+                  code:
+                    type: number
+                    example: 200
+                  pickupId:
+                    type: string
+                    example: c7158287-e74e-498d-81b7-89e97948d012
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'
+  /associates/get-associate-pickups:
+    get:
+      tags:
+        - associates
+      description: Returns a list of all associate pickup locations created by the developer
+      summary: Gets all associate pickup
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  code:
+                    type: number
+                    example: 200
+                  payload:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AssociatePickup'
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'
+  '/associates/get-associate-pickup/{associateId}':
+    get:
+      tags:
+        - associates
+      summary: Gets a single Associate Pickup Location
+      description: Returns a single associate pickup location created by the developer
+      parameters:
+        - name: associateId
+          in: path
+          description: Third Party Associate ID defined by developer
+          required: true
+          schema:
+            type: string
+            format: uuid
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  code:
+                    type: number
+                    example: 200
+                  payload:
+                    $ref: '#/components/schemas/AssociatePickup'
+                      
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'        
+  /associates/update-associate-pickup:
+    post:
+      tags:
+        - associates
+      summary: Updates an associate pickup location
+      description: Updates a single associate pickup location
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssociatePickup'
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Associate Pickup Updated
+                  code:
+                    type: number
+                    example: 200
+                  pickupId:
+                    type: string
+                    example: c7158287-e74e-498d-81b7-89e97948d012
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'              
+  /associates/remove-associate-pickup:
+    post:
+      tags: 
+        - associates
+      summary: Removes a single pickup location
+      description: Removes a single associate pickup location
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                associateId:
+                  type: string
+                  example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+                pickupId:
+                  type: string
+                  example: 68a45c66-f694-4238-9c00-f2ef2df0badc
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Associate Pickup Removed
+                  code:
+                    type: number
+                    example: 200
+                  pickupId:
+                    type: string
+                    example: c7158287-e74e-498d-81b7-89e97948d012
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'              
+  /associates/enable-associate-pickup:
+    put:
+      tags: 
+        - associates
+      summary: Enables a single pickup location
+      description: Enables a single associate pickup location
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                associateId:
+                  type: string
+                  example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+                pickupId:
+                  type: string
+                  example: 68a45c66-f694-4238-9c00-f2ef2df0badc
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Associate Pickup Removed
+                  code:
+                    type: number
+                    example: 200
+                  pickupId:
+                    type: string
+                    example: c7158287-e74e-498d-81b7-89e97948d012
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'                            
+  /associates/disable-associate-pickup:
+    put:
+      tags: 
+        - associates
+      summary: Disables a single pickup location
+      description: Disables a single associate pickup location
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                associateId:
+                  type: string
+                  example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+                pickupId:
+                  type: string
+                  example: 68a45c66-f694-4238-9c00-f2ef2df0badc
+      responses:
+        '200':
+          description: Success
+          content:
+            'application/json':
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Associate Pickup Removed
+                  code:
+                    type: number
+                    example: 200
+                  pickupId:
+                    type: string
+                    example: c7158287-e74e-498d-81b7-89e97948d012
+        '400':
+          description: 'invalid input, object invalid'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err400'
+            
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Err500'                                          
+servers:
+  - url: https://sandbox.enroutdelivery.com/developers/v4
+    description: Sandbox Server
+  - url: https://api.enroutdelivery.com/develoeprs/v4
+    description: Enrout Developers Live API
+components:
+  schemas:
+    Session:
+      type: object
+      required: 
+        - appId
+        - appToken
+        - requestType
+      properties:
+        appId:
+          type: string
+          format: text
+          description: Generated after application is created
+          example: e96c656f-c1ed-42c3-afa2-d90d55e75fa2
+        appToken:
+          type: string
+          format: text
+          description: Generated after application is created
+          example: 96c656f-c1ed-42
+        requestType:
+          type: string
+          format: text
+          description: Request Type [VENDOR | REGULAR]
+          example: VENDOR
+        associateId:
+          type: string
+          format: text
+          description: Associate Id of third party Vendor, Required if requestType is Vendor, Supplied by Enrout Partner
+          example: DJDFEDDFDJIJIDF
+        pickupId:
+          type: string
+          format: text
+          description: Pickup location of specified associateId, Required if requestType is Vendor
+          example: Tc1NTQ1MTU5OTFmYTBjLWExZD
+    PricingVendor:
+      type: object
+      required:
+        - requestId
+        - destination
+      properties:
+        requestId:
+            type: string
+            format: uuid
+            description: 'RequestId returend from create-session request'
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+        destination:
+          type: object
+          allOf:
+            - $ref: '#/components/schemas/LngLat'
+    PricingAnonymous:
+      type: object
+      required:
+        - destinations
+        - origins
+      properties:
+        origins:
+            type: array
+            description: 'Starting position'
+            items:
+              $ref: '#/components/schemas/LngLat'
+        destinations:
+           type: array
+           description: 'Ending position'
+           items:
+            allOf:
+              - $ref: '#/components/schemas/LngLat'
+    PricingAssociate:
+      type: object
+      required:
+        - associateId
+        - destinations
+        - origins
+      properties:
+        associateId:
+          type: string
+          description: Thirdy Party Associate ID
+          format: uuid
+          example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+        destinations:
+           type: array
+           description: 'Ending position'
+           items:
+            allOf:
+            - $ref: '#/components/schemas/LngLat'
+    PricingRegular:
+      type: object
+      required:
+        - requestId
+        - destination
+        - origins
+        - destinations
+      properties:
+        requestId:
+            type: string
+            format: uuid
+            description: 'RequestId returend from create-session request'
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+        destinations:
+          type: array
+          items:
+            $ref: '#/components/schemas/LngLat'
+        origins:
+          type: array
+          items:
+            $ref: '#/components/schemas/LngLat'
+    Application:
+      type: object
+      required:
+        - appName
+      properties:
+        appId:
+          type: string
+          format: text
+          description: Generated after application is created
+          example: e96c656f-c1ed-42c3-afa2-d90d55e75fa2
+        appToken:
+          type: string
+          format: text
+          description: Generated after application is created
+          example: 96c656f-c1ed-42
+        appName:
+          type: string
+          format: text
+          example: Harry's Tea Shop
+        callbackUrl:
+          type: string
+          format: url
+          example: 'https://harrysteashop.com/app/callback'
+        createdAt:
+          type: string
+          format: date
+          example: '12/12/12 09:11:00'
+        status:
+          type: string
+          format: text
+          default: PENDING
+          example: PENDING
+    LngLat:
+      type: object
+      properties:
+        longitude: 
+          type: number
+          example: 5.2323232
+        latitude:
+          type: number
+          example: -0.232323
+        
+    Destination:
+      type: object
+      properties:
+        longitude: 
+          type: number
+          example: 5.2323232
+        latitude:
+          type: number
+          example: -0.232323
+        place:
+          type: string
+          example: No 10. Exeel street
+        recipientNumber:
+          type: string
+          example: 024423232,
+        recipientName:
+          type: string
+          example: Harry
+        instruction:
+          type: string
+          example: ""
+    MakeRequestRegular:
+      type: object
+      required:
+        - requestId
+        - pricingCode
+        - destinations
+        - pickups
+      properties:
+         requestId:
+            type: string
+            format: uuid
+            description: 'RequestId returend from create-session request'
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+         pricingCode:
+            type: string
+            description: 'pricingCode from pricing request'
+            example: 5ec0deb3b9f43afa67d86499
+         destinations:
+            type: array
+            items:
+              $ref: '#/components/schemas/Destination'
+         pickups:
+            type: array
+            items:
+              $ref: '#/components/schemas/Pickup'
+              
+    MakeRequestVendor:
+      type: object
+      required:
+        - requestId
+        - pickupInstruction
+        - destinations
+      properties:
+         requestId:
+            type: string
+            format: uuid
+            description: 'RequestId returend from create-session request'
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+         pickupInstruction:
+            type: string
+            description: 'Pickup Instructions from Vendor'
+            example: Give it to Kasier
+         destinations:
+            type: array
+            items:
+              $ref: '#/components/schemas/Destination'
+    Pickup:
+      type: object
+      properties:
+        longitude: 
+          type: number
+          example: 5.2323232
+        latitude:
+          type: number
+          example: -0.232323
+        place:
+          type: string
+          example: No 10. Exeel street
+        pickUpPersonPhone:
+          type: string
+          example: 024423232,
+        pickUpName:
+          type: string
+          example: Harry
+    AssociatePickup:
+      type: object
+      required: 
+        - place
+        - phoneNumber
+        - name
+        - associateId
+        - appId
+        - appToken
+        - longitude
+        - latitude
+      properties:
+        longitude: 
+          type: number
+          example: 5.2323232
+        latitude:
+          type: number
+          example: -0.232323
+        place:
+          type: string
+          example: No 10. Exeel street
+        phoneNumber:
+          type: string
+          example: 024423232,
+        name:
+          type: string
+          example: Harry
+        associateId:
+          type: string
+          format: text
+          description: Associate Id of third party Vendor
+          example: DJDFEDDFDJIJIDF
+        appId:
+            type: string
+            format: uuid
+            description: 'Given to you upon successful creation of app,'
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+        appToken:
+            type: string
+            description: 'Given to you upon successful creation of app,'
+            example: b1110d9b-eac9-4917-9bc8-22d6934c8186
+    AddApplicationRequest:
+      type: object
+      required:
+        - appName
+      properties:
+        appName:
+          type: string
+          format: text
+          example: Harry's Tea Shop
+        callbackUrl:
+          type: string
+          format: url
+          example: 'https://harrysteashop.com/app/callback'
+    Err500:
+      type: object
+      properties:
+        status:
+          type: string
+          example: false
+        message:
+          type: string
+          example: Something went wrong
+          
+    Err400:
+      type: object
+      properties:
+        status:
+          type: string
+          example: false
+        message:
+          type: string
+          example: Some fields are invalid
+    Request:
+      type: object
+      properties:
+        acceptedAt: 
+          type: "string"
+          example: "12/12/12"
+        actualCost: 
+          type: "number"
+          example: 10
+        arrivedAt: 
+          type: "string"
+          example: "12/12/12"
+        couponApplied: 
+          type: "boolean"
+          example: false
+        couponName: 
+          type: "string"
+          example: ""
+        couponValueInPercentage: 
+          type: "number"
+          example: 0
+        destinationNames: 
+          type: "array"
+          items: 
+            type: "string"
+            example: Harry's Lane
+        destinations: 
+          type: "array"
+          items: 
+            $ref: "#/components/schemas/Destination"
+        estimatedCost: 
+          type: "number"
+          example: 10
+        estimatedDistanceInMeters: 
+          type: "number"
+          example: 1000
+        estimatedTimeInSeconds: 
+          type: "number"
+          example: 100
+        hasPaid: 
+          type: "boolean"
+          example: true
+        isAccepted: 
+          type: "boolean"
+          example: true
+        isArrived: 
+          type: "boolean"
+          example: true
+        isPayForMe: 
+          type: "boolean"
+          example: false
+        orderNumber: 
+          type: "string"
+          example: 00001212
+        payForMe: 
+          type: "number"
+          example: 0
+        paymentMethod: 
+          type: "string"
+          example: CASH
+        pickupNames: 
+          type: "array"
+          items: 
+            type: "string"
+            example: Harry's Kitchen
+        pickups: 
+          type: "array"
+          items: 
+            $ref: "#/components/schemas/Pickup"
+        rating: 
+          type: "number"
+          example: 5.5
+        reason: 
+          type: "array"
+          items: 
+            type: "string"
+        requestId: 
+          type: "string"
+          format: uuid
+          example: 3045756a-9b35-42e1-9cce-5a756f53a0b2
+        riderId: 
+          type: "string"
+        riderImage: 
+          type: "string"
+        riderName: 
+          type: "string"
+        riderPaid: 
+          type: "boolean"
+          example: true
+        riderPhoneNumber: 
+          type: "string"
+          example: 023202323
+        riderPlateNumber: 
+          type: "string"
+          example: GH-323-HCD
+        selectedItemCategories: 
+          type: "array"
+          items: 
+            type: "string"
+            example: Food
+        selectedItemInstructions: 
+          type: "array"
+          items: 
+            type: "string"
+            example: "Deliver to Tesley"
+        senderId: 
+          type: "string"
+          example: 'Hdfd8dfhD8fnkdf'
+        senderName: 
+          type: "string"
+          example: Harry
+        senderPhoneNumber: 
+          type: "string"
+          example: 0122332333
+        status: 
+          type: "string"
+          example: COMPLETED
+        typeCode: 
+          type: "string"
+          example: MD
+        isScheduled: 
+          type: "boolean"
+          example: false
+        dispatchAt: 
+          type: "string"
+          example: "12/12/12"
+        currentLocation:
+            $ref: '#/components/schemas/LngLat'
+          
+  securitySchemes:
+    basicAuth:     # <-- arbitrary name for the security scheme
+      type: http
+      scheme: basic
+    developerId:        # arbitrary name for the security scheme
+      type: apiKey
+      in: header       # can be "header", "query" or "cookie"
+      name: xxx-header-partnerid  # name of the header, query parameter or cookie
+# 2) Apply the API key globally to all operations
+security:
+  - ApiKeyAuth: []     # use the same name as under securitySchemes

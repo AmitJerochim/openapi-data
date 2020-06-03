@@ -1,0 +1,443 @@
+openapi: 3.0.0
+info:
+  title: CLT - Members API
+  description: API para obtener la información vinculada a un socio.
+  version: "0.0.4"
+  
+servers:
+  - url: 'https://testing.com.uy/apis/v1'
+
+paths:
+  /members/{id}:
+    get:
+      tags:
+        - Members
+      
+      description: Devuelve la información viculada al socio ID
+      operationId: getMemberById
+      parameters:
+        - name: id
+          in: path
+          description: ID del socio
+          required: true
+          schema:
+            type: string
+            example: "1234"
+        - name: fields
+          in: header
+          description: lista de atributos a devolver del recurso Member (separados por ,). Se puede nombrar solo atributos en el primer nivel del modelo de Members. Por defecto se devuelven todos los atributos.
+          required: false
+          schema:
+            type: string
+            default: "*"
+        - name: sessionToken
+          in: header
+          description: token de sesión del usuario que realizo el login en el canal. 
+          required: true
+          schema:
+            type: string
+            example: "A12312AG-23432"
+
+      responses:
+        200:
+          description: Successful operation            
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'          
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+              example:
+                code: 400
+                message: "Parametro invalido"
+                issue:
+                  - severity: "error"
+                    scope: "private"
+                    reason: "invalidValue"
+                    message: "parametro fields invalido. Los valores permitidos son: xxx" 
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        404:
+          description: Resource Not Found
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+               
+
+  /members/{id}/reservations:
+    get:
+      tags:
+        - Members
+      
+      description: Devuelve todos las reservas que tiene el socio ID. Si se  recibe los parametros from-to la busqueda se acota a ese periodo. De lo contrario se devuelven las reservas de hoy en adelante.
+      operationId: getMemberReservations
+      parameters:
+        - name: id
+          in: path
+          description: ID del socio
+          required: true
+          schema:
+            type: string
+            example: "1234"
+        - name: sessionToken
+          in: header
+          description: token de sesión del usuario que realizo el login en el canal. 
+          required: true
+          schema:
+            type: string
+            example: "A12312AG-23432"
+        - name: from
+          in: query
+          description: fecha desde
+          required: false
+          schema:
+            type: "string"
+            format: "date"       
+            example: "2019-03-01"       
+            default: "today()"
+        - name: to
+          in: query
+          description: fecha hasta
+          required: false
+          schema:
+            type: "string"
+            format: "date"       
+            example: "2019-03-15"
+            default: ""
+      responses:
+        200:
+          description: Successful operation            
+          content:
+            application/json:
+              schema:            
+                type: "array"
+                items:
+                  $ref: '#/components/schemas/Reservation' 
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+              example:
+                code: 400
+                message: "Parametro invalido"
+                issue:
+                  - severity: "error"
+                    scope: "private"
+                    reason: "invalidValue"
+                    message: "parametro sessionToken invalido"
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden
+        404:
+          description: Resource Not Found
+        500:
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+
+security:
+  - bearerAuth: []
+  
+components:
+  securitySchemes:
+    bearerAuth:            # arbitrary name for the security scheme
+      type: http
+      scheme: bearer
+      
+  schemas:
+    Member:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+        fullname:
+          type: "string"
+          description: "nombre completo"
+        documentType:
+          type: "string"
+          description: "tipo de documento. (Catalogo DocumentTypes)"
+        documentNumber:
+          type: "string"
+          description: "nro de documento"
+        documentCountry:
+          type: "string"
+          description: "país del tipo de documento. (Catalogo Countries)"
+        state:
+          type: "string"
+          description: "estado en el club. (Catalogo MemberStates)"
+        category:
+          type: "integer"
+          format: "int32"
+          description: "categoría en el club. (Catalogo MemberCategories)"       
+      example:
+        id: "1234ab56"
+        fullname: "Pablo Rodriguez"      
+        documentType: "CI"       
+        documentNumber: "3157743-0"    
+        documentCountry: "UY"
+        state: "Activo"
+        category: 1          
+      xml:
+        name: "Member"
+    
+
+    Reservation:
+      type: "object"
+      properties:
+        id:
+          type: string
+          description: "id de la reserva"
+        creationDate:
+          type: string
+          format: "date-time"
+          description: "fecha-hora en el que se creo la reserva"
+        state:
+          type: string
+          description: "estado actual"
+          enum:
+          - pendingUser
+          - pendingAuthorization
+          - confirmed
+          - cancelled
+          - waitingList
+        originState:
+          type: string
+          description: "origen del estado actual"
+          enum:
+          - system
+          - user
+          - employee
+        
+        member:
+          type: object
+          properties:
+            id:
+              type: string
+              description: ID del socio titular de la reserva
+            fullname:
+              type: string
+              description: Nombre del socio titular de la reserva
+              
+        location:
+          type: object
+          properties:
+            id:
+              type: integer
+              format: "int32"
+              description: "id locacion"
+            description:
+              type: string
+              description: "Descripción de la locacion"
+              
+        date:
+          type: string
+          format: "date"
+          description: "fecha de la reserva"
+        timeFrom:
+          type: string
+          format: "time"
+          description: "hora-desde de la reserva"
+        timeTo:
+          type: string
+          format: "time"
+          description: "hora-hasta de la reserva"
+          example: "15:00"     
+        characteristics:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: "id caracteristica"
+              description:
+                type: string
+                description: "descripción caracteristica"
+              code:  
+                type: string
+                description: "codigo del valor"
+              label:  
+                type: string
+                description: "etiqueta del valor"           
+        participants:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                description: "Nombre del participante"
+                
+        comments:
+          type: string
+          description: "comentario libre"
+                
+        expirationTimeUnit:
+          type: string
+          enum:
+          - minutes
+          - hours
+          - days
+          description: "unidad utilizada para determinar el tiempo que se mantiene la reserva en estado pendingUser desde la fecha de creación."
+          
+        expirationTimeAmount:
+          type: integer
+          description: "cantidad (minutos, horas, dias) que se mantiene la reserva en estado pendingUser desde la fecha de creación. Luego de ese tiempo la reserva se puede caer automaticamente."
+          
+        cancelTimeUnit:
+          type: string
+          enum:
+          - minutesBefore
+          - hoursBefore
+          - daysBefore
+          - minutesAfter
+          - hoursAfter
+          - daysAfter          
+          description: "unidad utilizada para determinar el tiempo que tiene el socio de cancelar la reserva sin costo. Se considera antes o despues de la fecha-hora de comienzo de la reserva"
+           
+        cancelTimeAmount:
+          type: integer
+          description: "cantidad (minutos, horas, dias) que tiene el socio para cancelar la reserva sin costo."
+          
+        prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Price'
+
+      example:
+        id: "12345"
+        creationDate: "2019-03-17T22:12:45.699Z"
+        state: "pendingUser"
+        originState: "user"
+        member: 
+          id: "1234"
+          fullname: "Pablo Rodriguez"        
+        location: 
+          id: 1
+          description: "Carrasco"
+        date: "2019-03-18"
+        timeFrom: "14:00"          
+        timeTo: "15:00"     
+        characteristics:
+          - id: "piso"
+            description: "Piso"
+            code: "blando"
+            label: "Blando"
+          - id: "tipo"
+            description: "Tipo"
+            code: "singles"
+            label: "Singles"
+        comments: "Llego 5 minutos tarde."
+        participants:
+          - name: "Mincho"
+          - name: "Tito"            
+        expirationTimeUnit: "minutes"
+        expirationTimeAmount: 30
+        cancelTimeUnit: "minutesBefore"
+        cancelTimeAmount: 60
+        prices:
+          - type: "resource"
+            amount: 100
+            currency: "UYU"
+          - type: "cancelAfterTime"
+            amount: 50
+            currency: "UYU"            
+
+      xml:
+        name: "Reservation"
+        
+    Response:
+      type: "object"
+      properties:
+        code:
+          type: integer
+          format: "int32"
+          description: "código de error"
+        message:
+          type: string
+          description: "mensaje asociado al código de error"
+        issue:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueItem'
+      example:
+        code: 500
+        message: "Error interno"
+        issue:
+          - severity: "error"
+            scope: "private"
+            reason: "unavailableServiceDependency"
+            message: "No esta disponible el servicio xxxxx."         
+      xml:
+        name: "Response"  
+        
+    IssueItem:
+      type: object
+      properties:
+        severity:
+          type: string
+          description: "severidad del mensaje"
+          enum:
+          - error
+          - warning
+          - info
+          example: "error"
+        reason: 
+          type: string
+          description: "razon del error (codificada)"
+          example: "invalidState"
+        message: 
+          type: string
+          description: "mensaje asociado al reason"
+          example: "Estado de la reserva invalido."
+        scope:
+          type: string
+          description: "alcance del mensaje. Puede ser privado (para el sistema) o publico (para mostrar al socio)"
+          enum:
+            - public
+            - private
+          example: "public"
+      xml:
+        name: "IssueItem"         
+        
+    Price:
+      type: "object"
+      properties:
+        type:
+          type: string
+          enum:
+          - resource
+          - cancelAfterTime
+          description: "tipo de precio"
+          
+        amount:
+          type: number
+          format: "double"
+          description: "monto"
+          
+        currency:
+          type: string
+          enum:
+          - UYU
+          - USD
+          description: "moneda"
+      example:
+        - type: "resource"
+          amount: 100
+          currency: "UYU"      
+      xml:
+        name: "Price"

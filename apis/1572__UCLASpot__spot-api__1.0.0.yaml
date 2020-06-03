@@ -1,0 +1,541 @@
+openapi: 3.0.1
+info:
+  title: SpotAPI
+  description: "This is an API documentation for the application Spot."
+  version: 1.0.0
+# servers:
+# - url: https://petstore.swagger.io/v2
+# - url: http://petstore.swagger.io/v2
+
+servers:
+  - url: https://cryptic-temple-59373.herokuapp.com
+
+tags:
+- name: spots
+  description: Study Spots
+- name: reviews
+  description: Spot Reviews
+- name: favorites
+  description: User Favorites
+
+security:
+  - AuthToken: []
+
+paths:
+  /spots:
+    get:
+      tags:
+        - spots
+      summary: List spots
+      description: Returns a list of spots with the total count
+      operationId: listSpots
+      parameters:
+        - name: pageSize
+          description: This field is for pagination
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+        - name: pageNumber
+          description: This field is for pagination
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: latitude
+          description: latitude of the client
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: longitude
+          description: longitude of the client
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: isOpen
+          description: boolean for searching only open spots
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: sortBy
+          description: sorting criteria
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - distance
+              - rating
+              - review
+            default: distance
+        - name: name
+          description: name to search for
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotListResponse"
+        400:
+          description: Bad Request
+          content: {}
+        500:
+          description: Internal Server Error
+          content: {}
+    post:
+      tags:
+        - spots
+      summary: Add a new spot
+      operationId: addSpot
+      requestBody:
+        description: Spot object
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpotRequest"
+        required: true
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotCreateResponse"
+        400:
+          description: Bad Request
+          content: {}
+        500:
+          description: Internal Server Error
+          content: {}
+  /spots/{spotId}:
+    get:
+      tags:
+        - spots
+      summary: Find spot by ID
+      description: Returns a single spot
+      operationId: getSpotById
+      parameters:
+        - name: spotId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: latitude
+          description: latitude of the client
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: longitude
+          description: longitude of the client
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotDetail"
+        400:
+          description: Invalid ID supplied
+          content: {}
+        500:
+          description: Internal Server Error
+          content: {}
+
+  /reviews:
+    get:
+      tags:
+        - reviews
+      summary: List reviews
+      description: Returns a list of reviews with the total count
+      operationId: listReviews
+      parameters:
+        - name: spotId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 20
+        - name: pageNumber
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewListResponse"
+        400:
+          description: Bad Request
+          content: {}
+        500:
+          description: Internal Server Error
+          content: {}
+    post:
+      tags:
+        - reviews
+      summary: Add a new review to the spot
+      operationId: addReview
+      requestBody:
+        description: Review object that needs to be added to the spot
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRequest"
+        required: true
+      responses:
+        default:
+          description: successful operation
+          content: {}
+  /reviews/{reviewId}:
+    delete:
+      tags:
+        - reviews
+      summary: Delete reviews by ID
+      operationId: deleteReview
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        400:
+          description: Invalid ID supplied
+          content: {}
+        404:
+          description: Order not found
+          content: {}
+  /favorites:
+    get:
+      tags:
+        - favorites
+      summary: "List favorite spots"
+      operationId: getFavoriteSpots
+      parameters:
+        - name: latitude
+          description: latitude of the client
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: longitude
+          description: longitude of the client
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotListResponse"
+    post:
+      tags:
+        - favorites
+      summary: "add favorite spot"
+      operationId: addFavoriteSpot
+      requestBody:
+        description: spotId to add as a favorite
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FavoriteRequest"
+        required: true
+      responses:
+        default:
+          description: successful operation
+          content: {}
+  /favorites/{spotId}:
+    delete:
+      tags:
+        - favorites
+      summary: "remove favorite spot"
+      operationId: removeFavoriteSpot
+      parameters:
+        - name: spotId
+          in: path
+          required: true
+          schema:
+            type: string
+      description: spotId to remove from favorite
+      responses:
+        default:
+          description: successful operation
+          content: {}
+components:
+  securitySchemes:
+    AuthToken:
+      type: apiKey
+      in: header
+      name: x-spot-access-token
+  schemas:
+    SpotRequest:
+      type: object
+      properties:
+        googlePlaceId:
+          type: string
+      required:
+        - googlePlaceId
+    SpotListResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+        page:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpotListEntry"
+      required:
+        - count
+        - page
+    SpotListEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        distanceInMiles:
+          type: number
+          format: double
+        imageUrl:
+          type: string
+        rating:
+          type: number
+          format: double
+        availability:
+          type: number
+          format: double
+        openFrom:
+          $ref: "#/components/schemas/Time"
+        openTo:
+          $ref: "#/components/schemas/Time"
+        category:
+          type: string
+        reviewCount:
+          type: integer
+          format: int32
+        latlng:
+          $ref: "#/components/schemas/LatLng"
+        googlePlaceId:
+          type: string
+      required:
+        - id
+        - name
+        - distanceInMiles
+        - category
+        - reviewCount
+        - googlePlaceId
+        - latlng
+    SpotDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        googlePlaceId:
+          type: string
+        name:
+          type: string
+        distanceInMiles:
+          type: number
+          format: double
+        imageUrl:
+          type: string
+        rating:
+          type: number
+          format: double
+        availability:
+          type: number
+          format: double
+        openFrom:
+          $ref: "#/components/schemas/Time"
+        openTo:
+          $ref: "#/components/schemas/Time"
+        category:
+          type: string
+        reviewCount:
+          type: integer
+          format: int32
+        latlng:
+          $ref: "#/components/schemas/LatLng"
+        attribute:
+          $ref: "#/components/schemas/SpotAttribute"
+        address:
+          $ref: "#/components/schemas/Address"
+      required:
+        - id
+        - name
+        - distanceInMiles
+        - category
+        - reviewCount
+        - latlng
+        - googlePlaceId
+        - address
+    ReviewRequest:
+      type: object
+      properties:
+        attributes:
+          $ref: "#/components/schemas/SpotAttribute"
+        text:
+          type: string
+        rating:
+          type: number
+          format: double
+        spotId:
+          type: string
+      required:
+        - attributes
+        - text
+        - rating
+        - spotId
+    ReviewListResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+        page:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewListEntry"
+      required:
+        - count
+        - page
+    ReviewListEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        attributes:
+          $ref: "#/components/schemas/SpotAttribute"
+        text:
+          type: string
+        rating:
+          type: number
+          format: double
+        spotId:
+          type: string
+      required:
+      - id
+      - attributes
+      - text
+      - rating
+      - spotId
+    FavoriteRequest:
+      type: object
+      properties:
+        spotId:
+          type: string
+      required:
+        - spotId
+    LatLng:
+      type: object
+      properties:
+        latitude:
+          type: number
+          format: double
+        longitude:
+          type: number
+          format: double
+      required:
+        - latitude
+        - longitude
+    Time:
+      type: object
+      properties:
+        hour:
+          type: integer
+          format: int32
+        minute:
+          type: integer
+          format: int32
+        dayOfWeek:
+          type: integer
+          format: int32
+      required:
+        - hour
+        - minute
+        - dayOfWeek
+    SpotAttribute:
+      type: object
+      properties:
+        wifi:
+          type: number
+          format: double
+        drinks:
+          type: number
+          format: double
+        outlets:
+          type: number
+          format: double
+        quiet:
+          type: number
+          format: double
+        cleanliness:
+          type: number
+          format: double
+        temperature:
+          type: number
+          format: double
+    Address:
+      type: object
+      properties:
+        address1:
+          type: string
+        address2:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipcode:
+          type: string
+      required:
+        - address1
+        - address2
+        - city
+        - state
+        - zipcode
+    SpotCreateResponse:
+      type: object
+      properties:
+        id:
+          type: string

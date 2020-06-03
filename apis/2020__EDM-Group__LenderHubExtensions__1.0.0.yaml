@@ -1,0 +1,413 @@
+openapi: 3.0.0
+info:
+  description: >-
+    Definition of the proposed extensions to the eTech LenderHub API to support the integration with the EDM Property Risk Hub.
+  version: "1.0.0"
+  title: Lender Hub Extensions
+  contact: {}
+paths:
+  /api/Panel/{valuerPanelId}/availability:
+    post:
+      tags:
+        - Availability
+      summary: Get Valuer Panel Availability
+      operationId: GetValuerPanelAvailabilityPost
+      description: Get Valuer Panel Availability information for the chosen Valuer Panel.
+      parameters:
+      - name: valuerPanelId
+        in: path
+        required: true
+        description: The identifier used to determine which Valuer Panel the lender would like to check for availability.
+        style: simple
+        explode: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValuerPanelAvailabilityrequest'
+            example: 
+              ClientBranchName: Nationwide (MSO)
+              ClientName: Nationwide Building Society (MSO)
+              CaseReference: M1915602253
+              InstructionReference: "M1915602253-01"
+              Address:
+                BuildingName: Rose House
+                BuildingNumber: "2"
+                Line1: Test Street
+                Province: Oxfordshire
+                PostalCode: "OX30 7LB"
+              PropertyNotes: ''
+              ConstructionYear: '1930'
+              PropertyTypeCode: SEMIDETACHEDHOUSE
+              PropertyTypeText: Semi-Detached House
+              NumberOfBedrooms: '3'
+              EstimatedValueAmount: 150000
+              EstimatedRental: 0
+              PurchasePriceAmount: 150000
+              LoanAmount: 100000
+              GroundRent: 0
+              LeaseHoldTerm: 0
+              TenureText: Freehold
+              InstructionTypeCode: MV
+              ApplicationTypeCode: REMORTGAGE
+              CaseCustomAttributes:
+                - itemKey: Case Key 1
+                  itemValue: SampleValue
+                - itemKey: CaseDataStatus
+                  itemValue: InProg
+              ValuerGroup: e.surv Chartered Surveyors
+        description: Request Panel Availability
+      responses:
+        200:
+          description: item created
+          content:
+            application/json:
+              schema:
+                required: 
+                  - "GetPanelFirmAvailabilityResult"
+                properties: 
+                  GetPanelFirmAvailabilityResult: 
+                    $ref: '#/components/schemas/AvailabilityEnum'
+              example:
+                GetPanelFirmAvailabilityResult: No Coverage
+        400:
+          description: 'Bad Request'
+        500:
+          description: 'Server Error'
+  /api/Jobs/{jobId}/status:
+    post:
+      tags:
+        - Jobs
+      summary: Update Job Status
+      description: Update the job status with the latest status information from the lender.
+      operationId: UpdateJobStatusPost
+      parameters:
+      - name: jobId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateJobStatusrequest'
+            example:
+              status:
+                instructionReference: REF1243
+                notes: 
+                statusCode: ONHOLD
+                statusDataItems:
+                  statusDataItem:
+                  - itemKey: On Hold from Date
+                    itemValue: 2016-06-01
+                statusDate: 2016-06-28T15:36:52.511Z
+                statusMessage: 'Instruction has been placed on hold - 01 June 2016 at 9:00.'
+                statusReason: Applicant is on holiday.
+        required: true
+      responses:
+        200:
+          description: Success
+          headers: {}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateJobStatusresponse'
+        400:
+          description: 'Bad Request'
+        500:
+          description: 'Server Error'
+components:
+  schemas:
+    UpdateJobStatusresponse: 
+      type: object
+      properties:
+        id:
+          format: uuid
+          type: string
+    JobContactAddress:
+      required:
+        - postcode
+      type: object
+      properties:
+        subBuildingName:
+          maxLength: 100
+          type: string
+        buildingName:
+          maxLength: 100
+          type: string
+        buildingNumber:
+          maxLength: 100
+          type: string
+        dependentThoroughFareName:
+          maxLength: 100
+          type: string
+        street:
+          maxLength: 100
+          type: string
+        dependentLocality:
+          maxLength: 100
+          type: string
+        doubleDependentLocality:
+          maxLength: 100
+          type: string
+        town:
+          maxLength: 100
+          type: string
+        postcode:
+          maxLength: 15
+          type: string
+        uprn:
+          maxLength: 12
+          type: string
+        udprn:
+          maxLength: 8
+          type: string
+        isVerified:
+          type: boolean
+    ContactTelephone:
+      required:
+        - telephoneNumber
+      type: object
+      properties:
+        telephoneNumber:
+          type: string
+        isPrimary:
+          type: boolean
+        isMobile:
+          type: boolean
+    JobContact:
+      title: JobContact
+      required:
+      - salutation
+      - firstName
+      - lastName
+      - telephoneNumbers
+      type: object
+      properties:
+        id:
+          format: uuid
+          type: string
+        salutation:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        companyName:
+          type: string
+        emailAddress:
+          type: string
+        isPrimaryContact:
+          type: boolean
+        isAgency:
+          type: boolean
+        isApplicant:
+          type: boolean
+        isPropertyOwner:
+          type: boolean
+        isOccupier:
+          type: boolean
+        isAppointmentContact:
+          type: boolean
+        isKeyHolder:
+          type: boolean
+        unknownAddress:
+          type: boolean
+        useJobAddress:
+          type: boolean
+        address:
+          $ref: "#/components/schemas/JobContactAddress"
+        telephoneNumbers:
+          minLength: 1
+          uniqueItems: false
+          type: array
+          items:
+            $ref: "#/components/schemas/ContactTelephone"
+    StatusDataItem:
+      title: StatusDataItem
+      required:
+      - itemKey
+      type: object
+      properties:
+        itemKey:
+          type: string
+        itemValue:
+          type: string
+      description: ''
+    JobStatusDataItems:
+      title: JobStatusDataItems
+      type: object
+      properties:
+        statusDataItem:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusDataItem'
+          description: ''
+      description: ''
+    UpdateJobStatus:
+      title: Status
+      required:
+      - statusDate
+      - statusMessage
+      type: object
+      description: Job Status Update
+      properties:
+        jobContacts:
+          $ref: '#/components/schemas/JobContact'
+        InstructionReference:
+          type: string
+        notes:
+          type: string
+        statusCode:
+          type: string
+        statusDataItems:
+          $ref: '#/components/schemas/JobStatusDataItems'
+        statusDate:
+          type: string
+          format: date-time
+        statusMessage:
+          type: string
+        statusReason:
+          type: string
+    UpdateJobStatusrequest:
+      title: UpdateJobStatusrequest
+      required:
+      - Status
+      type: object
+      properties:
+        Status:
+          $ref: '#/components/schemas/UpdateJobStatus'
+    ValuerPanelAvailabilityrequest:
+      required: 
+        - "ClientName"
+        - "CaseReference"
+        - "Address"
+        - "InstructionTypeCode"
+        - "ApplicationTypeCode"
+      properties: 
+        ClientBranchName: 
+          type: "string"
+          example: "Nationwide (MSO)"
+        ClientName: 
+          type: "string"
+          example: "Nationwide Building Society (MSO)"
+        CaseReference: 
+          type: "string"
+          example: "M1915602253"
+        InstructionReference: 
+          type: "string"
+          example: "M745169885-01"
+        Address: 
+          required: 
+            - "Line1"
+            - "PostalCode"
+          properties: 
+            Company: 
+              type: "string"
+              example: ""
+            BuildingName: 
+              type: "string"
+              example: "Rose House"
+            BuildingNumber: 
+              type: "string"
+              example: "2"
+            Line1: 
+              type: "string"
+              example: "Test Street"
+            Line2: 
+              type: "string"
+              example: ""
+            Line3: 
+              type: "string"
+              example: ""
+            Line4: 
+              type: "string"
+              example: ""
+            City: 
+              type: "string"
+              example: ""
+            Province: 
+              type: "string"
+              example: "Oxfordshire"
+            PostalCode: 
+              type: "string"
+              example: "OX30LB"
+            UPRN: 
+              type: "string"
+              example: ""
+          type: "object"
+        PropertyNotes: 
+          type: "string"
+          example: ""
+        ConstructionYear: 
+          type: "string"
+          example: "1930"
+        PropertyTypeCode: 
+          type: "string"
+          example: "SEMIDETACHEDHOUSE"
+        PropertyTypeText: 
+          type: "string"
+          example: "Semi-Detached House"
+        NumberOfBedrooms: 
+          type: "string"
+          example: "3"
+        EstimatedValueAmount: 
+          type: "number"
+          example: 150000
+        EstimatedRental: 
+          type: "number"
+          example: 0
+        PurchasePriceAmount: 
+          type: "number"
+          example: 150000
+        LoanAmount: 
+          type: "number"
+          example: 100000
+        GroundRent: 
+          type: "number"
+          example: 0
+        LeaseHoldTerm: 
+          type: "number"
+          example: 0
+        TenureId: 
+          type: "string"
+          example: "1"
+        TenureText: 
+          type: "string"
+          example: "Freehold"
+        InstructionTypeCode: 
+          type: "string"
+          example: "MV"
+        ApplicationTypeCode: 
+          type: "string"
+          example: "REMORTGAGE"
+        CaseCustomAttributes: 
+          type: "array"
+          items: 
+            type: "object"
+            properties: 
+              itemKey: 
+                type: "string"
+                example: "Case Key 1"
+              itemValue: 
+                type: "string"
+                example: "SampleValue"
+        ValuerGroup: 
+          type: "string"
+          example: "e.surv Chartered Surveyors"
+    AvailabilityEnum:
+      title: AvailabilityEnum
+      enum:
+      - Busy
+      - Available
+      - NoCoverage
+      - NotFound
+      - OnHold
+      - Cancelled
+      type: string
+      example: No Coverage

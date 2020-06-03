@@ -1,0 +1,270 @@
+openapi: 3.0.0
+info:
+  version: "1.0.2-oas3"
+  title: Technical Services FTDC Requestion API
+  description: >-
+    This REST API is used to request FTDC from the Atlas API using a single API key with elevated
+    (`GLOBAL_MONITORING_ADMIN`) privileges. This API implements its own security and access control to allow wider
+    usage of this service while maintaining security and auditing at the individual user level.
+
+    Basic Auth is used with Username and passwords from the mongo users of the Atlas project. To be able to interact
+    with the API, you need to have a db user in the `RequestDB` database. This will be replaced by Oauth authentication
+    in future versions.
+security:
+  - httpAuth: []
+
+paths:
+  /ping:
+    get:
+      summary: Server heartbeat operation
+      description: >-
+        Check to see if the API is up and functioning.
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pong:
+                    type: boolean
+
+  /clusters/{groupID}:
+    get:
+      summary: Returns all clusters for a given project id
+      description: >-
+        Returns a list of all clusters for the provided project (group)
+      parameters:
+        - name: groupID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/clusterInfo'
+                example:
+                  - id: jlkjklj-sadasda-dasdasdas-dasdasd
+                    clusterType: SHARDED
+                  - id: 234423-23423423-gdsgdgdsgd-34242343
+                    name: REPLICASET
+        '404':
+          description: The provided group/project id does not exist
+
+  /jobs/{groupID}/clusters/{clusterID}:
+    post:
+      summary: Requests an ftdc collection job for a cluster
+      description: >-
+        Triggers a request for a log collection job of type ftdc.
+      parameters:
+        - name: groupID
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: clusterID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+        '400':
+          description: The provided group or cluster id does not exist.
+    get:
+      summary: Returns all jobs for a given cluster
+      description: >-
+        Returns all jobs for a given group and cluster.
+
+        Includes the job ID, as well as the latest status. This data is pulled from the Atlas
+        API, and the status is updated beyond Atlas statuses by the Requestor and Storer.
+      parameters:
+        - name: groupID
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: clusterID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/jobInfo'
+        '404':
+          description: The provided group/project id does not exist
+
+  /jobs/{groupID}/{jobID}:
+    get:
+      summary: The current status of a single job
+      description: >-
+        Returns job status information for the passed job id.
+
+        Includes the job ID, as well as the latest status. This data is pulled from the Atlas
+        API, and the status is updated beyond Atlas statuses by the Requestor and Storer.
+      parameters:
+        - name: groupID
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: jobID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/jobInfo'
+        '404':
+          description: The provided job ID does not exist
+
+    delete:
+      summary: Removes the requested job
+      description: >-
+        Deletes the job request and cleans up any files gathered from the Atlas servers.
+      parameters:
+        - name: groupID
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: jobID
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        '204':
+          description: OK
+        '404':
+          description: The provided job ID does not exist
+
+
+  /jobs/{groupID}/{jobID}/file:
+    get:
+      summary: Retrives the archive of the files collected by the job.
+      description: >-
+        Returns an compressed archive containing all of the files requested for the given job.
+
+      parameters:
+        - name: groupID
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: jobID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/tar+gzip:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: The provided job id does not exist.
+
+  /jobs/{groupID}:
+    get:
+      summary: Returns all jobs for a given group
+      description: >-
+        Returns all jobs for a given group.
+
+        Includes the job ID, as well as the latest status. This data is pulled from the Atlas
+        API, and the status is updated beyond Atlas statuses by the Requestor and Storer.
+      parameters:
+        - name: groupID
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/jobInfo'
+        '404':
+          description: The provied group id does not exist.
+
+servers:
+  - url: 'https://virtserver.swaggerhub.com/mgmonteleone73/ts-ftdc-requestor/1.0.0'
+
+components:
+  schemas:
+    jobInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum:
+            - SUCCESS
+            - FAILURE
+            - IN_PROGRESS
+            - MARKED_FOR_EXPIRY
+            - EXPIRED
+      required:
+        - id
+    requestStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - DELETED
+            - REQUESTED
+            - NOT FOUND
+            - ERROR
+    clusterInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        clusterType:
+          type: string
+          enum:
+            - REPLICASET
+            - SHARDED
+            - GEOSHARDED
+
+  securitySchemes:
+    httpAuth:
+      type: http
+      scheme: basic

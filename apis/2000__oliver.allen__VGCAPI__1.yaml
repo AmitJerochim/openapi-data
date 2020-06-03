@@ -1,0 +1,332 @@
+openapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+# Added by API Auto Mocking Plugin
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/oliver.allen/VGCAPI/1
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/variable-content/VGC/1.0.0
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/variable-content/vgc/master-data/v1
+info:
+  description: VGC Create Voucher and Gift Card Stock Prototype
+  version: "1"
+  title: VGC Master Data API
+tags:
+  - name: Client Orders
+  - name: Vouchers
+  - name: Gift Cards
+paths:
+  '/client-orders/vouchers':
+    post:
+      tags:
+        - Client Orders
+      summary: Create voucher client order
+      operationId: createClientOrderForVouchers
+      description: Creates a client order for vouchers (defaults to electronic distrib method)
+      responses:
+        '202':
+          description: 'Accepted'
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Url for the client-order created
+              example: '/client-orders/reference/sd98f7ds9fds'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientOrderCreateResponse'
+        '400':
+          description: 'Invalid input, object invalid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoucherClientOrder'
+        description: Client voucher order to create
+  '/client-orders/gift-cards':
+    post:
+      tags:
+        - Client Orders
+      summary: Create gift card client order
+      operationId: createClientOrderForGiftCards
+      description: Creates a client order for gift cards
+      responses:
+        '202':
+          description: 'Accepted'
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Url for the client-order created
+              example: '/client-orders/reference/sd98f7ds9fds'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientOrderCreateResponse'        
+        '400':
+          description: 'Invalid input, object invalid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GiftCardClientOrder'
+        description: Client gift order to create
+  '/client-orders/references/{reference}':
+    get:
+      tags:
+        - Client Orders
+      summary: Get Client Order By Reference
+      operationId: getClientOrderByReference
+      description: Gets a cient order by reference (todo paging of items or output a file link)
+      parameters:
+        - name: reference
+          in: path
+          description: Client Order Reference
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientOrder'
+  '/voucher-types':
+    get:
+      tags:
+        - Vouchers
+      summary: Get Voucher Types
+      operationId: getAllVoucherTypes
+      description: Gets a list of all voucher types
+      responses:
+        '200':
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VoucherType'
+  '/gift-card-types':
+    get:
+      tags:
+        - Gift Cards
+      summary: Get Gift Card Types
+      operationId: getAllGiftCardTypes
+      description: Gets a list of all gift card types
+      responses:
+        '200':
+          description: 'OK'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GiftCardType'
+  '/gift-cards/activations':
+    post:
+      tags:
+        - Gift Cards
+      summary: Activate Gift Card
+      operationId: activateGiftCards
+      description: Activate gift cards and set balance
+      responses:
+        '204':
+          description: 'No Content'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ActivateGiftCardsRequest'
+        description: Activate gift cards request
+  '/gift-cards/refunds':
+    post:
+      tags:
+        - Gift Cards
+      summary: Refunds Gift Card
+      operationId: refundGiftCards
+      description: Refunds gift cards
+      responses:
+        '204':
+          description: 'No Content'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/RefundGiftCardsRequest'
+        description: Refund gift cards request
+components:
+  schemas:
+    ClientOrder:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - None
+            - Queuing
+            - Queued
+            - Processing
+            - Success
+            - QueueFailure
+            - ProcessingFailure
+            - UnexpectedFailure
+        vouchers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Voucher'
+        giftCards:
+          type: array
+          items:
+            $ref: '#/components/schemas/GiftCard'
+    ClientOrderCreateResponse:
+      type: object
+      properties:
+        clientReference:
+          type: string
+    Voucher:
+      type: object
+      properties:
+        productCode:
+          type: string
+          example: 'VT001'
+        barcode:
+          type: string
+          example: 'VT0011456156'
+        pin:
+          type: string
+          example: '8974'
+    GiftCard:
+      type: object
+      properties:
+        productCode:
+          type: string
+          example: '0001'
+        cardNumber:
+          type: string
+          example: '000012103874209'
+        pin:
+          type: string
+          example: '986'
+    VoucherClientOrder:
+      type: object
+      required:
+        - vouchers
+      properties:
+        vouchers:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoucherClientOrderRequest'
+        OrderReference:
+          type: string
+    VoucherClientOrderRequest:
+      type: object
+      required:
+        - productCode
+        - quantity
+      properties:
+        productCode:
+          type: string
+          example: VT0001
+        quantity:
+          type: number
+          format: int32
+          example: 1000
+        salePrice:
+          type: number
+          format: float
+          example: 9.98
+        redeemPrice:
+          type: number
+          format: float
+          example: 9.98
+        expiryDate:
+          type: string
+          format: date
+    GiftCardClientOrder:
+      type: object
+      required:
+        - giftCards
+      properties:
+        giftCards:
+          type: array
+          items:
+            $ref: '#/components/schemas/GiftCardClientOrderRequest'
+        OrderReference:
+          type: string
+    GiftCardClientOrderRequest:
+      type: object
+      required:
+        - productCode
+        - quantity
+        - unitPrice
+      properties:
+        productCode:
+          type: string
+          example: "00001"
+        quantity:
+          type: number
+          format: int32
+          example: 1000
+    VoucherType:
+      type: object
+      required:
+        - productCode
+      properties:
+        productCode:
+          type: string
+          example: 'VT001'
+        description:
+          type: string
+          example: Adult Ticket Voucher
+        isPinRequired:
+          type: boolean
+          example: true
+    GiftCardType:
+      type: object
+      required:
+        - productCode
+      properties:
+        productCode:
+          type: string
+          example: '00001'
+        description:
+          type: string
+          example: 'Xmas Gift Card'
+        isPinRequired:
+          type: boolean
+          example: true
+    ActivateGiftCardsRequest:
+      type: object
+      required:
+        - id
+      properties:
+        cardNumber:
+          type: string
+          example: '000012103874209'
+        balance:
+          type: number
+          format: float
+          example: 29.99
+        date:
+          type: string
+          format: date
+    RefundGiftCardsRequest:
+      type: object
+      required:
+        - id
+      properties:
+        cardNumber:
+          type: string
+          example: '000012103874209'
+        date:
+          type: string
+          format: date

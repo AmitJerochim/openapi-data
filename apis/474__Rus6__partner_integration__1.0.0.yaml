@@ -1,0 +1,544 @@
+openapi: 3.0.0
+info:
+  description: |
+    Описание API интеграций для партнеров
+    Все вопросы задавайте на почту 24@rustransfer.org или в скайп ответственному лицу.
+    
+    Для создания заказа, необходимо предварительно рассчитать стоимость, соответственно создание заказа делится на 2 этапа:
+    1) Отправка запроса на /calculate
+    2) Отправка запроса на /orders
+    
+  version: "1.0.0"
+  title: API интеграции
+  contact:
+    email: 24@rustransfer.org
+servers:
+  - description: Sandbox
+    url: https://sandbox.rustransfer.org/hs/api
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Rus6/partner_integration/1.0.0
+tags:
+  - name: Заказы
+    description: Взаимодействие с заказами
+  - name: Заказ
+    description: Взаимодействие с конкретным заказом
+  - name: Калькулятор
+    description: Взаимодействие с калькулятором заказа
+paths:
+    /orders:
+      get:
+        summary: Список заказов
+        description: Получить список заказов
+        tags:
+          - Заказы
+        responses:
+          '200':
+            $ref: '#/components/responses/OrdersResponse'
+      post:
+        summary: Новый заказ
+        description: Создать новый заказ с указанными параметрами, на основе расчета калькулятора из **/calculate**
+        tags:
+          - Заказы
+        requestBody:
+          $ref: '#/components/requestBodies/OrderRequestBody'
+        responses:
+          '200':
+            $ref: '#/components/responses/OrderResponse'
+    /orders/{guid}:
+      parameters: 
+          - name: guid
+            in: path
+            description: Идентификатор заказа
+            required: true
+            schema:
+              type: string
+      get:
+        summary: Данные заказа
+        description: Получить данные заказа
+        tags:
+          - Заказ
+        responses:
+          '200':
+            $ref: '#/components/responses/OrderResponse'
+      post:
+        summary: Изменить заказ
+        description: Изменяет указанный заказ с переданными параметрами, на основе расчета калькулятора из **/calculate**
+        tags:
+          - Заказ
+        requestBody:
+          $ref: '#/components/requestBodies/OrderRequestBody'
+        responses:
+          '200':
+            $ref: '#/components/responses/OrderResponse'
+      delete:
+        summary: Отмена заказа
+        description: Запрос на отмену заказа
+        tags:
+          - Заказ
+        responses:
+          '200':
+            description: "OK"
+    /calculate:
+      post:
+        summary: Рассчитать поездку
+        description: Выполняет рассчет поездки \ поездок
+        tags:
+          - Калькулятор
+        requestBody:
+          $ref: '#/components/requestBodies/CalculateRequestBody'
+        responses:
+          '403':
+            $ref: '#/components/responses/Unauthorized'
+          '200':
+            $ref: '#/components/responses/CalculateResponse'
+components:
+  responses:
+    CalculateResponse:
+      description: Ответ калькулятора
+      content:
+        application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ApiSuccess'
+                - type: object
+                  required:
+                    - Result
+                  properties:
+                    Result:
+                      $ref: '#/components/schemas/CalculateResults'
+    OrdersResponse:
+      description: Данные заказов
+      content:
+        application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ApiSuccess'
+                - type: object
+                  required:
+                    - Result
+                  properties:
+                    Result:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/OrderResult'
+    OrderResponse:
+      description: Данные заказа
+      content:
+        application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ApiSuccess'
+                - type: object
+                  required:
+                    - Result
+                  properties:
+                    Result:
+                      $ref: '#/components/schemas/OrderResult'
+    Unauthorized:
+      description: Ошибка авторизации
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiSuccess'
+    NotFound:
+      description: Сущность не найдена
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiSuccess'
+  schemas:
+    ApiSuccess:
+      type: object
+      properties:
+        StatusCode:
+          description: Код ответа
+          type: integer
+          default: 200
+        Success:
+          description: Флаг успешного ответа
+          type: boolean
+          default: true
+    ApiError:
+      type: object
+      properties:
+        StatusCode:
+          description: Код ответа
+          type: integer
+          default: " >= 400 "
+        Success:
+          description: Флаг неуспешного ответа
+          type: boolean
+          default: false
+        Result:
+          type: object
+        Error:
+          $ref: '#/components/schemas/ApiErrorDescription'
+    ApiErrorDescription:
+      type: object
+      properties:
+        Description:
+          type: string
+        Type:
+          type: string
+    CalculateItems:
+      type: object
+      required: 
+        - requests
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalculateItem'
+    CalculateItem:
+      type: object
+      required: 
+        - date
+        - origin
+        - destination
+        - type
+        - client
+      properties:
+        date:
+          type: string
+          format: date-time
+        origin:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteItemRequest'
+        destination:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteItemRequest'
+        type:
+          $ref: '#/components/schemas/OrderTypes'
+        currency:
+          type: string
+        client:
+          type: string
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionItemRequest'
+    CalculateResults:
+      type: array
+      items:
+        anyOf:
+          - $ref: '#/components/schemas/CalculateResult'
+          - $ref: '#/components/schemas/CalculateResultError'
+    CalculateResultError:
+      type: object
+      required:
+        - Success
+        - ErrorCode
+      properties:
+        Success:
+          description: Флаг неудачного расчета
+          type: boolean
+          default: false
+        ErrorCode:
+          description: Описание ошибки
+          type: string
+    CalculateResult:
+      type: object
+      required:
+        - Success
+      properties:
+        Success:
+          description: Флаг удачного расчета
+          type: boolean
+          default: true
+        Id:
+          description: Идентификатор (guid) расчета
+          type: string
+        Currency:
+          description: Валюта расчета
+          type: string
+        Duration:
+          description: Длительность маршрута в секундах
+          type: number
+        Distance:
+          description: Дальность маршрута в км
+          type: number
+        Origin:
+          description: Адреса подачи
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteItemRespones'
+        Destination:
+          description: Адреса назначения
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteItemRespones'
+        Tariffs:
+          description: Данные тарифов
+          type: array
+          items:
+            $ref: '#/components/schemas/CalculationTariffItem'
+        Messages:
+          description: Сообщения по маршруту
+          type: array
+          items:
+            type: string
+    OrderRequest:
+      type: object
+      required: 
+        - CalculationId
+        - Tariff
+        - PaymentType
+      properties:
+        PaymentType:
+          $ref: '#/components/schemas/PaymentTypes'
+        CodeWord:
+          description: Кодовое слово
+          type: string
+        ExternalId:
+          description: Внешний идентификатор заказа
+          type: string
+        CalculationId:
+          description: Идентификатор (guid) расчета калькулятора
+          type: string
+        Comment:
+          description: Комментарий к заказу
+          type: string
+        Passengers:
+          description: Пассажиры
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactItem'
+        Information:
+          description: Дополнительная информация по заказу
+          type: array
+          items:
+            $ref: '#/components/schemas/InformationItem'
+        Contact:
+          $ref: '#/components/schemas/ContactItem'
+        Tariff:
+          description: Идентификатор выбранного тарифа
+          type: string
+    OrderResult:
+      type: object
+      properties:
+        Id:
+          type: string
+        CreationDate:
+          type: string
+        Date:
+          type: string
+        PaymentType:
+          $ref: '#/components/schemas/PaymentTypes'
+        Origin:
+          description: Адреса подачи
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteItemRespones'
+        Destination:
+          description: Адреса назначения
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteItemRespones'
+        Currency:
+          type: string
+        Client:
+          type: string
+        Tariff:
+          type: string
+        Options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionItemRespones'
+        ExternalId:
+          type: string
+        Type:
+          $ref: '#/components/schemas/OrderTypes'  
+        CodeWord:
+          type: string
+        Comment:
+          type: string
+        Information:
+          description: Дополнительная информация по заказу
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactItem'
+        Contact:
+          $ref: '#/components/schemas/ContactItem'
+        Passengers:
+          description: Пассажиры
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactItem'
+        Sum:
+          type: number
+        Number:
+          type: string
+    ContactItem:
+      type: object
+      required:
+        - Name
+      properties:
+        Name:
+          description: ФИО контакта
+          type: string
+        Phone:
+          description: Телефон
+          type: string
+        Email:
+          description: Электронная почта
+          type: string
+    InformationItem:
+      type: object
+      required:
+        - Name
+        - Value
+      properties:
+        Id:
+          description: Внешний идентификатор
+          type: string
+        Name:
+          description: Наименование
+          type: string
+        Value:
+          description: Значение
+          type: string
+    CalculationTariffItem:
+      type: object
+      properties:
+        Id:
+          type: string
+        Name:
+          type: string
+        Total:
+          type: string
+        Options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionItemRespones'
+    RouteItemRespones:
+      required:
+        - Address
+        - Lat
+        - Lng
+        - GoogleId
+        - AddressType
+      properties:
+        Address:
+          description: Представление адреса
+          type: string
+        Lat:
+          description: Широта
+          type: number
+        Lon:
+          description: Долгота
+          type: number
+        GoogleId:
+          description: Идентификатор Google
+          type: string
+        AddressType:
+          description: Тип адреса
+          type: string
+          enum:
+            - Address
+            - Airport
+            - Hotel
+    RouteItemRequest:
+      type: object
+      required: 
+        - type
+        - value
+      properties:
+        type:
+          description: "Тип адреса: Address - Адрес строкой, LatLng - пара коодинат через запятую
+            GooglePlace - идентификатор Google объекта"
+          type: string
+          enum:
+            - Address
+            - LatLng
+            - GooglePlace
+        value:
+          description: Значение адреса
+          type: string
+    OptionItemRespones:
+      type: object
+      properties:
+        Id:
+          type: string
+        Name:
+          type: string
+        Price:
+          type: number
+        Count:
+          type: number
+        Total:
+          type: number
+    OptionItemRequest:
+      type: object
+      required: 
+        - type
+        - value
+      properties:
+        type:
+          description: "Тип опции: MeetAndGreet - встреча с табличкой, Waiting - ожидание, Rent - количество часов аренды"
+          type: string
+          enum:
+            - MeetAndGreet
+            - Waiting
+            - Rent
+    PaymentTypes:
+      description: Тип оплаты
+      type: string
+      enum:
+        - Cash
+        - Cashless
+    OrderTypes:
+      description: Тип поездки
+      type: string
+      enum:
+        - Transfer
+        - Rent
+  requestBodies:
+    CalculateRequestBody:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CalculateItems'
+          examples:
+            SimpleCalc:
+              $ref: '#/components/examples/CalculationExample'
+    OrderRequestBody:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OrderRequest'
+          examples:
+            SimpleCreate:
+              $ref: '#/components/examples/CreateOrderExample'
+  examples:
+    CalculationExample:
+      summary: Пример запроса на калькуляцию
+      value:
+        Requests:
+          - Date: "20200809T183142"
+            Origin:
+              - Type: "Address"
+                Value: "Москва ленинградский проспект 79"
+            Destination:
+              - Type: "Address"
+                Value: "Аэропорт Шереметьево"
+            Currency: "USD"
+            Client: "cfcad77b-5598-471d-a3b0-1162a9d90144 (если имеется идентфикатор клиента)"
+            Type: "Transfer"
+    CreateOrderExample:
+      summary: Пример запроса для создания простого заказа
+      value: 
+        PaymentType: Cashless
+        CodeWord: "Кодовое слово (если необходимо)"
+        ExternalId: "Внешний индентификатор (если необходимо)"
+        CalculationId: "384aa487-e705-4ecd-9741-fad5bc9eddf9 (Идентификатор калькуляции, берется из ответа калькулятора)"
+        Comment: "Комментарий к заказу"
+        Tariff: "01aad35c-d5c9-4c96-b0ef-24a80f2bb94c (Идентификатор тарифа, берется из ответа калькулятора)"
+        Contact:
+          - Name: "ФИО ответственного сотрудника"
+            Phone: "+71111111111"
+        Passengers:
+          - Name: "ФИО пассажира или его обозначение ('Пассажир', например), если передавать ФИО нежелательно"
+            Phone: "+72222222222"

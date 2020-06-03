@@ -1,0 +1,283 @@
+openapi: 3.0.0
+servers:
+- description: Local Server
+  url: http://localhost:8080
+info:
+  description: |
+    With Lindenbaum Cognitive Voice API you can easily do things like building your voicebots,
+      which can be reached via phone calls. You can receive speech input of the caller as
+      transcripted text in many languages. Let different voices say your text in this call.
+      After the voicebot dialog you may drop the call (call fully completed by bot) or transfer the call e.g. to the relevant service hotline (human agent required to satisfy caller).
+
+
+      Find documentation about the API provided on our site below voice endpoints.
+
+
+      By some events, such as receiving an incoming phone call or transcription of a callers
+      utterance, Lindenbaum make an HTTP request to an URL to be provided by you. This is called
+      a webhook. To handle a webhook, you need to build a small web application that can accept
+      the HTTP requests. The required webhooks are listed as bot endpoints.
+  version: 1.0.13
+  title: Lindenbaum Cognitive Voice Bot API
+  contact:
+    email: cvp@lindenbaum.eu
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+tags:
+- name: bot
+  description: endpoints related to text analysis and text responses
+security:
+- OAuth2: []
+- ApiKeyAuth: []
+paths:
+  /session:
+    post:
+      tags:
+      - bot
+      summary: A session with a caller has been established
+      operationId: session
+      description: A session with a caller has been established
+      responses:
+        '204':
+          description: Operation successful
+        '400':
+          description: Bad request
+      requestBody:
+        description: Parameters for the session operation
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionParameters'
+  /message:
+    post:
+      tags:
+      - bot
+      summary: Caller utterance has been transcribed to text
+      operationId: message
+      description: Caller utterance has been transcribed to text
+      responses:
+        '204':
+          description: Operation successful
+        '400':
+          description: Bad request
+      requestBody:
+        description: Parameters for the message operation
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageParameters'
+  /inactivity:
+    post:
+      tags:
+      - bot
+      summary: Call/Session has been inactive
+      operationId: inactivity
+      description: Call/Session has been inactive. The duration of the inactivity
+        period is contained in the "duration" field of the body. The last activity
+        in this session thus occurred at timestamp "timestamp" - "duration", according
+        to the corresponding fields in the body of this message.
+      responses:
+        '204':
+          description: Operation successful
+        '400':
+          description: Bad request
+      requestBody:
+        description: Parameters for the inactive operation
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InactivityParameters'
+  /terminated:
+    post:
+      tags:
+      - bot
+      summary: Call/Session has been terminated
+      operationId: terminated
+      description: Call/Session has been terminated
+      responses:
+        '204':
+          description: Operation successful
+        '400':
+          description: Bad request
+      requestBody:
+        description: Parameters for the terminated operation
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminatedParameters'
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: http://example.com/oauth/auth
+          scopes: {}
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-KEY
+  schemas:
+    SessionParameters:
+      type: object
+      required:
+      - dialogId
+      - timestamp
+      - local
+      - remote
+      - language
+      - callback
+      properties:
+        dialogId:
+          type: string
+          format: uuid
+          example: 09e59647-5c77-4c02-a1c5-7fb2b47060f1
+        timestamp:
+          allOf:
+          - $ref: '#/components/schemas/Timestamp'
+          description: |
+            An instant of time, measured in milliseconds since the epoch (1970-01-01).
+        local:
+          type: string
+          example: '+4972112345678'
+        remote:
+          type: string
+          description: In case the caller supresses the number, this string will be
+            empty.
+          example: '+4972110203040'
+        language:
+          $ref: '#/components/schemas/language'
+        callback:
+          type: string
+          example: https://callback.com/restbot
+    MessageParameters:
+      type: object
+      required:
+      - dialogId
+      - timestamp
+      - type
+      - text
+      - language
+      - callback
+      properties:
+        dialogId:
+          type: string
+          format: uuid
+          example: 09e59647-5c77-4c02-a1c5-7fb2b47060f1
+        timestamp:
+          allOf:
+          - $ref: '#/components/schemas/Timestamp'
+          description: |
+            An instant of time, measured in milliseconds since the epoch (1970-01-01).
+        type:
+          type: string
+          enum:
+          - SPEECH
+          - DTMF
+          example: SPEECH
+        text:
+          type: string
+          example: Hello!
+        confidence:
+          type: integer
+          format: int32
+        language:
+          $ref: '#/components/schemas/language'
+        callback:
+          type: string
+          example: https://callback.com/restbot
+    InactivityParameters:
+      type: object
+      required:
+      - dialogId
+      - timestamp
+      - duration
+      - callback
+      properties:
+        dialogId:
+          type: string
+          format: uuid
+          example: 09e59647-5c77-4c02-a1c5-7fb2b47060f1
+        timestamp:
+          allOf:
+          - $ref: '#/components/schemas/Timestamp'
+          description: |
+            An instant of time, measured in milliseconds since the epoch (1970-01-01).
+        duration:
+          allOf:
+          - $ref: '#/components/schemas/Duration'
+          description: |
+            An amount of time, measured in milliseconds.
+        callback:
+          type: string
+          example: https://callback.com/restbot
+    TerminatedParameters:
+      type: object
+      required:
+      - dialogId
+      - timestamp
+      properties:
+        dialogId:
+          type: string
+          format: uuid
+          example: 09e59647-5c77-4c02-a1c5-7fb2b47060f1
+        timestamp:
+          allOf:
+          - $ref: '#/components/schemas/Timestamp'
+          description: |
+            An instant of time, measured in milliseconds since the epoch (1970-01-01).
+    Timestamp:
+      description: An instant of time, measured in milliseconds since the epoch (1970-01-01).
+      type: integer
+      format: int64
+      example: 1535546718115
+    language:
+      type: string
+      enum:
+      - ar-SA
+      - bg-BG
+      - ca-ES
+      - cs-CZ
+      - da-DK
+      - de-DE
+      - el-GR
+      - en-GB
+      - en-US
+      - es-ES
+      - es-US
+      - fi-FI
+      - fr-CA
+      - fr-FR
+      - he-IL
+      - hi-IN
+      - hr-HR
+      - hu-HU
+      - it-IT
+      - ja-JP
+      - ko-KR
+      - nb-NO
+      - nl-NL
+      - pl-PL
+      - pt-BR
+      - pt-PT
+      - ro-RO
+      - ru-RU
+      - sk-SK
+      - sl-SI
+      - sr-RS
+      - th-TH
+      - yue-Hant-HK
+      - zh-HK
+      - zh-TW
+      - zh
+      example: de-DE
+    Duration:
+      description: An amount of time, measured in milliseconds.
+      type: integer
+      format: int32
+      example: 60000

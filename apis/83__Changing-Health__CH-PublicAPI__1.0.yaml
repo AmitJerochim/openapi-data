@@ -1,0 +1,1386 @@
+openapi: 3.0.0
+info:
+  version: '1.0'
+  title: 'Changing Health Public API'
+  description: 'Specification for Changing Health Public API'
+servers:
+  - url: https://dev-api.changinghealth.com
+    description: Development Server
+  - url: https://staging-api.changinghealth.com
+    description: Staging Server
+  - url: https://api.changinghealth.com
+    description: Production Server
+paths: 
+  /api/ext/user:
+    post:
+      tags: 
+        - Consumer Operations
+      summary: Create a user
+      description: Create a User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateBody'
+      responses:
+        '200':
+          description: User Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUserResponse'
+        '401':
+          description: Invalid authorization token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedAccessResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+  /api/ext/user/search:
+    post:
+      tags:
+        - Consumer Operations
+      summary: Search a user
+      description: Searches for users and returns paginated users list for specific Partner.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchBody'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SearchUserResponse'
+                  - $ref: '#/components/schemas/NotFoundAnyUserResponse'
+              examples:
+                'User has been found':
+                    $ref: '#/components/examples/FoundExample'
+                'User not found':
+                    $ref: '#/components/examples/NotFoundExample'
+        '401':
+          description: Invalid authorization token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedAccessResponse'
+  /api/ext/user/{ppuid}:
+    delete:
+      tags: 
+        - Consumer Operations
+      summary: Delete a user
+      parameters:
+        - $ref: "#/components/parameters/ppuidPathParam"
+      responses:
+        '200':
+          description: User Deleted
+          content:
+            application/json:
+              example:
+                []
+        '401':
+          description: Invalid authorization token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedAccessResponse'
+        '422':
+          description: User with given ppuid was not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorDeleteResponse'
+      
+  /api/ext/pops:
+    post:
+      tags: 
+        - POPS Operations
+      summary: Edit POPS value
+      description: Edit POPS value
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/POPSChangeBody'
+      responses:
+        '200':
+          description: POPS value updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/POPSValueUpdateResponse'
+              example:
+                [
+    {
+        "category": "capturing-bmi",
+        "key": "weight",
+        "value": 120,
+        "updated_at": null
+    },
+    {
+        "category": "capturing-bmi",
+        "key": "height",
+        "value": 189,
+        "updated_at": null
+    }
+]
+        '401':
+          description: Invalid authorization token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedAccessResponse'
+        '422':
+          description: Validation error, error message indicates which POPS is incorrect iterating from 0 for example, if invalid value is in the second object then the error message will indicate POPS number 1.
+          content:
+            application/json:
+              examples:
+                'Key value is not a string':
+                  value:
+                    {
+                      "pops.1.key": [
+                        "The pops.1.key must be a string."
+                      ]
+                    }
+                'Wrong value in value property':
+                  value:
+                    {
+                      "message": "422 Unprocessable Entity",
+                      "errors": {
+                          "pops.1.value": [
+                                "validation.optional_data_value_invalid"
+                           ]
+                      },
+                      "status_code": 422
+                    }
+                'Wrong value in category property':
+                  value:
+                    {
+                      "message": "422 Unprocessable Entity",
+                      "errors": {
+                          "pops.1.category": [
+                              "validation.exists"
+                          ],
+                          "pops.1.value": [
+                              "validation.optional_data_value_invalid"
+                          ]
+                        },
+                        "status_code": 422
+                    }
+                'Wrong user id value':
+                  value:
+                    {
+                      "user_id": [
+                          "user 18657 does not exist"
+                      ]
+                    }
+          
+  /api/ext/locales:
+    get:
+      tags:
+       - Translations
+      summary: Get all available languages
+      description: Get an Array with all available languages
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+              examples:
+                'Get all available locales':
+                  value: >-
+                    [{"id":1,"slug":"en","name":"English
+                    (UK)","locale":"en_GB","display_name":"English"},{"id":2,"slug":"bn","name":"Bengali","locale":"bn_BN","display_name":"Bengali"},{"id":3,"slug":"gu","name":"Gujarati","locale":"gu_GU","display_name":"Gujarati"},{"id":4,"slug":"ro","name":"Romanian","locale":"ro_RO","display_name":"Romanian"},{"id":5,"slug":"pa","name":"Punjab","locale":"pa_PA","display_name":"Punjab"},{"id":6,"slug":"nl","name":"Dutch","locale":"nl_NL","display_name":"Dutch"},{"id":7,"slug":"de","name":"German
+                    (Germany)","locale":"de_DE","display_name":"German"},{"id":8,"slug":"fr","name":"French
+                    (France)","locale":"fr_FR","display_name":"French"}]
+        '401':
+          description: Invalid authorization token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedAccessResponse'
+security:
+  - JwtAuthToken: []
+  
+components:
+  securitySchemes:
+    JwtAuthToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    POPS:
+      type: object
+      description: "Optional profile data for user, each item should contain a `category`, `key` and `value` fields with correct values."
+      required:
+        - category
+        - key
+        - value
+      properties:
+        category:
+          type: string
+          example: capturing-bmi
+          description: "property should be in the form of a slug i.e.  
+          
+                      * lowercase  
+                      
+                      * every white space replaced by `-` i.e. category `Capturing BMI` → `capturing-bmi`"
+        key:
+          type: string
+          example: weight
+          description: "property should be in the form of a slug i.e.  
+          
+                      * lowercase  
+                      
+                      * every white space replaced by `-` i.e. key `Tricky Situations Problem` → `tricky-situations-problem`"
+        value:
+          $ref: '#/components/schemas/Value'
+    Value:
+      oneOf:
+        - type: string
+        - type: boolean
+        - type: integer
+      example: 120
+      description: "every POPS is a sensitive data type i.e. when POPS is:
+      
+                  * a text type, it accepts only `string`,  
+                  
+                  * a `boolean` type, it accepts an only `true` or `false` value and `1` or `0`
+                  
+                  * `number type` accepts `int` which `length` should be within values given when creating `Optional Profile Data` which contains POPS value
+                  
+                  * `select type` accepts `string` or `int` which should be exact `key` of `OPD` given when creating this `OPD`"
+    POPSArray:
+      type: array
+      items:
+        $ref: '#/components/schemas/POPS'
+    UserCreateBody:
+      type: object
+      required:
+        - sys_first_name
+        - sys_last_name
+        - unit_id
+        - package_id
+        - email
+        - phone
+        - enabled
+        - welcome_message
+      properties:
+        sys_first_name:
+          type: string
+          example: "John"
+          description: "participant system first name,
+
+                        * max 50 characters long
+                        
+                        * must begin with at least one letter
+                        
+                        * must end with at least one letter
+                        
+                        * contain no more than one character from the set:  ` ` (space), `-`(hyphen), `.` (dot), `'` (single quote)"
+        sys_last_name:
+          type: string
+          example: "Doe"
+          description: "participant system last name,
+
+                        * max 50 characters long
+                        
+                        * must begin with at least one letter
+                        
+                        * must end with at least one letter
+                        
+                        * contain no more than one character from the set:  ` ` (space), `-`(hyphen), `.` (dot), `'` (single quote)"
+        unit_id:
+          type: integer
+          example: 34
+          description: "participant’s unit ID    
+                        - needs to be consistent with the token, which is available for the specific unit_id's"
+        package_id:
+          type: integer
+          example: 11
+          description: "participant’s package ID
+                        - The package needs to be assigned to the unit, which ID we specified in the above property"
+        email:
+          type: string
+          example: "example@domain.com"
+          description: "participant email address,
+
+                        * needs to be unique in the context of the entire Changing Health application
+                    
+                        * is required if we don't enter property `welcome_method_type` or when this property is set to valid email value
+                    
+                        * our email validation uses syntax RFC 822, http://jkorpela.fi/rfc/822addr.html"
+        enabled:
+          type: boolean
+          example: true
+          description: "determines whether the user is active,
+
+                        * the value should be set to `boolean`: `true` or `false`"
+        welcome_message:
+          type: boolean
+          example: true
+          description: "determines whether welcome message should be sent,
+
+                        * the value should be set to `boolean`: `true` or `false`"
+        phone:
+          type: string
+          example: "+4407736406088"
+          description: "participant phone number should be unique in entire app,
+
+                      * the valid value is an international phone number with country prefix
+                      
+                      * we are using library: https://github.com/Propaganistas/Laravel-Phone
+                      
+                      * this library checks if given number is a possible number for given region
+                      
+                      * we are checking the `prefix`by comparing it to the region and check whether the number with such a `prefix` can exist in a given region
+                      
+                      * the `prefix` should start with `+`
+                      
+                      * we check the construction of the numbers following the rules for creating a number for a given region
+                      
+                      * This field won’t be required if `welcome_method_type` is set to `email` "
+        landline_phone:
+          type: string
+          example: "+442072104850"
+          description: "participant landline phone number, 
+
+                      * this should be a full, international phone number (with a country prefix).
+                      
+                      * this field is checked by the library:  https://github.com/Propaganistas/Laravel-Phone
+                      
+                      * this library checks if the given number is the possible number for the given region, we check the prefix number here, we compare it with the region and check whether the number with such a `prefix` can exist in a given region
+                      
+                      * the number should be preceded by a prefix `+`"
+        birthdate:
+          type: string
+          example: "1990-01-01"
+          description: "participant birthdate,
+
+                      * format: `YYYY-MM-DD`
+                      
+                      * we check whether the data is consistent with the calendar for a given year
+                      
+                      * we cannot enter a date in future
+                      
+                      * if the month or day consists of one digit, it should be completed with a 0 before"
+        suid:
+          type: string
+          example: "TestUsers12345"
+          description: "additional user ID provided by provider, 
+
+                      * this field should be a `string` and have a maximum of 100 characters"
+        time_zone:
+          type: string
+          example: "+00:02"
+          default: "+00:00"
+          description: "timezone for participant, 
+
+                      * format have to be like: `+00:00` `-01:00`
+                      
+                      * can't be `-00:00`
+                      
+                      * should have 6 characters
+                      
+                      * should have  `+` or `-` at the beginning
+                      
+                      * should consist of two parts, each part has two numbers and is divided by a colon `:`
+                      
+                      * the first part should be the value between `0` and `12`
+                      
+                      * and the second part should be `00`, `15`, `30` or `45`"
+        locale_id:
+          type: integer
+          example: 8
+          default: 1
+          description: "determines locale (language) for the user in the programme,
+          
+                      * should be valid locale `ID` from API (`/api/ext/locales`)
+                      
+                      * when not provided, English will be used"
+        welcome_method_type:
+          type: string
+          example: "phone"
+          default: "email"
+          description: "determines which way the user would receive the invitation  
+          
+                        Possible values are:
+                        
+                      * `email` invitation will be sent via email
+                      
+                      * `phone` invitation will be sent via sms"
+        distance_unit:
+          type: integer
+          example: 1
+          default: 0
+          description: "determines distance unit used by user.
+
+                        Possible values are:
+                        
+                        * `0` for metric units (meters)
+                        
+                        * `1` for imperial units (feets, miles)"
+        pops:
+          $ref: '#/components/schemas/POPSArray'
+    POPSChangeBody:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1865
+        pops:
+          $ref: '#/components/schemas/POPSArray'
+    SearchBody:
+      type: object
+      description: "If we give an invalid string to any property, it won't find any user."
+      properties:
+        ppuid:
+          type: string
+          example: "DYONDYYTAU3IZMCZ22QI"
+          description: "participant Changing Health UID"
+        email:
+          type: string
+          example: "search123@example.com"
+          description: "participant email address"
+        phone:
+          type: string
+          example: "+4407736406088"
+          description: "participant mobile phone number"
+        landline_phone:
+          type: string
+          example: "+442072104850"
+          description: "participant landline phone number"
+        any_phone:
+          type: string
+          example: "+41794098097"
+          description: "this property will search for users with phone or landline_phone matching given value"
+    CreateUserResponse:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+          example: true
+          readOnly: true
+        welcome_message:
+          type: boolean
+          example: true
+        unit_id:
+          type: integer
+          example: 25
+        welcome_method_type:
+          type: string
+          example: "email"
+        attempts:
+          type: integer
+          example: 1
+          readOnly: true
+        code:
+          type: string
+          example: "VEPKETJAFRZT"
+          readOnly: true
+        updated_at:
+          type: string
+          example: "2020-05-25 12:36:53"
+          readOnly: true
+        created_at:
+          type: string
+          example: "2020-05-25 12:36:53"
+          readOnly: true
+        id:
+          type: integer
+          example: 7159
+          readOnly: true
+        link:
+          type: string
+          example: "https://app.changinghealth.com/auth/VEPKETJAFRZC"
+          readOnly: true
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 7446
+              readOnly: true
+            personal_data_store_id:
+              type: integer
+              example: 1
+              readOnly: true
+            locale_id:
+              type: integer
+              example: 1
+            status:
+              type: string
+              example: "new"
+              readOnly: true
+            avatar_id:
+              type: integer
+              example: 7118
+              readOnly: true
+            global_role:
+              type: string
+              example: "consumer"
+              readOnly: true
+            confirm_code:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            created_at:
+              type: string
+              example: "2020-05-25 12:36:53"
+              readOnly: true
+            updated_at:
+              type: string
+              example: "2020-05-25 12:36:53"
+              readOnly: true
+            deleted_at:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            upload_id:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            distance_unit:
+              type: integer
+              example: 1
+            package_id:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            enabled:
+              type: boolean
+              example: 1
+            enabled_2fa:
+              type: integer
+              example: 0
+              readOnly: true
+            account_enabled:
+              type: boolean
+              example: 1
+              readOnly: true
+            account_unit_id:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            initial_token:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            created_by:
+              type: integer
+              example: 14
+              readOnly: true
+            updated_by:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            modified_by:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            modified_at:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            is_shared_coach:
+              type: boolean
+              example: 0
+              readOnly: true
+            timezone:
+              type: string
+              example: "+00:00"
+            ppuid:
+              type: string
+              example: "DYONDYYTAU3IZM22C0QI"
+              readOnly: true
+            suid:
+              type: string
+              example: "testUser12345"
+            created_type:
+              type: string
+              example: "api"
+              readOnly: true
+            updated_type:
+              type: string
+              example: "user"
+              readOnly: true
+            has_completed_profile:
+              type: boolean
+              example: 0
+              readOnly: true
+            first_name:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            last_name:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            full_name:
+              type: string
+              example: " "
+              readOnly: true
+            sys_first_name:
+              type: string
+              example: "John"
+            sys_last_name:
+              type: string
+              example: "Doe"
+            birthdate:
+              type: string
+              example: "1989-01-01"
+            email:
+              type: string
+              example: "example12345@domain.com"
+            phone:
+              type: string
+              example: "+4407736406088"
+            landline_phone:
+              type: string
+              example: "+442072104850"
+            new_email:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            distance_unit_text:
+              type: string
+              example: "imperial"
+              readOnly: true
+            is_account:
+              type: boolean
+              example: false
+              readOnly: true
+            unlocked_plugin_array:
+              type: array
+              items:
+                type: string
+              readOnly: true
+            avatar_url:
+              type: string
+              example: "https://storage.googleapis.com/ch-media/userhub/avatar/KPKtafDLdj1XWwI8HNc1C19CFVm2Z2UBsbswDMG08yWboiWd8j0SCF7Wvi0mAcGnKPtZIwE8U7E0CG91kJiAi2bnmNTgQaspXxdM_1590410213_1abedaddc07e2df621fb33b91c0ccfad.png"
+              readOnly: true
+            account_unit_role:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            can_login:
+              type: boolean
+              example: false
+              readOnly: true
+            can_activate:
+              type: boolean
+              example: true
+              readOnly: true
+            unit_id:
+              type: integer
+              example: 25
+            pds_slug:
+              type: string
+              example: "uk"
+              readOnly: true
+            last_login:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            current_program_id:
+              type: string
+              nullable: true
+              example: null
+              readOnly: true
+            personal_data_store:
+              type: object
+              readOnly: true
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: "UK"
+                slug:
+                  type: string
+                  example: "uk"
+                created_at:
+                  type: string
+                  example: "2018-03-11 19:00:00"
+                updated_at:
+                  type: string
+                  example: "2018-03-11 19:00:00"
+                deleted_at:
+                  type: string
+                  nullable: true
+                  example: null
+            unlocked_plugins:
+              type: array
+              readOnly: true
+              items:
+                type: string
+            avatar:
+              type: object
+              readOnly: true
+              properties:
+                id:
+                  type: integer
+                  example: 7118
+                created_at:
+                  type: string
+                  example: "2020-05-25 12:36:53"
+                updated_at:
+                  type: string
+                  example: "2020-05-25 12:36:53"
+                name:
+                  type: string
+                  example: "avatar/KPKtafDLdj1XWwI8HNc1C19CFVm2Z2UBsbswDMG08yWboiWd8j0SCF7Wvi0mAcGnKPtZIwE8U7E0CG91kJiAi2bnmNTgQaspXxdM_1590410213_1abedaddc07e2df621fb33b91c0ccfad.png"
+                type:
+                  type: integer
+                  example: 0
+                url:
+                  type: string
+                  example: "https://storage.googleapis.com/ch-media/userhub/avatar/KPKtafDLdj1XWwI8HNc1C19CFVm2Z2UBsbswDMG08yWboiWd8j0SCF7Wvi0mAcGnKPtZIwE8U7E0CG91kJiAi2bnmNTgQaspXxdM_1590410213_1abedaddc07e2df621fb33b91c0ccfad.png"
+    UnauthorizedAccessResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Unauthorized"
+          readOnly: true
+    ValidationErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "422 Unprocessable Entity"
+        errors:
+          type: object
+          properties:
+            sys_first_name:
+              type: array
+              items:
+                type: string
+                example: "Invalid value"
+            sys_last_name:
+              type: array
+              items:
+                type: string
+                example: "Invalid value"
+            email:
+              type: array
+              items:
+                type: string
+                example: ["Email hash exists", "validation.email"]
+            phone:
+              type: array
+              items:
+                type: string
+                example: "validation.phone"
+            landline_phone:
+              type: array
+              items:
+                type: string
+                example: "validation.phone"
+            birthdate:
+              type: array
+              items:
+                type: string
+                example: ["errors.birthdate", "Invalid date format"]
+            suid:
+              type: array
+              items:
+                type: string
+                example: ["validation.max.string", "validation.string"]
+            distance_unit:
+              type: array
+              items:
+                type: string
+                example: "validation.in"
+            unit_id:
+              type: array
+              items:
+                type: string
+                example: "Unit 100 does not belong to your app"
+            package_id:
+              type: array
+              items:
+                type: string
+                example: "validation.exists"
+            enabled:
+              type: array
+              items:
+                type: string
+                example: "validation.boolean"
+            welcome_message:
+              type: array
+              items:
+                type: string
+            welcome_method_type:
+              type: array
+              items:
+                type: string
+                example: ["validation.string", "validation.in"]
+            locale_id:
+              type: array
+              items:
+                type: string
+                example: ["validation.exists", "validation.numeric"]
+            timezone:
+              type: array
+              items:
+                type: string
+                example: "Incorrect timezone"
+        status_code:
+          type: integer
+          example: 422
+    ValidationErrorDeleteResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "422 Unprocessable Entity"
+        errors:
+          type: object
+          properties:
+            id:
+              type: array
+              items:
+                type: string
+                example: "validation.required"
+        status_code:
+          type: integer
+          example: 422
+    SearchUserResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 7446
+                readOnly: true
+              personal_data_store_id:
+                type: integer
+                example: 1
+                readOnly: true
+              locale_id:
+                type: integer
+                example: 1
+              status:
+                type: string
+                example: "new"
+                readOnly: true
+              avatar_id:
+                type: integer
+                example: 7118
+                readOnly: true
+              global_role:
+                type: string
+                example: "consumer"
+                readOnly: true
+              confirm_code:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              created_at:
+                type: string
+                example: "2020-05-25 19:18:47"
+                readOnly: true
+              updated_at:
+                type: string
+                example: "2020-05-25 19:18:47"
+                readOnly: true
+              deleted_at:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              upload_id:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              distance_unit:
+                type: integer
+                example: 1
+              package_id:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              enabled:
+                type: boolean
+                example: 1
+              enabled_2fa:
+                type: boolean
+                example: 0
+                readOnly: true
+              account_enabled:
+                type: boolean
+                example: 1
+                readOnly: true
+              account_unit_id:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              initial_token:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              created_by:
+                type: integer
+                example: 14
+                readOnly: true
+              updated_by:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              modified_by:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              modified_at:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              is_shared_coach:
+                type: boolean
+                example: 0
+                readOnly: true
+              timezone:
+                type: string
+                example: "+00:00"
+              ppuid:
+                type: string
+                example: "DYONDYYTAU3IZM22C0QI"
+                readOnly: true
+              suid:
+                type: string
+                example: "testUser12345"
+              created_type:
+                type: string
+                example: "api"
+                readOnly: true
+              updated_type:
+                type: string
+                example: "user"
+                readOnly: true
+              has_completed_profile:
+                type: boolean
+                example: 0
+                readOnly: true
+              first_name:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              last_name:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              full_name:
+                type: string
+                example: " "
+                readOnly: true
+              sys_first_name:
+                type: string
+                example: "John"
+              sys_last_name:
+                type: string
+                example: "Doe"
+              birthdate:
+                type: string
+                example: "1989-01-01"
+              email:
+                type: string
+                example: "example12345@domain.com"
+              phone:
+                type: string
+                example: "+4407736406088"
+              landline_phone:
+                type: string
+                example: "+442072104850"
+              new_email:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              distance_unit_text:
+                type: string
+                example: "imperial"
+                readOnly: true
+              is_account:
+                type: boolean
+                example: false
+                readOnly: true
+              unlocked_plugin_array:
+                type: array
+                items:
+                  type: string
+                  readOnly: true
+              avatar_url:
+                type: string
+                example: "https://storage.googleapis.com/ch-media/userhub/avatar/KPKtafDLdj1XWwI8HNc1C19CFVm2Z2UBsbswDMG08yWboiWd8j0SCF7Wvi0mAcGnKPtZIwE8U7E0CG91kJiAi2bnmNTgQaspXxdM_1590410213_1abedaddc07e2df621fb33b91c0ccfad.png"
+                readOnly: true
+              account_unit_role:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              can_login:
+                type: boolean
+                example: false
+                readOnly: true
+              can_activate:
+                type: boolean
+                example: true
+                readOnly: true
+              unit_id:
+                type: integer
+                example: 25
+              pds_slug:
+                type: string
+                example: "uk"
+                readOnly: true
+              last_login:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              current_program_id:
+                type: string
+                nullable: true
+                example: null
+                readOnly: true
+              personal_data_store:
+                type: object
+                readOnly: true
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  name:
+                    type: string
+                    example: "UK"
+                  slug:
+                    type: string
+                    example: "uk"
+                  created_at:
+                    type: string
+                    example: "2018-03-11 19:00:00"
+                  updated_at:
+                    type: string
+                    example: "2018-03-11 19:00:00"
+                  deleted_at:
+                    type: string
+                    nullable: true
+                    example: null
+              unlocked_plugins:
+                type: array
+                readOnly: true
+                items:
+                  type: string
+              avatar:
+                type: object
+                readOnly: true
+                properties:
+                  id:
+                    type: integer
+                    example: 7118
+                  created_at:
+                    type: string
+                    example: "2020-05-25 12:36:53"
+                  updated_at:
+                    type: string
+                    example: "2020-05-25 12:36:53"
+                  name:
+                    type: string
+                    example: "avatar/KPKtafDLdj1XWwI8HNc1C19CFVm2Z2UBsbswDMG08yWboiWd8j0SCF7Wvi0mAcGnKPtZIwE8U7E0CG91kJiAi2bnmNTgQaspXxdM_1590410213_1abedaddc07e2df621fb33b91c0ccfad.png"
+                  type:
+                    type: integer
+                    example: 0
+                  url:
+                    type: string
+                    example: "https://storage.googleapis.com/ch-media/userhub/avatar/KPKtafDLdj1XWwI8HNc1C19CFVm2Z2UBsbswDMG08yWboiWd8j0SCF7Wvi0mAcGnKPtZIwE8U7E0CG91kJiAi2bnmNTgQaspXxdM_1590410213_1abedaddc07e2df621fb33b91c0ccfad.png"
+              invitation_package_id:
+                type: integer
+                example: 69
+                readOnly: true
+              creator:
+                type: string
+                example: "JohnDTest"
+                readOnly: true
+              participant_status:
+                type: string
+                example: "invitation_sent"
+                readOnly: true
+              participant_status_date:
+                type: string
+                example: "2020-05-25 19:18:49"
+                readOnly: true
+        links:
+          type: object
+          readOnly: true
+          properties:
+            first:
+              type: string
+              example: "http://prod-userhub/api/user/search-post?page=1"
+            last:
+              type: string
+              example: "http://prod-userhub/api/user/search-post?page=1"
+            prev:
+              type: string
+              nullable: true
+              example: null
+            next:
+              type: string
+              nullable: true
+              example: null
+        meta:
+          type: object
+          readOnly: true
+          properties:
+            current_page:
+              type: integer
+              example: 1
+            from:
+              type: integer
+              example: 1
+            last_page:
+              type: integer
+              example: 1
+            path:
+              type: string
+              example: "http://prod-userhub/api/user/search-post"
+            per_page:
+              type: integer
+              example: 15
+            to:
+              type: integer
+              example: 1
+            total:
+              type: integer
+              example: 1
+    NotFoundAnyUserResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            example: []
+        links:
+          type: object
+          readOnly: true
+          properties:
+            first:
+              type: string
+              example: "http://prod-userhub/api/user/search-post?page=1"
+            last:
+              type: string
+              example: "http://prod-userhub/api/user/search-post?page=1"
+            prev:
+              type: string
+              nullable: true
+              example: null
+            next:
+              type: string
+              nullable: true
+              example: null
+        meta:
+          type: object
+          readOnly: true
+          properties:
+            current_page:
+              type: integer
+              example: 1
+            from:
+              type: integer
+              example: 1
+            last_page:
+              type: integer
+              example: 1
+            path:
+              type: string
+              example: "http://prod-userhub/api/user/search-post"
+            per_page:
+              type: integer
+              example: 15
+            to:
+              type: integer
+              example: 1
+            total:
+              type: integer
+              example: 1
+    POPSValueUpdateResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          category:
+            type: string
+          key:
+            type: string
+          value:
+            $ref: '#/components/schemas/Value'
+          updated_at:
+            type: string
+            nullable: true
+  examples:
+    FoundExample:
+      value:
+        {
+          "data": [
+        {
+            "id": 7450,
+            "personal_data_store_id": 1,
+            "locale_id": 1,
+            "status": "new",
+            "avatar_id": 7122,
+            "global_role": "consumer",
+            "confirm_code": null,
+            "created_at": "2020-05-25 19:18:47",
+            "updated_at": "2020-05-25 19:18:47",
+            "deleted_at": null,
+            "upload_id": null,
+            "distance_unit": 1,
+            "package_id": null,
+            "enabled": 1,
+            "enabled_2fa": 0,
+            "account_enabled": 1,
+            "account_unit_id": null,
+            "initial_token": null,
+            "created_by": 14,
+            "updated_by": null,
+            "modified_by": null,
+            "modified_at": null,
+            "is_shared_coach": 0,
+            "timezone": "+00:00",
+            "ppuid": "HCESDIIJXZKZ2ZKDNNHR",
+            "suid": "12345",
+            "created_type": "api",
+            "updated_type": "user",
+            "has_completed_profile": 0,
+            "first_name": null,
+            "last_name": null,
+            "full_name": " ",
+            "sys_first_name": "Tomaszkę",
+            "sys_last_name": "Mixpanelę",
+            "birthdate": "2001-12-01",
+            "email": "swagger3@owls.com",
+            "phone": "",
+            "landline_phone": "",
+            "new_email": null,
+            "distance_unit_text": "imperial",
+            "is_account": false,
+            "unlocked_plugins_array": [],
+            "avatar_url": "https://storage.googleapis.com/ch-media/userhub/avatar/qG7wO54EMzznxU06Z8aZkC6ajdHQpq0dRM6CST0gO9nDtNpnRnRPHDWxDzxxmNLgSm42Uyz8yrqWaDm2d2a2WLvVvUSiEbrA4Ju8_1590434327_816632b06660a146117fa6610ce5858d.png",
+            "account_unit_role": null,
+            "can_login": false,
+            "can_activate": true,
+            "unit_id": 25,
+            "pds_slug": "uk",
+            "last_login": null,
+            "current_program_id": null,
+            "personal_data_store": {
+                "id": 1,
+                "name": "UK",
+                "slug": "uk",
+                "created_at": "2018-03-11 19:00:00",
+                "updated_at": "2018-03-11 19:00:00",
+                "deleted_at": null
+            },
+            "unlocked_plugins": [],
+            "avatar": {
+                "id": 7122,
+                "created_at": "2020-05-25 19:18:48",
+                "updated_at": "2020-05-25 19:18:48",
+                "name": "avatar/qG7wO54EMzznxU06Z8aZkC6ajdHQpq0dRM6CST0gO9nDtNpnRnRPHDWxDzxxmNLgSm42Uyz8yrqWaDm2d2a2WLvVvUSiEbrA4Ju8_1590434327_816632b06660a146117fa6610ce5858d.png",
+                "type": 0,
+                "url": "https://storage.googleapis.com/ch-media/userhub/avatar/qG7wO54EMzznxU06Z8aZkC6ajdHQpq0dRM6CST0gO9nDtNpnRnRPHDWxDzxxmNLgSm42Uyz8yrqWaDm2d2a2WLvVvUSiEbrA4Ju8_1590434327_816632b06660a146117fa6610ce5858d.png"
+            },
+            "invitated_package_id": 69,
+            "creator": "KrzychuPTest",
+            "participant_status": "invitation_sent",
+            "participant_status_date": "2020-05-25 19:18:49"
+        }
+    ],
+    "links": {
+        "first": "http://prod-userhub/api/user/search-post?page=1",
+        "last": "http://prod-userhub/api/user/search-post?page=1",
+        "prev": null,
+        "next": null
+    },
+    "meta": {
+        "current_page": 1,
+        "from": 1,
+        "last_page": 1,
+        "path": "http://prod-userhub/api/user/search-post",
+        "per_page": 15,
+        "to": 1,
+        "total": 1
+    }
+        }
+    NotFoundExample:
+      value:
+        {
+    "data": [],
+    "links": {
+        "first": "http://prod-userhub/api/user/search-post?page=1",
+        "last": "http://prod-userhub/api/user/search-post?page=1",
+        "prev": null,
+        "next": null
+    },
+    "meta": {
+        "current_page": 1,
+        "from": null,
+        "last_page": 1,
+        "path": "http://prod-userhub/api/user/search-post",
+        "per_page": 15,
+        "to": null,
+        "total": 0
+    }
+}
+        
+  parameters:
+    ppuidPathParam:
+      name: ppuid
+      in: path
+      description: Participant ppuid value
+      required: true
+      schema:
+        type: string

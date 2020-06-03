@@ -1,0 +1,487 @@
+openapi: 3.0.0
+servers:
+  - url: https://pos.lszzg.com/CLP/api/v2
+    description: 生产环境
+info:
+  description: |
+    智掌柜产品提供的开放API。
+    所有API均使用https协议进行数据传输。请注意不要使用http协议发起请求，以免泄露敏感信息。
+  version: "2.0.0"
+  title: 智掌柜开放API
+  # contact:
+  #   email: you@your-company.com
+  # license:
+  #   name: Apache 2.0
+  #   url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+security:
+  - StoreKeyAuth: []
+tags:
+  - name: 销售数据
+    description: 店铺的销售数据
+paths:
+  /sales:
+    get:
+      tags:
+        - 销售数据
+      summary: 根据日期获取店铺当天的所有销售数据
+      operationId: getSalesByDate
+      description: |
+        <h1>返回店铺在指定日期（北京时间）的所有销售数据。</h1>
+        <h3>返回值中各个金额之间的关系如下伪代码所示：</h3>
+        <p>StoreSale</p>
+        <pre>
+        order_amount = sum(menu.num * (menu.amount + sum(option_group.option.amount)))
+        order_amount + sum(discount_for_menu.amount) + sum(discount.amount) + round_amount = total_amount
+        payment_amount - total_amount = change_amount
+        </pre>
+        <p>PlatformSale</p>
+        <pre>
+        original_amount = sum(menu.amount * menu.num) + package_amount + delivery_amount
+        total_amount = original_amount + sum(discount.platform_amount + discount.restaurant_amount)
+        </pre>
+      parameters:
+        - in: query
+          name: date
+          description: yyyyMMdd格式的日期
+          required: true
+          schema:
+            type: string
+          example: '20190101'
+      responses:
+        '200':
+          description: 当天的所有销售数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  store_id:
+                    type: string
+                    description: 店铺ID
+                    example: AR00000001
+                  store_sales:
+                    type: array
+                    description: 店内部分的销售数据
+                    items:
+                      $ref: '#/components/schemas/StoreSale'
+                  delivery_sales:
+                    type: array
+                    description: 外卖部分的销售数据
+                    items:
+                      $ref: '#/components/schemas/DeliverySale'
+        '401':
+          description: 店铺Key无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: UNAUTHORIZED
+                errors:
+                  - 验证信息无效
+        '400':
+          description: 日期格式不正确
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: BAD_REQUEST
+                errors:
+                  - 日期格式不正确
+        default:
+          description: 意外错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: INTERNAL_SERVER_ERROR
+                errors:
+                  - 服务器内部错误
+components:
+  securitySchemes:
+    StoreKeyAuth:
+      type: apiKey
+      in: header
+      name: X-STORE-KEY
+      description: |
+        店铺Key。
+        该Key另行通知。请妥善保管，避免泄露。
+  schemas:
+    StoreSale:
+      type: object
+      description: 店内部分的结算
+      properties:
+        visit_id:
+          type: string
+          description: 客户到店ID
+          pattern: '^\d{20}$'
+          example: '00041902271028300002'
+        timestamp:
+          type: integer
+          description: 结算时间戳（毫秒）
+          format: int64
+          example: 1546311600000
+        table_id:
+          type: string
+          description: 餐桌ID
+          pattern: '^\d{4}$'
+          nullable: true
+          example: null
+        modification_amount:
+          type: number
+          description: 结算修正合计金额
+          format: float
+          example: -1.23
+        register_id:
+          type: string
+          description: 收银机ID
+          pattern: '^\d{4}$'
+          example: '0001'
+        visitor_num:
+          type: integer
+          description: 人数
+          minimum: 1
+          example: 2
+        menu_num:
+          type: integer
+          format: int64
+          description: 点单数
+          minimum: 1
+          example: 1
+        order_amount:
+          type: number
+          description: 点单总金额
+          format: float
+          example: 65.2
+        total_amount:
+          type: number
+          description: 结算总金额
+          format: float
+          example: 58.9
+        payment_amount:
+          type: number
+          description: 支付金额
+          format: float
+          example: 60
+        change_amount:
+          type: number
+          description: 找零金额
+          format: float
+          example: 1.1
+        round_amount:
+          type: number
+          description: 进位调整金额
+          format: float
+          example: -0.08
+        menus:
+          type: array
+          description: 该结算的点单信息
+          items:
+            $ref: '#/components/schemas/StoreMenu'
+        discounts_for_menu:
+          type: array
+          description: 该结算的商品指定折扣/加价信息
+          items:
+            $ref: '#/components/schemas/StoreDiscountForMenu'
+        discounts:
+          type: array
+          description: 该结算的全部折扣/加价与代金券信息
+          items:
+            $ref: '#/components/schemas/StoreDiscount'
+        payment_methods:
+          type: array
+          description: 该结算的支付方式信息
+          items:
+            $ref: '#/components/schemas/StorePaymentMethod'
+    StoreMenu:
+      type: object
+      description: 店内点单
+      properties:
+        id:
+          type: string
+          description: 商品ID
+          pattern: '^\d{4}$'
+          example: '0001'
+        name:
+          type: string
+          description: 商品名称
+          minLength: 1
+          maxLength: 49
+          example: 红烧肉
+        num:
+          type: integer
+          description: 数量
+          minimum: 1
+          example: 1
+        amount:
+          type: number
+          description: 商品单价
+          format: float
+          example: 65.3
+        category:
+          $ref: '#/components/schemas/StoreCategory'
+        option_groups:
+          type: array
+          description: 选项组
+          items:
+            $ref: '#/components/schemas/StoreOptionGroup'
+    StoreCategory:
+      type: object
+      description: |
+        商品类别
+        （若商品被删除，此处为null）
+      nullable: true
+      properties:
+        id:
+          type: string
+          description: 类别ID
+          pattern: '^\d{4}$'
+          example: '0001'
+        name:
+          type: string
+          description: 类别名称
+          minLength: 1
+          maxLength: 20
+          example: 肉菜
+      example: null
+    StoreOptionGroup:
+      type: object
+      description: 选项组
+      properties:
+        id:
+          type: string
+          pattern: '^\d+$'
+          description: 选项组ID
+          example: '1'
+        name:
+          type: string
+          description: 选项组名称
+          minLength: 1
+          maxLength: 64
+          example: 辣度
+        options:
+          type: array
+          description: 选项
+          items:
+            $ref: '#/components/schemas/StoreOption'
+    StoreOption:
+      type: object
+      description: 选项
+      properties:
+        id:
+          type: string
+          description: 选项ID
+          pattern: '^\d+$'
+          example: '3'
+        name:
+          type: string
+          description: 选项名称
+          minLength: 1
+          maxLength: 64
+          example: 无辣
+        amount:
+          type: number
+          description: 选项金额
+          format: float
+          example: -0.1
+    StoreDiscountForMenu:
+      type: object
+      description: 商品指定折扣（包括加价）
+      properties:
+        id:
+          type: string
+          description: 商品指定折扣ID
+          pattern: '^\d+$'
+          example: '1'
+        name:
+          type: string
+          description: 商品指定折扣名称
+          minLength: 1
+          maxLength: 49
+          example: 红烧肉促销
+        amount:
+          type: number
+          description: 商品指定折扣金额
+          format: float
+          example: -1.22
+    StoreDiscount:
+      type: object
+      description: 全体折扣（包括加价和代金券）
+      properties:
+        id:
+          type: string
+          description: 全体折扣ID
+          pattern: '^\d{3}$'
+          example: '001'
+        name:
+          type: string
+          description: 全体折扣名称
+          minLength: 1
+          maxLength: 49
+          example: 周年促销
+        amount:
+          type: number
+          description: 全体折扣金额
+          format: float
+          example: -5
+    StorePaymentMethod:
+      type: object
+      description: 支付方式
+      properties:
+        id:
+          type: string
+          description: 支付方式ID
+          minLength: 3
+          maxLength: 3
+          example: '001'
+        name:
+          type: string
+          description: 支付方式名称
+          minLength: 1
+          maxLength: 49
+          example: 现金
+        amount:
+          type: number
+          description: 支付金额
+          format: float
+          example: 60
+    DeliverySale:
+      type: object
+      description: 外卖部分的结算
+      properties:
+        platform_id:
+          type: string
+          description: 外卖平台ID
+          enum:
+            - '100'
+            - '200'
+            - '300'
+          example: '100'
+        platform_name:
+          type: string
+          description: 外卖平台名称
+          enum:
+            - ELEME
+            - MEITUAN
+            - ZHICHI
+          example: ELEME
+        sales:
+          type: array
+          description: 该外卖平台部分的结算
+          items:
+            $ref: '#/components/schemas/PlatformSale'
+    PlatformSale:
+      type: object
+      description: 外卖平台部分的结算
+      properties:
+        order_id:
+          type: string
+          description: 订单号
+          pattern: '^\d{18}$'
+          example: '888888888888888000'
+        timestamp:
+          type: integer
+          description: 结算时间戳（毫秒）
+          format: int64
+          example: 1546313400000
+        menu_num:
+          type: integer
+          description: 点单数
+          minimum: 1
+          example: 1
+        package_amount:
+          type: number
+          description: 餐盒费金额
+          format: float
+          example: 2
+        delivery_amount:
+          type: number
+          description: 配送费金额
+          format: float
+          example: 6
+        original_amount:
+          type: number
+          description: 原价总金额
+          format: float
+          example: 36.5
+        total_amount:
+          type: number
+          description: 用户支付金额
+          format: float
+          example: 35
+        income_amount:
+          type: number
+          description: 店铺到账金额
+          format: float
+          example: 27.5
+        cancel_amount:
+          type: number
+          description: 退款金额
+          format: float
+          example: 0
+        menus:
+          type: array
+          description: 该结算的点单信息
+          items:
+            $ref: '#/components/schemas/PlatformMenu'
+        discounts:
+          type: array
+          description: 该结算的折扣信息
+          items:
+            $ref: '#/components/schemas/PlatformDiscount'
+    PlatformMenu:
+      type: object
+      description: 外卖点单
+      properties:
+        name:
+          type: string
+          description: 商品名称
+          minLength: 1
+          maxLength: 200
+          example: 红烧肉
+        amount:
+          type: number
+          description: 商品单价
+          format: float
+          example: 28.5
+        num:
+          type: integer
+          description: 数量
+          minimum: 1
+          example: 1
+    PlatformDiscount:
+      type: object
+      description: 外卖折扣
+      properties:
+        name:
+          type: string
+          description: 折扣名称
+          minLength: 1
+          maxLength: 300
+          example: 红烧肉促销
+        platform_amount:
+          type: number
+          description: 平台负担折扣额
+          format: float
+          example: -1.5
+        restaurant_amount:
+          type: number
+          description: 店铺负担折扣额
+          format: float
+          example: 0
+    ErrorResponse:
+      type: object
+      description: 发生错误时返回的Body
+      properties:
+        status:
+          type: string
+          description: HTTP STATUS
+          example: BAD_REQUEST
+        errors:
+          type: array
+          items:
+            type: string
+            example: 错误信息
+          description: 错误信息

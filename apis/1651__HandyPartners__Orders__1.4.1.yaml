@@ -1,0 +1,374 @@
+openapi: 3.0.0
+
+info:
+  description: |
+    Handy’s Retail Solution offers retailers fixed price, 1-click installation services that can be added to an eCommerce site. This document is meant to serve as our partners' one-stop shop for all Handy Orders API needs. Specifically, this document includes instructions on how to:
+    
+      1. Autheticate and communicate with the Handy Orders API
+        2. Request to receive webhooks
+        3. Fetch information about an existing order
+        4. Create an order
+        5. Update the delivery date of an order
+        6. Cancel an order
+        
+
+    # Authentication
+    
+    Follow the instuctions below in order to authenticate and communicate with the Handy Orders API.
+    
+    Note: All API requests are authenticated using a digital signature created with the partner's private key along with several additional values to ensure the reliability and accuracy of the request.
+    ## 1. Create the RSA Key Pair
+    ```
+    openssl genpkey -algorithm RSA -out private_key.pem -pkeyopt rsa_keygen_bits:4096
+
+    ```
+    if that doesn't work, try:
+    ```
+    openssl genrsa -out private_key.pem 4096
+    ```
+    ## 2. Extract the public key
+    ```
+    openssl rsa -pubout -in private_key.pem -out public_key.pem
+    ```
+    ## 3. Share your public key with Handy
+    Share the public_key.pem that you just generated with Handy so that we can add you as an authorized partner and verify any incomming requests.
+    ## 4. Share IP addresses to whitelist
+    Share a list or range of IP addresses with Handy for whitelisting.
+    ## 5. Sign your requests
+    The Handy Orders API requires every request to have a signed signature.
+    The following is the format of the required signature:
+    ```
+    BASE_64(RSA_SHA256(partner_id + '\n' + url + '\n' + http_method + '\n' + timestamp + '\n' + payload))`
+    ```
+    * Ensure that http_method is lowercase while generating this signature.
+    * BASE_64 = Strict Base64 Encoding (RFC 4648) No line feeds are added.
+    * RSA_SHA256 = RSA Key with SHA256 hashing algorithm. Padding is PKCS1v15.
+
+    <table>
+    <thead>
+    <tr>
+    <th>Field</th>
+    <th>Header</th>
+    <th>Example Value</th>
+    <th>Description</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+    <td>partner_id</td>
+    <td>HDY-PARTNER-ID</td>
+    <td>partner_name</td>
+    <td>Identifies the client</td>
+    </tr>
+    <tr>
+    <td>url</td>
+    <td>None</td>
+    <td><a href="https://partners.services.handy.com/api/v1/orders/echo" rel="nofollow">https://partners.services.handy.com/api/v1/orders/echo</a></td>
+    <td>URL of endpoint of request</td>
+    </tr>
+    <tr>
+    <td>http_method</td>
+    <td>None</td>
+    <td>post</td>
+    <td>HTTP method of request</td>
+    </tr>
+    <tr>
+    <td>timestamp</td>
+    <td>HDY-TIMESTAMP</td>
+    <td>1516219185</td>
+    <td>Seconds since epoch UTC</td>
+    </tr>
+    <tr>
+    <td>payload</td>
+    <td>None</td>
+    <td>{'foo': 'bar'}</td>
+    <td>Payload of request</td>
+    </tr></tbody></table>
+    
+    After computing the signature, pass it to the request in the header HDY-SIGNATURE, along with the other Header fields.
+    
+    ```
+    > POST /foo HTTP/1.1
+    > Host: localhost:3000
+    > User-Agent: MyCoolApp
+    > Accept: */*
+    > HDY-PARTNER-ID: partner_name
+    > HDY-TIMESTAMP: 1516219185
+    > HDY-SIGNATURE: <signature>
+    ```
+    **NOTE**: Handy needs your public key before you will be able to make requests to the orders API.
+    
+    **Example code in python:** <a href="https://gist.github.com/agoswami-handy/a42d779bbfc3931c6ccd94b7f4f03777" target="_blank">sign.py</a>
+    
+    **Sample Route**: The URL https://partners.services.handy.com/api/v1/orders/echo can be used for testing purposes. It will just echo back any params which were passed to it. You can make GET or POST requests to this URL.
+    
+    ## Webhooks
+    Subscribe to Handy Orders API’s Webhooks by emailing partnerships@handy.com to be notified of the following significant events regarding an order:
+    * A booking is created
+    * A booking is completed
+    * A booking is rated
+    * A booking is rescheduled
+    * A booking is cancelled
+
+    
+  version: "1.4.1"
+  title: Handy Orders API
+tags:
+  - name: orders
+    description: API for creating and managing Orders
+paths:
+  /orders:
+    get:
+      tags:
+        - orders
+      summary: Fetch order information
+      description: This path allows partners to fetch information about specific orders that exist through the Handy Orders API. This path is typically used to display customer order information to a partner.
+      parameters:
+        - in: path
+          name: partner_order_id
+          description: Provide the partner_order_id used to create the order
+          required: true
+          schema:
+            type: string
+            
+        - name: HDY-PARTNER-ID   
+          in: header
+          description: partner machine name
+          required: true
+          schema:
+            type: string
+            default: demo_partner
+            
+        - name: HDY-TIMESTAMP   
+          in: header
+          description: unix timestamp of request
+          required: true
+          schema:
+            type: integer
+            
+        - name: HDY-SIGNATURE   
+          in: header
+          description: signed request signature
+          required: true
+          schema:
+            type: string    
+          
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order:
+                    $ref: '#/components/schemas/OrderResponse'
+    post:
+      tags: 
+        - orders
+      summary: Create a new order
+      description: This path allows partners to create orders through the Handy Orders API. This path is typically used when a customer purchases Handy Installation from a partner and the partner needs to create the corresponding order in the Handy Orders API.
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                properties:
+                  order:
+                    $ref: '#/components/schemas/OrderResponse'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user:
+                  $ref: '#/components/schemas/UserRequest'
+                address:
+                  $ref: '#/components/schemas/AddressRequest'
+                order:
+                  $ref: '#/components/schemas/OrderRequest'
+    delete:
+      tags: 
+        - orders
+      summary: Cancel an order
+      description: This path allows partners to cancel orders that were previously created through the Handy Orders API. This path is typically used to tell Handy that a customer has cancelled their item associated with their Handy installation.
+      parameters:
+        - in: path
+          name: partner_order_id
+          description: Provide the partner_order_id used to create the order
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No content
+    patch:
+      tags: 
+        - orders
+      summary: Update an Order's Delivery Date
+      description: This path allows partners to update the expected delivery date of the item associated with the customer's Handy installation. This path is typically used to tell Handy that the delivery date of an item has been delayed so that Handy can delay the associated installation, if necessary.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order:
+                  $ref: '#/components/schemas/OrderRequest'
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  booking:
+                    $ref: '#/components/schemas/OrderResponse'
+components:
+  schemas:
+    UserRequest:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - email
+        - phone_number
+      properties:
+        first_name:
+          type: string
+          example: John
+        last_name:
+          type: string
+          example: Doe
+        email:
+          type: string
+          example: johndoe@example.com
+        phone_number:
+          type: string
+          example: 2125555555
+    AddressRequest:
+      type: object
+      required:
+        - address1
+        - address2
+        - city
+        - state
+        - zipcode
+        - country
+      properties:
+        address1:
+          type: string
+          example: '10 Main Street'
+        address2:
+          type: string
+          example: 'Apt 2'
+        city:
+          type: string
+          example: 'New York'
+        state:
+          type: string
+          example: NY
+        zipcode:
+          type: string
+          example: 10012
+        country:
+          type: string
+          example: US
+    OrderResponse:
+      type: object
+      required:
+        - partner_order_id
+        - user_id
+        - address_id
+        - products
+        - created_at
+      properties:
+        partner_order_id:
+          type: integer
+          example: 12345
+        user_id:
+          type: string
+          example: lnog1gg3l39140n
+        address_id:
+          type: string
+          example: wzg8m14pz48mj9z
+        products:
+          $ref: '#/components/schemas/ProductResponse'
+        created_at:
+          type: string
+          example: "2017-04-17T03:50:02.000Z"
+    ProductResponse:
+      type: array
+      items:
+        type: object
+        required:
+          - booking_id
+          - sku
+          - name
+          - quantity
+        properties:
+          booking_id:
+            type: string
+            example: j1z40w3gwwd2qmg
+          sku:
+            type: string
+            example: STSP1001
+          name:
+            type: string
+            example: "Arm chair"
+          quantity:
+            type: integer
+            example: 1
+    OrderRequest:
+      type: object
+      required:
+        - partner_order_id
+        - products
+      properties:
+        partner_order_id:
+          type: integer
+          example: 12345
+        products:
+          $ref: '#/components/schemas/Product'
+    Product:
+      type: array
+      items:
+        type: object
+        required:
+          - sku
+          - product_info
+          - order_details
+        properties:
+          sku:
+            type: string
+            example: STSP1001
+          product_info:
+            $ref: '#/components/schemas/ProductInfo'
+          order_details:
+            $ref: '#/components/schemas/OrderDetails'
+    ProductInfo:
+      type: object
+      required:
+        - product_name
+      properties:
+        product_name:
+          type: string
+          example: "Arm chair"
+    OrderDetails:
+      type: object
+      required:
+        - quantity
+        - delivery_date
+      properties:
+        quantity:
+          type: integer
+          example: 2
+        delivery_date:
+          type: string
+          example: "2017-04-17T03:50:02.000Z" 
+servers:
+  - description: Handy Orders API
+    url: https://partners.services.handy.com/api/v1/

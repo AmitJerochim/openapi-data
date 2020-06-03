@@ -1,0 +1,478 @@
+openapi: 3.0.0
+
+info:
+  title: SwipeSimple V3 Public API
+  version: "3.0.5"
+  description: |
+    On-board merchants onto SwipeSimple through an API
+
+    # Introduction
+
+    SwipeSimple resellers can add new accounts & merchants to SwipeSimple via
+    the SwipeSimple Dashboard. However, this can be slow and error-prone.
+    This API provides the ability to integrate that process into a reseller’s
+    existing onboarding process. You can create accounts and merchant accounts
+    owned by that account automatically.
+    
+    See the Company schema below for a detailed description of each parameter 
+    the API expects.
+
+    ## Authentication
+    This API uses basic authentication over HTTPS/TLS. To get your
+    authentication details, please contact your SwipeSimple account manager.
+
+servers:
+  - url: https://swipesimple.com/api/v3
+
+security:
+  - basicAuth: []
+
+tags:
+  # List these alphabetically
+  - name: Companies
+
+paths: # List alphabetically
+  /companies:
+    post:
+      summary:
+        Create a company and merchant account
+      tags:
+        - Companies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Company"
+      responses:
+        201:
+          description:
+            Operation completed successfully.
+        400:
+          $ref: "#/components/responses/400_Company"
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+
+  schemas:
+    Company:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The company name.
+          example: Cindy's Catering
+        phoneNumber:
+          type: string
+          description: The contact phone number.
+          example: "(500) 555-1234"
+        adminEmail:
+          type: string
+          description:
+            The merchant admin user's email address.
+            This is the email address the user will use to log into the merchant dashboard.
+          example: cindy@example.com
+        adminFullName:
+          type: string
+          description: The merchant admin user's full name.
+          example: Cindy Smith
+        merchantAccounts:
+          type: array
+          description:
+            The merchant account details. When onboarding multiple accounts,
+            each must have a unique name.
+          maxItems: 1
+          items:
+            oneOf:
+              - $ref: "#/components/schemas/FirstDataMerchantAccount"
+              - $ref: "#/components/schemas/TerminalMerchantAccount"
+              - $ref: "#/components/schemas/TsysMerchantAccount"
+              - $ref: "#/components/schemas/VantivMerchantAccount"
+            discriminator:
+              propertyName: processor
+        automaticAdjustment:
+          $ref: "#/components/schemas/AutomaticAdjustment"
+      required:
+        - name
+        - phone
+        - adminEmail
+        - adminFullName
+        - merchantAccounts
+
+    Address:
+      type: object
+      properties:
+        streetAddress:
+          type: string
+          example: 123 JellyBelly Lane
+        city:
+          type: string
+          example: Boston
+        state:
+          type: string
+          example: MA
+        zip:
+          type: string
+          example: "10204"
+      required:
+        - streetAddress
+        - city
+        - state
+        - zip
+
+    AutomaticAdjustment:
+      type: object
+      properties:
+        name:
+          type: string
+          example: '$1 off'
+        amount:
+          type: string
+          description: |
+            The dollar or percentage adjustment.
+            Specify dollar amounts with a leading dollar sign (e.g., $1 or $0.50).
+            Specify percentage amounts with a trailing percent sign (e.g., 1% or 0.75%).
+            For a negative adjustment prefix the value with a minus sign
+            (e.g., -$1 or -0.5%)
+
+            NOTE: Percentage adjustments are automatically rounded to two decimal places.
+          example: -$1.00 
+        appliesTo:
+          type: string
+          enum:
+            - card
+            - cash
+            - both
+          description: |
+            Indicates whether to apply the adjustment to card
+            transactions, cash transactions or both.
+          example: cash
+        canBypass:
+            type: boolean
+            description: |
+              Indicates whether the merchant can bypass the adjustment.
+      required:
+        - name
+        - amount
+        - appliesTo
+        - canBypass
+
+    BatchTimeZone:
+      type: string
+      description: The time zone for the localBatchTime parameter
+      enum:
+        - EASTERN
+        - CENTRAL
+        - MOUNTAIN
+        - PACIFIC
+        - ALASKA
+        - HAWAII
+        - UTC
+
+    FirstDataMerchantAccount:
+      allOf:
+        - $ref: "#/components/schemas/MerchantAccount"
+        - $ref: "#/components/schemas/FirstDataParameters"
+
+    FirstDataParameters:
+      type: object
+      properties:
+        processor:
+          type: string
+          enum:
+            - FIRST_DATA_OMAHA
+          example: FIRST_DATA_OMAHA
+        merchantId:
+          type: string
+          pattern: "^[0-9A-Za-z]{1,19}$"
+          description: 1 to 19 digits
+          example: "1234567890"
+        terminalId:
+          type: string
+          pattern: "^[0-9A-Za-z]{1,8}$"
+          description: 1 to 8 digits
+          example: "1234"
+        deviceId:
+          type: string
+          pattern: "^[0-9A-Za-z]{0,4}$"
+          description: 0 to 4 digits
+          example: "123"
+      required:
+        - processor
+        - merchantId
+        - terminalId
+
+    LocalBatchTime:
+      type: string
+      description: |
+        The time at which batches of transactions are submitted for settlement.
+        Note: This is not the time at which the batch settles - this is decided
+        by the payment processor.
+        Must be provided on the hour or half hour in the following format:
+        1:00 AM or 12:30 PM
+      enum:
+        - 12:00 AM
+        - 12:30 AM
+        - 1:00 AM
+        - 1:30 AM
+        - 2:00 AM
+        - 2:30 AM
+        - 3:00 AM
+        - 3:30 AM
+        - 4:00 AM
+        - 4:30 AM
+        - 5:00 AM
+        - 5:30 AM
+        - 6:00 AM
+        - 6:30 AM
+        - 7:00 AM
+        - 7:30 AM
+        - 8:00 AM
+        - 8:30 AM
+        - 9:00 AM
+        - 9:30 AM
+        - 10:00 AM
+        - 10:30 AM
+        - 11:00 AM
+        - 11:30 AM
+        - 12:00 PM
+        - 12:30 PM
+        - 1:00 PM
+        - 1:30 PM
+        - 2:00 PM
+        - 2:30 PM
+        - 3:00 PM
+        - 3:30 PM
+        - 4:00 PM
+        - 4:30 PM
+        - 5:00 PM
+        - 5:30 PM
+        - 6:00 PM
+        - 6:30 PM
+        - 7:00 PM
+        - 7:30 PM
+        - 8:00 PM
+        - 8:30 PM
+        - 9:00 PM
+        - 9:30 PM
+        - 10:00 PM
+        - 10:30 PM
+        - 11:00 PM
+        - 11:30 PM
+
+    MerchantAccount:
+      properties:
+        name:
+          type: string
+          description: The merchant account name.
+          example: Cindy's Catering
+        address:
+           $ref: "#/components/schemas/Address"
+        localBatchTime:
+          $ref: "#/components/schemas/LocalBatchTime"
+        batchTimeZone:
+          $ref: "#/components/schemas/BatchTimeZone"
+      discriminator:
+        propertyName: processor
+      required:
+        - name
+        - address
+        - localBatchTime
+        - batchTimeZone
+
+    TerminalMerchantAccount:
+      allOf:
+        - $ref: "#/components/schemas/MerchantAccount"
+        - $ref: "#/components/schemas/TerminalParameters"
+
+    TerminalParameters:
+      type: object
+      properties:
+        processor:
+            type: string
+            enum:
+              - TSYS_TERMINAL
+              - VANTIV_TERMINAL
+              - FIRST_DATA_OMAHA_TERMINAL
+        settlement:
+          type: object
+          properties:
+            scheme:
+              type: string
+              enum:
+                - BROADPOS_AUTO
+                - BROADPOS_MANUAL
+                - GATEWAY_AUTO
+          required:
+            - scheme
+        merchantId:
+          type: string
+          example: "123456789012"
+        terminalId:
+          type: string
+          example: "123"
+        terminal:
+          type: object
+          properties:
+            manufacturer:
+              type: string
+              enum:
+                - PAX
+            model:
+              type: string
+              enum:
+                - A920
+                - A80
+            serialNumber:
+              type: string
+              example: "1234567890"
+              description: |
+                The unique serial number assigned to the device.
+                Note: To provision the device after creating the account,
+                set this value to "TBD" and the API will substitute
+                a unique placeholder.
+          required:
+            - manufacturer
+            - model
+            - serialNumber
+      required:
+        - processor
+        - settlement
+        - merchantId
+        - terminalId
+        - terminal
+
+    TsysMerchantAccount:
+      allOf:
+        - $ref: "#/components/schemas/MerchantAccount"
+        - $ref: "#/components/schemas/TsysParameters"
+
+    TsysParameters:
+      type: object
+      properties:
+        processor:
+          type: string
+          enum:
+            - TSYS
+          example: TSYS
+        merchantId:
+          type: string
+          pattern: "^[0-9]{12}$"
+          description: 12 digits
+          example: "123456789012"
+        terminalId:
+          type: string
+          pattern: "^[V7][0-9]{7}$"
+          description: First character is "V" or "7" followed by seven digits
+          example: V1234567
+        storeNumber:
+          type: string
+          pattern: "^[0-9]{4}$"
+          description: 4 digits
+          example: "1234"
+        terminalNumber:
+          type: string
+          pattern: "^[0-9]{4}$"
+          description: 4 digits
+          example: "1234"
+        locationNumber:
+          type: string
+          pattern: "^[0-9]{5}$"
+          description: 5 digits
+          example: "12345"
+        sicCode:
+          type: string
+          pattern: "^[0-9]{4}$"
+          description: 4 digits
+          example: "1234"
+        agentNumber:
+          type: string
+          pattern: "^[0-9]{6}$"
+          description: 6 digits
+          example: "123456"
+        chainNumber:
+          type: string
+          pattern: "^[0-9]{6}$"
+          description: 6 digits
+          example: "123456"
+        bin:
+          type: string
+          pattern: "^[0-9]{6}$"
+          description: 6 digits
+          example: "123456"
+      required:
+        - processor
+        - terminalId
+        - storeNumber
+        - terminalNumber
+        - locationNumber
+        - sicCode
+        - agentNumber
+        - chainNumber
+
+    VantivMerchantAccount:
+      allOf:
+        - $ref: "#/components/schemas/MerchantAccount"
+        - $ref: "#/components/schemas/VantivParameters"
+
+    VantivParameters:
+      type: object
+      properties:
+        processor:
+          type: string
+          enum:
+            - VANTIV
+          example: VANTIV
+        merchantId:
+          type: string
+          pattern: "^[0-9]{12}$"
+          description: 12 digits
+          example: "123456789012"
+        terminalId:
+          type: string
+          pattern: "^[0-9]{3}$"
+          description: 3 digits
+          example: "123"
+        bankId:
+          type: string
+          pattern: "^[0-9]{4}$"
+          description: 4 digits
+          example: "1234"
+      required:
+        - processor
+        - merchantId
+        - terminalId
+        - bankId
+
+  responses:
+    400_Company:
+      description: >-
+        (Bad Request) The email address is taken, the request body contains
+        an invalid value, or the request body omits a required parameter.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Invalid attributes for Company"
+              details:
+                type: array
+                items:
+                  oneOf:
+                    - type: string
+                      example: "User email has already been taken"
+                    - type: object
+                      description: An object containing detailed validation errors.
+            example: |
+              {
+                "message": "Invalid attributes for MerchantAccount",
+                "details": {
+                  "vantiv_merchant_account": [
+                    "The property '#/merchantId' value \"1234\" did not match the regex '^[0-9]{12}$'"
+                  ]
+                }
+              }

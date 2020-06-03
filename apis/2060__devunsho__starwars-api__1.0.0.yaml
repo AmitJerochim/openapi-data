@@ -1,0 +1,337 @@
+openapi: 3.0.1
+info:
+  title: Star Wars API
+  description: 'This is a simple API that consumes https://swapi.co'
+  contact:
+    email: hi@funsho.me
+  version: 1.0.0
+servers:
+  - url: 'https://pystck-starwars.herokuapp.com/api'
+    variables: {}
+paths:
+  /movies:
+    get:
+      summary: fetches all Star Wars movies
+      description: This endpoint allows you to fetch all the Star Wars movies
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SuccessMoviesItem'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedItem'
+  '/movies/{movie}':
+    get:
+      summary: fetches a Star War movie
+      description: This endpoint allows you to fetch a Star Wars movie by id
+      parameters:
+        - name: movie
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMoviesItem'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundItem'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedItem'
+  '/movies/{movie}/characters':
+    get:
+      summary: fetches the characters in a Star War movie
+      description: >-
+        This endpoint allows you to fetch all the characters in a Star Wars
+        movie by id
+      parameters:
+        - name: movie
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: filter
+          in: query
+          description: Filter key e.g gender etc
+          schema:
+            type: string
+        - name: by
+          in: query
+          description: Value to be used to filter e.g male
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: 'Sort key e.g height, name, gender'
+          schema:
+            type: string
+        - name: order
+          in: query
+          description: Order for sorting. Supports ASC or DESC
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessCharactersItem'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundItem'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedItem'
+  '/movies/{movie}/comments':
+    get:
+      summary: fetches the comments for a Star War movie
+      description: >-
+        This endpoint allows you to fetch all the comments for a Star Wars movie
+        by id
+      parameters:
+        - name: movie
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessCommentsItem'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundItem'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedItem'
+    post:
+      summary: creates a comment for a Star War movie
+      description: This endpoint allows you to create a comment for a Star Wars movie by id
+      parameters:
+        - name: movie
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - comment
+                - email
+                - name
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                comment:
+                  type: string
+        required: false
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  body:
+                    $ref: '#/components/schemas/CommentItem'
+                  status:
+                    example: >-
+                      success
+        '442':
+          description: >-
+            Unprocessable Entity - When server side validation fails for
+            required parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailedValidationItem'
+components:
+  schemas:
+    NotFoundItem:
+      type: object
+      properties:
+        code:
+          type: object
+          example: '404'
+        status:
+          type: object
+          example: failed
+        body:
+          type: object
+          example: Not Found
+    FailedItem:
+      type: object
+      properties:
+        code:
+          type: object
+          example: '503'
+        status:
+          type: object
+          example: failed
+        body:
+          type: object
+          example: Service unavailable
+    FailedValidationItem:
+      type: object
+      properties:
+        body:
+          type: object
+          properties:
+            name:
+              type: array
+              items:
+                example: >-
+                  The name field is required.
+        status:
+          type: object
+          example: failed
+    SuccessMoviesItem:
+      type: object
+      properties:
+        body:
+          type: array
+          items:
+            $ref: '#/components/schemas/MovieItem'
+        count:
+          type: object
+          example: '7,'
+        status:
+          type: object
+          example: success
+    SuccessCharactersItem:
+      type: object
+      properties:
+        body:
+          type: array
+          items:
+            $ref: '#/components/schemas/CharacterItem'
+        totalHeight:
+          type: object
+          properties:
+            metric:
+              type: object
+              example: 3066cm
+            imperial:
+              type: object
+              example: 100ft and 7 inches
+        count:
+          type: object
+          example: '7,'
+        status:
+          type: object
+          example: success
+    SuccessCommentsItem:
+      type: object
+      properties:
+        body:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommentItem'
+        status:
+          type: object
+          example: success
+    MovieItem:
+      type: object
+      properties:
+        movie_id:
+          type: object
+          example: '4'
+        title:
+          type: object
+          example: Revenge of the Sith
+        opening_crawl:
+          type: object
+          example: >-
+            War! The Republic is crumbling under attacks by the ruthless Sith
+            Lord, Count Dooku....
+        release_date:
+          type: string
+          format: date
+          example: '2016-08-29T00:00:00.000+0000'
+        comment_count:
+          type: object
+          example: '4'
+    CharacterItem:
+      type: object
+      properties:
+        name:
+          type: object
+          example: Raymus Antilles
+        height:
+          type: object
+          example: '188'
+        mass:
+          type: object
+          example: '78'
+        hair_color:
+          type: object
+          example: brown
+        skin_color:
+          type: object
+          example: light
+        eye_color:
+          type: object
+          example: brown
+        birth_year:
+          type: object
+          example: 64BBY
+        gender:
+          type: object
+          example: male
+    CommentItem:
+      type: object
+      properties:
+        comment:
+          type: object
+          example: >-
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi a
+            erat ut diam posuere elementum non sit amet elit. Lorem ipsum dolor
+            sit amet, consectetur adipiscing elit. Donec lacinia dui eget leo
+            aliquet, vel molestie nunc placerat.
+        ip_address:
+          type: object
+          example: 127.0.0.1
+        created_at:
+          type: string
+          format: date-time

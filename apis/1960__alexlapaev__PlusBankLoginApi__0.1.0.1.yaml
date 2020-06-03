@@ -1,0 +1,351 @@
+openapi: 3.0.1
+info:
+  title: Registration API Плюс банка для ДБО
+  version: 0.1.0.1
+servers:
+  - url: https://onlinetest.plus-bank.ru/api/registration/v1
+paths:
+  /identify:
+    post:
+      summary: Идентификация клиента для регистрации
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phone:
+                  type: string
+                  description: Номер телефона в формате 10 цифр
+                  example: 9037354582
+                accountOrContractNumber:
+                  type: string
+                  description: Номер договора или двадцатизначный номер счета
+                  example: 40817810570000123456
+                deviceId:
+                  type: string
+                  description: |
+                    Идентификатор устройства. Либо предоставляется операционной системой, либо GUID сохраненный в 
+                    localStorage
+              required:
+                - phone
+                - accountOrContractNumber
+                - deviceId
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                description: |
+                  На верхнем уровне задано только одно свойство - это состояние, в которое перешел процесс регистрации
+                type: object
+                properties:
+                  ConfirmLoginPhone:
+                    type: object
+                    properties:
+                      sendInfo:
+                        $ref: '#/components/schemas/SmsSendInfo'
+                  EisaCode:
+                    type: object
+                    properties:
+                      esiaData:
+                        $ref: '#/components/schemas/EisaAuthData'
+                  Register:
+                    type: object
+          headers:
+            Authorization:
+              schema:
+                type: string
+                description: Токен авторизации
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+                    enum:
+                      - invalidPhone
+                      - invalidAccountOrContractNumber
+                      - invalidDeviceId
+                      - unknownError
+                required:
+                  - result
+  /resend:
+    post:
+      summary: Повторная отправка смс
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        200:
+          description: |
+            На верхнем уровне задано только одно свойство - это состояние, в которое перешел процесс регистрации
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ConfirmLoginPhone:
+                    type: object
+                    properties:
+                      sendInfo:
+                        $ref: '#/components/schemas/SmsSendInfo'
+                  DboContractAccept:
+                    type: object
+                    properties:
+                      sendInfo:
+                        $ref: '#/components/schemas/SmsSendInfo'
+      security:
+        - loginProcessAuth: []
+  /confirmLoginPhone:
+    post:
+      summary: Подтвердить телефон
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phoneCode:
+                  description: Код подтверждения
+                  type: string
+              required:
+                - phoneCode
+      responses:
+        200:
+          description: Запрос обработан
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ConfirmLoginPhone:
+                    type: object
+                    properties:
+                      cause:
+                        type: string
+                        description: |
+                          Причина, почему перешли в это состояние:
+                          * invalidCode - неверный код
+                          * noMoreAttempts - закончились попытки ввода этого кода, требется сделать /resend 
+                        enum:
+                          - invalidCode
+                          - noMoreAttempts
+                      sendInfo:
+                        $ref: '#/components/schemas/SmsSendInfo'
+                  EisaCode:
+                    type: object
+                    properties:
+                      esiaData:
+                        $ref: '#/components/schemas/EisaAuthData'
+                  Initial:
+                    type: object
+                    properties:
+                      cause:
+                        type: string
+                        description: |
+                          Причина, почему перешли в это состояние:
+                          * loginByPhoneForbidden - Клиент запретил вход по телефону (можно входить только по логину)
+                          * unknownPhone - телефон не известен, вход с таким телефоном возможен только после обращения
+                                           в банк 
+                        enum:
+                          - loginByPhoneForbidden
+                          - unknownPhone
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - loginProcessAuth: []
+  /sendEisaCode:
+    post:
+      summary: |
+        Отправка кода доступа к ЕИСА. Запрос может обрабатываться долго, так как в течении этого запроса 
+        происходит взаимодействие с ЕИСА. Рекомендуется поставить таймаут 2 минуты.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  description: Код доступа к ЕИСА
+                  type: string
+              required:
+                - code
+      responses:
+        200:
+          description: Запрос обработан
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  DboContractAccept:
+                    type: object
+                    properties:
+                      contractText:
+                        type: string
+                    required: 
+                      - contractText
+                  Initial:
+                    type: object
+                    properties:
+                      cause:
+                        type: string
+                        description: |
+                          Причина, почему перешли в это состояние:
+                          * esiaError - При взаимодействии с ЕИСА возникла ошибка
+                          * esiaCredentialsNotMatch - Данные ЕИСА не соответствуют введенному счету или номеру договора
+                        enum:
+                          - esiaError
+                          - esiaCredentialsNotMatch
+                          - unknown
+                      description:
+                        type: string
+                    required:
+                      - cause
+      security:
+        - loginProcessAuth: []
+  /acceptDboContract:
+    post:
+      summary: Подтвердить договор
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                phoneCode:
+                  description: Код подтверждения
+                  type: string
+              required:
+                - phoneCode
+      responses:
+        200:
+          description: Запрос обработан
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  DboContractAccept:
+                    type: object
+                    properties:
+                      cause:
+                        type: string
+                        description: |
+                          Причина, почему перешли в это состояние:
+                          * invalidCode - неверный код
+                          * noMoreAttempts - закончились попытки ввода этого кода, требется сделать /resend 
+                        enum:
+                          - invalidCode
+                          - noMoreAttempts
+                      sendInfo:
+                        $ref: '#/components/schemas/SmsSendInfo'
+                  Register:
+                    type: object
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+      security:
+        - loginProcessAuth: []
+#ready      
+  /register:
+    post:
+      summary: Регистрация постоянного логина и пароля
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login:
+                  type: string
+                password:
+                  type: string
+      responses:
+        200:
+          description: Request processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  Register:
+                    type: object
+                    properties:
+                      cause:
+                        type: string
+                        description: |
+                          Причина, почему перешли в это состояние:
+                          * noMoreAttempts - закончились попытки ввода логина и пароля, требется сделать /resend                        
+                        enum:
+                          - invalidLogin
+                          - invalidPassword
+                          - loginIsAlreadyTaken
+                          - noMoreAttempts
+                      sendInfo:
+                        $ref: '#/components/schemas/SmsSendInfo'
+                  Login:
+                    type: object
+        400:
+          description: Invalid request
+      security:
+        - loginProcessAuth: []
+components:
+  securitySchemes:
+    loginProcessAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    EisaAuthData:
+      description: Данные для начала аутентификации в ЕИСА
+      type: object
+      properties:
+        esiaUrl:
+          type: string
+          description: Путь для аутентификации в ЕИСА
+        esiaReturnUrl:
+          type: string
+          description: url, который передан в качестве возврата
+        esiaCodeParameter:
+          type: string
+          description: имя параметра с кодом, который будет добавлен к esiaReturnUrl
+        esiaUrlTtl:
+          type: integer
+          description: Время жизни esiaUrl в секундах
+      required:
+        - esiaUrl
+        - esiaUrlTtl
+    SmsSendInfo:
+      type: object
+      properties:
+        isMessageSend:
+          description: Было ли отправлено сообщение
+          type: boolean
+        nextSend:
+          type: number
+          description: Когда можно будет отправить повторное смс (секунды)
+      required:
+        - isMessageSend
+        - nextSend
+  responses:
+    UnauthorizedError:
+      description: Access token is missing or invalid
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              cause:
+                type: string
+                enum:
+                  - illgelallToken
+                  - illegalState
+              message:
+                type: string

@@ -1,0 +1,154 @@
+openapi: 3.0.0
+info:
+  title: SMSQueue API
+  version: '1.0'
+  contact:
+    name: Developer
+    email: paulg@value.co.za
+  description: >-
+    Allows you to create and queue a SMS message, get delivery details of a SMS
+    message and retrieve information related to cost centres, campaigns and
+    message templates.
+servers:
+  - url: 'https://apitest.value.co.za/SMSQueue/api'
+    description: Test Server
+  - description: Production Server
+    url: 'https://api.value.co.za/SMSQueue/api'
+security: 
+  - apiKey: []
+paths:
+  /message:
+    post:
+      tags:
+        - Message
+      summary: Message
+      description: Creates and queues a new SMS message for delivery.
+      operationId: post-message
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message_Request'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message_Response'
+components:
+  schemas:
+    Message_Request:
+      title: Message_Request
+      type: object
+      description: The request schema of the Message POST operation.
+      properties:
+        messageOptions:
+          type: object
+          description: The options for the SMS message being created.
+          required:
+            - costCentreId
+          properties:
+            costCentreId:
+              type: integer
+              description: >-
+                The cost centre to use for the delivery of the SMS message. Use
+                GET /CostCentres to retrieve a list of available cost centres.
+              format: int32
+              example: '1'
+            campaignId:
+              type: integer
+              format: int32
+              example: '1'
+              description: >-
+                The campaign to associate the SMS message with. Campaigns are
+                used to drive reporting, and any replies to SMS messages will be
+                routed to the email address associated with the campaign.
+            templateId:
+              type: integer
+              format: int32
+              example: '1'
+              description: >-
+                The message body templatte ID to use for this message. If
+                specified then the 'bosy' parameter must be either empty or
+                contain a JSON array of template parameters and values.
+            groupMessage:
+              type: boolean
+              default: false
+              description: >-
+                If the value of this parameter is 'true', the value of the
+                'recipient' parameter must contain the name of the group instead
+                of the recipient MSISDN.
+            expiryInHours:
+              type: integer
+              format: int32
+              example: '8'
+        source:
+          type: string
+          example: calling application name
+          maxLength: 50
+          description: >-
+            The source is the name of the calling application or system, and
+            will be stored against the created message for reporting purposes.
+        reference:
+          type: string
+          example: calling application common key reference
+          maxLength: 200
+          description: >-
+            The reference should contain a value that will uniquely identify the
+            SMS message delivery request on the calling application or system.
+        recipient:
+          type: string
+          example: '+27825205467'
+          maxLength: 100
+          description: >-
+            The recipient must either be a MSISDN in a valid format or the name
+            of the group in the case of a group message.
+        body:
+          type: string
+          example: Hello World!
+          maxLength: 1600
+          description: >-
+            The body can either contain static text or if a template ID is
+            specified a JSON formatted list of body parameters.
+
+
+            Ex.
+
+            {
+              "name": "Steve",
+              "surname": "Jobs"
+            }
+      required:
+        - messageOptions
+        - recipient
+        - body
+    Message_Response:
+      title: Message_Response
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: >-
+            A boolean value indicating if the SMS message was successfully
+            created.
+        errorDescription:
+          type: string
+          description: >-
+            In the event of an error, contains a description of the validation
+            or processing error encountered.
+        messageId:
+          type: integer
+          description: >-
+            The unique ID of the SMS message. Can be used to retrieve updated
+            message information and delivery reports.
+      description: The request schema of the Message POST operation.
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      description: Your authorization token
+      name: Authorization
+      in: header
+tags:
+  - name: Message
+    description: But first, let me send a message!

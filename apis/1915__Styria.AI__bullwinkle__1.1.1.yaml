@@ -1,0 +1,174 @@
+openapi: 3.0.0
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: 'https://api.styria.ai/bullwinkle'
+info:
+  description: Bullwinkle
+  version: "1.1.1"
+  title: Bullwinkle
+  contact:
+    email: info@styria.ai
+paths:
+  '/v1/{site_id}/recommendations/{user_id}':
+    options:
+      description: >-
+        Given an user Id returns information describing if it fullfills 
+        criteria for personalizing articles
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          description: id of the user article recommendations are sought for
+          schema:
+            type: string
+        - in: path
+          name: site_id
+          required: true
+          description: id of the site article recommendations are sought for
+          schema:
+            type: integer
+            format: int32
+      responses:
+          '200':
+            description: user does fullfill criteria for personalizing articles
+          '204':
+            description: user has no personalized articles yet
+          '403':
+            description: user does not fullfill criteria for personalizing articles
+    get:
+      description: >-
+        Given an user Id returns a list of articles that are recommendable to
+        the specified user. The list of articles is sorted in descending order
+        of the confidence an article should be recommended to the user and it
+        excludes articles that were blacklisted by a definition. If the model
+        name and version are not specified the latest will be used.
+      parameters:
+        - in: query
+          name: model_name
+          description: name of model to use
+          schema:
+            type: string
+        - in: query
+          name: model_version
+          description: version of the model to use
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+        - in: query
+          name: count
+          description: number of sought articles
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 200
+            default: 100
+        - in: path
+          name: user_id
+          required: true
+          description: id of the user article recommendations are sought for
+          schema:
+            type: string
+        - in: path
+          name: site_id
+          required: true
+          description: id of the site article recommendations are sought for
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '200':
+          description: article recommendations matching the input parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _metadata:
+                    type: object
+                    properties:
+                      model:
+                        $ref: '#/components/schemas/ModelItem'
+                  articles:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ArticleItem'
+              examples:
+                response:
+                  value: |-
+                    {
+                      "_metadata": {
+                        "model": {
+                          "name": "network",
+                          "version": 7
+                        }
+                      },
+                      "data": [{
+                          "id": 239403,
+                          "site": {
+                            "id": 63829,
+                            "name": "www.24sata.hr"
+                          }
+                        }]
+                    }
+        '204':
+          description: user has no personalized articles yet
+        '403':
+          description: user does not fullfill criteria for personalizing articles
+        '404':
+          description: user with the requested id not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    $ref: '#/components/schemas/ErrorItem'
+components:
+  schemas:
+    ArticleItem:
+      type: object
+      required:
+        - id
+        - site
+        - source
+      properties:
+        id:
+          type: integer
+          format: int32
+        site:
+          $ref: '#/components/schemas/SiteItem'
+    ModelItem:
+      type: object
+      required:
+        - name
+        - version
+      properties:
+        name:
+          type: string
+        version:
+          type: integer
+          format: int32
+    SiteItem:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int32
+        name:
+          type: string
+    ErrorItem:
+      type: object
+      required:
+        - message
+        - code
+      properties:
+        message:
+          type: string
+        code:
+          type: integer
+          format: int32

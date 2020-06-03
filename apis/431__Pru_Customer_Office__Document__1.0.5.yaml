@@ -1,0 +1,169 @@
+openapi: 3.0.0
+info:
+  description: ''
+  version: "1.0.5"
+  title: Document Composition 
+tags:
+  - name: document-composition
+servers:
+  - url: 'https://virtserver.swaggerhub.com/Pru_Customer_Office/Document/1.0.0'
+paths:
+  /v1/convert/:
+    post:
+      tags:
+        - Document Composition
+      summary:  Convert
+      description: >-
+        Document composition for given input data and template.  The servie will take data in JSON format , bind to template engine and prodcues in fomrat requeted with Accept header
+      operationId: convert
+      parameters:
+        - in: header
+          name: X-PruRequestId
+          description: X-PruRequestId
+          required: true
+          schema:
+            type: string
+        - in : header
+          name: Accept
+          description: Service will render the composed document in format specified.  Allowed value is application/pdf
+          required: true
+          schema:
+            type: string
+            enum: [application/pdf]
+      responses:
+        '200':
+          description: Success. In case of success .
+          content:
+            'application/octet-stream':
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Bad request. If any of the required parameter is missing or invalid
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error. For example, if database is down
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'               
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Document'
+        description: Request Object 
+        required: true
+  /v1/transformation:
+    post:
+      tags:
+        - Document transformation 
+      summary:  Transform document to PDF for given multipart file. Only HTML to PDF conversion is supported as of now.. 
+      description: >-
+        Transform document to PDF for given multipart.  
+      operationId: transformation
+      parameters:
+        - in: header
+          name: X-PruRequestId
+          description: X-PruRequestId
+          required: true
+          schema:
+            type: string
+        - in : header
+          name: Accept
+          description: Transform document to PDF. Supported File Types - jpg,jpeg,gif,png,svg,bmp,tiff,html
+          required: true
+          schema:
+            type: string
+            enum: [application/pdf]
+      responses:
+        '200':
+          description: Success. In case of success .
+          content:
+             'application/octet-stream':
+               schema:
+                 type: string
+                 format: binary
+        '400':
+          description: Bad request. If any of the required parameter is missing or invalid
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentPart'  
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        responseHeader:
+         $ref: '#/components/schemas/ErrorDetail' 
+    ErrorDetail:
+      type: object
+      properties:
+        responseCode:
+          type: string
+          enum: [4XX, 5XX]
+        responseStatus:
+          type: string
+          enum: [FAILED]
+        errorDetails:
+          $ref: '#/components/schemas/ErrorMessage'     
+    Document:
+      type: object
+      description: Both data and template names are required 
+      properties:
+        data:
+          type: string
+        templateName:
+           type: string
+           description: Template enginge will be derived from template name extention.  For example .pdf will use ACROPDF and .vm wil use VELOCITY as template engine.
+    DocumentPart:
+      type: object
+      description: This is multipart object with key as `part` and an html file as multipart value.
+      properties:
+        part:
+          type: string
+          format: binary
+    ErrorMessage:
+      type: object
+      description: Error details information object
+      properties:
+        subCode:
+          type: string
+          description: Detailed error code
+        message:
+          type: string
+          description: Detailed error message
+        reportingComponentId:
+          type: string
+          description: Server name from where the service is running
+        errorComponentId:
+          type: string
+          description: Will not be populated
+        errorUrl:
+          type: string
+          description: Will not be populated
+        fieldError:
+          $ref: '#/components/schemas/fieldError'
+    fieldError:
+     type: array
+     items:
+        type: object
+        properties:
+          code:
+            type: string
+            description: Field Code
+          fieldname:
+            type: string
+            description: Field Name
+          message:
+            type: string
+            description: Error message

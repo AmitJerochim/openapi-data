@@ -1,0 +1,160 @@
+openapi: 3.0.1
+info:
+  version: '2019-11-05-0001'
+  title: 'foundation-consumer-portal-service'
+  description: ''
+
+servers:
+  - url: 'https://{appId}.execute-api.{region}.amazonaws.com/{basePath}'
+    variables:
+      appId:
+        default: '8bfytxmk47'
+      region:
+        default: 'us-west-2'
+      basePath:
+        default: 'dev'
+
+paths:  
+  
+  /tokens:
+    post:
+      tags:
+        - Refresh Auth
+      requestBody:
+        description: Refresh request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/refreshRequest'
+      responses:
+        200:
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/refreshResponse'
+        403:
+          $ref: '#/components/responses/unauthorizedError'
+        400:
+          $ref: '#/components/responses/badRequestError'
+        500:
+          $ref: '#/components/responses/serverError'
+
+  
+  /mqtt-connections:
+    post:
+      tags:
+        - Build MQTT Connection
+      security:
+        - portalAuthorizer: []
+      responses:
+        200:
+          description: "200 response"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/mqttResponse'
+        403:
+          $ref: '#/components/responses/unauthorizedError'
+        400:
+          $ref: '#/components/responses/badRequestError'
+        500:
+          $ref: '#/components/responses/serverError'
+          
+components:
+
+  securitySchemes:
+  
+    portalAuthorizer:
+      type: http
+      scheme: bearer
+      bearerFormat: OAuth Access Token
+          
+  responses:
+  
+    unauthorizedError:
+      description: User is not authorized to access this resource with an explicit deny
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/unauthorizedErrorResponse'
+            
+    serverError:
+      description: Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/errorResponse'
+            
+    badRequestError:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/errorResponse'
+      
+  schemas:
+  
+    errorResponse:
+      title: "Error Response"
+      description: "Standard Error Response"
+      type: object
+      properties:
+        code:
+          title: "Error Code"
+          description: "Unique error code describing a known error condition"
+          type: integer
+          minimum: 0
+        message:
+          title: "Error Message"
+          description: "Human-readable description of the problem"
+          type: string
+          
+    unauthorizedErrorResponse:
+      title: "Unauthorized Error Response"
+      description: "Unauthorized Error Response"
+      type: object
+      properties:
+        Message:
+          title: "Error Message"
+          description: "User is not authorized to access this resource with an explicit deny"
+          type: string
+    
+    refreshRequest:
+      title: "Request new credentials"
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          title: OAuth refresh token
+          description: "OAuth refresh token"
+          type: string
+
+    mqttResponse:
+      title: "Generate MQTT connection response"
+      description: "Signed MQTT websocket connection"
+      type: object
+      properties:
+        signedUrl:
+          title: Signed URL
+          type: string
+          
+    refreshResponse:
+      title: "Create Certificate Response"
+      description: "Creates a certificate that can be used to authorize an MQTT broker connection"
+      type: object
+      properties:
+        accessToken:
+          title: Access Token
+          type: string
+          description: "OAuth access token"
+        expiresIn:
+          title: Expires In
+          type: number
+          description: "Number of seconds the token expires in"
+        tokenType:
+          title: Token Type
+          type: string
+          description: "Bearer"

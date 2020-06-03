@@ -1,0 +1,273 @@
+openapi: 3.0.0
+# Added by API Auto Mocking Plugin
+servers:
+# Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Diagnotes/Messaging/1.0.0
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/Diagnotes/Diagnotes/1.0.0
+info:
+  description: Diagnotes API
+  version: "0.9.0"
+  title: Diagnotes Messaging API
+  # contact:
+  #   email: you@your-company.com
+  # license:
+  #   name: Apache 2.0
+  #   url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+# tags:
+#   - name: admins
+#     description: Secured Admin-only calls
+#   - name: developers
+#     description: Operations available to regular developers
+paths:
+  /users:
+    get:
+      summary: Get users
+      description: >
+        Search users with user properties in query string
+      parameters:
+        - in: query
+          name: user
+          description: user properties to search
+          schema:
+            $ref: '#/components/schemas/User'
+        - in: query
+          name: page_num
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: array of users matching search criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+  /channels:
+    put:
+      summary: Create or update channel
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Channel'
+      responses:
+        '200':
+          description: channel created or updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Channel'
+    get:
+      summary: Search channels
+      description: >
+        Search channels by channel name or user id for the user's "my channel"
+      parameters:
+        - in: query
+          name: name
+          schema:
+            type: string
+        - in: query
+          name: user_id
+          description: user id of the users "my channel"
+          schema:
+            type: string
+        - in: query
+          name: page_num
+          schema:
+            type: integer
+        - in: query
+          name: page_size
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: array of channels matching search criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Channel'
+                  
+                  
+  /channels/{id}/subscribers:
+    put:
+      summary: Create new subscriber to channel
+      parameters:
+        - in: path
+          required: true
+          name: id
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subscriber_id:
+                  type: string
+      responses:
+        '200':
+          description: subscriber created
+  /channels/{id}/subscribers/actions:
+    post:
+      summary: Perform action in subscribers
+      description: >
+        Perform specified action on each subscriber in channel:
+          * 'channel-link' - create a link in subscriber channels with text
+      parameters:
+        - in: path
+          required: true
+          name: id
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Action'
+      responses:
+        '200':
+          description: link events created
+  /channels/{id}/subscribers/messages:
+    post:
+      summary: Create subscriber message
+      description: >
+        Create new message in all of specified channel's subscribers
+      parameters:
+        - in: path
+          required: true
+          name: id
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+      responses:
+        '200':
+          description: message created
+  /channels/{id}/messages:
+    post:
+      summary: Create message
+      description: Create message in specified channel
+      parameters:
+        - in: path
+          required: true
+          name: id
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Message'
+      responses:
+        '200':
+          description: message created
+          
+components:
+  schemas:
+    Message:
+      type: object
+      properties:
+        text:
+          type: string
+        tagged_users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        tag_channel:
+          type: boolean
+    Patient:
+      type: object
+      properties:
+        id:
+          type: string
+        account_id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        phone_number:
+          type: string
+          format: phone
+        gender:
+          type: string
+        location:
+          type: object
+          properties:
+            point_of_care:
+              type: string
+            room:
+              type: string
+            bed:
+              type: string
+            facility:
+              type: string
+            building:
+              type: string
+        attending_physician:
+          $ref: '#/components/schemas/User'
+        admitting_physician:
+          $ref: '#/components/schemas/User'
+        consulting_physician:
+          $ref: '#/components/schemas/User'
+        referring_physician:
+          $ref: '#/components/schemas/User'
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        external_id:
+          type: string
+          
+    Action:
+      type: object
+      properties:
+        type: 
+          type: string
+          enum: [channel_link]
+        data:
+          type: object
+          oneOf:
+            - $ref: '#/components/schemas/ChannelLinkAction'
+    
+    ChannelLinkAction:
+      type: object
+      properties:
+        subscriber_id:
+          type: string
+    Channel:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        patient:
+          $ref: '#/components/schemas/Patient'
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'

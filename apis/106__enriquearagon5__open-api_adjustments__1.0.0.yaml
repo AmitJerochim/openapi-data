@@ -1,0 +1,263 @@
+openapi: 3.0.0
+info:
+  description: API for adjustments on customer accounts.
+  version: 1.0.0
+  title: OpenAPI Adjustments
+servers:
+  - url: https://api.example.com/adjustments/
+paths:
+  /v1/adjustments:
+    get:
+      summary: Get all adjustments by adjustmentId
+      tags:
+        - Adjustments
+
+      security:
+        - BearerAuthOAuth: []
+
+      parameters:
+        - in: query
+          name: adjustmentId
+          required: false
+          schema:
+            type: string
+            format: uuid
+            pattern: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+            example: 182315c3-2913-4a19-9cae-c99784270889
+          description: Adjustment identifier.
+        - in: query
+          name: accountId
+          required: false
+          schema:
+            type: string
+            format: uuid
+            pattern: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+            example: 182315c3-2913-4a19-9cae-c99784270889
+          description: Account identifier
+
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                $ref: "#/components/schemas/adjustmentsResponse"
+        '404':
+          description: Not Found
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/adjustment:
+    post:
+      summary: Post an adjusment
+      tags:
+        - Adjustments
+      security:
+        - BearerAuthOAuth: []
+      requestBody:
+        description: Request payload
+        content:
+          application/json; charset=UTF-8:
+            schema:
+              $ref: "#/components/schemas/adjustmentBodyRequest"
+          
+      responses:
+        '201':
+          description: Created
+          content:
+              application/json; charset=UTF-8:
+                schema:
+                  $ref: '#/components/schemas/createAdjustmentResponse'
+        '400':
+          description: Bad Request
+          content:
+              application/json; charset=UTF-8:
+                schema:
+                  $ref: "#/components/schemas/Error"
+        '401':
+          description: Unauthorized
+          content:
+              application/json; charset=UTF-8:
+                schema:
+                  $ref: "#/components/schemas/Error"  
+
+  '/v1/adjustments/{adjustmentId}/status/{status}':
+    patch:
+      x-orangebank-public-route: true
+      summary: Modify the adjustment status
+      tags:
+        - Adjustments
+      parameters:
+        - in: path
+          name: adjustmentId
+          description: The unique adjustment identifier.
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: string
+            format: uuid
+            pattern: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+            example: 182315c3-2913-4a19-9cae-c99784270889
+        - in: path
+          name: status
+          description: Status of the adjustment
+          required: true
+          schema:
+            $ref: "#/components/schemas/adjustmentStatus"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/authorizeResponse'
+        '204':
+          description: Status change succesfully
+        '404':
+          description: AdjustmentId not found
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                $ref: "#/components/schemas/Error"
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json; charset=UTF-8:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+
+  securitySchemes:
+    BearerAuthOAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT 
+
+  schemas:
+    #####################################################
+    # Predefined Schemas
+    #####################################################
+    
+    Error:
+      type: object
+      description: Error response payload
+      properties:
+        code:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Descriptive message for human consumption
+        cid:
+          type: string
+          description: Correlation id of the requested operation
+      required:
+        - code
+        - message
+        - cid
+      example:
+        code: 'adjustments.error.invalid.input'
+        message: 'The request does not contain valid data'
+        cid: '0123456789abcdef'
+    
+    adjustment:
+      type: object
+      properties:
+        adjustmentId:
+          type: string
+          format: uuid
+          pattern: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+          example: 182315c3-2913-4a19-9cae-c99784270889
+        adjustmentStatus:
+          $ref: "#/components/schemas/adjustmentStatus"
+    
+    adjustmentBodyRequest:
+      type: object
+      properties:
+        accountId:
+          $ref: "#/components/schemas/accountId"
+        amount:
+          description: Amount to transfer
+          allOf:
+            - $ref: "#/components/schemas/amount"
+        adjustmentStatus:
+          $ref: '#/components/schemas/adjustmentStatus'
+      required:
+        - accountId
+        - amount
+        
+    adjustmentsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/adjustment'
+        
+    adjustmentStatus:
+      type: string
+      enum: [IN_PROGRESS, PENDING_ACCEPTED, CLOSED]
+      description: Status of the adjustment
+      
+    amount:
+      type: object
+      required:
+        - currency
+        - amount
+      properties:
+        currency:
+          $ref: "#/components/schemas/currencyCode"
+        amount:
+          $ref: "#/components/schemas/amountValue"
+      example:
+        {
+          "amount": "1200",
+          "currency": "EUR"
+        }
+
+    currencyCode:
+      description: |
+        ISO 4217 Alpha 3 currency code
+      type: string
+      pattern: "[A-Z]{3}"
+      example: "EUR"
+      
+    amountValue:
+      description: |
+        The amount given with fractional digits
+        **Example:**
+        Valid representations for EUR with up to two decimals are:
+
+          * 1056
+          * 5768.2
+          * -1.50
+          * 5877.78
+      type: string
+      pattern: "-?[0-9]{1,14}(\\.[0-9]{1,3})?"
+      example: "5877.78"
+      
+    accountId:
+      description: Id of account
+      type: string
+      format: uuid
+      pattern: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+      example: 182315c3-2913-4a19-9cae-c99784270889 
+    
+    createAdjustmentResponse:
+      type: object
+      properties:
+        adjustmentId:
+          type: string
+          format: uuid
+          pattern: "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+          example: 182315c3-2913-4a19-9cae-c99784270889
+      required:
+        - adjustmentId
+        
+    authorizeResponse:
+      type: object
+      properties:
+        authorizationGroup: 
+          type: string
+          example: MANAGER

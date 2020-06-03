@@ -1,0 +1,1249 @@
+openapi: 3.0.0
+servers:
+  - url: 'https://bdk.hu/api'
+  - url: 'http://bdk.hu/apitest'
+info:
+  description: |
+    http://bdk.hu error ticketing system output API. AKA BDKReporter.
+    
+    Input from: 
+    - bdk mobile app ([Google Play](https://play.google.com/store/apps/details?id=hu.bdk.bdk) / [iOS App store](https://itunes.apple.com/hu/app/bdk/id582850614))
+    - [bdk.hu](http://bdk.hu) online error reporting form
+    - [Prolan - ECLIPSE Control Intelligent Public Lighting Management System](http://www.prolan.hu/megoldasok/ECLIPSE)
+    
+    Reporter IDS (RID):
+    - [1-10] Prolan Eclipse reserved IDs - At the moment Prolan uses values 1 and 2.
+    - [11-999] - Any future third party automatic data providers. All distinct systems will have their own ID intervals
+    - 1000 bdk mobile app (legacy) - All reports from legacy mobil app have the RID 1000
+    - 2000 bdk.hu error reporting form (webapp) - All reports from webapp will have the RID 2000
+    - X000 Any new BDK operated data provider systems (X>2)
+    - [1000000-9999999] bdk mobile app registered users (appuser) - Each user will have a different RID. It is possible to have 8.999.999 registered users in this current state
+    
+    Default Status values:
+    - 1: Faulty
+    - 0: Functioning
+    
+    Default Event Type IDS:
+    - 0: None
+    - 1: Unique error / Egyedi hiba
+    - 2: Section error / Szakasz hiba
+    - 3: Pedestrian crossing / Gyalagos átkelő
+    - 4: [IDLH](https://en.wikipedia.org/wiki/Immediately_dangerous_to_life_or_health) / Életveszély
+    - 99: Else / Egyéb
+    
+  version: "1.1.7-oas3"
+  title: BDK Ticket API
+  contact:
+    email: gabor@born.hu
+  license:
+    name: All rights reserved
+    url: 'http://born.hu'
+tags:
+  - name: partners
+    description: Operations available to partners
+  - name: appuser
+    description: Operations available to Mobile Apps
+  - name: webapp
+    description: Operations available to bdk.hu api calls
+  - name: nouser
+    description: Operation available to any client
+paths:
+  /reports:
+    get:
+      tags:
+        - partners
+        - appuser
+      summary: searches reports
+      operationId: searchReports
+      description: |
+        By passing in the appropriate options, you can search for
+        available reports in the system.
+        Lists a maximum of 100 reports
+      security:
+        - Bearer: [testauthcode]
+      parameters:
+        - in: query
+          name: Authentication
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+            example: Bearer testauthcode
+        - in: query
+          name: last_queried_id
+          description: |
+            list all reports with a ReportItem ID 
+            greater than the last queried ReportItem ID
+          required: false
+          schema:
+            type: integer
+            format: int11
+            minimum: 0   
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportItem'
+        '400':
+          $ref: "#/components/responses/BadInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '404': 
+          $ref: "#/components/responses/NotFoundError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+    post:
+      tags:
+        - appuser
+        - webapp
+      summary: CREATES (or updates) a ReportItem and returns the item ID
+      operationId: createReport
+      description: |
+        Posts an item into the system. 
+        
+        - Input is automatically tested against possible formats (XML, JSON)
+        
+        - Uses *"Authorization: Oauth 2"* header *TBD*
+        
+        - Update via post is only available for DEV purposes!
+        
+        **Compulsory fields**: id, address_place, address_zipcode, address_gps_x, address_gps_y, event_type_id, event_type_name, event_timestamp
+        
+      security: 
+        - Bearer: [testauthcode]
+      parameters:
+        - in: header
+          name: Authorization
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+          example: Bearer testauthcode
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportItem'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/ReportItem'
+        description: Report item to update  
+      responses:
+        '200':
+          $ref: "#/components/responses/ItemUpdated"
+        '201':
+          description: Item created
+          content:
+            text/plain:
+              schema:
+                type: integer
+                format: int
+                example: "123"
+          links:
+            getReportById:
+              operationId: getReport
+              parameters:
+                reportId: '$response.body#/id'
+              description: >
+                The `ID` value returned in the response can be used as
+                the `ID` parameter in `GET /reports/[ID]`.
+              
+        '400':
+          $ref: "#/components/responses/InvalidInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '409':
+          $ref: "#/components/responses/NothingToUpdate"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+             
+  /reports/xml:
+    get:
+      tags:
+        - partners
+        - appuser
+      summary: searches reports
+      operationId: searchReportsXml
+      description: |
+        By passing in the appropriate options, you can search for
+        available reports in the system
+      security:
+        - Bearer: [testauthcode]
+        - oAuth: []
+      parameters:
+        - in: path
+          name: authcode
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: last_queried_id
+          description: |
+            list all reports with a ReportItem ID 
+            greater than the last queried ReportItem ID
+          required: false
+          schema:
+            type: integer
+            format: int11
+            minimum: 0   
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportItem'
+        '400':
+          $ref: "#/components/responses/BadInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '404': 
+          $ref: "#/components/responses/NotFoundError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"          
+  /reports/json:
+    get:
+      tags:
+        - partners
+        - appuser
+      summary: searches reports
+      operationId: searchReportsJson
+      description: |
+        By passing in the appropriate options, you can search for
+        available reports in the system
+      security:
+        - Bearer: [testauthcode]
+        - oAuth: []
+      parameters:
+        - in: path
+          name: authcode
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: last_queried_id
+          description: |
+            list all reports with a ReportItem ID 
+            greater than the last queried ReportItem ID
+          required: false
+          schema:
+            type: integer
+            format: int11
+            minimum: 0   
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportItem'
+        '400':
+          $ref: "#/components/responses/BadInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '404': 
+          $ref: "#/components/responses/NotFoundError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"          
+  /reports/{ID}: 
+    get:
+      tags:
+        - partners
+        - appuser
+        - webapp
+      summary: searches reports
+      operationId: getReport
+      description: |
+        By passing in the appropriate options, you can retrieve a specific report from the system
+      security:
+        - Bearer: [testauthcode]
+        - oAuth: []
+      parameters:  
+        - in: path
+          name: ID
+          description: ID of ReportItem
+          required: true
+          schema:
+            type: integer
+            format: int11
+            minimum: 0   
+        - in: header
+          name: authcode
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: report with ID
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ReportItem'
+        '400':
+          $ref: "#/components/responses/BadInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '404': 
+          $ref: "#/components/responses/NotFoundError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+    patch:
+      tags:
+        - partners
+      summary: updates status of a ReportItem
+      operationId: updateReport
+      description:  |
+        Updates the status of an item into the system. 
+        
+        - Input is automatically tested against possible formats (XML, JSON)
+        
+        - Uses *"Authorization: Bearer testauthcode"* header
+        
+        **Compulsory fields**: id, status
+        
+        **Note**: Only status gets updated
+      security:
+        - Bearer: [testauthcode]
+      parameters:
+        - in: path
+          name: ID
+          description: ID of ReportItem
+          required: true
+          schema:
+            type: integer
+            format: int11
+            minimum: 0   
+        - in: header
+          name: authcode
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: "#/components/responses/ItemUpdated"
+        '400':
+          $ref: "#/components/responses/InvalidInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '409':
+          $ref: "#/components/responses/NothingToUpdate"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportItem'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/ReportItem'
+        description: Report item to update  
+  /reports/{ID}/xml: 
+    get:
+      tags:
+        - partners
+        - appuser
+      summary: searches reports
+      operationId: getReportXml
+      description: |
+        By passing in the appropriate options, you can retrieve a specific report from the system
+      security:
+        - Bearer: [testauthcode]
+        - oAuth: []
+      parameters:  
+        - in: path
+          name: ID
+          description: ID of ReportItem
+          required: true
+          schema:
+            type: integer
+            format: int11
+            minimum: 0   
+        - in: header
+          name: authcode
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: report with ID
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ReportItem'
+        '400':
+          $ref: "#/components/responses/BadInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '404': 
+          $ref: "#/components/responses/NotFoundError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+  /reports/{ID}/json: 
+    get:
+      tags:
+        - partners
+        - appuser
+      summary: searches reports
+      operationId: getReportJsn
+      description: |
+        By passing in the appropriate options, you can retrieve a specific report from the system
+      security:
+        - Bearer: [testauthcode]
+        - oAuth: []
+      parameters:  
+        - in: path
+          name: ID
+          description: ID of ReportItem
+          required: true
+          schema:
+            type: integer
+            format: int11
+            minimum: 0   
+        - in: header
+          name: authcode
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: report with ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportItem'
+        '400':
+          $ref: "#/components/responses/BadInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '404': 
+          $ref: "#/components/responses/NotFoundError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"          
+  /reports/{ID}/picture:
+    get:
+      tags:
+        - appuser
+        - partners
+      summary: gets image of the report (created by the user)
+      operationId: getReportPicture
+      description: Get photo that was uploaded to the report
+      security:
+        - Bearer: [testauthcode]
+        - oAuth: []
+      parameters:  
+        - in: path
+          name: ID
+          description: ID of ReportItem
+          required: true
+          schema:
+            type: integer
+            format: int11
+            minimum: 0   
+      responses:
+        '200':
+          description: report picture file in JPEG format
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '404': 
+          $ref: "#/components/responses/NotFoundError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"        
+    post:
+      tags:
+        - appuser
+        - webapp
+      summary: Create or Update image of a report
+      operationId: postReportPicture
+      description: Post photo that to the report
+      security:
+        - Bearer: [testauthcode]
+        - oAuth: []
+      parameters:  
+        - in: path
+          name: ID
+          description: ID of ReportItem
+          required: true
+          schema:
+            type: integer
+            format: int11
+            minimum: 0   
+      requestBody:
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+          string:
+            schema:
+              type: string
+              format: uri
+              example: "http://bdk.hu/wp-content/uploads/2019/01/image.jpg"
+        description: Jpeg image by the user to be updated to the report that is being edited. accepts URI or binary content not both.
+      responses:
+        '200':
+          description: Item updated
+          links:
+            getPicture:
+              operationId: getReportPicture
+        '400':
+          $ref: "#/components/responses/InvalidInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '409':
+          $ref: "#/components/responses/NothingToUpdate"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+          
+  /register:
+    post:
+      tags:
+        - appuser
+      summary: user sign up
+      operationId: register
+      description: |
+        Sign up a 'native user' through the mobile app. Use mobil app authcode.
+      security:
+        - Bearer: [testauthcode]
+      parameters: 
+        - in: header
+          name: Authorization
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+          example: Bearer testauthcode
+      requestBody:
+        $ref: '#/components/requestBodies/UserItem'
+      responses:
+        '200':
+          $ref: "#/components/responses/UserRegistered"
+        '400':
+          $ref: "#/components/responses/BadInputError"
+        '401':
+          $ref: "#/components/responses/PasswordError"
+        '409':
+          $ref: "#/components/responses/RegisterEmailError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"  
+          
+  /login:
+    post:
+      tags:
+        - appuser
+      summary: login for native mobile app users
+      operationId: login
+      description: |
+        Login with user signed up through the mobile app
+      requestBody:
+        $ref: '#/components/requestBodies/UserLoginData'
+      responses:
+        '200':
+          $ref: "#/components/responses/UserLogedIn"
+        '401':
+          $ref: "#/components/responses/UnauthorizedError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"  
+  
+  /facebooklogin:
+    post:
+      tags:
+        - appuser
+      summary: facebook login
+      operationId: facebooklogin
+      description: |
+        Sign up / log in with facebook user
+      parameters:
+        - name: token
+          in: path
+          description: access token retrieved by the mobile app from Facebook
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: "#/components/responses/UserLogedIn"
+        '400':
+          $ref: "#/components/responses/UnauthorizedError"
+          
+  /googlelogin:
+    post:
+      tags:
+      - appuser
+      summary: google login
+      operationId: googlelogin
+      description: |
+        Sign up / log in with facebook user
+      parameters:
+        - name: token
+          in: path
+          description: access token retrieved by the mobile app from google
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: "#/components/responses/UserLogedIn"
+        '400':
+          $ref: "#/components/responses/UnauthorizedError"
+       
+  /logout:
+    get:
+      tags:
+      - appuser
+      summary: Sign out a(ny) appuser
+      operationId: logout
+      description: |
+        Sign out any appuser (native or social)
+      security: 
+        - Bearer: [testauthcode]
+      parameters:
+        - in: header
+          name: Authorization
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+          example: Bearer testauthcode
+      responses:
+        '200':
+         $ref: "#/components/responses/UserLogedOut"
+  /me:
+    get:
+      tags: 
+        - appuser
+      summary: gets stored user data
+      operationId: getUserData
+      description: Retrieves all data stored in the system for the actual user. Use auth code received on login.
+      security: 
+        - Bearer: [testauthcode]
+      parameters:
+        - in: header
+          name: Authorization
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+          example: Bearer testauthcode
+      responses:
+        '200':
+          description: user with ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserItem'
+        '400':
+          $ref: "#/components/responses/BadInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"  
+    post:
+      tags:
+        - appuser
+      summary: Create or Update user data
+      operationId: updateUser
+      description: Update user data. Only native users. Use auth code received on login.
+      security: 
+        - Bearer: [testauthcode]
+      parameters:
+        - in: header
+          name: Authorization
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+          example: Bearer testauthcode
+      responses:
+        '200':
+          $ref: "#/components/responses/ItemUpdated"
+        '400':
+          $ref: "#/components/responses/InvalidInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '409':
+          $ref: "#/components/responses/NothingToUpdate"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"      
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserItem'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/UserItem'      
+    delete:
+      tags:
+        - appuser
+      summary: Delete own user
+      operationId: deleteUser
+      description: Deletes the current logged in user with all it's personal data. Reports will be untouched. 
+      security: 
+        - Bearer: [testauthcode]
+      parameters:
+        - in: header
+          name: Authorization
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+          example: Bearer testauthcode
+      responses:
+        '200':
+          $ref: "#/components/responses/ItemUpdated"
+        '400':
+          $ref: "#/components/responses/InvalidInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+  /me/picture:
+    get:
+      tags:
+        - appuser
+      summary: Get current user picture
+      operationId: getUserPicture
+      description: Get current user picture. Use auth code received on login.
+      security: 
+        - Bearer: [testauthcode]
+      parameters:
+        - in: header
+          name: Authorization
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+          example: Bearer testauthcode
+      responses:
+        '200':
+          description: user picture file in JPEG format
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: "#/components/responses/InvalidInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '404': 
+          $ref: "#/components/responses/NotFoundError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+    post:
+      tags:
+        - appuser
+      summary: Create or Update picture of user
+      operationId: updateUserPicture
+      description: Create or update user picture
+      security: 
+        - Bearer: [testauthcode]
+      parameters:
+        - in: header
+          name: Authorization
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+          example: Bearer testauthcode
+      requestBody:
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+        description: Jpeg image of the user to be updated
+      responses:
+        '200':
+          description: Item updated
+          links:
+            getPicture:
+              operationId: getUserPicture
+        '400':
+          $ref: "#/components/responses/InvalidInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '409':
+          $ref: "#/components/responses/NothingToUpdate"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+      
+    delete:
+      tags:
+        - appuser
+      summary: Delete user picture
+      operationId: deleteUserPicture
+      description: Delete user picture
+      security: 
+        - Bearer: [testauthcode]
+      parameters:
+        - in: header
+          name: Authorization
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+          example: Bearer testauthcode 
+      responses:
+        '200':
+          description: Item deleted
+        '400':
+          $ref: "#/components/responses/InvalidInputError"
+        '401': 
+          $ref: "#/components/responses/UnauthorizedError"
+        '404': 
+          $ref: "#/components/responses/NotFoundError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+          
+  /me/password:
+    post:
+      tags:
+        - appuser
+      summary: trigger password forgotten email
+      operationId: passwordForgotten
+      description: |
+        Send password forgotten email. Forgotten email requests will invoke the very same response regardless of the email existence in the system or any other errors. Use mobil app authcode.
+      security: 
+        - Bearer: [testauthcode]
+      parameters:
+        - in: header
+          name: Authorization
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+          example: Bearer testauthcode
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+              required:
+                - email
+          text/plain:
+            schema:
+              type: string                  
+      responses:
+        '200':
+          description: password reset email sent
+        '400':
+          $ref: "#/components/responses/InvalidInputError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"  
+    patch:
+      tags:
+        - appuser
+      summary: set password
+      operationId: password
+      description: |
+        set the password for signed in user
+      security: 
+        - Bearer: [testauthcode]
+      parameters:
+        - in: header
+          name: Authorization
+          description: Authentication code of partner
+          required: true
+          schema:
+            type: string
+          example: Bearer testauthcode
+      requestBody:
+        content:
+          text/plain:
+            schema:
+              type: string        
+          application/json:
+            schema:
+              description: password
+              type: object
+              required:
+                - password
+              properties:
+                password:
+                  description: Numbers, letters, CAPS, 8-20 chars
+                  type: string
+                  format: varchar(255)
+                  example: e{[U(srgdRR32_5
+          application/xml:
+            schema:
+              description: password
+              type: object
+              required:
+                - password
+              properties:
+                password:
+                  description: Numbers, letters, CAPS, 8-20 chars
+                  type: string
+                  format: varchar(255)
+                  example: e{[U(srgdRR32_5
+              xml:
+                name: UserItem
+      responses:
+        '200':
+          description: password updated
+        '400':
+          $ref: "#/components/responses/PasswordError"
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"  
+          
+  /ping:
+    head:
+      tags:
+        - partners
+        - appuser
+        - webapp
+        - nouser
+      summary: checks if api is live
+      operationId: ping
+      description: |
+        Ping request to see if service is live
+      parameters: []
+      responses:
+        '200':
+          description: Success, api is alive
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+              description: Request limit per hour.
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: The number of requests left for the time window.
+            X-RateLimit-Reset:
+              schema:
+                type: string
+                format: date-time
+              description: The UTC date/time at which the current rate limit window resets.
+        '400':
+          description: Request method is not valid (not in ["HEAD","GET"])
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+    get:
+      tags:
+        - partners
+        - appuser
+        - webapp
+        - nouser
+      summary: checks if api is live
+      operationId: pingGet
+      description: |
+        Ping request to see if service is live
+      parameters: []
+      responses:
+        '200':
+          description: Success, api is alive
+          content:
+            text:
+              schema:
+                type: string
+                format: varchar(32)
+                example: "OK: {timecode}"
+          headers:
+            X-RateLimit-Limit:
+              schema:
+                type: integer
+              description: Request limit per hour.
+            X-RateLimit-Remaining:
+              schema:
+                type: integer
+              description: The number of requests left for the time window.
+            X-RateLimit-Reset:
+              schema:
+                type: string
+                format: date-time
+              description: The UTC date/time at which the current rate limit window resets.
+        '400':
+          description: Request method is not valid (not in ["HEAD","GET"])
+        '5XX':
+          $ref: "#/components/responses/UnexpectedError"
+            
+components:
+  schemas:
+    ReportItem:
+      type: object
+      required:
+        - id
+        - status
+        - address_place
+        - address_street
+        - address_house
+        - address_zipcode
+        - address_gps_x
+        - address_gps_y
+        - event_type_id
+        - event_type_name
+        - event_timestamp
+      properties:
+        id:
+          type: integer
+          format: int(11)
+          example: 111
+        reporter_id:
+          type: integer
+          format: int(7)
+          example: 2000
+        status:
+          type: integer
+          format: int(2)
+          example: 1
+        address_place:
+          type: string
+          format: varchar(255)
+          example: "<![CDATA[Fehérvári út 40]]>"
+        address_street:
+          type: string
+          format: varchar(255)
+          example: "<![CDATA[Fehérvári út]]>"
+        address_house:
+          type: string
+          format: varchar(255)
+          example: "<![CDATA[40]]>"
+        address_zipcode:
+          type: string
+          format: varchar(4)
+          example: 1116
+        address_gps_x:
+          type: number
+          format: float
+          example: 47.4708
+        address_gps_y:
+          type: number
+          format: float
+          example: 19.0453
+        event_type_id:
+          type: integer
+          format: int(1)
+          example: 1
+        event_type_name:
+          type: string
+          format: varchar(255)
+          example: "Egyedi hiba"
+        event_description:
+          type: string
+          format: varchar(255)
+          example: "<![CDATA[villog de már 2 éve, pár percet]]>"
+        event_timestamp:
+          type: number
+          format: int(11)
+          example: 1461857633
+        picture:          
+          type: string
+          format: byte
+          description: Base64-encoded contents of the report picture
+    UserItem:
+      description: |
+        'Native users' are signed up through the mobile app with all required data. Non native users AKA 'social users' get personal data automatically from the social paltform (facebook, google)
+      type: object
+      required:
+        - email
+        - fullname
+        - password
+      properties:
+        id:
+          type: integer
+          format: int(11)
+          example: 111
+        email:
+          type: string
+          format: varchar(128)
+          example: john@dough.com
+        fullname:
+          description: In XML CDATA is required
+          type: string
+          format: varchar(255)
+          example: "John F. Doe"
+        password:
+          description: Numbers, letters, CAPS, 8-20 chars
+          type: string
+          format: varchar(255)
+          example: e{[U(srgdRR32_5
+        social_type:
+          description: only set with facebook or google sign ups, not with native users 
+          type: string
+          nullable: true
+          enum: ["facebook", "google", None]
+          example: "facebook"
+        social_id:
+          description: only set with facebook or google sign ups, not with native users 
+          type: integer
+          format: int(9)
+          example: 98245345
+        social_access_token:
+          description: only set with facebook or google sign ups, not with native users 
+          type: string
+          format: text
+          example: "IUHWB5O47ZNW8E9RT5ZNOWE8IV5FZUKHS5VDRZU"
+        picture:          
+          type: string
+          format: byte
+          description: Base64-encoded contents of the user picture
+    UserLoginData:
+      description: Native login data
+      type: object
+      required:
+        - email
+        - fullname
+      properties:
+        email:
+          type: string
+          format: varchar(128)
+          example: john@dough.com
+        password:
+          description: Numbers, letters, CAPS, 8-20 chars
+          type: string
+          format: varchar(255)
+          example: e{[U(srgdRR32_5
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Only available for partner API calls
+    oAuth:    
+      type: oauth2
+      description: This API uses OAuth 2 with the Authorization Code Flow and Password Credentials flow. [More info](https://www.digitalocean.com/community/tutorials/an-introduction-to-oauth-2) Only available for appuser API calls.
+      flows:
+        authorizationCode:   # <---- OAuth flow(authorizationCode, implicit, password or clientCredentials)
+          authorizationUrl: https://bdk.hu/api/authorize
+          tokenUrl:  https://bdk.hu/api/token
+          scopes:
+            default: read your reports
+            email: create reports, modify your account details
+        password:
+          tokenUrl: http://bdk.hu/api/authorize
+          refreshUrl: http://bdk.hu/api/authorize
+          scopes:
+            read_reports: read your reports
+            write_reports: create reports, modify your account details
+    ApiKeyAuth:                  # arbitrary name for the security scheme
+      type: apiKey
+      in: header                 # can be "header", "query" or "cookie"
+      name: BDKREPORTER-API-KEY  # name of the header, query parameter or cookie
+  responses:
+    NotFoundError:
+      description: The requested resource could not be found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnauthorizedError:
+      description: Authorization information is missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadInputError:
+      description: Bad input parameter
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnexpectedError:
+      description: Unexpected error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InvalidInputError:
+      description: Invalid input, object invalid or data error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NothingToUpdate:
+      description: No change in the data, new object matching one in DB
+    ItemCreated:
+      description: Item created
+    ItemUpdated:
+      description: Item updated
+    UserRegistered:
+      description: User successfully registered
+    UserLogedOut:
+      description: User successfully logged in 
+    UserLogedIn:
+      description: User successfully logged out
+      content:
+        access_token:
+          schema:
+            type: string
+            format: varchar(32)
+            example: "IUHWB5O47ZNW8E9RT5ZNOWE8IV5FZUKHS5VDRZU"
+        token_type:
+          schema:
+            type: string
+            format: varchar(32)
+            example: "bearer"
+    RegisterEmailError:
+      description: Email already registered
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    PasswordError:
+      description: Password difficulty not good
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  requestBodies:
+    UserItem:
+      description: An object containing user information
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserItem'
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/UserItem'
+        application/x-www-form-urlencoded:
+          schema:
+            $ref: '#/components/schemas/UserItem'
+    UserLoginData:
+      description: Login data for the user
+      required: true
+      content:
+        application/x-www-form-urlencoded:
+          schema:
+            $ref: '#/components/schemas/UserLoginData'
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserItem'
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/UserItem'

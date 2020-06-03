@@ -1,0 +1,375 @@
+openapi: 3.0.0
+servers:
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/raydhitya/qr-code/1.0.0
+info:
+  title: QR Code
+  description: | 
+    This is a QR Code payment API which support GoPay QR Code and QRIS QR Code.
+    
+    ### Authorization
+    For client to server communication please use merchant client key encoded in base 64 in Authorization header.
+    
+    For server to server communication please use static API key in apiKey header.
+    
+    For GoID please make sure the token is dechipered by the GoID plugin and then the plugin forwards go-user-merchant_id header.
+    
+  version: "1.0.0"
+  contact:
+    name: Payment Backend Developers
+    email: payment@go-jek.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: gopay
+    description: Operations related to GoPay QR Code
+  - name: qris
+    description: Operations related to QRIS QR Code
+paths:
+  /merchant/{crossReferenceId}:
+    get:
+      tags:
+        - gopay
+      summary: Get needed information of a merchant
+      operationId: gopayMerchant
+      parameters:
+        - $ref: '#/components/parameters/crossReferenceIdParameter'
+      responses:
+        '200':
+          description: OK. Merchant Found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantResponse'
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized. Wrong client key.
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                example: Basic realm=Access to merchant
+        '404':
+          description: Not Found. Merchant not found.
+        '502':
+          description: Bad Gateway. Error on Saudagar.
+        '504':
+          description: Gateway Timeout. Timeout to Saudagar.
+      security:
+        - ClientKeyBasicAuth: []
+  /transaction:
+    post:
+      tags:
+        - gopay
+      summary: Generate QR Code for transactions
+      description: |
+        Make a transaction by generating a QR Code.
+      operationId: gopayTransaction  
+      requestBody:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionRequest'
+      responses:
+        '201':
+            description: QR Generated
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/TransactionResponse'
+        '400':
+            description: Bad Request.
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized. Wrong client key.
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                example: Basic realm=Access to merchant
+        '404':
+          description: Not Found. Pop not found.
+        '500':
+          description: Internal Server Error.
+        '502':
+          description: Bad Gateway. Error on Go-Pay.
+        '504':
+          description: Gateway Timeout. Timeout to Go-Pay.
+      security:
+        - ClientKeyBasicAuth: []
+  /gopay/{tref}:
+    get:
+      tags:
+        - gopay
+      summary: Get a GoPay transaction's status
+      operationId: gopayStatus
+      parameters: 
+        - $ref: '#/components/parameters/trefParameter'
+      responses:
+        '200':
+          description: Transaction Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized. Wrong client key.
+          headers:
+            WWW-Authenticate:
+              schema:
+                type: string
+                example: Basic realm=Access to merchant
+        '404':
+          description: Not Found. Transaction not found.
+        '500':
+          description: Internal Server Error.
+        '502':
+          description: Bad Gateway. Error on Go-Pay.
+        '504':
+          description: Gateway Timeout. Timeout to Go-Pay.
+      security:
+        - ClientKeyBasicAuth: []
+  /qris/transaction:
+    post:
+      tags:
+        - qris
+      summary: Generate QR Code for transactions
+      description: |
+        Make a transaction by generating a QR Code. The response will contain specific payment type response.
+      operationId: qrisTransaction
+      parameters:
+        - $ref: '#/components/parameters/authorizationParameter'
+        - $ref: '#/components/parameters/apiKeyParameter'
+        - $ref: '#/components/parameters/goUserMerchantIdParameter'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QrisRequest'
+      responses:
+        '201':
+          description: QR Generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QrisResponse'
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized. Wrong client key.
+        '404':
+          description: Not Found. Pop not found.
+        '500':
+          description: Internal Server Error.
+        '502':
+          description: Bad Gateway. Error on Saudagar.
+        '504':
+          description: Gateway Timeout. Timeout to Saudagar.
+  /qris/{tref}:
+    get:
+      tags:
+        - qris
+      summary: Get a transaction's status
+      operationId: qrisStatus
+      parameters:
+        - $ref: '#/components/parameters/trefParameter'
+        - $ref: '#/components/parameters/authorizationParameter'
+        - $ref: '#/components/parameters/apiKeyParameter'
+        - $ref: '#/components/parameters/goUserMerchantIdParameter'
+      responses:
+        '200':
+          description: Transaction Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized. Wrong client key.
+        '404':
+          description: Not Found. Transaction not found.
+        '500':
+          description: Internal Server Error.
+components:
+  securitySchemes:
+    ClientKeyBasicAuth:
+      type: http
+      scheme: basic
+  parameters:
+    authorizationParameter:
+      name: Authorization
+      in: header
+      description: Client key of Merchant in Saudagar
+      required: false
+      schema:
+        type: string
+    apiKeyParameter:
+      name: apiKey
+      in: header
+      description: API Key
+      required: false
+      schema:
+        type: string
+    goUserMerchantIdParameter:
+      name: go-user-merchant_id
+      in: header
+      description: GoID merchant id header
+      required: false
+      schema:
+        type: string
+    crossReferenceIdParameter:
+      name: crossReferenceId
+      in: path
+      description: The merchant's cross reference id
+      required: true
+      schema:
+        type: string
+    trefParameter:
+      name: tref
+      in: path
+      description: The transaction's tref returned on QR Code generation
+      required: true
+      schema:
+        type: string
+  schemas:
+    MerchantResponse:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          example: M1234
+        name:
+          type: string
+          example: A Merchant Name
+    TransactionRequest:
+      type: object
+      required:
+        - payment_type
+        - amount
+      properties:
+        payment_type:
+          type: string
+          example: gopay
+        amount:
+          type: integer
+          format: int32
+          example: 10000
+        gopay:
+          $ref: '#/components/schemas/GoPayRequest'
+    GoPayRequest:
+      type: object
+      required:
+        - cross_reference_id
+        - stan
+      properties:
+        cross_reference_id:
+          type: string
+          example: FR704LGI1PPC9W4YMWS3EF4
+    TransactionResponse:
+      type: object
+      required:
+        - payment_type
+        - qr_code
+      properties:
+        payment_type:
+          type: string
+          example: gopay
+        qr_code:
+          type: string
+          example: "{\"activity\":\"GP:RR\",\"data\":{\"tref\":\"1548648340476845999KSTR\",\"amount\":1000}}"
+    StatusResponse:
+      type: object
+      required:
+        - paid
+        - status
+      properties:
+        paid:
+          type: boolean
+          example: true
+        status:
+          type: string
+          example: pending
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: Missing request header 'Authorization' for method parameter of type String
+    QrisRequest:
+      type: object
+      required:
+        - amount
+        - pop_id
+      properties:
+        amount:
+          type: integer
+          format: int32
+          example: 10000
+        cross_reference_id:
+          type: string
+          example: FR704LGI1PPC9W4YMWS3EF4
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+          
+    Metadata:
+      type: object
+      properties:
+        mid:
+          type: string
+          example: FR704LGI1PPC9W4
+        tid:
+          type: string
+          example: YMWS3EF4
+        stan:
+          type: string
+          example: 000092
+        invoice_no:
+          type: string
+          example: 000748
+        cmp_merchant:
+          type: string
+          example: "true"
+        kartuku_transaction:
+          type: string
+          example: "true"
+    QrisResponse:
+      type: object
+      required:
+        - tref
+        - qr_code
+      properties:
+        tref:
+          type: string
+          example: "6XQVS075AKS96SAJVCS3OG0JA"
+        qr_code:
+          type: string
+          example: "00020101021126610014COM.GO-JEK.WWW01189360091430438058080210G0438058080303UMI51440014ID.CO.QRIS.WWW0215ID10190115538140303UMI5204581253033605802ID5914Go Milk Telkom6007Bandung61054025762070703A016304C21D"

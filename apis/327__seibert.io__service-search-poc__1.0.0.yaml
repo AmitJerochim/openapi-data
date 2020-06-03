@@ -1,0 +1,469 @@
+openapi: 3.0.0
+
+info:
+  description: | 
+    - Query for documents, retrieve suggestions ans similar documents
+    - Re-index sites or single documents
+  version: "1.0.0"
+  title: Service Portal Search POC
+  
+tags:
+  - name: search
+    description: Endpoints related to search & suggestions
+  - name: index
+    description: Restricted endpoints related to indexing sites or URLs
+
+paths:
+  
+  /{site-slug}/query:
+    post:
+      tags:
+        - search
+      summary: Search the index for hits, suggestions or similar documents
+      operationId: search
+      description: |
+        Searches the index.
+        
+        Depending on the request body search results, query suggestions and similar documents are returned next to each other instead of having to perform multiple requests e.g. for search & suggestions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IQueryRequest'
+      parameters:
+        - $ref: '#/components/parameters/siteSlug'
+          
+      responses:
+        '200':
+          description: Query successful, results in body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IQueryResponse'
+        '400':
+          description: Input Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IErrorResponse'
+        '404':
+          description: | 
+            Unknown site site-slug
+            
+            The site slug provided does not match the slug of any registered site
+        '500':
+          description: Internal server error
+          
+  /{site-slug}/index:
+    patch:
+      security:
+        - token: []
+      tags:
+        - index
+      summary: (Re-)Index an entire site
+      operationId: indexSite
+      description: |
+        Initiates background re-indexing of an entire site
+        
+        _Caution:_ a full re-index is a costly operation and should be used sparsely in favor of daily automatic interval based indexing.
+      parameters:
+        - $ref: '#/components/parameters/siteSlug'
+        - in: query
+          name: reindex
+          description: If set to 1, the index will be recreated instead of just all documents being reindexed
+          required: false
+          schema:
+            type: integer
+            default: 0
+            maximum: 1
+            minimum: 0
+      responses:
+        '202':
+          description: (Re-)Indexing of the site has started
+        '401':
+          description: Unauthorized
+        '404':
+          description: | 
+            Unknown site site-slug
+            
+            The site slug provided does not match the slug of any registered site
+        '500':
+          description: Internal server error
+  
+  /{site-slug}/index/url:
+    patch:
+      security: 
+        - token: []
+      tags:
+        - index
+      summary: (Re-)index a URL
+      operationId: indexUrl
+      description: Initiates a background re-indexing of a single URL
+      parameters:
+        - $ref: '#/components/parameters/siteSlug'
+        - $ref: '#/components/parameters/documentUrl'
+      responses:
+        '202':
+          description:  (Re-)Indexing of the url has started
+        '401':
+          description: Unauthorized
+        '404':
+          description: Unknown site-slug or document URL
+        '500':
+          description: Internal server error
+
+components:
+  securitySchemes:
+    token:            # arbitrary name for the security scheme
+      type: apiKey
+      in: header
+      name: X-Api-Key
+  
+  parameters:
+    siteSlug:
+      name: site-slug
+      in: path
+      description: The slug of the site to use for this operation
+      required: true
+      schema:
+        type: string
+      example: services-commerzbank-de
+    documentUrl:
+      in: query
+      name: url
+      description: document URL to process
+      required: true
+      schema:
+        type: string
+  
+  schemas:
+    # requests
+    IQueryRequest:
+      description: May contain any combination of a search query, a moreLikeThis query and a suggest query depending on what kind of response is required
+      type: object
+      properties:
+        search:
+          $ref: '#/components/schemas/ISearchQuery'
+        moreLikeThis:
+          $ref: '#/components/schemas/IMoreLikeThisQuery'
+        suggest:
+          $ref: '#/components/schemas/ISuggestQuery'
+    
+    # request details
+    ISearchQuery:
+      type: object
+      required: 
+        - query
+      properties:
+        query:
+          type: string
+          example: girocard
+        filters:
+          type: array
+          items:
+            $ref: '#/components/schemas/ISearchFilter'
+        aggregations:
+          type: array
+          description: document properties for which aggregations should be included in the result set
+          items:
+            type: string
+          default: []
+          example: 
+            - 'semanticDocumentInfo.breadcrumb.itemListElement.1.item.name'
+        includeProperties:
+          description: Document properties to return alongside the basic document properties id, score, url and title
+          type: array
+          items:
+            type: string
+          default: []
+          example: ['semanticDocumentInfo']
+        offset:
+          description: Number of documents to skip for pagination
+          type: integer
+          minimum: 0
+          default: 0
+          example: 0
+        limit:
+          description: Maximum number of documents to return
+          type: integer
+          minimum: 0
+          maximum: 50
+          default: 10
+          example: 10
+    IMoreLikeThisQuery:
+      description: |
+        Query for similar documents
+        
+        _Please note:_ evaluation of this feature still in process - API may change or be removed entirely
+      type: object
+      required: 
+        - like
+      properties:
+        like: 
+          $ref: '#/components/schemas/ILike'
+        unlike: 
+          $ref: '#/components/schemas/ILike'
+        limit:
+          description: Maximum number of documents to return
+          type: integer
+          minimum: 0
+          maximum: 50
+          default: 10
+          example: 10
+        includeProperties:
+          description: Document properties to return alongside the basic document properties id, score, url and title
+          type: array
+          items:
+            type: string
+          default: []
+          example: ['semanticDocumentInfo']
+    ISuggestQuery:
+      description: |
+        Query for term suggestions, spelling corrections, term completions and significant terms
+      type: object
+      required: 
+        - query
+      properties:
+        query:
+          type: string
+          example: girocard
+        limit:
+          description: Maximum number of documents to return
+          type: integer
+          minimum: 0
+          maximum: 50
+          default: 10
+          example: 10
+    
+    # query details
+    ISearchFilter:
+      description: Documents not matching this criteria are ignored
+      type: object
+      required:
+        - property
+        - operator
+        - value
+      properties:
+        property:
+          type: string
+          example: 'SemanticDocumentInfo.@type'
+        operator:
+          $ref: '#/components/schemas/ISearchFilterOperator'
+        value:
+          type: string
+          example: 'FAQPage'
+    ISearchFilterOperator:
+      description: |
+        Operator to use for a filter
+        
+        | Operator | description | applicable to values |
+        |-|-|-|
+        | eq | equals | string, number |
+        | gt | greater than | number |
+        | gte | greater than or equal | number |
+        | lt | lower than | numbers only |
+        | lte | lower than or equal | number |
+      type: string
+      enum: 
+            - eq
+            - gt
+            - gte
+            - lt
+            - lte
+    ILike:
+      description: |
+        May specify either an id or URL (must be a URL that is indexed in the current site) or a text to search similar documents for
+      type: object
+      properties:
+        id:
+          type: string
+          example: a07586016d68fe4ad8abd16669fef13f
+        url:
+          type: string
+          example: https://service.x.de/corona-und-mein-bankschliesfach-habe-ich-noch-zugang/
+        text:
+          type: string
+          example: Wie beantrage ich Online-Banking?
+      
+    # responses
+    IQueryResponse:
+      type: object
+      properties:
+        search:
+          $ref: '#/components/schemas/ISearchResponse'
+        moreLikeThis:
+          $ref: '#/components/schemas/ISearchResponse'
+        suggest:
+          $ref: '#/components/schemas/ISuggestResponse'
+    IErrorResponse:
+      type: object
+      required: 
+        - message
+      description: Response in case of input errors 
+      properties:
+        message:
+          type: string
+    
+    # response details
+    ISearchResponse:
+      type: object
+      required: 
+        - numTotalHits
+        - hits
+      properties:
+        numTotalHits:
+          type: integer
+          description: total number of hits in the result set (not just the current page)
+          format: int32
+          minimum: 0
+          example: 14
+        hits:
+          type: array
+          description: search hits, sorted by relevance
+          items:
+            $ref: '#/components/schemas/IHit'
+        aggregations:
+            type: object
+            description: aggregations for the entire result set (not just the current page)
+            additionalProperties:
+              type: array
+              items:
+                $ref: '#/components/schemas/IAggregation'
+            example:
+              semanticDocumentInfo.breadcrumb.itemListElement.1.item.name: 
+                - name: Digital Banking
+                  count: 13
+                - name: Zahlungsverkehr
+                  count: 1
+    ISuggestResponse:
+      type: object
+      description: suggestions, sorted by relevance
+      required: 
+        - suggestions
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ISuggestion'
+    IHit:
+      type: object
+      required:
+        - id
+        - score
+        - url
+        - title
+      properties:
+        id:
+          type: string
+          example: 2b845641-49cb-4791-bf9e-c6d15082dc9d
+        score:
+          type: number
+          format: double
+          example: 0.987134134243455
+        url:
+          type: string
+          example: https://service.x.de/wie-beantrage-ich-online-banking/
+        title:
+          type: string
+          example: Wie beantrage ich Online Banking?
+        semanticDocumentInfo:
+          $ref: '#/components/schemas/ISemanticDocumentInfo'
+    ISuggestion:
+      type: object
+      required:
+        - text
+        - score
+        - type
+        - textHighlighted
+      properties:
+        text:
+          type: string
+          example: service
+        score:
+          type: number
+          format: double
+          example: 0.987134134243455
+        type:
+          type: string
+          enum: 
+            - phrase
+            - spelling
+            - significant
+          example: phrase
+        textHighlighted:
+           type: string
+           example: serv<emice</em>
+    IAggregation:
+      type: object
+      required:
+        - name
+        - numHits
+      properties:
+        name:
+          type: string
+          example: FAQPage
+        numHits:
+          type: integer
+          format: uint32
+          minimum: 0
+    
+    # hit details
+    ISemanticDocumentInfo:
+      type: object
+      description: Semantic information in key-value pairs as extracted from JSON+LD (if found in parsed document)
+      required:
+        - '@type'
+      properties:
+        '@type':
+          type: string
+          example: FAQPage
+        breadcrumb:
+          $ref: '#/components/schemas/ISemanticBreadcrumb'
+          
+      additionalProperties:
+        oneOf:
+          - type: string
+          - type: integer
+          - type: number
+          - type: object
+    ISemanticBreadcrumb:
+      type: object
+      required:
+        - '@type'
+        - itemListElement
+      properties:
+        '@type': 
+          type: string
+          example: BreadcrumbList
+        itemListElement:
+          type: array
+          items:
+            $ref: '#/components/schemas/ISemanticBreadcrumbListItem'
+    ISemanticBreadcrumbListItem:
+      type: object
+      required:
+        - '@type'
+        - position
+        - item
+      properties:
+        '@type': 
+          type: string
+          example: BreadcrumbListItem
+        position:
+          type: integer
+          example: 0
+        item:
+          $ref: '#/components/schemas/ISemanticBreadcrumbListItemData'
+    ISemanticBreadcrumbListItemData:
+      type: object
+      required: 
+        - '@id'
+        - name
+      properties:
+        '@id':
+          type: string
+          example: 'https://service.x.de/'
+        name:
+          type: string
+          example: Startseite

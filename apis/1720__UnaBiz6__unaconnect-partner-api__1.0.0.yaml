@@ -1,0 +1,124 @@
+openapi: 3.0.0
+info:
+  title: unaconnect-partner-api
+  description: "The UnaConnect Partner API\n
+  # Description\n
+  UnaConnect is your data payload parser with its RESTful API. From the raw event received from IoT network (eg. sigfox), UnaConnect sends a JSON response containing the data parsed.\n
+  
+  # Security\n
+  All requests are protected by an API KEY to provide in the header as 'x-api-key' and UnaConnect will parse only devices with an identifier known.\n
+  
+  # Functionalities\n
+  * **Data Parsing**: Once a  request is received on \"/data\", it parses the 'data' field of the object 'event' provided. Once parsed, UnaConnect sends in a field \"result\", the data parsed in JSON format. In the case of SIGFOX Downlink, it sends directly in a field \"result\" the message to deliver to the network backend. The user also must provide the configuration of the device in JSON.\n
+  * **Firmware Management**: UnaConnect knows the firmware version and the type of a device. It can be provided by the user with the field \"type\"\n
+  * **IoT Network**: In order to handle different IoT networks (e.g. SIGFOX, LORA, NB-IoT), the user has to provide the network name in the path. \n
+  
+  # **Device Types**\n
+  In the case the user provides the configuration of the device to parse, the JSON must contain the specific fields according to the device type and its firmware version. Here is the list with the device type to provide and all fields (by default, all required)\n
+  * Nicigas NCU - *nicincu1.0*\n
+  \  * **meter (boolean)** is true if it is a meter message and false if it is a security message\n
+  \  * **option (integer) [0 -> 4]** is 0 for \"Security\", 1 for \"Open Emergency\", 2 for \"Close Emergency\", 3 for \"Open Center\" and 4 for \"Close Center\"\n
+  \  * **sendingAlarm (integer) [0 -> 0xFFFF]** is the timestamp when the device will do the downlink\n\n
+ \  * **OPTIONAL - unixTime (integer) [0 -> 0xFFFFFFFF]** is the timestamp to set on the device. If not specified, the timestamp used is the current timestamp.\n
+ 
+  * UnaMKR FW Soracom - *unamkrSoracom1.0*\n
+  \  * **in progress**\n\n
+   * IoThink Device - *iothink1.0*\n
+  \  * **in progress**\n\n
+   * Capsule - *capsule1.0*\n
+  \  * **in progress**\n\n
+  "
+  contact:
+    email: valentin.kao@unabiz.com
+  version: "1.0.0"
+servers:
+- url: https://api.unaconnect.io/partner
+  description: UnaConnect API
+# Added by API Auto Mocking Plugin
+- description: SwaggerHub API Auto Mocking
+  url: https://virtserver.swaggerhub.com/UnaBiz6/unaconnect-partner-api/1.0.0
+security:
+- ApiKeyAuth:
+  - N19vFFfi472D9sz0Rva3i9SK3zHUxTwS3ULyYhTr
+paths:
+  /{network}/data:
+    post:
+      tags:
+      - Data
+      description: returns the data parsed in result
+      parameters:
+      - name: x-api-key
+        in: header
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: string
+      - in: path
+        name: network
+        required: true
+        schema:
+          type: string
+          example: 'sigfox'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataInput'
+        required: true
+      responses:
+        200:
+          description: Request for Data successed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataResponse'
+        400:
+          description: Bad request. Parsing Failed.
+        401:
+          description: Authorization information is missing or invalid.
+        404:
+          description: Device with the specified ID or the Network was not found
+        503:
+          description: Request incompleted.
+        5XX:
+          description: Unexpected error.
+      security:
+      - ApiKeyAuth:
+        - N19vFFfi472D9sz0Rva3i9SK3zHUxTwS3ULyYhTr
+components:
+  schemas:
+    DataInput:
+      type: object
+      properties:
+        event:
+          type: string
+          description: event received from the network
+          example: '{"device":"204C8E","time":"1572402511","data":"009e5600","seqNumber":"884","lqi":"Average","fixedLat":"0.0","fixedLng":"0.0","operatorName":"SIGFOX_Italy_Nettrotter","countryCode":"380","frameType":0}'
+        type:
+          type: string
+          description: type of the device
+          example: "nicincu1.0"
+        configuration:
+          type: string
+          description: configuration of the device
+          example: '{ "meter": 0, "option": 4, "unixTime": "FFFFFFFF", "sendingAlarm": "66BD"}'
+      description: input object with the event received from the network and the network name
+      required:
+        - network
+        - event
+    DataResponse:
+      type: object
+      properties:
+        result:
+          type: string
+          format: escapedJSON
+          example: '"[{"timestamp": 123456, "meterValue": 1234.56},{"timestamp": 123490, "meterValue": 1234.65}]" or "{"D09193":{"downlinkData":"1104000000000000"}}"'
+        status:
+          type: string
+          example: '"OK" or "KO"'
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      name: x-api-key
+      in: header

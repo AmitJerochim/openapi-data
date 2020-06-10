@@ -1,0 +1,226 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "description" : "DigitalOcean Test Mapper",
+    "url" : "http://test.mit-cyber.space:8080"
+  }, {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/mit-ndowmon/ensembles-infrastructure-map/1.0.0"
+  } ],
+  "info" : {
+    "version" : "1.0.0",
+    "title" : "MAP",
+    "description" : "This API consumes raw bi-directional netflow (biflow) data and produces a mapped uni-directional netflow (uniflow) data structure.",
+    "contact" : {
+      "name" : "Nick Dowmon",
+      "email" : "ndowmon@gmail.com"
+    }
+  },
+  "security" : [ {
+    "application" : [ "read", "write" ]
+  } ],
+  "paths" : {
+    "/map" : {
+      "post" : {
+        "summary" : "Server map operation",
+        "requestBody" : {
+          "description" : "Request body is in CSV format. Includes a **biflowHeader**, which is a comma-separated string of field headers, and an array of **biflowRows**, which is the same length comma-separated string of field values. The API takes care of parsing and data validation, based on the **fileConfig** configuration settings loaded onto the server.",
+          "required" : true,
+          "content" : {
+            "text/csv" : {
+              "schema" : {
+                "type" : "string"
+              },
+              "example" : "flowtype,firstpackettime,lastpackettime,srcip,srcport,srcpackets,srcbytes,srcflags,dstip,dstport,dstpackets,dstbytes,dstflags,protocol,category,srcsubnet,dstsubnet\n ,1556669289654,1556669289654,65e16abeab9781bb5f562f258b71189a,,1.0,60.0,,1bbf8538b8ffb9549cb98930d70ee407,,0.0,0.0,,ICMP,ICMP,136.12,19.4\n ,1556229938987,1556669334989,22db304102047618c8da08a7aab2d95c,47808.0,19.0,2597.0,,0caab09a9c4f660d130c68f32200d8d2,47808.0,1.0,88.0,,UDP,Unknown Flow,19.43,19.86\n ,1556229938989,1556669334391,22db304102047618c8da08a7aab2d95c,47808.0,12.0,899.0,,241fba75441e3dade49232a5d4c35c3e,47808.0,1.0,70.0,,UDP,Unknown Flow,19.43,19.86\n ,1556669277314,1556669286306,1461c5de43acdc27459d5191a52d360d,60950.0,3.0,156.0,0.0,b3ea0cad4a69c7326800b11634c394cb,135.0,0.0,0.0,0.0,TCP,File Transfer,19.43,19.75\n ,1556548702130,1556669335876,b4343c828a465f1719047f3b4ac33d18,47808.0,19.0,3764.0,,c2afc60050e108aed04288bf7691a8d9,47808.0,20.0,4240.0,,UDP,Unknown Flow,19.43,19.86\n ,1556669281232,1556669290224,106e4c6271efe3e8d3673ef1eb3697c1,51801.0,6.0,384.0,0.0,8ed0b010e0692a33068e8ca2e8ee60d3,7680.0,0.0,0.0,0.0,TCP,Unknown Flow,19.221,19.43\n ,1556229947913,1556669333344,5b77d2729c33703acda9279fc5d36d7a,47808.0,8.0,1144.0,,0caab09a9c4f660d130c68f32200d8d2,47808.0,1.0,88.0,,UDP,Unknown Flow,19.43,19.86\n"
+            }
+          }
+        },
+        "description" : "This is the map operation, converting biflow to uniflow data.",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "uniflowHeader" : {
+                      "type" : "string"
+                    },
+                    "mappedRows" : {
+                      "type" : "object",
+                      "properties" : {
+                        "key" : {
+                          "type" : "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example" : {
+                  "uniflowHeader" : "flowtype,firstpackettime,lastpackettime,myip,myport,mypackets,mybytes,myflags,theirip,theirport,theirpackets,theirbytes,theirflags,protocol,category,mysubnet,theirsubnet,isSource",
+                  "mappedRows" : {
+                    "136.12" : [ ",1556669289654,1556669289654,65e16abeab9781bb5f562f258b71189a,,1.0,60.0,,1bbf8538b8ffb9549cb98930d70ee407,,0.0,0.0,,ICMP,ICMP,136.12,19.43,true" ],
+                    "19.43" : [ ",1556669289654,1556669289654,1bbf8538b8ffb9549cb98930d70ee407,,0.0,0.0,,65e16abeab9781bb5f562f258b71189a,,1.0,60.0,,ICMP,ICMP,19.43,136.12,false", ",1556229938987,1556669334989,22db304102047618c8da08a7aab2d95c,47808.0,19.0,2597.0,,0caab09a9c4f660d130c68f32200d8d2,47808.0,1.0,88.0,,UDP,Unknown Flow,19.43,19.86,true" ],
+                    "19.86" : [ ",1556229938987,1556669334989,0caab09a9c4f660d130c68f32200d8d2,47808.0,1.0,88.0,,,22db304102047618c8da08a7aab2d95c,47808.0,19.0,2597.0,UDP,Unknown Flow,19.86,19.43,false" ]
+                  }
+                }
+              }
+            }
+          },
+          "428" : {
+            "description" : "Precondition Required (configuration unset)"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/configure" : {
+      "put" : {
+        "summary" : "Server start-up and configure operation",
+        "requestBody" : {
+          "description" : "Request body holds the configuration parameters for **hostsConfig**, **priorWindowConfig**, **databaseConfig**, and **fileConfig**.",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "hostsConfig" : {
+                    "type" : "object",
+                    "properties" : {
+                      "mapperIps" : {
+                        "type" : "array",
+                        "items" : {
+                          "type" : "string"
+                        }
+                      },
+                      "reducerIps" : {
+                        "type" : "array",
+                        "items" : {
+                          "type" : "string"
+                        }
+                      }
+                    }
+                  },
+                  "priorWindowConfig" : {
+                    "type" : "object",
+                    "properties" : {
+                      "slidingIntervalMins" : {
+                        "type" : "integer"
+                      },
+                      "windowLengthIntervals" : {
+                        "type" : "integer"
+                      }
+                    }
+                  },
+                  "databaseConfig" : {
+                    "type" : "object",
+                    "properties" : {
+                      "host" : {
+                        "type" : "string"
+                      }
+                    }
+                  },
+                  "fileConfig" : {
+                    "type" : "object",
+                    "properties" : {
+                      "nondirectionalFields" : {
+                        "type" : "array",
+                        "items" : {
+                          "type" : "object"
+                        }
+                      },
+                      "directionalFields" : {
+                        "type" : "array",
+                        "items" : {
+                          "type" : "object"
+                        }
+                      },
+                      "hierarchy" : {
+                        "type" : "array",
+                        "items" : {
+                          "type" : "string"
+                        }
+                      },
+                      "biflowSrcPrfx" : {
+                        "type" : "string"
+                      },
+                      "biflowDstPrfx" : {
+                        "type" : "string"
+                      },
+                      "datetimeField" : {
+                        "type" : "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "example" : {
+                "hostsConfig" : {
+                  "mapperIps" : [ "127.0.0.1:8082" ],
+                  "reducerIps" : [ "127.0.0.1:8081" ]
+                },
+                "priorWindowConfig" : {
+                  "slidingIntervalMins" : 10,
+                  "windowLengthIntervals" : 2016
+                },
+                "databaseConfig" : {
+                  "host" : ""
+                },
+                "fileConfig" : {
+                  "nondirectionalFields" : {
+                    "protocol" : "categorical",
+                    "category" : "categorical",
+                    "flowtype" : "categorical"
+                  },
+                  "directionalFields" : {
+                    "subnet" : "categorical",
+                    "ip" : "categorical",
+                    "port" : "categorical",
+                    "packets" : "float",
+                    "bytes" : "float",
+                    "flags" : "categorical"
+                  },
+                  "hierarchy" : [ "subnet", "ip" ],
+                  "biflowSrcPrfx" : "src",
+                  "biflowDstPrfx" : "dst",
+                  "datetimeField" : "lastpackettime"
+                }
+              }
+            }
+          }
+        },
+        "description" : "This sends configuration to the MAP server, including required configuration for expected fields in the biflow data.",
+        "security" : [ ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : { },
+    "securitySchemes" : {
+      "application" : {
+        "type" : "oauth2",
+        "flows" : {
+          "clientCredentials" : {
+            "tokenUrl" : "http://example.com/oauth/token",
+            "scopes" : {
+              "write" : "allows modifying resources",
+              "read" : "allows reading resources"
+            }
+          }
+        }
+      }
+    }
+  }
+}

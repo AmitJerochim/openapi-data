@@ -1,0 +1,342 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "version" : "1.0.0",
+    "title" : "Círculo Plus Sanborns API",
+    "description" : "\nWeb service para integrar aplicaciones de clientes con la plataforma de Círculo Plus Sanborns\n\n## OAuth2: Access Tokens\n\nPara poder hacer uso del web service se necesita un `CLIENT_ID` y un `CLIENT_SECRET` que se le proporcionará al cliente siguiendo estos pasos:\n\n#### 1. Codificar el CLIENT_ID y el CLIENT_SECRET\n\n* Se deberá concatenar el `CLIENT_ID` y un `CLIENT_SECRET` separado por dos puntos \":\" en una sola cadena de texto.\n* La cadena de texto obtenida se deberá codificar con base 64.\n* El resultado se usará en el header Authorization en la modalidad Basic para solicitar un `ACCESS_TOKEN`.\n\n*Basic Authentication Scheme: <https://tools.ietf.org/html/rfc2617#section-2*>\n\nEjemplo de las credenciales del cliente:\n\n```yaml\nCLIENT_ID: 42\nCLIENT_SECRET: GC0vJWLw7iEJ77DRdyO\nCREDENTIALS: 42:GC0vJWLw7iEJ77DRdyO\nBASE64d_ENCODED_CREDENTIALS: NDI6R0MwdkpXTHc3aUVKNzdEUmR5Tw==\n```\n\n**Credenciales de prueba:**\n\n```yaml    \nCLIENT_SECRET: kXKBCub4PxPGQXbN8Euj3HYPjfedepqgDUKwlHcb\nCLIENT_ID: 1\n```\n\n#### 2. Obtener un ACCESS_TOKEN\n\nPara obtener un `ACCESS_TOKEN` el cliente deberá realizar una petición tipo `POST` a la url: `http://10.0.1.203/oauth/token` con el encabezado de autorización tipo `basic` con las credenciales del paso anterior.\n\nAdemás se deberá incluir en el cuerpo de la petición el tipo de autorización: `grant_type=client_credentials`.\n\n*Access Token Request: <https://tools.ietf.org/html/rfc6749#section-4.4.2*>\n\n#### 3. Autenticar peticiones con el access token\n\nUna vez generado el token se pueden hacer peticiones al web service con el encabezado de autorización tipo Bearer.\n\n## Endpoints: Activaciones\n#### Validar Activaciones\n\nSe envía una petición tipo `POST` a la url: `http://10.0.1.203/activate-card` con el encabezado de autorización tipo bearer usando el access token.\n\n**Campos Requeridos:**\n\nLos siguientes campos son requeridos y obligatorios al momento de hacer una petición para obtener una respuesta exitosa.\n\n| Campo          | &emsp; Descripción                                                  |\n| -------------- | --------------------------------------------------------------------|\n| `date`         | &emsp; Fecha en la que se realizó la venta                          |\n| `code`         | &emsp; Código de activación escaneado                               |\n| `price`        | &emsp; Monto de la transacción en centavos                          |\n| `reference`    | &emsp; Referencia de la transacción                                 |\n| `store_id`     | &emsp; ID de la sucursal donde se realizó la venta                  |\n"
+  },
+  "paths" : {
+    "/oauth/token" : {
+      "post" : {
+        "tags" : [ "URIs" ],
+        "summary" : "(Obtener un access token)",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "Authorization: Basic",
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "required" : true,
+          "description" : "Encabezado de autorización tipo Basic usando las credenciales codificadas",
+          "example" : {
+            "Authorization" : "Basic NDI6R0MwdkpXTHc3aUVKNzdEUmR5Tw=="
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Cuerpo de la petición",
+          "required" : true,
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "properties" : {
+                  "grant_type" : {
+                    "type" : "string",
+                    "example" : "client_credentials"
+                  }
+                },
+                "required" : [ "grant_type" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "$ref" : "#/components/responses/accessToken"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/badRequest"
+          }
+        }
+      }
+    },
+    "/activate-card" : {
+      "post" : {
+        "summary" : "(Autenticar peticiones con el access token)",
+        "tags" : [ "URIs" ],
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "Authorization: Bearer",
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "required" : true,
+          "description" : "Encabezado de autorización tipo Bearer usando el access token",
+          "example" : {
+            "Authorization" : "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjQ5MTVmM2RiZjljNmQ1M2VlOGNjOD..."
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/activate-card"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "202" : {
+            "$ref" : "#/components/responses/accepted"
+          },
+          "408" : {
+            "$ref" : "#/components/responses/timeOut"
+          },
+          "422" : {
+            "description" : "Unproccessable Entity",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "message" : {
+                      "type" : "string"
+                    },
+                    "errors" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "object",
+                        "properties" : {
+                          "code" : {
+                            "type" : "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples" : {
+                  "date required" : {
+                    "value" : {
+                      "message" : "Error de validación de datos",
+                      "errors" : [ {
+                        "date" : "La fecha de venta es requerida."
+                      } ]
+                    }
+                  },
+                  "date invalid" : {
+                    "value" : {
+                      "message" : "Error de validación de datos",
+                      "errors" : [ {
+                        "date" : "La fecha de venta es inválida."
+                      } ]
+                    }
+                  },
+                  "date present" : {
+                    "value" : {
+                      "message" : "Error de validación de datos",
+                      "errors" : [ {
+                        "date" : "La fecha de venta no puede ser una fecha futura."
+                      } ]
+                    }
+                  },
+                  "code required" : {
+                    "value" : {
+                      "message" : "Error de validación de datos",
+                      "errors" : [ {
+                        "code" : "El código es requerido."
+                      } ]
+                    }
+                  },
+                  "code exists" : {
+                    "value" : {
+                      "message" : "Error de validación de datos",
+                      "errors" : [ {
+                        "code" : "El código es inválido."
+                      } ]
+                    }
+                  },
+                  "price required" : {
+                    "value" : {
+                      "message" : "Error de validación de datos",
+                      "errors" : [ {
+                        "price" : "El precio es requerido."
+                      } ]
+                    }
+                  },
+                  "price format" : {
+                    "value" : {
+                      "message" : "Error de validación de datos",
+                      "errors" : [ {
+                        "price" : "El precio debe ser un valor numérico."
+                      } ]
+                    }
+                  },
+                  "reference required" : {
+                    "value" : {
+                      "message" : "Error de validación de datos",
+                      "errors" : [ {
+                        "reference" : "La referencia es requerida."
+                      } ]
+                    }
+                  },
+                  "reference format" : {
+                    "value" : {
+                      "message" : "Error de validación de datos",
+                      "errors" : [ {
+                        "reference" : "La referencia debe ser una cadena de carácteres."
+                      } ]
+                    }
+                  },
+                  "store id required" : {
+                    "value" : {
+                      "message" : "Error de validación de datos",
+                      "errors" : [ {
+                        "store_id" : "El identificador de tienda es requerido."
+                      } ]
+                    }
+                  },
+                  "store id integer" : {
+                    "value" : {
+                      "message" : "Error de validación de datos",
+                      "errors" : [ {
+                        "store_id" : "El identificador de tienda debe ser una cadena de carácteres o un entero."
+                      } ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "responses" : {
+      "accessToken" : {
+        "description" : "Created",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/accessToken"
+            }
+          }
+        }
+      },
+      "accepted" : {
+        "description" : "Accepted",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/accepted"
+            }
+          }
+        }
+      },
+      "badRequest" : {
+        "description" : "Bad Request",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/badRequest"
+            }
+          }
+        }
+      },
+      "timeOut" : {
+        "description" : "Request Timeout",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/timeOut"
+            }
+          }
+        }
+      }
+    },
+    "schemas" : {
+      "accessToken" : {
+        "type" : "object",
+        "properties" : {
+          "token_type" : {
+            "type" : "string"
+          },
+          "expires_in" : {
+            "description" : "el token tendrá una validez de 3600 segundos (1 hora)",
+            "type" : "integer"
+          },
+          "access_token" : {
+            "type" : "string"
+          }
+        },
+        "example" : {
+          "token_type" : "Bearer",
+          "expires_in" : 3600,
+          "access_token" : "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImp0aSI6IjQ5MTVmM2RiZjljNmQ1M2VlOGNjOD"
+        }
+      },
+      "activate-card" : {
+        "type" : "object",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "price" : {
+            "type" : "integer"
+          },
+          "reference" : {
+            "type" : "string"
+          },
+          "store_id" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "date", "code", "price", "reference", "store_id" ],
+        "example" : {
+          "date" : "2020-04-23 18:25:43",
+          "code" : "1234567890asdfghjkl",
+          "price" : 90000,
+          "reference" : "lkjhgfdsa0987654321",
+          "store_id" : "99"
+        }
+      },
+      "accepted" : {
+        "type" : "object",
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "example" : {
+          "message" : "Termina el registro y activa tu membresía en http://wwww.circuloplussanborns.com/registro"
+        }
+      },
+      "badRequest" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "hint" : {
+            "type" : "string"
+          }
+        },
+        "example" : {
+          "error" : "invalid_request",
+          "message" : "The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed."
+        }
+      },
+      "timeOut" : {
+        "type" : "object",
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "example" : {
+          "message" : "La petición tardó más de lo esperado, vuelve a intentarlo"
+        }
+      }
+    }
+  }
+}

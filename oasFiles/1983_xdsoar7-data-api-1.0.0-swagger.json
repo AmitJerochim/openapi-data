@@ -1,0 +1,204 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "description" : "",
+    "version" : "1.0.0",
+    "title" : "audit data mart api",
+    "termsOfService" : "http://swagger.io/terms/",
+    "contact" : {
+      "email" : "apiteam@swagger.io"
+    },
+    "license" : {
+      "name" : "Apache 2.0",
+      "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "paths" : {
+    "/data_query" : {
+      "post" : {
+        "summary" : "create a data query and return the result",
+        "description" : "",
+        "requestBody" : {
+          "description" : "查询数据的参数",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "serverType" : {
+                    "type" : "string",
+                    "example" : "gbase"
+                  },
+                  "serverIP" : {
+                    "type" : "string",
+                    "example" : "10.6.123.51"
+                  },
+                  "serverPort" : {
+                    "type" : "integer",
+                    "example" : 5258
+                  },
+                  "queryType" : {
+                    "type" : "string",
+                    "enum" : [ "SQL" ],
+                    "description" : "当前仅支持SQL查询, 但该参数建议填写"
+                  },
+                  "SQL" : {
+                    "type" : "string",
+                    "example" : "select * from dual"
+                  },
+                  "queryParms" : {
+                    "$ref" : "#/components/schemas/Query"
+                  },
+                  "queryUser" : {
+                    "type" : "string",
+                    "example" : "274932",
+                    "description" : "填写用户ID, 用于查询语句的权限分析"
+                  },
+                  "limitRecords" : {
+                    "type" : "integer",
+                    "description" : "限制返回的数据行数, 默认为1000, 最大不超过1万",
+                    "example" : 100
+                  }
+                },
+                "required" : [ "serverType", "serverIP", "serverPort", "queryType", "queryUser" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "object",
+                        "description" : "返回的数据类型与查询语句中的数据类型保持一致"
+                      },
+                      "example" : [ {
+                        "user_id" : 1,
+                        "name" : "a",
+                        "rsk_lvl" : 1
+                      }, {
+                        "user_id" : 2,
+                        "name" : "b",
+                        "rsk_lvl" : 2
+                      } ]
+                    },
+                    "metadata" : {
+                      "type" : "object",
+                      "properties" : {
+                        "tableName" : {
+                          "type" : "string",
+                          "example" : "dual"
+                        },
+                        "schemaName" : {
+                          "type" : "string",
+                          "example" : "bas"
+                        },
+                        "tableComment" : {
+                          "type" : "string",
+                          "description" : "数据表中文名"
+                        },
+                        "fields" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "object",
+                            "properties" : {
+                              "fieldName" : {
+                                "type" : "string",
+                                "description" : "字段名"
+                              },
+                              "fieldComment" : {
+                                "type" : "string",
+                                "description" : "字段描述信息"
+                              },
+                              "fieldType" : {
+                                "type" : "string",
+                                "description" : "字段类型"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Query" : {
+        "type" : "object",
+        "properties" : {
+          "schemaName" : {
+            "type" : "string",
+            "example" : "mid"
+          },
+          "tableName" : {
+            "type" : "string",
+            "example" : "transaction_personal"
+          },
+          "queryColumns" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "example" : [ "id", "name", "address", "email" ],
+            "description" : "查询表的字段名, 当前仅支持填写该表的字段名称, 不支持运算符和函数运算. 当填写为\"*\"时, 返回该表的所有字段."
+          },
+          "whereConditions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FilterCondition"
+            }
+          }
+        }
+      },
+      "FilterCondition" : {
+        "type" : "object",
+        "properties" : {
+          "logicalOperator" : {
+            "type" : "string",
+            "enum" : [ "and", "or" ],
+            "description" : "逻辑运算符, 用于连接多个过滤条件, 对于第一个过滤条件, 可不填写, 之后的过滤条件必须填写."
+          },
+          "expressionOperator" : {
+            "type" : "string",
+            "description" : "布尔表达式运算符, 用于描述参数间的运算关系, 参与运算的参数数量由运算符决定, 如'='、'>'、 '<'等运算符使用两个参数, 'between and'使用三个参数",
+            "enum" : [ "=", ">", ">=", "<", "<=", "in", "between and", "like" ]
+          },
+          "parameters" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object"
+            },
+            "example" : [ "id", "'12345'" ],
+            "description" : "填写用于参与运算的参数. 数据库字段名直接填写字段名字(因json的要求, 需使用双引号. 字符串类值表达式使用双引号内再附上单引号 如'12345', 数值类无需单引号, 集合表达式在双引号内附上括号, 如('123', '456')"
+          }
+        }
+      }
+    }
+  },
+  "externalDocs" : {
+    "description" : "Find out more about Swagger",
+    "url" : "http://swagger.io"
+  },
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/xdsoar7/data-api/1.0.0"
+  } ]
+}

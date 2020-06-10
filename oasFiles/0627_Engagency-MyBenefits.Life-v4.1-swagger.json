@@ -1,0 +1,919 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "version" : "v4.1",
+    "title" : "Alliant MyBenefits.Life API",
+    "description" : "Authentication for the API requires performing a login on the site, either in a browser or through a mobile web view. This is required as the authentication is performed via Microsoft Azure B2C.\n\n**To initiate the login, perform the following steps:**\n\n1. Ask the user for their employer key.\n\n2. Request https://devlogin.mybenefits.life/api/v1/site with the user's employer key. If the response returns `enableAnonymousViewing=true`, prompt the user to either login/register or continue without logging in/registering (flow A). If it returns `enableAnonymousViewing=false`, immediately continue to the login/register flow below (flow B).\n\n**Flow A: If the user chooses to login/register:**\n\n1. Load https://devlogin.mybenefits.life/login?returnUrl=/complete\n\n2. The browser will be redirected to a Microsoft B2C login page where the user will enter their credentials or register.\n\n3. The user will be redirected to https://devlogin.mybenefits.life/complete. \n\n3. If the user has not completed the registration, they will get a 302 response on the `/complete` page, and then be redirected to https://devlogin.mybenefits.life/register?returnUrl=/complete When they finish the registration, they will be redirected to https://devlogin.mybenefits.life/complete with a 200 status code.\n\n4. Request https://devlogin.mybenefits.life/api/v1/token using the cookies from the previous requests. It will return a JWT token, a base URL for making future requests, and a dictionary of all whitelabel tokens (colors, icons and images)\n\n**Flow B: If the user chooses to continue without logging in/registering:**\n\n1. Request https://devlogin.mybenefits.life/api/v1/token with the user's employer key. It will return an *anonymous* JWT token, a base URL for making future requests, and a dictionary of all whitelabel tokens (colors, icons and images)\n\n**Once you have an authentication token**\n\nMake all subsequent requests against the base URL instead of https://devlogin.mybenefits.life, and pass the token as a cookie called `Alliant_AuthenticationToken`. Alternatively, you can pass the token in the Authorization header as `Authorization: Bearer <token>`. Both options will have the same effect. This includes ALL requests, including API, web view, media and document requests.\n\n---\n\n**Note**: To access the production environment, use https://login.mybenefits.life. The token endpoint will return the production base URL, so no further modifications should be needed.\n"
+  },
+  "servers" : [ {
+    "url" : "https://devclient1.mybenefits.life"
+  } ],
+  "paths" : {
+    "/api/v1/token" : {
+      "get" : {
+        "description" : "Retrieve the logged in user's token and whitelabeling information, or an anonymous token if the user is not logged in. Either the authentication cookies *or* the user's employer key must be provided",
+        "parameters" : [ {
+          "name" : "Cookie",
+          "in" : "header",
+          "schema" : {
+            "type" : "string"
+          },
+          "description" : "All of the cookies returned after performing the login flow",
+          "required" : false
+        }, {
+          "name" : "employerKey",
+          "in" : "query",
+          "schema" : {
+            "type" : "string"
+          },
+          "description" : "The employer key that the user entered",
+          "required" : false
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successfully retrieved token",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Invalid authentication state"
+          },
+          "500" : {
+            "description" : "An error occurred",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/site" : {
+      "get" : {
+        "description" : "Retrieve information about a site",
+        "parameters" : [ {
+          "name" : "employerKey",
+          "in" : "query",
+          "description" : "The employer key of the site",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The information about the site",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SiteInfoResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "The site was not found"
+          },
+          "500" : {
+            "description" : "An error occurred",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/concierge" : {
+      "get" : {
+        "security" : [ {
+          "sessionToken" : [ ]
+        } ],
+        "description" : "Retrieve the concierge decision tree with questions and answers paths.",
+        "responses" : {
+          "200" : {
+            "description" : "Successfully retrieved decision tree. Note that swagger has difficulties showing circular references (see code).",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Dst"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Invalid authentication token"
+          },
+          "500" : {
+            "description" : "An error occurred",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/messages" : {
+      "get" : {
+        "security" : [ {
+          "sessionToken" : [ ]
+        } ],
+        "description" : "Retrieve messages for the user associated withe the session token.",
+        "parameters" : [ {
+          "name" : "page",
+          "in" : "query",
+          "description" : "The page of messages to retrieve.",
+          "required" : false,
+          "schema" : {
+            "type" : "integer"
+          }
+        }, {
+          "name" : "pageSize",
+          "in" : "query",
+          "description" : "The number of messages to return per page. If not specified each page will contain 10 messages.",
+          "required" : false,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The list of messages for this user.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Invalid authentication token"
+          },
+          "500" : {
+            "description" : "An error occurred",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/messages/{messageId}" : {
+      "get" : {
+        "security" : [ {
+          "sessionToken" : [ ]
+        } ],
+        "description" : "Retrieve a message by unique id.",
+        "parameters" : [ {
+          "name" : "messageId",
+          "in" : "path",
+          "description" : "The unique id of the message",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successfully retrieved message.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Message"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Invalid authentication token"
+          },
+          "500" : {
+            "description" : "An error occurred",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "description" : "Mark a message as read with a unique id.",
+        "security" : [ {
+          "sessionToken" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "messageId",
+          "in" : "path",
+          "description" : "The unique id of the message",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Message marked as read."
+          },
+          "403" : {
+            "description" : "Invalid authentication token"
+          },
+          "500" : {
+            "description" : "An error occurred",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content" : {
+      "get" : {
+        "security" : [ {
+          "sessionToken" : [ ]
+        } ],
+        "description" : "Retrieve content associated with a node in the DST, or search content in general.",
+        "parameters" : [ {
+          "name" : "nodeId",
+          "in" : "query",
+          "description" : "The node for which to return content.",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Content of a variety of types to be returned.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AggregatedContent"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Invalid authentication token"
+          },
+          "500" : {
+            "description" : "An error occurred",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/home" : {
+      "get" : {
+        "security" : [ {
+          "sessionToken" : [ ]
+        } ],
+        "description" : "Retrieve the homepage content for the app.",
+        "responses" : {
+          "200" : {
+            "description" : "Content of a variety of types to be returned.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HomeContent"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Invalid authentication token"
+          },
+          "500" : {
+            "description" : "An error occurred",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profile" : {
+      "get" : {
+        "security" : [ {
+          "sessionToken" : [ ]
+        } ],
+        "description" : "Retrieve the user's profile information",
+        "responses" : {
+          "200" : {
+            "description" : "The user's profile information",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Invalid authentication token"
+          },
+          "500" : {
+            "description" : "An error occurred",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tags" : {
+      "get" : {
+        "description" : "Gets all of the tags in the system",
+        "parameters" : [ {
+          "name" : "key",
+          "in" : "query",
+          "description" : "The API key",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "default" : "ldziheuJ1BTgNPBU9AdX"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The tag information",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagResponse"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Invalid API key"
+          },
+          "500" : {
+            "description" : "An error occurred",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "HomeContent" : {
+        "properties" : {
+          "plans" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PlanCard"
+            }
+          },
+          "words" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/WordDefinition"
+            }
+          },
+          "pages" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Page"
+            }
+          },
+          "resources" : {
+            "type" : "array",
+            "items" : {
+              "anyOf" : [ {
+                "$ref" : "#/components/schemas/AppResource"
+              }, {
+                "$ref" : "#/components/schemas/GameResource"
+              }, {
+                "$ref" : "#/components/schemas/VideoResource"
+              }, {
+                "$ref" : "#/components/schemas/MessageResource"
+              } ]
+            }
+          },
+          "promos" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Promo"
+            }
+          }
+        }
+      },
+      "MessageResponse" : {
+        "properties" : {
+          "messages" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Message"
+            }
+          }
+        }
+      },
+      "Message" : {
+        "properties" : {
+          "messageId" : {
+            "type" : "string"
+          },
+          "isRead" : {
+            "type" : "boolean"
+          },
+          "sender" : {
+            "type" : "string"
+          },
+          "sentTime" : {
+            "type" : "string",
+            "format" : "datetime"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "messageText" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Dst" : {
+        "properties" : {
+          "parentNode" : {
+            "$ref" : "#/components/schemas/Node"
+          }
+        }
+      },
+      "Node" : {
+        "properties" : {
+          "nodeId" : {
+            "type" : "string",
+            "description" : "Unique identifier for node in the decision tree."
+          },
+          "options" : {
+            "type" : "array",
+            "description" : "A list of all possible navigation paths from this node (question and next node). This will be empty for leaf nodes.",
+            "items" : {
+              "$ref" : "#/components/schemas/NodeOptions"
+            }
+          }
+        }
+      },
+      "NodeOptions" : {
+        "properties" : {
+          "title" : {
+            "type" : "string"
+          },
+          "shortDescription" : {
+            "type" : "string"
+          },
+          "icon" : {
+            "type" : "string"
+          },
+          "associatedNode" : {
+            "$ref" : "#/components/schemas/Node"
+          }
+        }
+      },
+      "AggregatedContent" : {
+        "properties" : {
+          "plans" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PlanCard"
+            }
+          },
+          "articles" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ArticleCard"
+            }
+          },
+          "contacts" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ContactCard"
+            }
+          },
+          "links" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LinkCard"
+            }
+          },
+          "documents" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DocumentCard"
+            }
+          },
+          "wordDefinitions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/WordDefinition"
+            }
+          }
+        }
+      },
+      "PlanCard" : {
+        "properties" : {
+          "lineOfBusiness" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "tier" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ArticleCard" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "imageUrl" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ContactCard" : {
+        "properties" : {
+          "type" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "websiteUrl" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LinkCard" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "content" : {
+            "type" : "string"
+          },
+          "websiteUrl" : {
+            "type" : "string"
+          }
+        }
+      },
+      "DocumentCard" : {
+        "properties" : {
+          "title" : {
+            "type" : "string"
+          },
+          "size" : {
+            "type" : "integer"
+          },
+          "fileType" : {
+            "type" : "string"
+          },
+          "documentType" : {
+            "type" : "string"
+          },
+          "link" : {
+            "type" : "string"
+          }
+        }
+      },
+      "WordDefinition" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "summaryDefinition" : {
+            "type" : "string"
+          },
+          "fullDefinition" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Profile" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "hasSelectedAnyPlans" : {
+            "type" : "boolean"
+          },
+          "hasCompletedPlanSelection" : {
+            "type" : "boolean"
+          },
+          "anonymous" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "WhitelabelTokens" : {
+        "properties" : {
+          "colors" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "icons" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          },
+          "images" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "TokenResponse" : {
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "description" : "The JWT token to use in future requests"
+          },
+          "baseUrl" : {
+            "type" : "string",
+            "description" : "The base URL to use for future requests"
+          },
+          "employerKey" : {
+            "type" : "string",
+            "description" : "The user's employer key"
+          },
+          "whitelabelTokens" : {
+            "$ref" : "#/components/schemas/WhitelabelTokens"
+          }
+        }
+      },
+      "SiteInfoResponse" : {
+        "properties" : {
+          "enableAnonymousViewing" : {
+            "type" : "boolean",
+            "description" : "Whether or not a user should be able to load this site anonymously. If true, then this site will be able to issue an anonymous token"
+          }
+        }
+      },
+      "ErrorResponse" : {
+        "properties" : {
+          "success" : {
+            "type" : "boolean",
+            "description" : "Whether the request was successful. This is always false."
+          },
+          "errorTime" : {
+            "type" : "string",
+            "description" : "The timestamp of when the error occurred. Use this for reference so that developers can locate the error."
+          },
+          "errorMessage" : {
+            "type" : "string",
+            "description" : "A description of the error. Only present in non-production environments."
+          },
+          "errorStackTrace" : {
+            "type" : "string",
+            "description" : "The stacktrace of the error. Only present in non-production environments."
+          }
+        }
+      },
+      "Tag" : {
+        "properties" : {
+          "Name" : {
+            "type" : "string",
+            "description" : "The name of the tag"
+          },
+          "Id" : {
+            "type" : "string",
+            "description" : "The persistent ID of the tag"
+          },
+          "EmployerKeys" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "description" : "The employer keys for which the tag applies"
+          }
+        }
+      },
+      "TagResponse" : {
+        "properties" : {
+          "Tags" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Tag"
+            }
+          }
+        }
+      },
+      "Game" : {
+        "properties" : {
+          "gameId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "cardTitle" : {
+            "type" : "string"
+          },
+          "cardText" : {
+            "type" : "string"
+          },
+          "buttonText" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Promo" : {
+        "properties" : {
+          "promoName" : {
+            "type" : "string"
+          },
+          "promoTitle" : {
+            "type" : "string"
+          },
+          "promoText" : {
+            "type" : "string"
+          },
+          "promoImage" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "promoVideoId" : {
+            "type" : "string"
+          },
+          "promoCtaText" : {
+            "type" : "string"
+          },
+          "promoCtaLink" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "includeCloseButton" : {
+            "type" : "boolean"
+          },
+          "promoStyle" : {
+            "type" : "string"
+          }
+        }
+      },
+      "MessageResource" : {
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "default" : "messages"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "recentMessageCount" : {
+            "type" : "integer"
+          },
+          "messageCountPreText" : {
+            "type" : "string"
+          },
+          "messageCountPostText" : {
+            "type" : "string"
+          }
+        }
+      },
+      "AppResource" : {
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "default" : "app"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "icon" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "nonMobileLink" : {
+            "type" : "string",
+            "format" : "uri"
+          }
+        }
+      },
+      "VideoResource" : {
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "default" : "video"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "videoId" : {
+            "type" : "string"
+          }
+        }
+      },
+      "GameResource" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Game"
+        }, {
+          "$ref" : "#/components/schemas/GameResourceExtra"
+        } ]
+      },
+      "GameResourceExtra" : {
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "default" : "game"
+          }
+        }
+      },
+      "Page" : {
+        "properties" : {
+          "title" : {
+            "type" : "string"
+          },
+          "tabTitle" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string",
+            "format" : "uri"
+          },
+          "isHRLandingPage" : {
+            "type" : "boolean"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,290 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "description" : "Test API server",
+    "url" : "https://api.ligence.io/v1"
+  } ],
+  "info" : {
+    "version" : "1.0.0",
+    "title" : "Ligence DICOM API",
+    "description" : "API that allows Ligence cloud to accept and analyse echocardiography cases.",
+    "contact" : {
+      "name" : "Ligence",
+      "url" : "http://www.ligence.io",
+      "email" : "info@ligence.io"
+    },
+    "license" : {
+      "name" : "Ligence LTD Echocardiography License"
+    }
+  },
+  "paths" : {
+    "/analyse" : {
+      "post" : {
+        "summary" : "Submit a case/series to analyse",
+        "description" : "Submit a list of Dicom urls (all should belong to the same case/series) to analyse.",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "is_training",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "example" : true
+          },
+          "description" : "Boolean if dicoms can be saved for algorythm training."
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "List Dicom urls and case id",
+                "$ref" : "#/components/schemas/Analyse"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Task status and analysis report token",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AnalyseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status/{job_id}" : {
+      "get" : {
+        "summary" : "Get analysis status",
+        "description" : "Get analysis status",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "job_id",
+          "in" : "path",
+          "description" : "Analysis job id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Analysis status",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/report/{job_id}" : {
+      "get" : {
+        "summary" : "Download analysis results - report pdf",
+        "description" : "Download analysis results - report pdf",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "job_id",
+          "in" : "path",
+          "description" : "Job id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Download report pdf",
+            "content" : {
+              "application/pdf" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Pdf is not ready or other error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Job id not exists",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth" : {
+      "post" : {
+        "summary" : "Acquire JWT token",
+        "description" : "To receive authentication token provide client credentials (username and password). Token default expiration term - 3 months.",
+        "security" : [ {
+          "basicAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "Authenticate",
+                "$ref" : "#/components/schemas/Authenticate"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "JWT token",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Wrong credentials",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Analyse" : {
+        "type" : "object",
+        "required" : [ "instances_urls" ],
+        "properties" : {
+          "instances_urls" : {
+            "description" : "List of dicoms url to download for analysis.",
+            "example" : [ "https://api.orthanc-server.com/instance/file/7976ad32-4d15-439b-8789-bf70f52200ec", "https://api.orthanc-server.com/instance/file/2ddf6534-7bda-4bc6-b848-d5abc714af98", "https://api.orthanc-server.com/instance/file/04359e07-6434-4714-95de-e4c9016def17" ],
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "case_id" : {
+            "description" : "arbitrary id / name to group all instances.",
+            "example" : 28,
+            "type" : "string"
+          }
+        }
+      },
+      "Authenticate" : {
+        "type" : "object",
+        "required" : [ "username", "password" ],
+        "properties" : {
+          "username" : {
+            "description" : "Client username.",
+            "type" : "string"
+          },
+          "password" : {
+            "description" : "Client password.",
+            "type" : "string"
+          }
+        }
+      },
+      "Token" : {
+        "type" : "object",
+        "required" : [ "token" ],
+        "properties" : {
+          "token" : {
+            "description" : "JWT token.",
+            "type" : "string"
+          }
+        }
+      },
+      "Error" : {
+        "type" : "object",
+        "required" : [ "code", "message" ],
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "message" : {
+            "type" : "string"
+          }
+        }
+      },
+      "AnalyseResponse" : {
+        "type" : "object",
+        "properties" : {
+          "job_id" : {
+            "description" : "Job id to retrieve analysis report.",
+            "example" : "7976ad32-4d15-439b-8789-bf70f52200ec",
+            "type" : "string"
+          }
+        }
+      },
+      "StatusResponse" : {
+        "type" : "object",
+        "properties" : {
+          "state" : {
+            "type" : "string",
+            "description" : "Either PENDING, DOWNLOADING, ANALYSING, SUCCESS, ERROR.",
+            "example" : "PENDING"
+          }
+        }
+      }
+    },
+    "responses" : {
+      "Unauthorized" : {
+        "description" : "Unauthorized",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "basicAuth" : {
+        "type" : "http",
+        "scheme" : "basic"
+      },
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    }
+  }
+}

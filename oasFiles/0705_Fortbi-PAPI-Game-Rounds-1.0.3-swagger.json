@@ -1,0 +1,703 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "PAPI game rounds API",
+    "description" : "PAPI game rounds API",
+    "version" : "1.0.3"
+  },
+  "servers" : [ {
+    "url" : "https://api.fortbi.com/api/v1.0",
+    "description" : "production endpoint"
+  }, {
+    "url" : "http://papi.lan/api/v1.0",
+    "description" : "local endpoint"
+  } ],
+  "paths" : {
+    "/getGameSrps" : {
+      "get" : {
+        "summary" : "Returns list of game rounds stats from Play And Go",
+        "description" : "Returns game statistics and calculated srp based on 5 minutes and H hours interval. <br> **Note:** h hours interval passed as optional parameter (check query params)",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "clientId",
+          "required" : true,
+          "description" : "client id that has access to papi",
+          "schema" : {
+            "type" : "integer",
+            "minimum" : 1,
+            "example" : 1
+          }
+        }, {
+          "in" : "query",
+          "name" : "filter[endDateTime]",
+          "description" : "end datetime interval from which game statisctics need to be provided. If datetime is not present in db - latest will be taken from aggregation table.",
+          "schema" : {
+            "type" : "string",
+            "example" : "2019-10-16+11:30"
+          }
+        }, {
+          "in" : "query",
+          "name" : "filter[cyclesDepth]",
+          "description" : "shows how many cycles (5 minutes intervals) need to be refreshed and returned. If skipped - 3 cycles back will be returned.",
+          "schema" : {
+            "type" : "integer",
+            "minimum" : 0,
+            "example" : 3
+          }
+        }, {
+          "in" : "query",
+          "name" : "filter[hoursDepth]",
+          "description" : "determines how many hours intervals to show witn 5-minutes intervals for each cycle. If skipped - 4 hours interval will taken as default.",
+          "schema" : {
+            "type" : "integer",
+            "minimum" : 0,
+            "example" : 4
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/gameSrps"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/getGameWins" : {
+      "get" : {
+        "summary" : "Returns list of bigwins, superwins, megawins for H interval",
+        "description" : "**Note:** *H* interval defined in query parameter filter[hoursDepth]",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "clientId",
+          "required" : true,
+          "description" : "client id that has access to papi",
+          "schema" : {
+            "type" : "integer",
+            "minimum" : 1,
+            "example" : 1
+          }
+        }, {
+          "in" : "query",
+          "name" : "filter[hoursDepth]",
+          "description" : "period length in hours (default = 1).",
+          "schema" : {
+            "type" : "integer",
+            "example" : 1
+          }
+        }, {
+          "in" : "query",
+          "name" : "filter[cyclesDepth]",
+          "description" : "periods qty to show (default = 10).",
+          "schema" : {
+            "type" : "integer",
+            "example" : 10
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/gameBigWins"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/getGameLastWins" : {
+      "get" : {
+        "summary" : "Returns list of last bigwins, superwins, megawins ever being recorded",
+        "description" : "no params neede except client id, since logs stores only line per source/game",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "clientId",
+          "required" : true,
+          "description" : "client id that has access to papi",
+          "schema" : {
+            "type" : "integer",
+            "minimum" : 1,
+            "example" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/gameLastBigWins"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/getGameMaxWins" : {
+      "get" : {
+        "summary" : "Returns list of max wins in rtp and eur aquivalent",
+        "description" : "no params needed except client id, since logs stores only line per game",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "clientId",
+          "required" : true,
+          "description" : "client id that has access to papi",
+          "schema" : {
+            "type" : "integer",
+            "minimum" : 1,
+            "example" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/gameMaxBigWins"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "responses" : {
+      "gameSrps" : {
+        "description" : "game srps",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "protocol" : {
+                  "type" : "string",
+                  "example" : "1.0"
+                },
+                "type" : {
+                  "type" : "string",
+                  "example" : "response"
+                },
+                "serverId" : {
+                  "type" : "string",
+                  "example" : "papi"
+                },
+                "messageId" : {
+                  "type" : "string",
+                  "example" : "5daffa740ebab"
+                },
+                "callback" : {
+                  "type" : "string",
+                  "example" : ""
+                },
+                "timeCreated" : {
+                  "type" : "string",
+                  "example" : "2019-10-23 08:44:29 +00:00"
+                },
+                "statusCode" : {
+                  "type" : "integer"
+                },
+                "data" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "object",
+                    "properties" : {
+                      "type" : {
+                        "type" : "string",
+                        "example" : "TimeBoxEnd"
+                      },
+                      "id" : {
+                        "type" : "string",
+                        "example" : "2019-10-16 13:50:00"
+                      },
+                      "relationships" : {
+                        "type" : "object",
+                        "properties" : {
+                          "gameSrps" : {
+                            "type" : "array",
+                            "items" : {
+                              "type" : "object",
+                              "properties" : {
+                                "startDateTime" : {
+                                  "type" : "string",
+                                  "example" : "2019-10-16 13:45:00"
+                                },
+                                "endDateTime" : {
+                                  "type" : "string",
+                                  "example" : "2019-10-16 13:50:00"
+                                },
+                                "sourceTableName" : {
+                                  "type" : "string",
+                                  "example" : "pngo_rounds"
+                                },
+                                "slotId" : {
+                                  "type" : "integer",
+                                  "example" : 451,
+                                  "nullable" : true
+                                },
+                                "gameName" : {
+                                  "type" : "string",
+                                  "example" : "Cloud Quest"
+                                },
+                                "rtp" : {
+                                  "type" : "number",
+                                  "example" : 96.52
+                                },
+                                "roundsCount" : {
+                                  "type" : "string",
+                                  "example" : "55"
+                                },
+                                "betEuro" : {
+                                  "type" : "number",
+                                  "example" : 3.08
+                                },
+                                "winEuro" : {
+                                  "type" : "number",
+                                  "example" : 2.14
+                                },
+                                "sumRoundRtp" : {
+                                  "type" : "number",
+                                  "example" : 41.4
+                                },
+                                "srp" : {
+                                  "type" : "number",
+                                  "example" : 0.75
+                                },
+                                "rtpDelta" : {
+                                  "type" : "number",
+                                  "example" : -21.247
+                                },
+                                "roundsCountH" : {
+                                  "type" : "string",
+                                  "example" : "136"
+                                },
+                                "betEuroH" : {
+                                  "type" : "number",
+                                  "example" : 6.98
+                                },
+                                "winEuroH" : {
+                                  "type" : "number",
+                                  "example" : 10.05
+                                },
+                                "srpH" : {
+                                  "type" : "number",
+                                  "example" : 1.86
+                                },
+                                "rtpDeltaH" : {
+                                  "type" : "number",
+                                  "example" : 89.877
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "info" : {
+                  "type" : "object",
+                  "properties" : {
+                    "execTime" : {
+                      "type" : "integer",
+                      "example" : 277
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "gameBigWins" : {
+        "description" : "game big wins",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "protocol" : {
+                  "type" : "string",
+                  "example" : "1.0"
+                },
+                "type" : {
+                  "type" : "string",
+                  "example" : "response"
+                },
+                "serverId" : {
+                  "type" : "string",
+                  "example" : "papi"
+                },
+                "messageId" : {
+                  "type" : "string",
+                  "example" : "5daffa740ebab"
+                },
+                "callback" : {
+                  "type" : "string",
+                  "example" : ""
+                },
+                "timeCreated" : {
+                  "type" : "string",
+                  "example" : "2019-10-23 08:44:29 +00:00"
+                },
+                "statusCode" : {
+                  "type" : "integer"
+                },
+                "data" : {
+                  "type" : "object",
+                  "properties" : {
+                    "type" : {
+                      "type" : "string",
+                      "example" : "TimeBoxEnd"
+                    },
+                    "id" : {
+                      "type" : "string",
+                      "example" : "2019-10-16 14:15:00"
+                    },
+                    "relationships" : {
+                      "type" : "object",
+                      "properties" : {
+                        "gameWins" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "object",
+                            "properties" : {
+                              "startDateTime" : {
+                                "type" : "string",
+                                "example" : "2019-10-16 13:15:00"
+                              },
+                              "endDateTime" : {
+                                "type" : "string",
+                                "example" : "2019-10-16 14:15:00"
+                              },
+                              "sourceTableName" : {
+                                "type" : "string",
+                                "example" : "pngo_rounds"
+                              },
+                              "slotId" : {
+                                "type" : "integer",
+                                "nullable" : true,
+                                "example" : 451
+                              },
+                              "gameName" : {
+                                "type" : "string",
+                                "example" : "Cloud Quest"
+                              },
+                              "bigwinQty" : {
+                                "type" : "string",
+                                "example" : "8"
+                              },
+                              "bigwinMaxRtp" : {
+                                "type" : "number",
+                                "example" : 42.4
+                              },
+                              "superwinQty" : {
+                                "type" : "string",
+                                "example" : "5"
+                              },
+                              "superwinMaxRtp" : {
+                                "type" : "number",
+                                "example" : 60.4
+                              },
+                              "megawinQty" : {
+                                "type" : "string",
+                                "example" : "1"
+                              },
+                              "megawinMaxRtp" : {
+                                "type" : "number",
+                                "example" : 400
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "info" : {
+                  "type" : "object",
+                  "properties" : {
+                    "execTime" : {
+                      "type" : "integer",
+                      "example" : 277
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "gameLastBigWins" : {
+        "description" : "last game bigwins splited by sources",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "protocol" : {
+                  "type" : "string",
+                  "example" : "1.0"
+                },
+                "type" : {
+                  "type" : "string",
+                  "example" : "response"
+                },
+                "serverId" : {
+                  "type" : "string",
+                  "example" : "papi"
+                },
+                "messageId" : {
+                  "type" : "string",
+                  "example" : "5daffa740ebab"
+                },
+                "callback" : {
+                  "type" : "string",
+                  "example" : ""
+                },
+                "timeCreated" : {
+                  "type" : "string",
+                  "example" : "2019-10-23 08:44:29 +00:00"
+                },
+                "statusCode" : {
+                  "type" : "integer"
+                },
+                "data" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "object",
+                    "properties" : {
+                      "type" : {
+                        "type" : "string",
+                        "example" : "LastGameWinSource"
+                      },
+                      "id" : {
+                        "type" : "string",
+                        "example" : "pngo_rounds"
+                      },
+                      "relationships" : {
+                        "type" : "object",
+                        "properties" : {
+                          "lastGameWins" : {
+                            "type" : "array",
+                            "items" : {
+                              "type" : "object",
+                              "properties" : {
+                                "slotId" : {
+                                  "type" : "integer",
+                                  "example" : 451,
+                                  "nullable" : true
+                                },
+                                "gameName" : {
+                                  "type" : "string",
+                                  "example" : "Cloud Quest"
+                                },
+                                "bigwinRoundId" : {
+                                  "type" : "string",
+                                  "example" : "4526482374"
+                                },
+                                "bigwinRtp" : {
+                                  "type" : "number",
+                                  "example" : 86.2
+                                },
+                                "bigwinEur" : {
+                                  "type" : "number",
+                                  "example" : 51.35
+                                },
+                                "bigwinDateTime" : {
+                                  "type" : "string",
+                                  "example" : "2019-11-01 05:01:25"
+                                },
+                                "superwinRoundId" : {
+                                  "type" : "string",
+                                  "example" : "4526482375"
+                                },
+                                "superwinRtp" : {
+                                  "type" : "number",
+                                  "example" : 90.2
+                                },
+                                "superwinEur" : {
+                                  "type" : "number",
+                                  "example" : 513.35
+                                },
+                                "superwinDateTime" : {
+                                  "type" : "string",
+                                  "example" : "2019-11-05 05:01:25"
+                                },
+                                "megawinRoundId" : {
+                                  "type" : "string",
+                                  "example" : "4526482376"
+                                },
+                                "megawinRtp" : {
+                                  "type" : "number",
+                                  "example" : 80.2
+                                },
+                                "megawinEur" : {
+                                  "type" : "number",
+                                  "example" : 114.35
+                                },
+                                "megawinDateTime" : {
+                                  "type" : "string",
+                                  "example" : "2019-11-02 05:01:25"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "info" : {
+                  "type" : "object",
+                  "properties" : {
+                    "execTime" : {
+                      "type" : "integer",
+                      "example" : 277
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "gameMaxBigWins" : {
+        "description" : "max game bigwins splited by game",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "protocol" : {
+                  "type" : "string",
+                  "example" : "1.0"
+                },
+                "type" : {
+                  "type" : "string",
+                  "example" : "response"
+                },
+                "serverId" : {
+                  "type" : "string",
+                  "example" : "papi"
+                },
+                "messageId" : {
+                  "type" : "string",
+                  "example" : "5daffa740ebab"
+                },
+                "callback" : {
+                  "type" : "string",
+                  "example" : ""
+                },
+                "timeCreated" : {
+                  "type" : "string",
+                  "example" : "2019-10-23 08:44:29 +00:00"
+                },
+                "statusCode" : {
+                  "type" : "integer"
+                },
+                "data" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "object",
+                    "properties" : {
+                      "type" : {
+                        "type" : "string",
+                        "example" : "game"
+                      },
+                      "id" : {
+                        "type" : "string",
+                        "example" : "741"
+                      },
+                      "attributes" : {
+                        "type" : "object",
+                        "properties" : {
+                          "maxBigWins" : {
+                            "type" : "object",
+                            "properties" : {
+                              "maxWinRtpRoundId" : {
+                                "type" : "string",
+                                "example" : "43242343244",
+                                "nullable" : true
+                              },
+                              "maxWinRtp" : {
+                                "type" : "number",
+                                "example" : 24
+                              },
+                              "maxWinRtpEur" : {
+                                "type" : "number",
+                                "example" : 13.69
+                              },
+                              "maxWinRtpDateTime" : {
+                                "type" : "string",
+                                "example" : "2019-10-26 05:01:25"
+                              },
+                              "maxWinEurRoundId" : {
+                                "type" : "string",
+                                "example" : "43242343245",
+                                "nullable" : true
+                              },
+                              "maxWinEur" : {
+                                "type" : "number",
+                                "example" : 244
+                              },
+                              "maxWinEurRtp" : {
+                                "type" : "number",
+                                "example" : 23
+                              },
+                              "maxWinEurDateTime" : {
+                                "type" : "string",
+                                "example" : "2019-10-26 05:01:36"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "info" : {
+                  "type" : "object",
+                  "properties" : {
+                    "execTime" : {
+                      "type" : "integer",
+                      "example" : 277
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "UnauthorizedError" : {
+        "description" : "Unauthorized Client",
+        "content" : {
+          "text/plain" : {
+            "schema" : {
+              "type" : "string",
+              "example" : "Unauthorized"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    }
+  },
+  "security" : [ {
+    "bearerAuth" : [ ]
+  } ]
+}

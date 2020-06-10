@@ -1,0 +1,668 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "title" : "FasterFinance application API",
+    "description" : "Welcome to the FasterFinance API!",
+    "contact" : {
+      "email" : "contact@faster.finance"
+    },
+    "version" : "1.0.0"
+  },
+  "servers" : [ {
+    "url" : "https://api.faster.finance/api",
+    "description" : "FasterFinance Production"
+  } ],
+  "security" : [ {
+    "bearerAuth" : [ ]
+  } ],
+  "paths" : {
+    "/get_token" : {
+      "post" : {
+        "tags" : [ "authorisation" ],
+        "summary" : "Gets authentication token",
+        "description" : "Gets authentication token using credentials",
+        "operationId" : "getToken",
+        "requestBody" : {
+          "description" : "FasterFinance uses API token to allow access to the API called JWT. You can get your own token or ask FasterFinance admin to generate it for you.\n\nAll FasterFinance endpoints require authorization using the API token, which is expected to be included in all API requests to the server in a header that looks like the following: \n\n**Authorization: Bearer {yourtokenhere}**\n",
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/loginCredentials"
+              }
+            },
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/loginCredentials"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/authToken"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unautheticated"
+          }
+        },
+        "security" : [ ]
+      }
+    },
+    "/application" : {
+      "post" : {
+        "summary" : "Submits loan application",
+        "description" : "Submits loan application",
+        "operationId" : "postApplication",
+        "tags" : [ "application" ],
+        "requestBody" : {
+          "description" : "New loan application can be submitted through this endpoint\n",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/application"
+              },
+              "encoding" : {
+                "company" : {
+                  "contentType" : "application/json"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/appSubmitted"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unautheticated"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/application/{application_id}" : {
+      "get" : {
+        "tags" : [ "application" ],
+        "summary" : "Get current application status by `application_id`",
+        "description" : "Get current application status by `application_id`",
+        "operationId" : "getApplicationStatus",
+        "parameters" : [ {
+          "name" : "application_id",
+          "in" : "path",
+          "description" : "application_id value returned in in the `/application` response",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful response from the server",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "application_status" : {
+                      "type" : "string",
+                      "description" : "Current application status",
+                      "example" : "New Loan"
+                    },
+                    "internal_score_status" : {
+                      "type" : "string",
+                      "enum" : [ "PASSED", "FAILED", "REFERRED" ],
+                      "description" : "String describing if application passed, failed or have been referred for manual review",
+                      "example" : "PASSED"
+                    },
+                    "internal_id" : {
+                      "type" : "string",
+                      "description" : "Client internall ID"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/application/document-types" : {
+      "get" : {
+        "summary" : "Gets list of allowed document types to upload",
+        "description" : "Gets list of allowed document types to upload. Each of ID returned is used as \"document_type\" paremeter in \"upload\" endpoint\n",
+        "operationId" : "getAllowedDocTypes",
+        "tags" : [ "application", "documents" ],
+        "responses" : {
+          "200" : {
+            "description" : "Response with list of all alowed document types ID and description",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "object",
+                    "properties" : {
+                      "id" : {
+                        "type" : "integer",
+                        "format" : "int32",
+                        "description" : "Document ID",
+                        "example" : 1
+                      },
+                      "type" : {
+                        "type" : "string",
+                        "description" : "Document type description",
+                        "example" : "Bank Statement"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "links" : {
+              "document_ype" : {
+                "description" : "The `id` value returned in the response can be used as the `document_type` parameter in `POST /application/{application_id}/upload`.\n",
+                "operationId" : "postApplicationDocuments",
+                "requestBody" : {
+                  "document_type" : "$response.body#/0/id"
+                },
+                "parameters" : {
+                  "document_type" : "$response.body#/0/id"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unautheticated"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/error"
+          }
+        }
+      }
+    },
+    "/v2/application/{application_id}/upload" : {
+      "post" : {
+        "summary" : "Post application related document",
+        "description" : "Post document related to application",
+        "operationId" : "postApplicationDocuments",
+        "tags" : [ "application", "documents" ],
+        "parameters" : [ {
+          "name" : "application_id",
+          "in" : "path",
+          "required" : true,
+          "description" : "application_id value returned in in the `/application` response",
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "d290f1ee6c544b0190e6d701748f0851"
+        } ],
+        "requestBody" : {
+          "description" : "New loan application can be submitted through this endpoint\n",
+          "required" : true,
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "document_type", "file" ],
+                "properties" : {
+                  "document_type" : {
+                    "type" : "integer",
+                    "format" : "int32",
+                    "description" : "One of `id` values returned by `/application/document-types` response",
+                    "example" : 1
+                  },
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary",
+                    "description" : "Document file being uploaded"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/ok"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unautheticated"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/error"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "loginCredentials" : {
+        "title" : "Get token by credentials",
+        "required" : [ "password", "user_name" ],
+        "type" : "object",
+        "properties" : {
+          "user_name" : {
+            "maxLength" : 255,
+            "type" : "string",
+            "description" : "Account username. Usually email address",
+            "format" : "email",
+            "example" : "example@example.com"
+          },
+          "password" : {
+            "type" : "string",
+            "description" : "Account password",
+            "format" : "password",
+            "example" : "somepassword"
+          }
+        },
+        "description" : "Login credentials object"
+      },
+      "application" : {
+        "title" : "Application object",
+        "required" : [ "business_type_id", "company_name", "title_id", "first_name", "last_name", "email", "phone", "loan_amount", "term", "funding_reason", "cra_checks_consent", "privacy_policy_consent", "external_referral_consent", "company" ],
+        "type" : "object",
+        "properties" : {
+          "business_type_id" : {
+            "type" : "integer",
+            "description" : "Business Type:\n  * `1` - Sole Trader\n  * `2` - Non-Limited Partnership\n  * `3` - Limited Company\n  * `4` - Limited Partnership (LLP)\n    \n",
+            "enum" : [ 1, 2, 3, 4 ]
+          },
+          "company_name" : {
+            "maxLength" : 75,
+            "type" : "string",
+            "description" : "Company Name",
+            "example" : "Example Company Name"
+          },
+          "registration_number" : {
+            "maxLength" : 8,
+            "type" : "string",
+            "description" : "Company Registration Number",
+            "nullable" : true,
+            "example" : "12345678"
+          },
+          "title_id" : {
+            "$ref" : "#/components/schemas/title_id"
+          },
+          "first_name" : {
+            "$ref" : "#/components/schemas/first_name"
+          },
+          "last_name" : {
+            "$ref" : "#/components/schemas/last_name"
+          },
+          "phone" : {
+            "maxLength" : 80,
+            "minLength" : 8,
+            "pattern" : "^(0|\\+)\\d+$",
+            "type" : "string",
+            "description" : "Applicant phone number",
+            "example" : 1.23456789E8
+          },
+          "email" : {
+            "maxLength" : 255,
+            "pattern" : "^(([^<>()\\[\\]\\\\.,;:\\s@\"]+(\\.[^<>()\\[\\]\\\\.,;:\\s@\"]+)*)|(\".+\"))@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\])|(([a-zA-Z\\-0-9]+\\.)+[a-zA-Z]{2,}))$",
+            "type" : "string",
+            "description" : "Applicant email address",
+            "format" : "email",
+            "example" : "example@example.com"
+          },
+          "loan_amount" : {
+            "maximum" : 500000,
+            "minimum" : 5000,
+            "type" : "number",
+            "description" : "Loan amount",
+            "format" : "double",
+            "example" : 30000
+          },
+          "term" : {
+            "maximum" : 480,
+            "minimum" : 1,
+            "type" : "integer",
+            "description" : "Loan term in months. One of:\n* `1` to `48` - in `1` month interval, or\n* `60` to `108` - in `12` month interval, or\n* `120` to `480` - in `60` month interval\n",
+            "example" : 24
+          },
+          "funding_reason" : {
+            "maxLength" : 1000,
+            "minLength" : 3,
+            "type" : "string",
+            "description" : "Description of what funding will be used for"
+          },
+          "internal_id" : {
+            "maxLength" : 255,
+            "type" : "string",
+            "description" : "Your internal ID",
+            "example" : "AB123456"
+          },
+          "notes" : {
+            "maxLength" : 255,
+            "type" : "string",
+            "description" : "Notes"
+          },
+          "is_test" : {
+            "type" : "boolean",
+            "description" : "When set to true, the application will not be reviewed",
+            "default" : false
+          },
+          "privacy_policy_consent" : {
+            "type" : "boolean",
+            "description" : "When set to true, you are confirming that your client has consented to FasterFinance and its group of companies using their personal information in the ways described in the [Privacy Policy]() and [Terms of Website Use]().\n\n**FasterFinance won't be able to process an application without _privacy_policy_consent_ set to true**"
+          },
+          "cra_checks_consent" : {
+            "type" : "boolean",
+            "description" : "When set to true you are confirming that your client authorises FasterFinance to perform credit reference agency (CRA) searches on the business, directors, any individuals supplied as part of the application, and their financial associates. A record of this search will be recorded against all applicants and may be seen by other companies if they carry out a credit enquiry. Before submitting this application, please confirm that you have obtained the consent of all individuals concerned and provided them a copy of our [Privacy Policy](). For more information on how we and the CRAs use your information, please refer to our [Privacy Policy]().\n\n**FasterFinance won't be able to process an application without _cra_checks_consent_ set to true**"
+          },
+          "external_consent" : {
+            "type" : "boolean",
+            "description" : "If FasterFinance are unable to provide the finance requested, this consent allows us to refer the credit application and personal details to our carefully selected panel of brokers and lenders to assist in obtaining credit."
+          },
+          "company" : {
+            "$ref" : "#/components/schemas/company"
+          }
+        },
+        "description" : "Application object"
+      },
+      "company" : {
+        "required" : [ "directors", "monthly_sales", "registered_address", "same_address", "trading_date" ],
+        "type" : "object",
+        "properties" : {
+          "vat_no" : {
+            "maxLength" : 15,
+            "type" : "string",
+            "description" : "Company Vat Number",
+            "example" : "GB999999973"
+          },
+          "monthly_sales" : {
+            "type" : "number",
+            "description" : "Company monthly sales value",
+            "format" : "double",
+            "example" : 50000
+          },
+          "trading_date" : {
+            "type" : "string",
+            "description" : "When company have started to trade",
+            "format" : "date",
+            "example" : "2012-12-12"
+          },
+          "same_address" : {
+            "type" : "boolean",
+            "description" : "If is set to true, trading address is not required"
+          },
+          "registered_address" : {
+            "$ref" : "#/components/schemas/address"
+          },
+          "trading_address" : {
+            "$ref" : "#/components/schemas/address"
+          },
+          "directors" : {
+            "type" : "array",
+            "minItems" : 1,
+            "uniqueItems" : true,
+            "items" : {
+              "$ref" : "#/components/schemas/person"
+            }
+          },
+          "shareholders" : {
+            "type" : "array",
+            "uniqueItems" : true,
+            "items" : {
+              "$ref" : "#/components/schemas/person"
+            }
+          }
+        },
+        "description" : "Object holding company data"
+      },
+      "address" : {
+        "required" : [ "abode_name_no", "county", "postcode", "street", "street2", "town" ],
+        "type" : "object",
+        "properties" : {
+          "abode_name_no" : {
+            "maxLength" : 50,
+            "type" : "string",
+            "description" : "Building Name or Number   \n**Required for first director*\n",
+            "example" : "51"
+          },
+          "street" : {
+            "maxLength" : 100,
+            "type" : "string",
+            "description" : "Street name   \n**Required for first director*\n",
+            "example" : "John Street"
+          },
+          "street2" : {
+            "maxLength" : 100,
+            "type" : "string",
+            "description" : "Address second line   \n**Required for first director*\n",
+            "example" : "John Street"
+          },
+          "town" : {
+            "maxLength" : 100,
+            "type" : "string",
+            "description" : "Town name   \n**Required for first director*\n",
+            "example" : "Ipswich"
+          },
+          "county" : {
+            "maxLength" : 50,
+            "type" : "string",
+            "description" : "County name   \n**Required for first director*\n",
+            "example" : "Suffolk"
+          },
+          "postcode" : {
+            "maxLength" : 20,
+            "type" : "string",
+            "description" : "Postocode   \n**Required for first director*\n",
+            "example" : "IP3 0AH"
+          }
+        }
+      },
+      "person" : {
+        "allOf" : [ {
+          "required" : [ "date_of_birth", "first_name", "last_name", "residential_type_id" ],
+          "type" : "object",
+          "properties" : {
+            "title_id" : {
+              "$ref" : "#/components/schemas/title_id"
+            },
+            "first_name" : {
+              "$ref" : "#/components/schemas/first_name"
+            },
+            "last_name" : {
+              "$ref" : "#/components/schemas/last_name"
+            },
+            "date_of_birth" : {
+              "type" : "string",
+              "description" : "Person date of birth. Format: YYYY-MM-DD",
+              "format" : "date",
+              "example" : "1980-12-12"
+            },
+            "major_shareholder" : {
+              "type" : "boolean",
+              "description" : "Set to true if person holds 25% or more shares",
+              "default" : false
+            },
+            "residential_type_id" : {
+              "type" : "integer",
+              "description" : "Person Title:\n  * `1` - Homeowner\n  * `2` - Living with Partner\n  * `3` - Tenant\n  * `4` - Other\n",
+              "enum" : [ 1, 2, 3, 4 ]
+            }
+          },
+          "description" : "Person object"
+        }, {
+          "$ref" : "#/components/schemas/address"
+        }, {
+          "required" : [ "move_in_date" ],
+          "type" : "object",
+          "properties" : {
+            "move_in_date" : {
+              "$ref" : "#/components/schemas/move_in_date"
+            },
+            "previous_addresses" : {
+              "type" : "array",
+              "items" : {
+                "allOf" : [ {
+                  "type" : "object",
+                  "description" : "Person previous addresses.\n\n*Required if move_in_date is not over 3 years ago*"
+                }, {
+                  "$ref" : "#/components/schemas/address"
+                }, {
+                  "required" : [ "move_in_date" ],
+                  "type" : "object",
+                  "properties" : {
+                    "move_in_date" : {
+                      "$ref" : "#/components/schemas/move_in_date"
+                    }
+                  }
+                } ]
+              }
+            }
+          }
+        } ]
+      },
+      "title_id" : {
+        "type" : "integer",
+        "description" : "Person Title:\n  * `1` - Mr\n  * `2` - Mrs\n  * `3` - Miss\n  * `4` - Ms\n  * `5` - Dr\n  \n",
+        "enum" : [ 1, 2, 3, 4, 5 ]
+      },
+      "first_name" : {
+        "maxLength" : 80,
+        "type" : "string",
+        "description" : "Person first name",
+        "example" : "John"
+      },
+      "last_name" : {
+        "maxLength" : 80,
+        "type" : "string",
+        "description" : "Person last name",
+        "example" : "Doe"
+      },
+      "move_in_date" : {
+        "type" : "string",
+        "description" : "Approximate move-in date. Format: YYYY-MM-DD",
+        "format" : "date",
+        "example" : "1980-12-12"
+      }
+    },
+    "responses" : {
+      "Unauthorized" : {
+        "description" : "Access token is missing or invalid"
+      },
+      "Unautheticated" : {
+        "description" : "Invalid credentials",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "error" : {
+                  "type" : "string",
+                  "example" : "Invalid credentials"
+                }
+              }
+            }
+          }
+        }
+      },
+      "authToken" : {
+        "description" : "Returned authorisation token to use for all requests",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "token" : {
+                  "type" : "string",
+                  "description" : "Bearer token",
+                  "example" : "d290f1ee6c544b0190e6d701748f0851"
+                }
+              }
+            }
+          }
+        }
+      },
+      "appSubmitted" : {
+        "description" : "Returns application ID and status",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "application_id" : {
+                  "type" : "string",
+                  "description" : "Unique application ID",
+                  "example" : "d290f1ee6c544b0190e6d701748f0851"
+                },
+                "internal_score_status" : {
+                  "type" : "string",
+                  "description" : "Internal checks status",
+                  "example" : "PASSED"
+                }
+              }
+            }
+          }
+        },
+        "links" : {
+          "application_id" : {
+            "$ref" : "#/components/links/applicationId"
+          },
+          "path.application_id" : {
+            "description" : "The `application_id` value returned in the response can be used as the `application_id` parameter in various application related requests.\n",
+            "operationId" : "getApplicationStatus",
+            "parameters" : {
+              "application_id" : "$response.body#/application_id"
+            }
+          }
+        }
+      },
+      "error" : {
+        "description" : "Error response from server",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "error" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ok" : {
+        "description" : "OK response from server",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "message" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    },
+    "links" : {
+      "applicationId" : {
+        "operationId" : "postApplicationDocuments",
+        "parameters" : {
+          "application_id" : "$response.body#/application_id"
+        },
+        "description" : "The `application_id` value returned in the response can be used as the `application_id` parameter in various application related requests."
+      }
+    }
+  }
+}

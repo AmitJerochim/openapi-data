@@ -13,7 +13,5 @@ This repository contains data I collected from swaggerhub running a crawler on i
 It contains the HTML representation of the results found by the searching engine of swaggerhub.
 #### the links.txt file
 a file containing the URLs of all OpenAPI files found in the searching results
-#### the api directory
-this directory contains the openAPI files collected from swaggerhub
-#### the oasFilesJson directory
+#### the oasFiles directory
 this directory contains programmatically converted files from the api directory. I will consider this files in my later analysis.

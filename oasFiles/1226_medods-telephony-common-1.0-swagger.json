@@ -1,0 +1,563 @@
+{
+  "openapi" : "3.0.0",
+  "externalDocs" : {
+    "description" : "Схема взаимодействия с API",
+    "url" : "https://i.imgur.com/XUzlzTn.png"
+  },
+  "info" : {
+    "version" : "1.0",
+    "title" : "Medods API для телефонии",
+    "description" : "API для обработки информации о звонках с сервера АТС",
+    "contact" : {
+      "name" : "Medods Support",
+      "email" : "support@medods.ru"
+    }
+  },
+  "paths" : {
+    "/" : {
+      "post" : {
+        "description" : "",
+        "summary" : "Пример для входящего звонка",
+        "responses" : {
+          "200" : {
+            "description" : "Запрос обработан",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResponseSucces"
+                },
+                "example" : {
+                  "$ref" : "#/components/examples/ResponseSucces"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Ошибка авторизации(неверный токен API)",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "example" : {
+                    "error" : "authorization_failed"
+                  },
+                  "properties" : {
+                    "error" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Ошибка запроса(неверные параметры запроса)",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "example" : {
+                    "error" : "responsibles_not_present"
+                  },
+                  "properties" : {
+                    "error" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "412" : {
+            "description" : "Ошибка предусловия(не включен модуль телефонии/другие ошибки)",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "example" : {
+                    "error" : "module_not_connected"
+                  },
+                  "properties" : {
+                    "error" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "oneOf" : [ {
+                  "$ref" : "#/components/schemas/IncomingCallRequest"
+                }, {
+                  "$ref" : "#/components/schemas/LostCallRequest"
+                }, {
+                  "$ref" : "#/components/schemas/StartedCallRequest"
+                }, {
+                  "$ref" : "#/components/schemas/FinishedCallRequest"
+                }, {
+                  "$ref" : "#/components/schemas/RecordedCallRequest"
+                } ]
+              },
+              "example" : {
+                "oneOf" : [ {
+                  "$ref" : "#/components/examples/IncomingCallRequest"
+                }, {
+                  "$ref" : "#/components/examples/LostCallRequest"
+                }, {
+                  "$ref" : "#/components/examples/StartedCallRequest"
+                }, {
+                  "$ref" : "#/components/examples/FinishedCallRequest"
+                }, {
+                  "$ref" : "#/components/examples/RecordedCallRequest"
+                } ]
+              }
+            }
+          },
+          "required" : true
+        }
+      }
+    }
+  },
+  "tags" : [ ],
+  "servers" : [ {
+    "url" : "http://localhost:3000/api/v2/telephony/common"
+  }, {
+    "url" : "https://localhost:3000/api/v2/telephony/common"
+  } ],
+  "components" : {
+    "securitySchemes" : {
+      "system" : {
+        "type" : "apiKey",
+        "name" : "Authorization",
+        "in" : "header"
+      }
+    },
+    "schemas" : {
+      "IncomingCallRequest" : {
+        "title" : "Входящий звонок",
+        "description" : "Начало сессии звонка, должен быть первым в цепочке обработки звонка",
+        "example" : {
+          "$ref" : "#/components/examples/IncomingCallRequest"
+        },
+        "properties" : {
+          "call" : {
+            "type" : "object",
+            "properties" : {
+              "status" : {
+                "type" : "string",
+                "example" : "incoming_call",
+                "description" : "Статус звонка(всегда incoming_call)"
+              },
+              "call_session_id" : {
+                "type" : "string",
+                "example" : 33334443,
+                "description" : "ID сессии звонка, должен быть одинаковым для цепочки событий конкретного звонка"
+              },
+              "contact_phone_number" : {
+                "type" : "string",
+                "example" : 79999999999,
+                "description" : "Номер телефона клиента"
+              },
+              "called_phone_number" : {
+                "type" : "string",
+                "example" : 79999999999,
+                "description" : "Номер, на который звонит клиент. Используется для связи с  источниками привлечения как номер рекламной компании"
+              }
+            },
+            "required" : [ "status", "contact_phone_number", "call_session_id" ]
+          }
+        },
+        "required" : [ "call" ]
+      },
+      "LostCallRequest" : {
+        "title" : "Звонок пропущен",
+        "description" : "Входящий звонок пропущен, данный запрос завершает цепочку Входящий звонок - Пропущенный звонок",
+        "example" : {
+          "$ref" : "#/components/examples/LostCallRequest"
+        },
+        "type" : "object",
+        "properties" : {
+          "call" : {
+            "type" : "object",
+            "properties" : {
+              "status" : {
+                "type" : "string",
+                "example" : "call_lost",
+                "description" : "Статус звонка(всегда call_lost)"
+              },
+              "call_session_id" : {
+                "type" : "string",
+                "example" : 33334443,
+                "description" : "ID сессии звонка"
+              },
+              "responsibles" : {
+                "type" : "array",
+                "example" : [ {
+                  "id" : 3
+                }, {
+                  "full_name" : "Иванов Иван Иванович"
+                } ],
+                "description" : "Массив ответственных за пропущенный звонок",
+                "items" : {
+                  "type" : "object",
+                  "description" : "Ответственный сотрудник из Медодс, обязательно передать либо ID сотрудника, либо ФИО. Приоритет отдается ID, при необходимости можно поменять в настройках пользователя в Медодс",
+                  "properties" : {
+                    "id" : {
+                      "type" : "integer"
+                    },
+                    "full_name" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            },
+            "required" : [ "status", "call_session_id", "responsibles" ]
+          }
+        },
+        "required" : [ "call" ]
+      },
+      "StartedCallRequest" : {
+        "title" : "Разговор начат",
+        "description" : "Сотрудник поднял трубку, начался разговор между клиентом и сотрудником(Входящий звонок - Звонок начался)",
+        "example" : {
+          "$ref" : "#/components/examples/StartedCallRequest"
+        },
+        "type" : "object",
+        "properties" : {
+          "call" : {
+            "type" : "object",
+            "properties" : {
+              "status" : {
+                "type" : "string",
+                "example" : "call_started",
+                "description" : "Статус звонка(всегда call_started)"
+              },
+              "call_session_id" : {
+                "type" : "string",
+                "example" : 33334443,
+                "description" : "ID сессии звонка"
+              },
+              "responsibles" : {
+                "type" : "array",
+                "example" : [ {
+                  "full_name" : "Иванов Иван Иванович"
+                } ],
+                "description" : "Массив ответственных за принятый звонок(как правило - 1 сотрудник, который взял трубку)",
+                "items" : {
+                  "type" : "object",
+                  "description" : "Ответственный сотрудник из Медодс, обязательно передать либо ID сотрудника, либо ФИО. Приоритет отдается ID, при необходимости можно поменять в настройках пользователя в Медодс",
+                  "properties" : {
+                    "id" : {
+                      "type" : "integer"
+                    },
+                    "full_name" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            },
+            "required" : [ "status", "call_session_id", "responsibles" ]
+          }
+        },
+        "required" : [ "call" ]
+      },
+      "FinishedCallRequest" : {
+        "title" : "Звонок завершен",
+        "description" : "Завершение разговора с клиентом, завершает цепочку Входящий звонок - Звонок начался - Звонок завершен",
+        "example" : {
+          "$ref" : "#/components/examples/FinishedCallRequest"
+        },
+        "type" : "object",
+        "properties" : {
+          "call" : {
+            "type" : "object",
+            "properties" : {
+              "status" : {
+                "type" : "string",
+                "example" : "call_finished",
+                "description" : "Статус звонка(всегда call_finished)"
+              },
+              "call_session_id" : {
+                "type" : "string",
+                "example" : 33334443,
+                "description" : "ID сессии звонка"
+              },
+              "duration" : {
+                "type" : "integer",
+                "example" : 10,
+                "description" : "Продолжительность разговора с момента начала разговора, до его окончания(в секундах)"
+              }
+            },
+            "required" : [ "status", "call_session_id", "duration" ]
+          }
+        },
+        "required" : [ "call" ]
+      },
+      "RecordedCallRequest" : {
+        "title" : "Запись звонка",
+        "description" : "Передать ссылку на запись разговора",
+        "example" : {
+          "$ref" : "#/components/examples/RecordedCallRequest"
+        },
+        "type" : "object",
+        "properties" : {
+          "call" : {
+            "type" : "object",
+            "properties" : {
+              "status" : {
+                "type" : "string",
+                "example" : "call_record_file",
+                "description" : "Статус звонка(всегда call_record_file)"
+              },
+              "call_session_id" : {
+                "type" : "string",
+                "example" : 33334443,
+                "description" : "ID сессии звонка"
+              },
+              "file_link" : {
+                "type" : "string",
+                "example" : "http://localhost/public/call_record.mp3",
+                "description" : "Ссылка на файл с записью разговора"
+              }
+            },
+            "required" : [ "status", "call_session_id", "file_link" ]
+          }
+        },
+        "required" : [ "call" ]
+      },
+      "ResponseSucces" : {
+        "title" : "Обработанный ответ",
+        "description" : "Ответ от сервера, в случае успешной обработки запроса",
+        "type" : "object",
+        "example" : {
+          "$ref" : "#/components/examples/ResponseSucces"
+        },
+        "properties" : {
+          "message" : {
+            "type" : "string",
+            "example" : "call_handled",
+            "description" : "Сообщение об успешной обработке события"
+          },
+          "call" : {
+            "$ref" : "#/components/schemas/Call"
+          }
+        }
+      },
+      "Call" : {
+        "title" : "Звонок",
+        "description" : "Информация об обрабатываемом звонке",
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "ID звонка",
+            "example" : 11523
+          },
+          "client_id" : {
+            "type" : "integer",
+            "description" : "ID клиента, если его номер есть в БД Медодса",
+            "example" : 101
+          },
+          "result" : {
+            "type" : "string",
+            "example" : "refused",
+            "description" : "Результат звонка(Завершен/В процессе/Записан на прием/Отклонен)"
+          },
+          "duration" : {
+            "type" : "integer",
+            "example" : 10,
+            "description" : "Время разговора в секундах(От момента начала разговора, до завершения)"
+          },
+          "created_at" : {
+            "type" : "string",
+            "example" : "2019-02-07T12:19:58.549+03:00",
+            "description" : "Время создания звонка(UTC)"
+          },
+          "updated_at" : {
+            "type" : "string",
+            "example" : "2019-02-07T15:10:57.756+03:00",
+            "description" : "Время последнего изменения звонка(UTC)"
+          },
+          "call_type" : {
+            "type" : "string",
+            "example" : "incoming",
+            "description" : "Тип звонка(Входящий/Исходящий)"
+          },
+          "status" : {
+            "type" : "string",
+            "example" : "accepted",
+            "description" : "Статус звонка(Принят/Пропущен)"
+          },
+          "refuse_result_id" : {
+            "type" : "integer",
+            "example" : 1,
+            "description" : "ID причины отказа звонка(Только для результата Отклонен)"
+          },
+          "call_session_id" : {
+            "type" : "integer",
+            "example" : 3334443,
+            "description" : "ID сессии звонка из АТС, должен быть уникальным"
+          },
+          "phone" : {
+            "type" : "string",
+            "example" : 79876543322,
+            "description" : "Номер телефона клиента"
+          },
+          "clinic_id" : {
+            "type" : "integer",
+            "example" : 1,
+            "description" : "ID клиники, в которой находится ответственный сотрудник"
+          },
+          "note" : {
+            "type" : "string",
+            "example" : "Не устроило время",
+            "description" : "Комментарий к причине отказа(Только для результата Отклонен)"
+          },
+          "file_link" : {
+            "type" : "string",
+            "example" : "http://localhost:3000/public/call_recording.mp3",
+            "description" : "Ссылка на файл записи звонка"
+          },
+          "responsibles" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Responsible"
+            }
+          }
+        }
+      },
+      "Responsible" : {
+        "title" : "Ответственный",
+        "description" : "Ответственный за обработку звонка сотрудник",
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "example" : 3,
+            "description" : "ID сотрудника в Медодс"
+          },
+          "surname" : {
+            "type" : "string",
+            "example" : "Иванов",
+            "description" : "Фамилия сотрудника"
+          },
+          "name" : {
+            "type" : "string",
+            "example" : "Иван",
+            "description" : "Имя сотрудника"
+          },
+          "second_name" : {
+            "type" : "string",
+            "example" : "Иванович",
+            "description" : "Отчество сотрудника"
+          },
+          "phone" : {
+            "type" : "string",
+            "example" : 79999999999,
+            "description" : "Телефон сотрудника"
+          },
+          "email" : {
+            "type" : "string",
+            "example" : "ivanov@mail.ru",
+            "description" : "E-mail сотрдуника"
+          },
+          "current_clinic_id" : {
+            "type" : "integer",
+            "example" : 1,
+            "description" : "ID текущей клиники сотрудника"
+          },
+          "common_telephony_id" : {
+            "type" : "integer",
+            "example" : 3,
+            "description" : "ID сотрудника, который используется данным API для определения пользователя, по умолчанию совпадает с ID сотрудника, возможно указать необходимый"
+          }
+        }
+      }
+    },
+    "examples" : {
+      "IncomingCallRequest" : {
+        "value" : {
+          "call" : {
+            "status" : "incoming_call",
+            "call_session_id" : 33334443,
+            "contact_phone_number" : 79999999999
+          }
+        }
+      },
+      "LostCallRequest" : {
+        "value" : {
+          "call" : {
+            "status" : "call_lost",
+            "call_session_id" : 33334442,
+            "responsibles" : [ {
+              "id" : 3
+            }, {
+              "full_name" : "Петров Петр Петрович"
+            } ]
+          }
+        }
+      },
+      "StartedCallRequest" : {
+        "value" : {
+          "call" : {
+            "status" : "call_started",
+            "call_session_id" : 33334442,
+            "responsibles" : [ {
+              "id" : 3
+            }, {
+              "full_name" : "Петров Петр Петрович"
+            } ]
+          }
+        }
+      },
+      "FinishedCallRequest" : {
+        "value" : {
+          "call" : {
+            "status" : "call_finished",
+            "call_session_id" : 33334443,
+            "duration" : 10
+          }
+        }
+      },
+      "RecordedCallRequest" : {
+        "value" : {
+          "call" : {
+            "status" : "call_record_file",
+            "call_session_id" : 33334443,
+            "file_link" : "http://localhost/public/call_record.mp3"
+          }
+        }
+      },
+      "ResponseSucces" : {
+        "value" : {
+          "message" : "call_handled",
+          "call" : {
+            "id" : 1518,
+            "created_at" : "2019-02-07T10:55:34.416+03:00",
+            "updated_at" : "2019-02-07T10:55:34.416+03:00",
+            "call_type" : "incoming",
+            "status" : null,
+            "clinic_id" : null,
+            "result" : null,
+            "client_id" : 102,
+            "refuse_result_id" : null,
+            "duration" : null,
+            "call_session_id" : 33334443,
+            "phone" : 79999999999,
+            "deleted_at" : null,
+            "note" : null,
+            "file_link" : null,
+            "responsibles" : [ ]
+          }
+        }
+      }
+    }
+  }
+}

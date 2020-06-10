@@ -1,0 +1,872 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/ORBCOMM/ORBCOMM_AIS_API/1.0.0"
+  } ],
+  "info" : {
+    "description" : "This is an addition to the current version of the ORBCOMM API to access AIS data. The main features of this updated API are\n1. Each account can have up to 3 areas stored in its profile. Each of the area is defined by a polygon of no more than 25 vertices.\n2. The areas are created by ORBCOMM based on contractual agreements and are **not modifiable** by the account owner.\n3. Each account can have a stored list of vessels (either defined by MMSI or IMO). The maximum number of vessels in the list is defined by ORBCOMM based on contractual agreements with a maximum of 10,000 vessels. The account owner can add and remove vessels from the list\n4. The account owner can retrieve the latest position of each vessels in its stored list and / or in one of his area within the last 24 hours or less\n5. The response to the query is \"*immediate*\" and there is no need to probe the server for the availability of the response.",
+    "version" : "2.0.10",
+    "title" : "ORBCOMM AISVDS API V2",
+    "contact" : {
+      "email" : "service.customer@orbcomm.com"
+    }
+  },
+  "tags" : [ {
+    "name" : "List Management",
+    "description" : "Each account can have a single stored list of vessel. The list can be modified by the account owner using this API. The maximum number of vessels in the list is set by ORBCOMM per account."
+  }, {
+    "name" : "Area Management",
+    "description" : "Access to the areas associated with the account. Each account can have up to 3 areas and each area is defined by a polygon with a maximum of 25 vertices"
+  }, {
+    "name" : "Vessels In List",
+    "description" : "Access to information related to the vessels in the stored list"
+  }, {
+    "name" : "Vessels In Area",
+    "description" : "Access to information related to the vessels in the stored area and optionally in the stored list."
+  } ],
+  "paths" : {
+    "/vessellist/add" : {
+      "put" : {
+        "tags" : [ "List Management" ],
+        "summary" : "Add vessels to the account stored list.",
+        "description" : "If there are duplicate vessels or if vessels are already in the stored list, they will be ignored. If the same vessel is included in both the MMSI list and the IMO list, results will be duplicated. The server processes duplicates before determining if the list length is exceeded.",
+        "operationId" : "addVessels",
+        "requestBody" : {
+          "description" : "Provide the credentials and the list of vessel",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/credentials"
+                }, {
+                  "$ref" : "#/components/schemas/listName"
+                }, {
+                  "$ref" : "#/components/schemas/vesselList"
+                } ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "All MMSI and IMO in the list were added",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/successList"
+                }
+              }
+            }
+          },
+          "206" : {
+            "description" : "Not all vessels were added to the stored list",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/successList"
+                },
+                "example" : {
+                  "nbrVessels" : 25,
+                  "nbrFailedToAdd" : 1,
+                  "nbrFailedToRemove" : 0
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Account already contains a list with the specified name.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/failure"
+                },
+                "example" : {
+                  "errorDescription" : "Account already contains a list: Indian Ocean Tankers"
+                }
+              }
+            }
+          },
+          "410" : {
+            "description" : "List exceeded maximum length. No vessel were inserted in the list.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/failure"
+                },
+                "example" : {
+                  "errorDescription" : "List exceeds maximum length"
+                }
+              }
+            }
+          },
+          "411" : {
+            "description" : "List contains an invalid MMSI or IMO number. Maximum MMSI length is 10. Maximum IMO length is 7. No vessels where inserted in the list.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/failure"
+                },
+                "example" : {
+                  "errorDescription" : "List contains an invalid MMSI or IMO number. Maximum MMSI length is 10. Maximum IMO length is 7"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vessellist/list" : {
+      "post" : {
+        "tags" : [ "List Management" ],
+        "summary" : "List names of the account stored lists.",
+        "description" : "Returns list names of the vessel lists created by the account holder. These lists are used adding vessels.",
+        "operationId" : "vesselLists",
+        "requestBody" : {
+          "description" : "Provide the credentials",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/credentials"
+                } ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "List names of the account stored lists",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/storedLists"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No stored vessel lists found.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/failure"
+                },
+                "example" : {
+                  "errorDescription" : "No vessel list found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vessellist/remove" : {
+      "post" : {
+        "tags" : [ "List Management" ],
+        "summary" : "Remove vessels from the stored list.",
+        "description" : "Vessels which are requested to be removed but are not in the stored list are ignored. A vessel needs to be removed the same way as it was added either by MMSI or by IMO.",
+        "operationId" : "removeVessels",
+        "requestBody" : {
+          "description" : "Provide the credentials and the list of vessel",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/credentials"
+                }, {
+                  "$ref" : "#/components/schemas/listName"
+                }, {
+                  "$ref" : "#/components/schemas/vesselList"
+                } ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "All MMSI and IMO in the list were removed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/successList"
+                }
+              }
+            }
+          },
+          "206" : {
+            "description" : "Not all vessels were removed. This typically occurs when vessels which are not in the list are requested to be removed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/successList"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "The listName specified does not exists",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/failure"
+                },
+                "example" : {
+                  "errorDescription" : "The listName was not found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vessellist/clear" : {
+      "post" : {
+        "tags" : [ "List Management" ],
+        "summary" : "Remove all vessels from the stored list.",
+        "description" : "Completely empties the stored list.",
+        "operationId" : "clearVessels",
+        "requestBody" : {
+          "description" : "Provide the credentials and the list of vessel",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/credentials"
+                }, {
+                  "$ref" : "#/components/schemas/listName"
+                } ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Stored vessel list has been cleared",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/successList"
+                },
+                "example" : {
+                  "error" : false,
+                  "nbrVessels" : 0
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "The listName specified does not exists",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/failure"
+                },
+                "example" : {
+                  "errorDescription" : "The listName was not found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vessellist/getVessels" : {
+      "post" : {
+        "tags" : [ "Vessels In List" ],
+        "summary" : "Retrieves latest position of all vessels in the list.",
+        "description" : "The latest position of the vessels in the list which occurred less than the lookBack interval before the current date are retrieved. The lookBack interval can be adjusted from 5 minutes to 24 hours.",
+        "operationId" : "getListVessels",
+        "requestBody" : {
+          "description" : "Provide the credentials and the list of vessel",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/credentials"
+                }, {
+                  "$ref" : "#/components/schemas/listName"
+                }, {
+                  "$ref" : "#/components/schemas/lookBackInterval"
+                } ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Returns the dynamic, static and voyage information of the vessels in the area",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/vesselDataset"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "The listName specified does not exists or does not contain any vessels",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/failure"
+                },
+                "example" : {
+                  "errorDescription" : "The specified list contains no vessel or The listName was not found"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/area" : {
+      "post" : {
+        "tags" : [ "Area Management" ],
+        "summary" : "View all areas associated with the account",
+        "description" : "Retrieves the polygon of each of the area associated with the account.",
+        "requestBody" : {
+          "description" : "Provide the credentials and the list of vessel",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/credentials"
+                } ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Returns all the definition of all the areas associated with the account",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/areaList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/area/{areaName}" : {
+      "post" : {
+        "tags" : [ "Vessels In Area" ],
+        "summary" : "Retrieve vessels from an area",
+        "description" : "The latest position and information (within the lookBackTime) of all vessels in the area specified are retrieved.",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "areaName",
+          "description" : "Name of the area from which we want to retrieve the vessel positions",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "Gulf of Mexico"
+        } ],
+        "requestBody" : {
+          "description" : "Provide the credentials, the lookback interval as well as whether the search should be restricted to the vessels in the customer list.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "Credentials, lookback interval and additional filter by list",
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/credentials"
+                }, {
+                  "$ref" : "#/components/schemas/lookBackInterval"
+                }, {
+                  "$ref" : "#/components/schemas/listFilter"
+                } ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Returns the dynamic, static and voyage information of the vessels in the area",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/vesselDataset"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "The area requested does not exist",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/failure"
+                },
+                "example" : {
+                  "errorDescription" : "The area requested does not exist"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "vesselDataset" : {
+        "description" : "List of complete vessel data",
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/components/schemas/vesselData"
+        }
+      },
+      "vesselData" : {
+        "type" : "object",
+        "description" : "Contains the full set of information about a vessel. The information is divided in 3 sections.\n1. dynamic information related to the vessel position, speed and others. This section will be omitted if no dynamic information is available. Some internal fields of the section may be also omitted if their value indicates \"unavailable\" or is invalid. For example, latitude and longitude are omitted if their raw values in the M1371 message is 91 or 181.\n2. static information containing vessel name, dimension and others. This section will be omitted if no static information is available. Some internal fields of the section may be also omitted if their value indicates \"unavailable\" or is invalid.\n3. voyage information containing the vessel destination and ETA. This section will be omitted if no voyage information is available. Some internal fields of the section may be also omitted if their value indicates \"unavailable\" or is invalid.",
+        "properties" : {
+          "dynamic" : {
+            "$ref" : "#/components/schemas/dynamicInfo"
+          },
+          "static" : {
+            "$ref" : "#/components/schemas/staticInfo"
+          },
+          "voyage" : {
+            "$ref" : "#/components/schemas/voyageInfo"
+          }
+        }
+      },
+      "dynamicInfo" : {
+        "type" : "object",
+        "required" : [ "mmsi", "lat", "lon", "date" ],
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Date and time when the message was transmitted",
+            "example" : "2019-05-10T10:34:35Z"
+          },
+          "mmsi" : {
+            "type" : "string",
+            "format" : "mmsi",
+            "pattern" : "\\d{9,10}",
+            "example" : 566899000
+          },
+          "stationType" : {
+            "description" : "Station type indicates what class type the vessel is. The interpretation of the \"type\" field in the static section depends upon the station type.",
+            "type" : "string",
+            "enum" : [ "class a", "class b", "base station", "aton", "sar", "class a lr" ]
+          },
+          "navStatus" : {
+            "type" : "string",
+            "enum" : [ "under way using engine", "at anchor", "not under command", "restricted manoeuvrability", "constrained by her draught", "moored", "aground", "engaged in fishing", "under way sailing", "not defined" ]
+          },
+          "rot" : {
+            "description" : "Rate of turn in deg per minute. This field is omitted if the rate of turn is not available. Positive values indicates right turn.",
+            "type" : "number",
+            "format" : "float",
+            "minimum" : -708,
+            "maximum" : 708
+          },
+          "turningDirection" : {
+            "type" : "string",
+            "description" : "Indicates if the vessel is turning and the direction of the turn. 'right' correspond to raw ROT values between  1 and 127, 'left' corresponds to raw ROT values between -127 and -1, 'not turning' corresponds to raw ROT value of 0 and 'not available' corresponds to raw ROT value of -128. The raw ROT values are the encoded values in the ITU message.",
+            "enum" : [ "left", "right", "not turning", "not available" ],
+            "example" : "right"
+          },
+          "sog" : {
+            "type" : "number",
+            "format" : "float",
+            "description" : "Speed over ground in knots. This field is not provided if the speed over ground is not available",
+            "minimum" : 0,
+            "maximum" : 102.2,
+            "example" : 13.5
+          },
+          "posAccuracy" : {
+            "type" : "string",
+            "description" : "Position accuracy of the vessel",
+            "enum" : [ "low", "high" ],
+            "example" : "low"
+          },
+          "lon" : {
+            "type" : "number",
+            "format" : "float",
+            "description" : "Longitude in decimal degrees. This field is omitted if the longitude is not available or has an invalid value. (A value of 181 in the raw ITU message indicates that the longitude is not avaialable)",
+            "minimum" : -180,
+            "maximum" : 180,
+            "example" : 135.44645
+          },
+          "lat" : {
+            "type" : "number",
+            "format" : "float",
+            "description" : "Latitude in decimal degrees. This field is omitted if the latitude is not available or has an invalid value. (A value of 91 in the raw ITU message indicates that the longitude is not avaialable)",
+            "minimum" : -90,
+            "maximum" : 90,
+            "example" : -23.34535
+          },
+          "cog" : {
+            "type" : "number",
+            "format" : "float",
+            "description" : "Course over ground in degrees. This field is omitted if the course over ground is not available",
+            "minimum" : 0,
+            "maximum" : 360,
+            "example" : 234.8
+          },
+          "trueHeading" : {
+            "type" : "integer",
+            "format" : "int16",
+            "description" : "True heading in decimal degrees. This field is omitted if the true heading is not available",
+            "minimum" : 0,
+            "maximum" : 360,
+            "example" : 203
+          },
+          "timestamp" : {
+            "type" : "integer",
+            "description" : "UTC seconds when the report was generated. This field is omitted if the value is not available. This field is not compatible with posSysStatus."
+          },
+          "posSysStatus" : {
+            "type" : "string",
+            "description" : "Status of the positioning system. This field is not compatible with timestamp.",
+            "enum" : [ "manual input", "dead reckoning", "inoperative" ]
+          },
+          "specialManoeuvre" : {
+            "type" : "string",
+            "description" : "Indicates if the vessel is executing a special manoeuvre",
+            "enum" : [ "not available", "not engaged in special manoeuvre", "engaged in special manoeuvre" ]
+          },
+          "raim" : {
+            "type" : "boolean",
+            "description" : "True if the Receiver autonomous integrity monitor is in use, false otherwise",
+            "example" : true
+          }
+        }
+      },
+      "staticInfo" : {
+        "description" : "Latest static information about the vessel. This information is provided only if it is available.",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "UTC Date when this static information was collected",
+            "example" : "2019-05-06T10:00:00Z"
+          },
+          "mmsi" : {
+            "type" : "string",
+            "format" : "mmsi",
+            "pattern" : "\\d{9,10}",
+            "example" : 566899000
+          },
+          "imo" : {
+            "type" : "string",
+            "format" : "imo",
+            "pattern" : "\\d{7}",
+            "description" : "IMO number of the vessel",
+            "example" : 345678.0
+          },
+          "callSign" : {
+            "type" : "string",
+            "description" : "Callsign of the vessels",
+            "example" : "ABCDEFG"
+          },
+          "type" : {
+            "type" : "integer",
+            "description" : "Station type per M1371. The interpretation of this value depends upon the value of \"stationType\". If the station type is \"class a\" or \"class a lr\", this value should be interpreted per table 53 of ITU M1371; if the station type is \"aton\", this value should be interpreted per table 74 or ITU M1371."
+          },
+          "stationType" : {
+            "description" : "Station type indicates what class type the vessel is. The interpretation of the \"type\" field depends upon this value.",
+            "type" : "string",
+            "enum" : [ "class a", "class b", "base station", "aton", "sar", "class a lr" ]
+          },
+          "antToBow" : {
+            "type" : "integer",
+            "description" : "Distance between the GPS antenna and the bow of the vessel",
+            "minimum" : 0,
+            "maximum" : 511,
+            "example" : 145
+          },
+          "antToStern" : {
+            "type" : "integer",
+            "description" : "Distance between the GPS antenna and the stern of the vessel",
+            "minimum" : 0,
+            "maximum" : 511,
+            "example" : 45
+          },
+          "antToPort" : {
+            "type" : "integer",
+            "description" : "Distance between the GPS antenna and the port side of the vessel",
+            "minimum" : 0,
+            "maximum" : 63,
+            "example" : 23
+          },
+          "antToStarboard" : {
+            "type" : "integer",
+            "description" : "Distance between the GPS antenna and the starboard side of the vessel",
+            "minimum" : 0,
+            "maximum" : 63,
+            "example" : 23
+          },
+          "elecPosDevice" : {
+            "type" : "string",
+            "description" : "Electronic position fixing device",
+            "enum" : [ "undefined", "GPS", "GLONASS", "GPS/GLONASS", "Loran-C", "Chayka", "Integrated Nav System", "Surveyed", "Galileo", "Other" ]
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Name of station reported in ITU messages type 5, 19, 21 or 24. Depending upon the \"stationType\", this can be either the name of a vessel or the name of an ATON.",
+            "minLength" : 0,
+            "maxLength" : 20,
+            "example" : "The Goeland"
+          }
+        }
+      },
+      "voyageInfo" : {
+        "description" : "Latest available voyage information for this vessel. This information is provided only if it exists",
+        "properties" : {
+          "date" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "UTC Date when this voyage information was received",
+            "example" : "2019-05-05T12:34:32Z"
+          },
+          "maxDraught" : {
+            "type" : "number",
+            "format" : "float",
+            "description" : "Maximum present static draught in meters",
+            "minimum" : 0,
+            "maximum" : 25.5
+          },
+          "destination" : {
+            "type" : "string",
+            "description" : "Vessel destination",
+            "example" : "Shangai"
+          },
+          "eta" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Estimated Time of Arrival. The year, which is not part of the message is added by the backend.",
+            "example" : "2019-05-06T13:34:34Z"
+          }
+        }
+      },
+      "vesselList" : {
+        "properties" : {
+          "mmsi_list" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "mmsi",
+              "pattern" : "\\d{9,10}"
+            },
+            "example" : [ "645899000", "456898000", "009734234", "0123456789" ],
+            "description" : "List of vessels identified by their MMSI to be included in the stored list"
+          },
+          "imo_list" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "imo",
+              "pattern" : "\\d{7}"
+            },
+            "example" : [ "9888987", "1234557", "0001234" ],
+            "description" : "List of vessels identified by their IMO to be included in the stored list."
+          }
+        }
+      },
+      "successList" : {
+        "properties" : {
+          "nbrVessels" : {
+            "type" : "integer",
+            "format" : "int16",
+            "description" : "Number of vessels in the list",
+            "example" : 25
+          },
+          "nbrFailedToAdd" : {
+            "type" : "integer",
+            "format" : "int16",
+            "description" : "Number of vessels which were not successfully added in an attempt to add vessels to the stored list. This typically occurs when these vessels are already in the stored list.",
+            "example" : 0
+          },
+          "nbrFailedToRemove" : {
+            "type" : "integer",
+            "format" : "int16",
+            "description" : "Number of vessels which were not successfuly removed in an attempt to remove vessels from the stored list. This typically occurs when an attempt is made to remove vessels which are not in the stored list.",
+            "example" : 0
+          }
+        }
+      },
+      "failure" : {
+        "properties" : {
+          "errorDescription" : {
+            "type" : "string",
+            "description" : "Description of the error"
+          }
+        }
+      },
+      "area" : {
+        "description" : "Polygon describing one area assigned to this account",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Mnemonic identifying the area",
+            "example" : "Gulf of Mexixo"
+          },
+          "vertices" : {
+            "type" : "array",
+            "description" : "Vertices of the polygon expressed as a list of lat, lon points in decimal degrees.",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "lat" : {
+                  "type" : "number",
+                  "format" : "double",
+                  "minimum" : -90,
+                  "maximum" : 90,
+                  "example" : 23.534
+                },
+                "lon" : {
+                  "type" : "number",
+                  "format" : "double",
+                  "minimum" : -180,
+                  "maximum" : 180,
+                  "example" : -156.8797
+                }
+              },
+              "minItems" : 3,
+              "maxItems" : 25,
+              "example" : {
+                "lat" : 10.344,
+                "lon" : -234.535
+              }
+            },
+            "example" : [ {
+              "lat" : -10,
+              "lon" : 134.53535
+            }, {
+              "lat" : 23.535,
+              "lon" : -45.535
+            }, {
+              "lat" : 27.9797,
+              "lon" : -47.99
+            } ]
+          }
+        }
+      },
+      "areaList" : {
+        "description" : "List of polygons, where each polygon corresponds to a specific area associated with the account",
+        "properties" : {
+          "list" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/area"
+            }
+          }
+        }
+      },
+      "credentials" : {
+        "description" : "Credentials required to access the API",
+        "properties" : {
+          "api_key" : {
+            "type" : "string",
+            "format" : "uuid",
+            "minLength" : 36,
+            "maxLength" : 36,
+            "description" : "Key associated with the account. This key is provided by ORBCOMM during account provisioning.",
+            "pattern" : "[\\dABCDEF]{8}-[\\dABCDEF]{4}-[\\dABCDEF]{4}-[\\dABCDEF]{4}-[\\dABCDEF]{12}",
+            "example" : "88307372-58F0-43A9-A114-9EC2EEF3EDD5"
+          }
+        }
+      },
+      "lookBackInterval" : {
+        "description" : "Amount of time in minutes before the current date to search for vessels",
+        "properties" : {
+          "lookBack" : {
+            "type" : "integer",
+            "format" : "int16",
+            "minimum" : 1,
+            "maximum" : 1440,
+            "description" : "Lookback period during which vessels are searched.",
+            "example" : 45
+          }
+        }
+      },
+      "listFilter" : {
+        "description" : "Only retrieves vessels included in the account stored list",
+        "properties" : {
+          "listFilter" : {
+            "type" : "boolean",
+            "default" : false,
+            "example" : true,
+            "description" : "If true, only the vessels in the customer list are retrieved."
+          }
+        }
+      },
+      "listName" : {
+        "description" : "Identify the list to access",
+        "properties" : {
+          "listName" : {
+            "type" : "string",
+            "default" : "default",
+            "example" : "Indian Ocean Tankers",
+            "description" : "Identify the list to access"
+          }
+        }
+      },
+      "storedLists" : {
+        "description" : "List names of the account stored lists",
+        "properties" : {
+          "list" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "example" : [ "Indian Ocean Tankers" ]
+          }
+        }
+      }
+    },
+    "parameters" : {
+      "latitude" : {
+        "name" : "lat",
+        "in" : "query",
+        "description" : "Latitude in decimal degrees",
+        "schema" : {
+          "type" : "number",
+          "format" : "double"
+        },
+        "example" : "23.54646"
+      },
+      "longitude" : {
+        "name" : "lon",
+        "in" : "query",
+        "description" : "Longitude in decimal degrees",
+        "schema" : {
+          "type" : "number",
+          "format" : "double"
+        },
+        "example" : "-134.53646"
+      }
+    },
+    "requestBodies" : {
+      "vesselList" : {
+        "description" : "List of vessels where vessels are identified either by IMO or MMSI",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/vesselList"
+            }
+          }
+        }
+      },
+      "credentials" : {
+        "description" : "Provides the connection credentials",
+        "required" : true,
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/credentials"
+            }
+          }
+        }
+      }
+    }
+  }
+}

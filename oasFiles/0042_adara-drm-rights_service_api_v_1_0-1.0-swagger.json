@@ -1,0 +1,323 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "description" : "DRM Rights Service API Specifications (Version 1.0)",
+    "title" : "DRM Rights Service API v1.0",
+    "version" : "1.0"
+  },
+  "servers" : [ {
+    "url" : "https://drm-qa.adara.com/drm/rights/v1.0"
+  }, {
+    "url" : "https://drm.adara.com/drm/rights/v1.0"
+  } ],
+  "paths" : {
+    "/fetch" : {
+      "post" : {
+        "description" : "Get the data permissions of eligible dp_ids found by DRM Rights Service for the data use case specified in the request body. The ids of request parameters are available to be looked up in DRM CloudSQL mysql server now and DRM UI in the future. NOTE: The fetch API should be called every time for obtaining the latest dpPermissions and a new delivery token for the data use case, previously obtained eligible dp_ids and delivery_token should not be cached on the caller's end to be reused for the multiple data generation of the same data use case.",
+        "operationId" : "drm-v1-rights-fetch",
+        "tags" : [ "fetch" ],
+        "security" : [ {
+          "oauth2" : [ "fetch:/drm/rights/v1.0/fetch" ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "productId", "dataTypes", "usageTypes", "drmConsumers", "destinations", "dataOrigins" ],
+                "properties" : {
+                  "productId" : {
+                    "description" : "[Required] Id of the Adara product that uses the data",
+                    "type" : "string"
+                  },
+                  "dataTypes" : {
+                    "description" : "[Required] The ids of data types needed for this data use case. Note that at least one data type needs to be specified, otherwise, a bad request error will occur.",
+                    "type" : "array",
+                    "items" : {
+                      "type" : "string"
+                    }
+                  },
+                  "usageTypes" : {
+                    "description" : "[Required] The ids of data usage types involved in this data use case. Note that at least one usage type needs to be specified, otherwise, a bad request error will occur.",
+                    "type" : "array",
+                    "items" : {
+                      "type" : "string"
+                    }
+                  },
+                  "drmConsumers" : {
+                    "$ref" : "#/components/schemas/DrmConsumer"
+                  },
+                  "destinations" : {
+                    "description" : "[Required] The ids of destination platforms where the output data of the data use case will be delivered. Pass an empty list in this field to denote that the output data will be delivered to ALL destination platforms.",
+                    "type" : "array",
+                    "items" : {
+                      "type" : "string"
+                    }
+                  },
+                  "dataOrigins" : {
+                    "description" : "[Required] The ids of geographical region(s) where data providers' data is collected from. Pass an empty list in this field to denote that data collected from ALL geographical regions are needed for the data use case.",
+                    "type" : "array",
+                    "items" : {
+                      "type" : "string"
+                    }
+                  },
+                  "excludedDpIds" : {
+                    "description" : "[optional] The data provider ids to be excluded from the data use case prior in advance and regardless of the eligibility. Note this field should not co-exist with expectedDpIds in the request, otherwise, a bad request error will occur.",
+                    "type" : "array",
+                    "items" : {
+                      "type" : "integer"
+                    }
+                  },
+                  "fetchForDelivery" : {
+                    "description" : "[optional] A flag to indicate whether this fetch request call is driven by an intended data generation and delivery. A delivery_token will be issued and returned in the response if this field is set to true. This field is set to false by default if it's not specified in the request.",
+                    "type" : "boolean"
+                  }
+                }
+              }
+            }
+          },
+          "description" : "The fetch request body contains the data use case parameters."
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/FetchResponseBodyFound"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/FetchResponseBodyBadRequest"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/FetchResponseBodyNotFound"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/validate" : {
+      "post" : {
+        "description" : "Check with DRM rights service for getting the data delivery validated and approved before taking action to deliver the data. NOTE: the delivery_token must be paired with the output data generated for the delivery which this delivery_token was issued for. A delivery_token should neither be reused for delivering multiple data snapshots generated across time for the same data use case nor be used for the output data of other data use case.",
+        "operationId" : "drm-v1-rights-deliver",
+        "tags" : [ "validate" ],
+        "security" : [ {
+          "oauth2" : [ "fetch:validate:/drm/rights/v1.0/validate" ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "deliveryToken", "outputSize" ],
+                "properties" : {
+                  "deliveryToken" : {
+                    "description" : "The delivery_token returned along with the dp_ids which are used for generating the output data in this delivery.",
+                    "type" : "string"
+                  },
+                  "outputSize" : {
+                    "description" : "The size of the output data",
+                    "type" : "integer"
+                  }
+                }
+              }
+            }
+          },
+          "description" : "The request body needs to contain the previously issued delivery_token and the required information."
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/ValidateResponseBodyApproved"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/ValidateResponseBodyBadRequest"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/ValidateResponseBodyUnapproved"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "responses" : {
+      "FetchResponseBodyFound" : {
+        "description" : "A DpPermission list of eligible dp_ids will be returned if there are eligible dp_ids found for the given data use case. A delivery_token will also be issued if fetchForDelivery is set to true in the request body.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "dpPermissions" : {
+                  "description" : "A list of data permission object of the eligible dp_ids to the data use case.",
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DpPermission"
+                  }
+                },
+                "deliveryToken" : {
+                  "description" : "The delivery_token obtained from the preceding Fetch request. It will be used by DRM to retrieve the information provided in the preceding fetch request for validating this data delivery and log the information of the output data for analytics and auditing purpose.",
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "FetchResponseBodyNotFound" : {
+        "description" : "No eligible dp_id is found regarding the given data use case. A short reason and detailed error message will be provided in the response.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "error" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "FetchResponseBodyBadRequest" : {
+        "description" : "No eligible dp_id is found due to invalid parameters or values in the request. A short reason and detailed error message will be provided in the response.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "error" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized" : {
+        "description" : "Unauthorized error",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "error" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ValidateResponseBodyApproved" : {
+        "description" : "The data delivery is validated and approved. The \"approved\" will be set to true in the response.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "deliveryApproved" : {
+                  "description" : "True as the validation is passed and the data delivery is approved.",
+                  "type" : "boolean"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ValidateResponseBodyUnapproved" : {
+        "description" : "The data delivery is unapproved due to a specific reason. The \"approved\" will be set to false in the response and a short reason and detailed error message will be provided in the response.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "deliveryApproved" : {
+                  "description" : "False as the data delivery is unapproved due to a specific reason.",
+                  "type" : "boolean"
+                },
+                "error" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ValidateResponseBodyBadRequest" : {
+        "description" : "The data delivery is unapproved due to invalid parameters or values in the request. The \"approved\" will be set to false in the response and a short reason and detailed error message will be provided in the response.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "deliveryApproved" : {
+                  "description" : "False as the data delivery is unapproved due to a specific reason.",
+                  "type" : "boolean"
+                },
+                "error" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "oauth2" : {
+        "type" : "oauth2",
+        "flows" : {
+          "clientCredentials" : {
+            "tokenUrl" : "/core/v1.0/oauth/token"
+          }
+        }
+      }
+    },
+    "schemas" : {
+      "DpPermission" : {
+        "description" : "The data permissions of a specific data provider granted to this data use case. Full permission is granted if only dpId is included in the object.",
+        "type" : "object",
+        "properties" : {
+          "dpId" : {
+            "description" : "The id of the data provider.",
+            "type" : "integer"
+          }
+        }
+      },
+      "DrmConsumer" : {
+        "description" : "A consumer of the output data of this data use case.",
+        "type" : "object",
+        "properties" : {
+          "drmClients" : {
+            "description" : "Client consumers of the data",
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "drmVerticals" : {
+            "description" : "Vertical consumers of the data",
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "Error" : {
+        "description" : "An error object in response body, it contains a short reason and detailed explanation of the error.",
+        "type" : "object",
+        "properties" : {
+          "reason" : {
+            "description" : "The reason info of the error",
+            "type" : "string"
+          },
+          "message" : {
+            "description" : "The message of the error",
+            "type" : "string"
+          }
+        },
+        "required" : [ "reason", "message" ]
+      }
+    }
+  }
+}

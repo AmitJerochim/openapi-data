@@ -1,0 +1,1990 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "title" : "Zipari Provider Portal v3.0.3 - Payer API Specification",
+    "description" : "Zipari Payer API Specifications defines the REST API's to be implemented by the Payers to integrate with Zipari Portals.\n\nv3.0.2 Change log\n  - This document specification is a representation of what is required to support the Provider Portal v3.0.0\n  - This document specification is a clone of the Member Portal v2.3 API Specification with specific changes being applied to support Provider Portal\n  - All <b>Provider, Facility, Location, and Profile information</b> is stored within the SCAPI Payer Services API at this time (as there was too much information and far too many dependencies to include in this spec)\n  - Individual Changes will be enumarated here: \\\n    -Added fields to Messages object (effective_date, termination_date, updated_at)\\\n    -Modified {member_number} and {claim_number} path parameters to be {id})\\\n    -Added \"provider_id\" to the notifications object\\\n    -Added field to Modifier object (\"description\")\\\n    -Added field to Accumulator object (\"network\")\\\n    -Added the GET member/{id}/pcp call into the spec\\\n    -Added field to the GET Claims filter (\"member_id\")\\\n    -Reverted the GET Member Benefits API to return a collection of Benefits objects\\\n    -Updated the Benefits object to include an array of Accumulator objects\\\n    -References to models now point to centralized store\\\n    \nv3.0.3 Change log\n  - The PlanBenefitDetail Model reference has been added\n  - The Benefit Model reference has been updated to a new version\n  - The Accumulator Model reference has been updated to a new version\n  - The PlanBenefitDetail Model now includes enums for \"participation_level\" (in_network, out_of_network) and \"benefit_applies_to\" (self, family)\n  - The Benefit Model now includes enums for \"participation_level\" (in_network, out_of_network) and \"benefit_applies_to\" (self, family)\n  - The /member/{id}/benefits/ filter criteria has been changed to include \"benefit_period_id\"\n  - The /member/{id}/benefits/ API has been updated to return the updated Benefit Model\n  - The /member/{id}/plan-benefits/ API has been updated to return a PlanBenefitDetail response object\n  - The /member/{id}/plan-benefits/ filter criteria has been changed to remove \"plan_benefit_name\" and include \"benefit_category\"\n",
+    "version" : "3.0.3"
+  },
+  "servers" : [ {
+    "url" : "/"
+  } ],
+  "paths" : {
+    "/members/" : {
+      "get" : {
+        "tags" : [ "member" ],
+        "summary" : "Get the list of Members associated with search criteria",
+        "description" : "Returns a list of member object. \n\nSearch can be performed using Member Last Name, Member Number or by Member Date of Birth. Additional search fields can be included as needed by the configuration of the portal.\n",
+        "operationId" : "members_list",
+        "parameters" : [ {
+          "name" : "last_name",
+          "in" : "query",
+          "description" : "Member's last name to be used for search by last name",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "member_number",
+          "in" : "query",
+          "description" : "Unique member identifier associated with the member",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "date_of_birth",
+          "in" : "query",
+          "description" : "Members date of birth in YYYY-MM-DD format",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "member_name",
+          "in" : "query",
+          "description" : "Fuzzy search on first name and last name fields",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of member objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/MemberModel/10.0.2#/components/schemas/Member"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/{id}/" : {
+      "get" : {
+        "tags" : [ "member" ],
+        "summary" : "Get Member Details by Member Number",
+        "description" : "Returns the Member Information for the specified member id\n\nMember ID is the unique identifier of the member specified by the payer .\n",
+        "operationId" : "members_read",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "The unique identifier of the member to retrieve",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Expected response to a valid request",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/MemberModel/10.0.2#/components/schemas/Member"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/{id}}/pcp/" : {
+      "get" : {
+        "tags" : [ "member" ],
+        "summary" : "Return the Member PCP information for the Member",
+        "description" : "Return the Member PCP information for the Member",
+        "operationId" : "members_pcp_list",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "The unique identifier of the member to retrieve",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Expected response to a valid request",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/MemberPCPModel/10.0.1#/components/schemas/MemberPCP"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/search/" : {
+      "post" : {
+        "tags" : [ "member" ],
+        "summary" : "Member search based on criteria used for member linking",
+        "description" : "Search for a Member based on elements populated in Member object. Typically used for member linking.  \n",
+        "operationId" : "members_search",
+        "requestBody" : {
+          "description" : "Search for member.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/MemberModel/10.0.2#/components/schemas/Member"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "\"Post search results for the member \"\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/MemberModel/10.0.2#/components/schemas/Member"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/{id}/plan-benefits/" : {
+      "get" : {
+        "tags" : [ "policy & benefits" ],
+        "summary" : "Get plan benefit details of plans associated with the member.",
+        "description" : "This API provides all of the plan information and the related benefit details of the plan to be displayed online for the user. \nThe data returned in this API is used only as a static display and not used for any calculation or accumulations.\nIf any calculated values to be displayed, perform the calculation at the payer side and send it as a benefit. \n",
+        "operationId" : "plan_benefits_read",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "unique identifier of the member to retrieve the list of benefits associated with the plan",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "benefit_category",
+          "in" : "query",
+          "description" : "Category of the Benefit that the user is searching",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of plan information objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/PlanBenefitDetailModel/10.0.2#/components/schemas/PlanBenefitDetail"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/policies/" : {
+      "get" : {
+        "tags" : [ "policy & benefits" ],
+        "summary" : "Get list of policies associated with the member",
+        "description" : "The policies API provides the list of policies the member is associated with. This API includes the group information for a group member, all of the coverages associated with the policy and the coverage election of subscribers and their dependents in the form of member coverage.\n",
+        "operationId" : "policies_list",
+        "parameters" : [ {
+          "name" : "member_number",
+          "in" : "path",
+          "description" : "member number to retrieve the list of policies associated with the member",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of policy objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/PolicyModel/10.0.6#/components/schemas/Policy"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/{id}/benefits/" : {
+      "get" : {
+        "tags" : [ "policy & benefits" ],
+        "summary" : "Get plan benefit details of plans associated with the member.",
+        "description" : "This API provides all of the plan information and the related benefit details of the plan to be displayed online for the user. \nThe data returned in this API is used only as a static display.\n",
+        "operationId" : "benefits_read",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "unique identifier of the member to retrieve the list of benefits associated with the member",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "benefit_period_id",
+          "in" : "query",
+          "description" : "ID of the Benefit Period being returned",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Expected response to a valid request",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the total number of objects available to be returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/BenefitModel/10.0.4#/components/schemas/Benefit"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/{id}/benefit-periods/" : {
+      "get" : {
+        "tags" : [ "policy & benefits" ],
+        "summary" : "Get benefit periods associated with the member used for benefit accumulators.",
+        "description" : "Provides benefit period date ranges used for benefit accumulator calculation.\n",
+        "operationId" : "benefitperiod_read",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "member number to retrieve the list of benefit accumulator values associated with the member.",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "member_coverage_id",
+          "in" : "path",
+          "description" : "unique identifier for the member to coverage association.",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of benefit period objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/BenefitPeriodModel/10.0.1#/components/schemas/BenefitPeriod"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/claims/" : {
+      "get" : {
+        "tags" : [ "claims" ],
+        "summary" : "Get a list of claims for the member",
+        "description" : "Returns a list of claims associated with search criteria\n\nSearch can be performed using Member First Name, Last Name, Claim Number or by Claim Status.\n",
+        "operationId" : "claims_list",
+        "parameters" : [ {
+          "name" : "first_name",
+          "in" : "query",
+          "description" : "Member's first name to be used for search by first name",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "last_name",
+          "in" : "query",
+          "description" : "Member's last name to be used for search by last name",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "claim_number",
+          "in" : "query",
+          "description" : "Unique claim number associated with the claim",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "claim_status",
+          "in" : "query",
+          "description" : "Claim status associated with the claim",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "member_id",
+          "in" : "query",
+          "description" : "Unique member identifier when wanting to view a specific Member's claims",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "service_from_date",
+          "in" : "query",
+          "description" : "Service Date From filter in YYYY-MM-DD format",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        }, {
+          "name" : "service_to_date",
+          "in" : "query",
+          "description" : "Service Date To filter in YYYY-MM-DD format",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of claim objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ClaimModel/10.0.6#/components/schemas/Claim"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/claims/{id}/" : {
+      "get" : {
+        "tags" : [ "claims" ],
+        "summary" : "Get claim details for a claim.",
+        "description" : "This API provides all of the details of a claim. The details includes the claim lines associated with the claim.",
+        "operationId" : "claim_read",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "unique identifier of the claim",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Expected response to a valid request",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ClaimDetailModel/10.0.5#/components/schemas/ClaimDetail"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/" : {
+      "get" : {
+        "tags" : [ "document center" ],
+        "summary" : "Get a list of Documents associated with the Member.",
+        "description" : "This API returns a list of document object associated with the member. Additional search filters can be included as part of the configuration, for example, can include a date range search.\n",
+        "operationId" : "documents_list",
+        "parameters" : [ {
+          "name" : "document_category",
+          "in" : "query",
+          "description" : "carrier specific document categorization for filtering. New categories can be included based on configuration.",
+          "required" : true,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "Claims", "Benefits", "Forms", "Tax Documents" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of document objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/DocumentModel/10.0.1#/components/schemas/Document"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{id}/" : {
+      "get" : {
+        "tags" : [ "document center" ],
+        "summary" : "Get document using the document id.",
+        "description" : "This API returns a document object associated with the member for an request to get meta data as application/json.\nThis API endpoint also can be configured to return a binary stream if the response needed is for an applicaion/pdf or image/*.\n",
+        "operationId" : "documents_read",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "unique document identifier to retrieve the associated document.",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "provides the Document object associated with the document id.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/DocumentModel/10.0.1#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/{id}/id-card/" : {
+      "get" : {
+        "tags" : [ "id cards" ],
+        "summary" : "Get Digital ID Card associated with Member",
+        "description" : "Returns the front, back images of the id card and the details of the members.\n",
+        "operationId" : "idcard_view",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "member number to retrieve associated id card",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Expected response to a valid request",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/IDCardModel/10.0.3#/components/schemas/IDCard"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/members/{id}/physical_id_card/" : {
+      "post" : {
+        "tags" : [ "id cards" ],
+        "summary" : "Create a request for id card delivery",
+        "description" : "The physical_id_card endpoint is to request an id card to be mailed to the member. The address can be selected from one of the addresses on the member's profile or can be a temporary address. \n",
+        "operationId" : "physical_id_card",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "member number to request id card for",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Request the id card to be mailed to member.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/PhysicalIDCardRequestModel/10.0.2#/components/schemas/PhysicalIDCardRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Successfully delivered the id card request"
+          }
+        }
+      }
+    },
+    "/messages/" : {
+      "get" : {
+        "tags" : [ "message center" ],
+        "summary" : "Get messages from payer system.",
+        "description" : "This API provides all of the messages for the specific user from the message source system of the payer.\n",
+        "operationId" : "messages_list",
+        "parameters" : [ {
+          "name" : "member_number",
+          "in" : "path",
+          "description" : "member number to retrieve the list of messages associated with the member.",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of message objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/MessageModel/10.0.4#/components/schemas/Message"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "message center" ],
+        "summary" : "Post message from portal to payer system.",
+        "description" : "This API provides all of the message information captured on the portal and submit the same to the payer system.\n",
+        "operationId" : "message_post",
+        "requestBody" : {
+          "description" : "Post new message created by member to the payer system. Message Id field is set as empty and replies attribute is set to null. Parent ID is populated when the member is responding to a message.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/MessageModel/10.0.4#/components/schemas/Message"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Successfully posted the message to the payer system."
+          }
+        }
+      }
+    },
+    "/messages/{id}/" : {
+      "put" : {
+        "tags" : [ "message center" ],
+        "summary" : "Updates a message within a payer system.",
+        "description" : "Updates whether or not a message has been read.\n",
+        "operationId" : "message_put",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "unique document identifier to retrieve the associated document.",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Updates whether or not a message has been read.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/MessageModel/10.0.4#/components/schemas/Message"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Successfully posted the message to the payer system."
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "message center" ],
+        "summary" : "Delete message",
+        "description" : "This API deletes a message.\n",
+        "operationId" : "message_delete",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "id of the message to delete",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success"
+          },
+          "424" : {
+            "description" : "Failed dependency"
+          }
+        }
+      }
+    },
+    "/notifications/" : {
+      "post" : {
+        "tags" : [ "notification center" ],
+        "summary" : "Post notification to Zipari Portal.",
+        "description" : "Payers can use this API to post notification for users. Notifications sent over to Zipari using this API will get displayed on Portal notification center on login.\n",
+        "operationId" : "notification_add",
+        "requestBody" : {
+          "description" : "Create a new notification to Zipari from Payer System.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/NotificationModel/10.0.2#/components/schemas/Notification"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Successfully posted the message to the Zipari."
+          }
+        }
+      }
+    },
+    "/user/preferences/" : {
+      "get" : {
+        "tags" : [ "user preferences" ],
+        "summary" : "Get the list of User Preferences",
+        "description" : "Returns a list of Preference object. \n\nSearch can be filtered using Preference Group \n\nUser identifiers are passed as the header identities object. API developers should use the header to get the user identifier to get the preferences for the user.",
+        "operationId" : "preferences_list",
+        "parameters" : [ {
+          "name" : "preference_group",
+          "in" : "query",
+          "description" : "Preference Group to filter the response specific to the group. Preference Group string is an enum which is defined as part of configuration.",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of user preferences objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/PreferenceModel/10.0.2#/components/schemas/Preference"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "user preferences" ],
+        "summary" : "Post the list of User Preferences (all preferences with all options)",
+        "requestBody" : {
+          "description" : "Sets the list of Preferences and corresponding options. All Preferences with all options will be sent.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/PreferenceModel/10.0.2#/components/schemas/Preference"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "response"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "user preferences" ],
+        "summary" : "Update specific User Preferences",
+        "requestBody" : {
+          "description" : "Updates the Preference options selected by the user.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/PreferenceModel/10.0.2#/components/schemas/Preference"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Successfully updated Preference options"
+          }
+        }
+      }
+    },
+    "/bills/" : {
+      "get" : {
+        "tags" : [ "bills & invoices" ],
+        "summary" : "Get a list of invoices billed to the Member.",
+        "description" : "This API returns a list of Invoices billed to the member.\n",
+        "operationId" : "bills_list",
+        "parameters" : [ {
+          "name" : "bill_date_from",
+          "in" : "query",
+          "description" : "bill date (from) to retrieve the associated invoices.",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "bill_date_to",
+          "in" : "query",
+          "description" : "bill date (to) to retrieve the associated invoices.",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "product_coverage_id",
+          "in" : "query",
+          "description" : "product coverage id to retrieve the associated bills.",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of bill objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/BillModel/10.0.1#/components/schemas/Bill"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments/" : {
+      "get" : {
+        "tags" : [ "payments" ],
+        "summary" : "Get a list of Payments associated with the Member.",
+        "description" : "This API returns a list of Payment object associated with the member.\n",
+        "operationId" : "payments_list",
+        "parameters" : [ {
+          "name" : "payment_date_from",
+          "in" : "query",
+          "description" : "payment date (from) to retrieve the associated payments.",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "payment_date_to",
+          "in" : "query",
+          "description" : "payment date (to) to retrieve the associated payments.",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "product_coverage_id",
+          "in" : "query",
+          "description" : "product coverage id to retrieve the associated payments.",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "ordering",
+          "in" : "query",
+          "description" : "name of field to use when ordering the results. Default sort order is plan name. Default sort type is ascending. If the user selects descending sort order, a hyphen - will be added in front of the ordering key",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "description" : "A page number within the paginated result set.",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "page_size",
+          "in" : "query",
+          "description" : "Number of results to return per page. Default is 10.",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of payments objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/PaymentModel/10.0.1#/components/schemas/Payment"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transfer-of-care/" : {
+      "get" : {
+        "tags" : [ "authorization" ],
+        "summary" : "Get a list Authorization and Referrral Status.",
+        "description" : "This API provides all of data related to authorization status and history, physician referral status and history.  (Transfer of Care).\n",
+        "operationId" : "tocs_list",
+        "parameters" : [ {
+          "name" : "member_number",
+          "in" : "path",
+          "description" : "member number to retrieve the Authorization and Referrral Status.",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "toc_type",
+          "in" : "query",
+          "description" : "Type of the request.",
+          "required" : true,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "authorization", "refferal", "predetermination" ]
+          }
+        }, {
+          "name" : "toc_status",
+          "in" : "query",
+          "description" : "Status used for search query. Optional.",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "approved", "denied", "pending" ]
+          }
+        }, {
+          "name" : "search_start_date",
+          "in" : "query",
+          "description" : "Start Date for search filtering. Optional. Conditionally required if search_end_date is provided.",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "YYYY-MM-DD"
+          }
+        }, {
+          "name" : "search_end_date",
+          "in" : "query",
+          "description" : "End Date for search filtering. Optional. Conditionally required if search_start_date is provided.",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "YYYY-MM-DD"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of transfer-of-care objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/TransferOfCare"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Unauthorized",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Invalid input",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ErrorModel/10.0.2#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/diagnosis/" : {
+      "get" : {
+        "tags" : [ "reference codes" ],
+        "summary" : "Get a list of Diagnosis Codes associated with search criteria",
+        "description" : "Returns a list of Diagnosis objects. \n\nSearch can be performed using Diagnosis Code or Description. \n",
+        "operationId" : "diagnosis_list",
+        "parameters" : [ {
+          "name" : "diagnosis_code",
+          "in" : "query",
+          "description" : "Code to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "diagnosis_description",
+          "in" : "query",
+          "description" : "Description to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of diagnosis objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/DiagnosisModel/10.0.1#/components/schemas/Diagnosis"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/level-of-care/" : {
+      "get" : {
+        "tags" : [ "reference codes" ],
+        "summary" : "Get a list of Level of Care objects associated with search criteria",
+        "description" : "Returns a list of Level of Care objects. \n\nSearch can be performed using Code or Description. \n",
+        "operationId" : "level_of_care_list",
+        "parameters" : [ {
+          "name" : "level_of_care_code",
+          "in" : "query",
+          "description" : "Code to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "level_of_care_description",
+          "in" : "query",
+          "description" : "Description to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of Level of Care objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/LevelOfCareModel/10.0.1#/components/schemas/LevelOfCare"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/procedure/" : {
+      "get" : {
+        "tags" : [ "reference codes" ],
+        "summary" : "Get a list of Procedure Codes associated with search criteria",
+        "description" : "Returns a list of Procedure objects. \n\nSearch can be performed using  Code or Description. \n",
+        "operationId" : "procedure_list",
+        "parameters" : [ {
+          "name" : "procedure_code",
+          "in" : "query",
+          "description" : "Code to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "procedure_description",
+          "in" : "query",
+          "description" : "Description to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of procedure objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ProcedureModel/10.0.1#/components/schemas/Procedure"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/place-of-service/" : {
+      "get" : {
+        "tags" : [ "reference codes" ],
+        "summary" : "Get a list of Place of Service Codes associated with search criteria",
+        "description" : "Returns a list of Place of Service objects. \n\nSearch can be performed using  Code or Description. \n",
+        "operationId" : "place_of_service_list",
+        "parameters" : [ {
+          "name" : "place_of_service_code",
+          "in" : "query",
+          "description" : "Code to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "place_of_service_description",
+          "in" : "query",
+          "description" : "Description to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of Place of Service objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/PlaceOfServiceModel/10.0.1#/components/schemas/PlaceOfService"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/service-type/" : {
+      "get" : {
+        "tags" : [ "reference codes" ],
+        "summary" : "Get a list of Service Types associated with search criteria",
+        "description" : "Returns a list of Service Types objects. \n\nSearch can be performed using  Code or Description. \n",
+        "operationId" : "service_type_list",
+        "parameters" : [ {
+          "name" : "service_type_code",
+          "in" : "query",
+          "description" : "Code to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "service_type_description",
+          "in" : "query",
+          "description" : "Description to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of service type objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ServiceTypeModel/10.0.1#/components/schemas/ServiceType"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/specialty/" : {
+      "get" : {
+        "tags" : [ "reference codes" ],
+        "summary" : "Get a list of Specialties associated with search criteria",
+        "description" : "Returns a list of Specialty objects. \n\nSearch can be performed using  Name or Description. \n",
+        "operationId" : "specialty_list",
+        "parameters" : [ {
+          "name" : "specialty_name",
+          "in" : "query",
+          "description" : "Name to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "specialty_description",
+          "in" : "query",
+          "description" : "Description to be used for search",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "An array of Specialty objects",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "count", "results" ],
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "integer",
+                      "description" : "Count representing the number of objects returned in the results array"
+                    },
+                    "next" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the next set of records"
+                    },
+                    "previous" : {
+                      "type" : "integer",
+                      "description" : "query identifier defined by the api developer for getting the previous set of records"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/SpecialtyModel/10.0.1#/components/schemas/Specialty"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "TransferOfCare" : {
+        "required" : [ "effective_date", "number", "requesting_provider", "service_request", "service_request_date", "servicing_provider", "termination_date", "toc_status", "toc_type", "units" ],
+        "type" : "object",
+        "properties" : {
+          "number" : {
+            "type" : "string",
+            "description" : "Transfer of care reference number / identifier"
+          },
+          "toc_type" : {
+            "type" : "string",
+            "description" : "Type of the transfer of care request.",
+            "enum" : [ "authorization", "refferal", "predetermination" ]
+          },
+          "toc_status" : {
+            "type" : "string",
+            "description" : "Status of the transfer of care request.",
+            "enum" : [ "approved", "denied", "pending" ]
+          },
+          "service_request_date" : {
+            "type" : "string",
+            "description" : "Date of service request",
+            "format" : "YYYY-MM-DD"
+          },
+          "service_request" : {
+            "type" : "string",
+            "description" : "Transfer of care service request details"
+          },
+          "effective_date" : {
+            "type" : "string",
+            "description" : "Transfer of care effective date",
+            "format" : "YYYY-MM-DD"
+          },
+          "termination_date" : {
+            "type" : "string",
+            "description" : "Transfer of care termination date",
+            "format" : "YYYY-MM-DD"
+          },
+          "requesting_provider" : {
+            "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ProviderModel/10.0.2#/components/schemas/Provider"
+          },
+          "servicing_provider" : {
+            "$ref" : "https://api.swaggerhub.com/domains/Zipari-Core-Services/ProviderModel/10.0.2#/components/schemas/Provider"
+          },
+          "requested_unit" : {
+            "type" : "string",
+            "description" : "Transfer of care requested units"
+          },
+          "approved_unit" : {
+            "type" : "string",
+            "description" : "Transfer of care approved units"
+          },
+          "used_unit" : {
+            "type" : "string",
+            "description" : "Transfer of care used units"
+          }
+        }
+      }
+    }
+  }
+}

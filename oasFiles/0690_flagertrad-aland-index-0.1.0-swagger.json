@@ -1,0 +1,135 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "Aland Index",
+    "description" : "Aland index - calculations on carbon footprint transaction's social cost of carbon (SCC)",
+    "termsOfService" : "http://crosskey.io/",
+    "contact" : {
+      "email" : "team.api@crosskey.fi"
+    },
+    "version" : "0.1.0"
+  },
+  "servers" : [ {
+    "url" : "https://api.crosskey.io/aland-index/v0.1.0"
+  } ],
+  "paths" : {
+    "/calculation" : {
+      "post" : {
+        "tags" : [ "Calculations" ],
+        "summary" : "Calculate the Aland index for one or more transactions",
+        "operationId" : "calculate",
+        "requestBody" : {
+          "description" : "Transaction information required to perform the calculation",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "items" : {
+                  "$ref" : "#/components/schemas/CardTransaction"
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Successful calculation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AlandIndex"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid input",
+            "content" : { }
+          }
+        },
+        "security" : [ {
+          "alandindex_auth" : [ "alandindex_calculate" ],
+          "api_key" : [ ]
+        } ]
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "AlandIndex" : {
+        "type" : "object",
+        "properties" : {
+          "referece" : {
+            "type" : "string",
+            "description" : "A reference to the transaction this calculation was based on (from request)"
+          },
+          "carbonFootprint" : {
+            "type" : "number",
+            "description" : "The transaction's CO2 footprint in grams"
+          },
+          "carbonSocialCost" : {
+            "$ref" : "#/components/schemas/SCC"
+          }
+        }
+      },
+      "MonetaryAmount" : {
+        "type" : "object",
+        "description" : "Expresses a monetary amount",
+        "properties" : {
+          "value" : {
+            "type" : "number"
+          },
+          "currency" : {
+            "type" : "string",
+            "description" : "Currency in ISO 4217 code format"
+          }
+        }
+      },
+      "SCC" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/MonetaryAmount"
+        } ],
+        "description" : "The transaction's social cost of carbon (SCC)"
+      },
+      "CardTransaction" : {
+        "type" : "object",
+        "properties" : {
+          "referece" : {
+            "type" : "string",
+            "description" : "Any unique referece to the transaction to be used for mapping back with the result on the response"
+          },
+          "mcc" : {
+            "type" : "string",
+            "description" : "Merchant Category Code in ISO 18245 format"
+          },
+          "amount" : {
+            "$ref" : "#/components/schemas/SCC"
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "alandindex_auth" : {
+        "type" : "oauth2",
+        "description" : "OAuth2 Client Credentials with mTLS.",
+        "flows" : {
+          "clientCredentials" : {
+            "tokenUrl" : "https://api.crosskey.io/oidc/v1.0/token",
+            "scopes" : {
+              "alandindex_calculation" : "perform the aland index calculation"
+            }
+          }
+        }
+      },
+      "api_key" : {
+        "type" : "apiKey",
+        "name" : "X-API-Key",
+        "in" : "header"
+      }
+    }
+  }
+}

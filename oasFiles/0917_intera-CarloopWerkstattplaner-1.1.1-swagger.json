@@ -1,0 +1,657 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "url" : "https://test.carloop-vermietsystem.de/ng/api/workshop-planner"
+  } ],
+  "info" : {
+    "description" : "Diese Schnittstelle ermöglicht es Werkstattplanersystemen die Fahrzeugverfügbarkeit aus Carloop heraus abzufragen, und auf diese Fahrzeuge Reservierungen anzulegen. Dabei können grundlegende Fahrzeugfilterungen angewendet werden. Angelegte Reservierungen können bis zum Check-Out der Miete aus dem Werkstattplaner storniert werden. Nach Check-Out der Miete kann nur noch das geplante Rücknahmedatum verändert werden.",
+    "version" : "1.1.1",
+    "title" : "Carloop Werkstattplaner Schnittstelle",
+    "contact" : {
+      "email" : "carloop@intera.de"
+    },
+    "license" : {
+      "name" : "proprietary",
+      "url" : "http://"
+    }
+  },
+  "paths" : {
+    "/vehicles" : {
+      "get" : {
+        "summary" : "Abfrage verfügbarer Fahrzeuge",
+        "description" : "Durch Übergabe eines Reservierungszeitraums sowie optionaler Filterkriterien können verfügbare Fahrzeuge des Händlers abgerufen werden.",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "rentalStart",
+          "description" : "geplanter Beginn der Reservierung",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time",
+            "example" : "2018-10-21T08:00:00+02:00"
+          }
+        }, {
+          "in" : "query",
+          "name" : "rentalEnd",
+          "description" : "geplantes Ende der Reservierung",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time",
+            "example" : "2018-10-21T17:00:00+02:00"
+          }
+        }, {
+          "in" : "query",
+          "name" : "vehicleClasses",
+          "description" : "Einschränkung auf Fahrzeugklassen",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/VehicleClasses"
+            }
+          }
+        }, {
+          "in" : "query",
+          "name" : "vehicleAttributes",
+          "description" : "optionale Anforderungen an Fahrzeugeigenschaften",
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/VehicleAttributes"
+            }
+          }
+        }, {
+          "in" : "query",
+          "name" : "limit",
+          "description" : "Maximale Anzahl Ergebnisse",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 1,
+            "maximum" : 50,
+            "default" : "25"
+          }
+        }, {
+          "in" : "query",
+          "name" : "offset",
+          "description" : "Offset der Ergebnisse für Pagination",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 0,
+            "default" : "0"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Liste freie Fahrzeuge für angefragte Parameter",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "$ref" : "#/components/schemas/ResponseStatus"
+                    },
+                    "paginator" : {
+                      "type" : "object",
+                      "properties" : {
+                        "totalCount" : {
+                          "type" : "integer",
+                          "example" : 45
+                        },
+                        "totalPages" : {
+                          "type" : "integer",
+                          "example" : 2
+                        },
+                        "currentPage" : {
+                          "type" : "integer",
+                          "example" : 1
+                        },
+                        "pageCount" : {
+                          "type" : "integer",
+                          "example" : 25
+                        }
+                      }
+                    },
+                    "vehicles" : {
+                      "type" : "array",
+                      "items" : {
+                        "allOf" : [ {
+                          "$ref" : "#/components/schemas/Vehicle"
+                        }, {
+                          "type" : "object",
+                          "properties" : {
+                            "price" : {
+                              "type" : "number",
+                              "format" : "float",
+                              "example" : 112.25
+                            }
+                          }
+                        } ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/Error400"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/Error500"
+          }
+        }
+      }
+    },
+    "/vehicleRental" : {
+      "post" : {
+        "summary" : "Anlage einer Reservierung auf ein Fahrzeug",
+        "description" : "Unter Bezug auf ein freies Fahrzeug kann eine Reservierung auf diesem angelegt werden.",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "vehicleId", "rentalStart", "rentalEnd" ],
+                "properties" : {
+                  "vehicleId" : {
+                    "description" : "vehicleId aus Vehicle Objekt aus Antwort des /vehicles GET Requests",
+                    "type" : "integer",
+                    "example" : 10512
+                  },
+                  "rentalStart" : {
+                    "description" : "geplanter Beginn der Reservierung",
+                    "type" : "string",
+                    "format" : "date-time",
+                    "example" : "2018-10-21T08:00:00+02:00"
+                  },
+                  "rentalEnd" : {
+                    "description" : "geplantes Ende der Reservierung",
+                    "type" : "string",
+                    "format" : "date-time",
+                    "example" : "2018-10-21T17:00:00+02:00"
+                  },
+                  "internalNotes" : {
+                    "description" : "interne Bemerkung zum Vorgang",
+                    "type" : "string",
+                    "example" : "Unfallersatzfahrzeug"
+                  },
+                  "vehicleIsFlexible" : {
+                    "description" : "Gibt an, ob die Fahrzeugauswahl flexible ist",
+                    "type" : "boolean",
+                    "default" : false
+                  },
+                  "customer" : {
+                    "$ref" : "#/components/schemas/Customer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Erfolgreiche angelegte Reservierung",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "$ref" : "#/components/schemas/ResponseStatus"
+                    },
+                    "vehicleRental" : {
+                      "$ref" : "#/components/schemas/VehicleRental"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/Error400"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Error409"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/Error500"
+          }
+        }
+      }
+    },
+    "/vehicleRental/{vehicleRentalId}" : {
+      "get" : {
+        "summary" : "Abfragen einer Reservierung",
+        "description" : "Über den Werkstattplaner angelegte Reservierungen, können über diese Methode abgefragt werden. Dadurch können Anpassungen am Zeitraum oder am Fahrzeug identifiziert werden.",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "vehicleRentalId",
+          "description" : "vehicleRentalId der aus dem Werkstattplaner angelegten Reservierung",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "example" : 1315432,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Reservierung wurde gefunden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "$ref" : "#/components/schemas/ResponseStatus"
+                    },
+                    "vehicleRental" : {
+                      "$ref" : "#/components/schemas/VehicleRental"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/Error400"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Error409"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/Error500"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Anpassung einer Reservierung",
+        "description" : "Über den Werkstattplaner angelegte Reservierungen, können solange der Check-In noch nicht stattgefunden hat über diese Methode angepasst werden. *Beachte* Es kann zwischenzeitlich in Carloop ein abweichendes Fahrzeug zugeordnet worden sein. Daher wird erneut das Fahrzeug zurückgegeben.",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "vehicleRentalId",
+          "description" : "vehicleRentalId der aus dem Werkstattplaner angelegten Reservierung",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "example" : 1315432,
+            "minimum" : 1
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "rentalEnd" ],
+                "properties" : {
+                  "rentalEnd" : {
+                    "description" : "neues geplantes Rücknahmedatum der Reservierung",
+                    "type" : "string",
+                    "format" : "date-time",
+                    "example" : "2018-10-21T17:30:00+02:00"
+                  },
+                  "vehicleIsFlexible" : {
+                    "description" : "Gibt an, ob die Fahrzeugauswahl flexible ist",
+                    "type" : "boolean",
+                    "example" : false
+                  },
+                  "internalNotes" : {
+                    "description" : "interne Bemerkung zum Vorgang",
+                    "type" : "string",
+                    "example" : "Unfallersatzfahrzeug"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Reservierung erfolgreich geändert",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "$ref" : "#/components/schemas/ResponseStatus"
+                    },
+                    "vehicleRental" : {
+                      "$ref" : "#/components/schemas/VehicleRental"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/Error400"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Error409"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/Error500"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Stornieren einer Reservierung",
+        "description" : "Über den Werkstattplaner angelegte Reservierungen, können solange der Check-Out noch nicht stattgefunden hat über diese Methode storniert werden.",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "vehicleRentalId",
+          "description" : "vehicleRentalId der aus dem Werkstattplaner angelegten Reservierung",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "example" : 1315432,
+            "minimum" : 1
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Reservierung erfolgreich storniert",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "$ref" : "#/components/schemas/ResponseStatus"
+                    },
+                    "vehicleRental" : {
+                      "type" : "object",
+                      "properties" : {
+                        "vehicleRentalId" : {
+                          "type" : "integer",
+                          "description" : "Eindeutiges Identifizierungsmerkmal der Reservierung",
+                          "example" : 1315432
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/Error400"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/Error409"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/Error500"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "VehicleRental" : {
+        "type" : "object",
+        "required" : [ "vehicleRentalId", "price", "rentalStart", "rentalEnd", "rentalStatus" ],
+        "properties" : {
+          "vehicleRentalId" : {
+            "type" : "integer",
+            "description" : "Eindeutiges Identifizierungsmerkmal der Reservierung",
+            "example" : 1315432
+          },
+          "vehicle" : {
+            "$ref" : "#/components/schemas/Vehicle"
+          },
+          "price" : {
+            "type" : "number",
+            "format" : "float",
+            "description" : "Preis für Fahrzeug in angefragtem Zeitraum mit Standardtarif",
+            "example" : 300.25
+          },
+          "rentalStart" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "geplanter Beginn der Reservierung",
+            "example" : "2018-10-21T08:00:00+02:00"
+          },
+          "rentalEnd" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "geplantes Ende der Reservierung",
+            "example" : "2018-10-21T17:00:00+02:00"
+          },
+          "rentalStatus" : {
+            "$ref" : "#/components/schemas/RentalStatus"
+          },
+          "vehicleIsFlexible" : {
+            "description" : "Gibt an, ob die Fahrzeugauswahl des Vorgangs flexibel ist",
+            "type" : "boolean",
+            "default" : false
+          },
+          "internalNotes" : {
+            "type" : "string",
+            "description" : "interne Bemerkung zum Vorgang",
+            "example" : "Unfallersatzfahrzeug"
+          }
+        }
+      },
+      "Vehicle" : {
+        "type" : "object",
+        "required" : [ "vehicleId", "licensePlate", "manufacturerName" ],
+        "properties" : {
+          "vehicleId" : {
+            "type" : "integer",
+            "description" : "Eindeutiges Identifizierungsmerkmal des Fahrzeugs",
+            "example" : 10512
+          },
+          "licencePlate" : {
+            "type" : "string",
+            "description" : "Kennzeichen des Fahrzeugs",
+            "example" : "HU-IN82"
+          },
+          "manufacturerName" : {
+            "type" : "string",
+            "description" : "Name des Fahrzeugherstellers",
+            "example" : "Opel"
+          },
+          "modelName" : {
+            "type" : "string",
+            "description" : "Modellbezeichnung des Fahrzeugs",
+            "example" : "Combo Life (E)(2018->)"
+          }
+        }
+      },
+      "Customer" : {
+        "type" : "object",
+        "properties" : {
+          "dmsCustomerNo" : {
+            "type" : "string",
+            "description" : "Kundennummer eines DMS Kunden, der der Reservierung zugeordnet werden soll. *Wird diese übergeben, werden die verbleibenden Daten des Kunden nicht übernommen.*",
+            "minimum" : 1,
+            "example" : 1021
+          },
+          "gender" : {
+            "type" : "string",
+            "description" : "Anrede des Kunden",
+            "enum" : [ "male", "female", "company", "none", "spouses" ],
+            "default" : "none"
+          },
+          "firstName" : {
+            "type" : "string",
+            "description" : "Vorname des Kunden",
+            "example" : "Mara",
+            "maxLength" : 255
+          },
+          "lastName" : {
+            "type" : "string",
+            "description" : "Nachname des Kunden",
+            "example" : "Muster",
+            "maxLength" : 255
+          },
+          "companyName" : {
+            "type" : "string",
+            "description" : "Firmenname des Kunden",
+            "example" : "Mustermann Immobilien",
+            "maxLength" : 255
+          },
+          "street" : {
+            "type" : "string",
+            "description" : "Straße, Hausnr. des Kunden",
+            "example" : "Zur grünen Eiche 14",
+            "maxLength" : 255
+          },
+          "zipCode" : {
+            "type" : "string",
+            "description" : "Postleitzahl des Kunden",
+            "example" : 84320,
+            "maxLength" : 255
+          },
+          "place" : {
+            "type" : "string",
+            "description" : "Ort des Kunden",
+            "example" : "München",
+            "maxLength" : 255
+          }
+        }
+      },
+      "RentalStatus" : {
+        "type" : "string",
+        "enum" : [ "reserved incomplete", "reserved", "quoted", "printed contract", "active", "returned", "billing outstanding", "done", "cancelled", "deleted" ],
+        "example" : "reserved incomplete",
+        "description" : "Fahrzeug noch nicht übergeben, Miete kann über Schnittstelle storniert werden: Angeboten, Reservierung unvollständig, Reserviert, Mietvertrag gedruckt. Fahrzeug wurde übergeben, Rücknahme ausstehend, Rückgabedatum kann über Schnittstelle angepasst werden: Aktiv. Fahrzeug zurückgenommen, keine Anpassungen über Schnittstelle mehr möglich: Zurückgenommen, Rechnungsstellung ausstehend, Abgeschlossen. Miete wurde entfernt: Storniert, Gelöscht."
+      },
+      "VehicleAttributes" : {
+        "type" : "string",
+        "enum" : [ "hasAc", "hasNavigation", "hasTrailerHitch", "hasAutomaticTransmission", "hasManualTransmission", "hasWinterTires", "hasDiesel", "hasPhone" ]
+      },
+      "VehicleClasses" : {
+        "type" : "string",
+        "enum" : [ "Kleinst", "Klein", "Kompakt", "Mittel", "Premium", "BusseTransporter" ]
+      },
+      "ResponseStatus" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "example" : 200
+          },
+          "message" : {
+            "type" : "string",
+            "example" : "Success"
+          },
+          "uiMessage" : {
+            "type" : "string",
+            "example" : "Die Reservierung wurde erfolgreich angelegt"
+          }
+        },
+        "required" : [ "code", "message" ]
+      }
+    },
+    "responses" : {
+      "Error400" : {
+        "description" : "bad input parameter",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "status" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 400
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "example" : "invalid params"
+                    },
+                    "uiMessage" : {
+                      "type" : "string",
+                      "example" : "Der Parameter X ist ungültig"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error409" : {
+        "description" : "Conflicted parameters",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "status" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 409
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "example" : "invalid params"
+                    },
+                    "uiMessage" : {
+                      "type" : "string",
+                      "example" : "Das Fahrzeug ist in diesem Zeitraum nicht mehr verfügbar"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error500" : {
+        "description" : "internal server error",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "status" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 500
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "example" : "Exception message..."
+                    },
+                    "uiMessage" : {
+                      "type" : "string",
+                      "example" : "Es ist ein unbekannter Fehler in der Verarbeitung aufgetreten"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "ApiKeyAuth" : {
+        "description" : "Zur Identifizierung der Schnittstelle wird je Standort aus Carloop ein Authentifizierungstoken vergeben. Dieses wird zur Autorisierung und Authentifizierung verwendet.",
+        "type" : "apiKey",
+        "in" : "header",
+        "name" : "Rest-Authorization"
+      }
+    }
+  },
+  "security" : [ {
+    "ApiKeyAuth" : [ ]
+  } ]
+}

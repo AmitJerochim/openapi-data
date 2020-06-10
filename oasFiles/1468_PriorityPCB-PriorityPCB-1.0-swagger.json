@@ -1,0 +1,712 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "version" : "1.0",
+    "title" : "PriorityPCB",
+    "description" : "v1.0 Beta of PriorityPCB API"
+  },
+  "paths" : {
+    "/quote/fabrication" : {
+      "post" : {
+        "tags" : [ "quote" ],
+        "summary" : "Obtains a quote for PCB fabrication.",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/FabSpec"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Fabrication Spec Successfully Parsed",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Price"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/quote/assembly" : {
+      "post" : {
+        "tags" : [ "quote" ],
+        "summary" : "Obtains a quote for PCB Assembly Labor",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AssemblySpec"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Quote price successfully obtained",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Price"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/quote/parts" : {
+      "post" : {
+        "tags" : [ "quote" ],
+        "summary" : "Obtains a quote for parts given a BOM",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BOM"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "BOM report successfully obtained",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BOMreport"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/quote/custom" : {
+      "post" : {
+        "tags" : [ "quote" ],
+        "summary" : "Give specs (if outside standard) for custom quote",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/FabSpec"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Specs passed successfully"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    },
+    "/placeOrder" : {
+      "get" : {
+        "tags" : [ "order" ],
+        "summary" : "Get a status update on an order",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "orderId",
+          "schema" : {
+            "type" : "number"
+          },
+          "description" : "The reference ID given when placing an order (6 digits)"
+        }, {
+          "in" : "query",
+          "name" : "orderSource",
+          "schema" : {
+            "type" : "string"
+          },
+          "description" : "The same orderSource given when placing an order"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Status retrieved successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OrderID"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "order" ],
+        "summary" : "Place an order by sending project data",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ProjectSpec"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Order placed successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OrderID"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "OrderID" : {
+        "type" : "object",
+        "properties" : {
+          "orderRefNum" : {
+            "type" : "integer",
+            "description" : "Order Reference Number (use this value as name for project files zip)",
+            "example" : 100055
+          }
+        }
+      },
+      "FabSpec" : {
+        "type" : "object",
+        "properties" : {
+          "createdBy" : {
+            "description" : "Entity sending request for quote",
+            "type" : "string",
+            "example" : "companyABC"
+          },
+          "turntime" : {
+            "description" : "Number of days the board will be shipped in",
+            "type" : "integer",
+            "minimum" : 1,
+            "example" : 3
+          },
+          "numLayers" : {
+            "description" : "Number of layers in the PCB",
+            "type" : "integer",
+            "minimum" : 1,
+            "example" : 2
+          },
+          "material" : {
+            "description" : "material required for PCB",
+            "type" : "string",
+            "example" : "FR4"
+          },
+          "quantity" : {
+            "description" : "Number of boards requested",
+            "type" : "integer",
+            "minimum" : 1,
+            "example" : 5
+          },
+          "boardWidth" : {
+            "description" : "Width of board in INCHES (up to 3 decimal places)",
+            "type" : "number",
+            "minimum" : 0.001,
+            "example" : 3
+          },
+          "boardLength" : {
+            "description" : "Length of board in INCHES (up to 3 decimal places)",
+            "type" : "number",
+            "minimum" : 0.001,
+            "example" : 3
+          },
+          "maskColor" : {
+            "description" : "Solder Mask color",
+            "type" : "string",
+            "default" : "green",
+            "enum" : [ "green", "black", "blue", "clear", "gray", "matte black", "matte blue", "matte green", "matte red", "none", "orange", "pink", "purple", "red", "teal", "white", "yellow" ]
+          },
+          "silkColor" : {
+            "description" : "silk screen color",
+            "type" : "string",
+            "example" : "white",
+            "default" : "white"
+          },
+          "surfaceFinish" : {
+            "description" : "Surface Finish Material",
+            "type" : "string",
+            "default" : "ENIG",
+            "enum" : [ "ENIG", "HASL" ]
+          },
+          "smallestDrill" : {
+            "description" : "smallest hole size (in inches)",
+            "type" : "number",
+            "minimum" : 0.01,
+            "example" : 0.016
+          },
+          "boardThickness" : {
+            "description" : "Thickness of board in inches -- 0.062 is the default",
+            "type" : "number",
+            "minimum" : 0.01,
+            "default" : 0.062,
+            "maximum" : 0.25
+          },
+          "minLine" : {
+            "description" : "Minimum trace width in inches (must be > 0.005 for instant pricing)",
+            "type" : "number",
+            "minimum" : 0.003,
+            "example" : 0.005
+          },
+          "minSpace" : {
+            "description" : "Minimum space width in inches (must be > 0.005 for instant pricing)",
+            "type" : "number",
+            "minimum" : 0.003,
+            "example" : 0.005
+          },
+          "copperWeightInner" : {
+            "description" : "Inner copper weight (in oz)",
+            "type" : "number",
+            "default" : 1.0
+          },
+          "copperWeightOuter" : {
+            "description" : "Outer copper weight (in oz)",
+            "type" : "number",
+            "default" : 1.0
+          },
+          "impedance" : {
+            "description" : "whether impedance control is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "dielectric" : {
+            "description" : "whether dielectric material is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "goldTips" : {
+            "description" : "whether gold tips/fingers are required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "goldThickness" : {
+            "description" : "thickness of gold, if necessary",
+            "type" : "number",
+            "default" : false
+          },
+          "platedEdges" : {
+            "description" : "whether plated edges are required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "plasmaEtch" : {
+            "description" : "whether plasma etching is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "pressFit" : {
+            "description" : "whether press-fit pins are required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "microBga" : {
+            "description" : "whether microBGAs are present",
+            "type" : "boolean",
+            "default" : false
+          },
+          "multiPartSets" : {
+            "description" : "whether multi-part sets are required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "peelableMask" : {
+            "description" : "whether peelable masks are required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "carbonInk" : {
+            "description" : "whether carbon ink is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "jumpScore" : {
+            "description" : "whether jump scoring is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "nonPlatedSlots" : {
+            "description" : "whether non-plated slots are required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "platedSlots" : {
+            "description" : "whether plated slots are required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "countersink" : {
+            "description" : "whether countersinks are required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "counterbore" : {
+            "description" : "whether counterbores are required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "beveling" : {
+            "description" : "whether beveling is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "castellations" : {
+            "description" : "whether castellations are required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "viaInPad" : {
+            "description" : "whether via-in-pad is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "lpiViaPlug" : {
+            "description" : "whether LPI Via Plug is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "epoxyViaFill" : {
+            "description" : "whether epoxy via fill is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "nonPlatedMilling" : {
+            "description" : "whether non-plated milling is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "platedMilling" : {
+            "description" : "whether plated milling is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "cavityMilling" : {
+            "description" : "whether cavity milling is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "xSection" : {
+            "description" : "whether cross-sectioning is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "cOfC" : {
+            "description" : "whether a certicifcate of compliance is required",
+            "type" : "boolean",
+            "default" : false
+          },
+          "buriedViaCount" : {
+            "description" : "count of buried vias",
+            "type" : "integer"
+          },
+          "blindViaCount" : {
+            "description" : "count of blind vias",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "turntime", "numLayers", "quantity", "boardWidth", "boardLength", "createdBy", "boardThickness" ]
+      },
+      "AssemblySpec" : {
+        "description" : "Object containing info necessary to quote assembly labor",
+        "type" : "object",
+        "properties" : {
+          "createdBy" : {
+            "type" : "string",
+            "description" : "Entity sending request for quote",
+            "example" : "companyABC"
+          },
+          "turntime" : {
+            "type" : "integer",
+            "minimum" : 1,
+            "example" : 3
+          },
+          "quantity" : {
+            "type" : "integer",
+            "minimum" : 1,
+            "example" : 5
+          },
+          "doubleSidedSMT" : {
+            "description" : "Are SMT parts placed on the top & bottom of the board?",
+            "type" : "boolean",
+            "example" : true
+          },
+          "numberBomLineItems" : {
+            "description" : "Number of Line Items (unique part numbers) on BOM",
+            "type" : "integer",
+            "minimum" : 1,
+            "example" : 20
+          },
+          "numberSMT" : {
+            "description" : "Total number of SMT parts on BOM",
+            "type" : "integer",
+            "minimum" : 0,
+            "example" : 40
+          },
+          "numberThruHole" : {
+            "description" : "Total number of Thru Hole parts on BOM",
+            "type" : "integer",
+            "minimum" : 0,
+            "example" : 1
+          }
+        },
+        "required" : [ "turntime", "numberBomLineItems", "numberSMT", "numberThruHole", "doubleSidedSMT", "quantity" ]
+      },
+      "Price" : {
+        "description" : "Price returned from quote. If price == -1, a custom quote is required.",
+        "type" : "object",
+        "properties" : {
+          "price" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "price" ]
+      },
+      "BOM" : {
+        "type" : "object",
+        "properties" : {
+          "csv" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "csv" ]
+      },
+      "BOMreport" : {
+        "description" : "report after parsing BOM",
+        "type" : "object",
+        "properties" : {
+          "percentFound" : {
+            "description" : "Percentage of parts available (found & in-stock)",
+            "type" : "number"
+          },
+          "partsReport" : {
+            "type" : "object",
+            "properties" : {
+              "lineItem" : {
+                "description" : "Line number that a part is located at on BOM",
+                "type" : "integer"
+              },
+              "refDes" : {
+                "description" : "Reference Designator of part on board",
+                "type" : "string",
+                "example" : "R1, C2, J3"
+              },
+              "MPN" : {
+                "description" : "Manufacturer Part Number",
+                "type" : "string"
+              },
+              "unitPrice" : {
+                "description" : "Price for a single component",
+                "type" : "number"
+              },
+              "totalPrice" : {
+                "description" : "Price for given quantity of component",
+                "type" : "number"
+              },
+              "alternativeParts" : {
+                "type" : "string"
+              }
+            }
+          }
+        }
+      },
+      "Error" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "message" ]
+      },
+      "ProjectSpec" : {
+        "type" : "object",
+        "properties" : {
+          "orderSource" : {
+            "type" : "string",
+            "description" : "Your company name",
+            "example" : "abc"
+          },
+          "partNumber" : {
+            "type" : "string",
+            "description" : "Project name",
+            "example" : "Test Project"
+          },
+          "partRev" : {
+            "type" : "string",
+            "description" : "Project version",
+            "example" : "v1"
+          },
+          "orderDate" : {
+            "type" : "string",
+            "description" : "Date order was placed in (mm/dd/yyyy) format",
+            "example" : "06/10/2019"
+          },
+          "orderQuantity" : {
+            "type" : "integer",
+            "description" : "Quantity of boards being ordered",
+            "example" : 10
+          },
+          "leadtime" : {
+            "type" : "integer",
+            "description" : "Leadtime for order (days until shipped)",
+            "example" : 3
+          },
+          "billingAddress1" : {
+            "type" : "string",
+            "description" : "Street address for billing",
+            "example" : "1234 Main St."
+          },
+          "billingAddressCity" : {
+            "type" : "string",
+            "description" : "City for billing",
+            "example" : "San Francisco"
+          },
+          "billingAddressStateName" : {
+            "type" : "string",
+            "description" : "Two letter state code for billing",
+            "example" : "CA"
+          },
+          "billingAddressZipCode" : {
+            "type" : "string",
+            "description" : "Zip code for billing",
+            "example" : "94109"
+          },
+          "billingAddressCountryName" : {
+            "type" : "string",
+            "description" : "Country name for billing",
+            "example" : "USA"
+          },
+          "shipVia" : {
+            "type" : "string",
+            "description" : "Shipping method, either 'Fed Ex' or 'USPS'",
+            "example" : "Fed Ex"
+          },
+          "shippingName" : {
+            "type" : "string",
+            "description" : "Name of customer who will receive boards",
+            "example" : "John Smith"
+          },
+          "shippingAddress1" : {
+            "type" : "string",
+            "description" : "Street address for shipping",
+            "example" : "1234 Main St."
+          },
+          "shippingAddressCity" : {
+            "type" : "string",
+            "description" : "City for shipping",
+            "example" : "San Francisco"
+          },
+          "shippingAddressStateName" : {
+            "type" : "string",
+            "description" : "Two letter state code for shipping",
+            "example" : "CA"
+          },
+          "shippingAddressZipCode" : {
+            "type" : "string",
+            "description" : "Zip code for shipping",
+            "example" : "94109"
+          },
+          "shippingAddressCountryName" : {
+            "type" : "string",
+            "description" : "Country name for shipping",
+            "example" : "USA"
+          },
+          "partData" : {
+            "$ref" : "#/components/schemas/FabSpec"
+          },
+          "projectFilesName" : {
+            "type" : "string",
+            "description" : "Name of zip file with project files sent to sftp site",
+            "example" : "TestProjABC.zip"
+          },
+          "verbose" : {
+            "type" : "boolean",
+            "description" : "Optional. If true, will return order ID along with other info relating to placed order.",
+            "default" : false
+          }
+        },
+        "required" : [ "orderSource", "partNumber", "partRev", "orderDate", "orderQuantity", "billingAddress1", "billingAddressCity", "billingAddressStateName", "billingAddressZipCode", "billingAddressCountryName", "shippingAddress1", "shippingAddressCity", "shippingAddressStateName", "shippingAddressZipCode", "shippingAddressCountryName", "partData", "projectFilesName" ]
+      }
+    },
+    "securitySchemes" : {
+      "ApiKeyAuth" : {
+        "type" : "apiKey",
+        "in" : "header",
+        "name" : "x-api-key"
+      }
+    },
+    "responses" : {
+      "UnauthorizedError" : {
+        "description" : "API key is missing or invalid",
+        "headers" : {
+          "WWW_Authenticate" : {
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "BadRequestError" : {
+        "description" : "Invalid request body was sent",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security" : [ {
+    "ApiKeyAuth" : [ ]
+  } ],
+  "servers" : [ {
+    "description" : "Staging Domain",
+    "url" : "https://api.prioritypcb.com/v1/staging"
+  }, {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/PriorityPCB/PriorityPCB/1.0"
+  } ]
+}

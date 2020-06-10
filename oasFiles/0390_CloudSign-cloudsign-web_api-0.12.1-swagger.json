@@ -1,0 +1,2916 @@
+{
+  "openapi" : "3.0.2",
+  "info" : {
+    "version" : "0.12.1",
+    "title" : "クラウドサイン Web API"
+  },
+  "servers" : [ {
+    "url" : "https://api.cloudsign.jp",
+    "description" : "プロダクション環境"
+  }, {
+    "url" : "https://api-sandbox.cloudsign.jp",
+    "description" : "サンドボックス環境"
+  } ],
+  "paths" : {
+    "/token" : {
+      "get" : {
+        "description" : "アクセストークンの取得にはクライアント ID が必要となる。クライアントID はWeb API クライアント ID 確認ページ [https://www.cloudsign.jp/api/clients](https://www.cloudsign.jp/api/clients) にて確認可能。",
+        "parameters" : [ {
+          "name" : "client_id",
+          "in" : "query",
+          "description" : "クライアント ID",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/accessTokenModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "client_id が空の場合は error の値は invalid_request に、不適切な client_id の場合は error の値は invalid_client。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "無効なユーザーのクライアント ID を使用したリクエストの場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "API サーバーの内部的なエラーの場合 error の値は internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "description" : "アクセストークンを取得する。  レスポンスはGETと共通。",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "client_id" : {
+                    "type" : "string"
+                  }
+                },
+                "required" : [ "client_id" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/paths/~1token/get/responses/200"
+          },
+          "400" : {
+            "$ref" : "#/paths/~1token/get/responses/400"
+          },
+          "403" : {
+            "$ref" : "#/paths/~1token/get/responses/403"
+          },
+          "500" : {
+            "$ref" : "#/paths/~1token/get/responses/500"
+          }
+        }
+      }
+    },
+    "/documents" : {
+      "post" : {
+        "description" : "書類の作成",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークン、またはリクエストパラメータが不正な場合、 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "template_id 指定時に指定された書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "GET / POST 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "title" : {
+                    "description" : "書類のタイトル",
+                    "type" : "string"
+                  },
+                  "note" : {
+                    "description" : "契約相手の名称などのメモ。受信者には表示されない",
+                    "type" : "string"
+                  },
+                  "message" : {
+                    "description" : "確認依頼メールに追加されるメッセージ",
+                    "type" : "string"
+                  },
+                  "template_id" : {
+                    "description" : "既存のテンプレートから書類作成を行う場合の元となるテンプレートの書類 ID",
+                    "type" : "string"
+                  },
+                  "can_transfer" : {
+                    "description" : "受信者に転送を許可するフラグ。指定できる値はtrue、またはfalse。trueの代わりに1、t、T、TRUE、True、falseの代わりに0, f, F, FALSE, Falseを指定可能。デフォルトはfalse。",
+                    "type" : "boolean",
+                    "default" : false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get" : {
+        "description" : "書類一覧の取得",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "page",
+          "in" : "query",
+          "allowEmptyValue" : true,
+          "description" : "値を渡さない場合、または不適切な値を渡した場合は 1 を利用する。データ量に対して大きすぎる値を渡した場合は documents の配列は空となる。",
+          "schema" : {
+            "type" : "integer",
+            "default" : 1
+          }
+        }, {
+          "name" : "status",
+          "in" : "query",
+          "allowEmptyValue" : true,
+          "description" : "状態で絞り込みを行う。\n * -1 - 全ての状態\n * 0 - 下書き\n * 1 - 先方確認中\n * 2 - 締結済\n * 3 - 取消、または却下\n * 4 - テンプレート\n",
+          "schema" : {
+            "type" : "integer",
+            "enum" : [ -1, 0, 1, 2, 3, 4 ],
+            "default" : -1
+          }
+        }, {
+          "name" : "with_files",
+          "in" : "query",
+          "allowEmptyValue" : true,
+          "description" : "ファイルの情報が不要な場合は、 y 以外の値を指定する。",
+          "schema" : {
+            "type" : "string",
+            "default" : "y"
+          }
+        }, {
+          "name" : "with_participants",
+          "in" : "query",
+          "allowEmptyValue" : true,
+          "description" : "参加者の情報が不要な場合は、 y 以外の値を指定する。",
+          "schema" : {
+            "type" : "string",
+            "default" : "y"
+          }
+        }, {
+          "name" : "with_shared_templates",
+          "in" : "query",
+          "allowEmptyValue" : true,
+          "description" : "取得対象に書類管理者が共有したテンプレートを含む場合は、 y を指定する。status に 4 を指定した場合のみ有効となる。",
+          "schema" : {
+            "type" : "string",
+            "default" : "n"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentListModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合、 status の値が不適切な場合、 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "GET / POST 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{documentID}" : {
+      "get" : {
+        "description" : "書類のデータ取得",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類が存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "GET / POST / PUT 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "description" : "書類のデータ更新",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークン、またはリクエストパラメータが不正な場合 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類が存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "GET / POST / PUT 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "title" : {
+                    "description" : "書類のタイトル",
+                    "type" : "string"
+                  },
+                  "note" : {
+                    "description" : "契約相手の名称などのメモ。受信者には表示されない",
+                    "type" : "string"
+                  },
+                  "message" : {
+                    "description" : "確認依頼メールに追加されるメッセージ",
+                    "type" : "string"
+                  },
+                  "can_transfer" : {
+                    "description" : "受信者に転送を許可するフラグ。指定できる値はtrue、またはfalse。trueの代わりに1, t, T, TRUE, True、falseの代わりに0, f, F, FALSE, Falseを指定可能。",
+                    "type" : "boolean"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "description" : "書類が下書き状態の場合には書類の送信を、書類が先方確認中状態の場合にはリマインドを行う。",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合または送信者に割り当てられた入力項目の値が設定されていない場合 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類が存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "GET / POST / PUT 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "下書き状態または先方確認中状態でない書類に対して操作をしようとした場合、もしくは参加者（送信者と1人以上の受信者）やファイル（1つ以上）が不足している書類を操作しようとした場合、 error の値は not_acceptable。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{documentID}/attribute" : {
+      "get" : {
+        "description" : "書類情報の取得",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "description" : "書類のID",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentAttributeModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類情報にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類情報が存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "description" : "書類情報が存在しない場合は作成、存在する場合は書類情報を更新します。  \n`Content-Type: application/json` のみリクエストを受け付けます。\nオブジェクトのキーはそれぞれ省略可能です。\n省略された場合は、対応するdocumentAttributeModelの値は変更されません。\n",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentAttributeModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類情報にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/documentAttributeUpsertRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{documentID}/certificate" : {
+      "get" : {
+        "description" : "合意締結証明書の取得",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時 合意締結証明書PDFファイルが返却される。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類が存在しない場合、または書類のステータスが締結済み以外の場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "GET 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{documentID}/decline" : {
+      "put" : {
+        "description" : "自分が送信した先方確認中の書類を却下する。",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常"
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合、却下理由が1000文字以上の場合、書類が先方確認中でない場合 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類が存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "comment" : {
+                    "description" : "却下理由を表す文字列。1000文字未満まで入力可能。",
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{documentID}/files" : {
+      "post" : {
+        "description" : "ファイルの添付。添付するファイルの容量はおおよそ 10MB を上限とする。正確にはリクエストのボディー全体で 10MB を上限としている。送付するファイルの合計サイズは 50MB を上限としている。",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "required" : true,
+          "in" : "path",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合、アップロードしたファイルの内容が空の場合、またはアップロードしたファイルの合計サイズが 30MB を超えた場合、 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類が存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "POST 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "下書き状態でない書類に対して操作をしようとした場合 error の値は not_acceptable。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "413" : {
+            "description" : "リクエストのサイズが大きすぎる場合 error の値は too_large_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "415" : {
+            "description" : "PDF 以外のファイルをアップロードした場合、もしくは Content-Type に multipart/form-data を付与していなかった場合、 error の値は unsupported_media_type。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "name" : {
+                    "type" : "string"
+                  },
+                  "uploadfile" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{documentID}/files/{fileID}" : {
+      "get" : {
+        "description" : "ファイルの取得",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "fileID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/pdf" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類またはファイルが存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "GET 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              },
+              "application/pdf" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "description" : "添付ファイルの削除",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "fileID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類またはファイルが存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "DELETE 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "下書き状態でない書類に対して操作をしようとした場合 error の値は not_acceptable。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{documentID}/participants" : {
+      "post" : {
+        "description" : "宛先の追加",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合、 email または name が空・不適切な場合、すでに宛先に含まれている email を指定した場合、 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類が存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "POST 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "下書き状態でない書類に対して操作をしようとした場合 error の値は not_acceptable。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "email" : {
+                    "description" : "宛先のメールアドレス",
+                    "type" : "string"
+                  },
+                  "name" : {
+                    "description" : "宛先の名前",
+                    "type" : "string"
+                  },
+                  "organization" : {
+                    "description" : "宛先の会社名など",
+                    "type" : "string"
+                  },
+                  "access_code" : {
+                    "description" : "表示をする際に要求されるアクセスコード",
+                    "type" : "string"
+                  },
+                  "language_code" : {
+                    "description" : "受信者の言語設定。指定できる値はja（日本語）、en（英語）、zh-CHS（簡体字）、zh-CHT（繁体字）の４つ。何も設定しない場合の値はja。",
+                    "type" : "string",
+                    "default" : "ja"
+                  }
+                },
+                "required" : [ "email", "name" ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{documentID}/participants/{participantID}" : {
+      "put" : {
+        "description" : "宛先の更新",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "participantID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合、 email が不適切な場合、すでに宛先に含まれている email を指定した場合、 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、宛先操作の際に書類の送信者を対象とした場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類または宛先が存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "PUT / DELETE 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "下書き状態でない書類に対して操作をしようとした場合 error の値は not_acceptable。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "email" : {
+                    "type" : "string"
+                  },
+                  "name" : {
+                    "type" : "string"
+                  },
+                  "organization" : {
+                    "type" : "string"
+                  },
+                  "access_code" : {
+                    "type" : "string"
+                  },
+                  "language_code" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "description" : "宛先の削除",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "participantID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、宛先操作の際に書類の送信者を対象とした場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類または宛先が存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "PUT / DELETE 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "下書き状態でない書類に対して操作をしようとした場合 error の値は not_acceptable。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{documentID}/files/{fileID}/widgets" : {
+      "post" : {
+        "description" : "入力項目の追加",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "fileID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合、 email または name が空・不適切な場合、 page の値が不適切な場合、送信者宛の入力項目で text が空の場合、送信者以外宛の入力項目で text が空でない場合、 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類またはファイルが存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "POST 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "下書き状態でない書類に対して操作をしようとした場合 error の値は not_acceptable。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "participant_id" : {
+                    "type" : "string"
+                  },
+                  "type" : {
+                    "description" : "入力項目の種類を整数で指定。\n* 0 - 押印\n* 1 - フリーテキスト\n* 2 - チェックボックス\n",
+                    "type" : "integer"
+                  },
+                  "page" : {
+                    "description" : "入力項目を設置するページ番号を整数で指定。なお、最初のページを0とする。",
+                    "type" : "integer"
+                  },
+                  "x" : {
+                    "description" : "入力項目を設置する位置のX座標を整数で指定する。なお、 fileID で指定した PDF ファイルの左端を0とする。",
+                    "type" : "integer"
+                  },
+                  "y" : {
+                    "description" : "入力項目を設置する位置のY座標を整数で指定する。なお、 fileID で指定した PDF ファイルの page で指定したページの上端を0とする。",
+                    "type" : "integer"
+                  },
+                  "text" : {
+                    "description" : "入力項目を送信者に割り当てた場合、もしくは任意入力のチェックボックスを受信者に割り当てた場合、入力する内容を指定する。 チェックボックスの場合、1 を指定するとチェックが入り、空文字を指定するとチェックが外れる。 チェックボックスを送信者に割り当てた場合、指定した内容は無視されて 1 (チェック済み) として扱われる。",
+                    "type" : "string"
+                  },
+                  "label" : {
+                    "description" : "入力項目のラベルを指定する。",
+                    "type" : "string"
+                  },
+                  "required" : {
+                    "description" : "type が 2（チェックボックス）の場合に、チェックを必須とするかを設定するフラグ。 指定できる値はtrue(必須)、またはfalse(任意)。 trueの代わりに1、t、T、TRUE、True、falseの代わりに0, f, F, FALSE, Falseを指定可能。 type が 2 以外の場合は無視される。",
+                    "type" : "boolean",
+                    "default" : true
+                  }
+                },
+                "required" : [ "participant_id", "type", "page", "x", "y" ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents/{documentID}/files/{fileID}/widgets/{widgetID}" : {
+      "put" : {
+        "description" : "入力項目の内容変更",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "fileID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "widgetID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合、 email または name が空・不適切な場合、 page の値が不適切な場合、 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類・ファイル、または入力項目が存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "PUT/DELETE 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "下書き状態でない書類に対して操作をしようとした場合 error の値は not_acceptable。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "participant_id" : {
+                    "type" : "string"
+                  },
+                  "type" : {
+                    "type" : "integer"
+                  },
+                  "page" : {
+                    "type" : "integer"
+                  },
+                  "x" : {
+                    "type" : "integer"
+                  },
+                  "y" : {
+                    "type" : "integer"
+                  },
+                  "text" : {
+                    "type" : "string"
+                  },
+                  "label" : {
+                    "description" : "入力項目のラベルを指定する。未指定の場合は元の値を維持する。",
+                    "type" : "string"
+                  },
+                  "required" : {
+                    "description" : "type が 2（チェックボックス）の場合に、チェックを必須とするかを設定するフラグ。 指定できる値はtrue(必須)、またはfalse(任意)。 trueの代わりに1、t、T、TRUE、True、falseの代わりに0, f, F, FALSE, Falseを指定可能。 type が 2 以外の場合は無視される。",
+                    "type" : "boolean"
+                  }
+                },
+                "required" : [ "participant_id", "page" ]
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "description" : "入力項目の削除",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "documentID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "fileID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "widgetID",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合、 email または name が空・不適切な場合、 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "書類にアクセスする権限が無い場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "指定された書類・ファイル、または入力項目が存在しない場合 error の値は not_found。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "PUT/DELETE 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "下書き状態でない書類に対して操作をしようとした場合 error の値は not_acceptable。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/team_documents" : {
+      "get" : {
+        "description" : "メンバー全員がやり取りした書類一覧の取得。この API で返る書類一覧は、書類の状態が「先方確認中」「締結済」「取消、または却下」「インポート書類」のもののみで、下書きやテンプレートなどは含まれない。また、この API の呼び出しは管理者権限を持ったアカウントに限られる。",
+        "security" : [ {
+          "accessTokenAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "name" : "page",
+          "in" : "query",
+          "allowEmptyValue" : true,
+          "description" : "値を渡さない場合、または不適切な値を渡した場合は 1 を利用する。データ量に対して大きすぎる値を渡した場合は documents の配列は空となる。",
+          "schema" : {
+            "type" : "integer",
+            "default" : 1
+          }
+        }, {
+          "name" : "with_files",
+          "in" : "query",
+          "allowEmptyValue" : true,
+          "description" : "値として y を渡した場合のみ、それぞれの書類にファイルの情報を付加する。",
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "with_participants",
+          "in" : "query",
+          "allowEmptyValue" : true,
+          "description" : "値として y を渡した場合のみ、それぞれの書類に参加者の情報を付加する。",
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/documentListModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合、 status の値が不適切な場合、 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "402" : {
+            "description" : "API オプションの契約が無いユーザーからのアクセスの場合 error の値は webapi_option_required。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "管理者権限が無いアカウントでアクセスした場合、IPアドレス制限機能を設定していて、不正なIPアドレスからリクエストした場合 error の値は forbidden。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "GET / POST 以外のメソッドでアクセスした場合 error の値は method_not_allowed。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "error の値は API サーバーの内部的なエラーの場合 internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me" : {
+      "get" : {
+        "description" : "APIを実行しているユーザーのユーザー情報およびチーム情報を返す。",
+        "responses" : {
+          "200" : {
+            "description" : "正常時",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/userModel"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "アクセストークンが適切に設定されていない場合、 status の値が不適切な場合、 error の値は bad_request。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "アクセストークンが無効な場合 error の値は unauthorized。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "API サーバーの内部的なエラーの場合 error の値は internal_server_error。",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/errorModel"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "securitySchemes" : {
+      "accessTokenAuth" : {
+        "type" : "apiKey",
+        "name" : "Authorization",
+        "in" : "header"
+      }
+    },
+    "schemas" : {
+      "accessTokenModel" : {
+        "properties" : {
+          "access_token" : {
+            "description" : "アクセストークンの値",
+            "type" : "string",
+            "minLength" : 32,
+            "maxLength" : 36
+          },
+          "expires_in" : {
+            "description" : "アクセストークンが有効な残り秒数",
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "token_type" : {
+            "type" : "string",
+            "format" : "Bearer",
+            "description" : "Bearer"
+          }
+        }
+      },
+      "errorModel" : {
+        "properties" : {
+          "error" : {
+            "type" : "string",
+            "description" : "エラーの種類"
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "エラーメッセージ"
+          }
+        }
+      },
+      "documentModel" : {
+        "properties" : {
+          "id" : {
+            "description" : "書類ID",
+            "type" : "string",
+            "minLength" : 32,
+            "maxLength" : 36
+          },
+          "user_id" : {
+            "description" : "作成者ID",
+            "type" : "string",
+            "minLength" : 32,
+            "maxLength" : 36
+          },
+          "title" : {
+            "description" : "書類のタイトル",
+            "type" : "string",
+            "minLength" : 0,
+            "maxLength" : 500
+          },
+          "note" : {
+            "description" : "契約相手の名称などのメモ。受信者には表示されない",
+            "type" : "string"
+          },
+          "message" : {
+            "description" : "受信者に対するメッセージ",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "書類の状態:\n * 0 - 下書き\n * 1 - 先方確認中\n * 2 - 締結済\n * 3 - 取消、または却下\n * 4 - テンプレート\n * 13 - インポート書類\n",
+            "type" : "integer",
+            "enum" : [ 0, 1, 2, 3, 4 ],
+            "format" : "int64"
+          },
+          "can_transfer" : {
+            "description" : "転送許可設定",
+            "type" : "boolean"
+          },
+          "sent_at" : {
+            "description" : "送信日時（RFC3339準拠）",
+            "type" : "string",
+            "format" : "YYYY-MM-DDThh:mm:ss.SSSSSSZ"
+          },
+          "last_processed_at" : {
+            "description" : "書類を最後に処理した日時（RFC3339準拠）\ndocumentModel.statusが以下のいずれかである場合は、最後の同意/却下日時。participants中のparticipantModel.processed_atの最新と等しい。\n\nstatus:\n  * 1 - 先方確認中\n  * 2 - 締結済\n  * 3 - 取消、または却下\n  * 13 - インポート書類\n\ndocumentModel.statusが上記のいずれでもない場合は、書類の最終更新日時。\n",
+            "type" : "string",
+            "format" : "YYYY-MM-DDThh:mm:ss.SSSSSSZ"
+          },
+          "created_at" : {
+            "description" : "作成日時（RFC3339準拠）",
+            "type" : "string",
+            "format" : "YYYY-MM-DDThh:mm:ssZ"
+          },
+          "updated_at" : {
+            "description" : "更新日時（RFC3339準拠）",
+            "type" : "string",
+            "format" : "YYYY-MM-DDThh:mm:ssZ"
+          },
+          "participants" : {
+            "description" : "参加者の一覧（作成者を含む）",
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/participantModel"
+            }
+          },
+          "files" : {
+            "description" : "ファイルの一覧",
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/fileModel"
+            }
+          }
+        }
+      },
+      "documentAttributeModel" : {
+        "properties" : {
+          "document_id" : {
+            "description" : "書類のID",
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "管理用タイトル",
+            "type" : "string",
+            "minLength" : 0,
+            "maxLength" : 500
+          },
+          "counterparty" : {
+            "description" : "契約相手の名称",
+            "type" : "string",
+            "minLength" : 0,
+            "maxLength" : 500
+          },
+          "contract_at" : {
+            "description" : "契約締結日 nullを許容する",
+            "type" : "string",
+            "format" : "date",
+            "default" : null
+          },
+          "validity_start_at" : {
+            "description" : "契約開始日 nullを許容する",
+            "type" : "string",
+            "format" : "date",
+            "default" : null
+          },
+          "validity_end_at" : {
+            "description" : "契約終了日 nullを許容する",
+            "type" : "string",
+            "format" : "date",
+            "default" : null
+          },
+          "validity_end_notice_at" : {
+            "description" : "解約通知期限 nullを許容する",
+            "type" : "string",
+            "format" : "date",
+            "default" : null
+          },
+          "auto_update" : {
+            "description" : "自動更新の有無:\n  * 0 - 指定なし\n  * 1 - あり\n  * 2 - なし\n",
+            "type" : "integer",
+            "enum" : [ 0, 1, 2 ]
+          },
+          "local_id" : {
+            "description" : "管理番号",
+            "type" : "string",
+            "minLength" : 0,
+            "maxLength" : 255
+          },
+          "amount" : {
+            "description" : "取引金額 nullを許容する",
+            "type" : "integer",
+            "default" : null
+          },
+          "created_at" : {
+            "description" : "作成日時",
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updated_at" : {
+            "description" : "更新日時",
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "options" : {
+            "description" : "ユーザー定義の項目",
+            "type" : "array",
+            "items" : {
+              "properties" : {
+                "order" : {
+                  "type" : "integer",
+                  "description" : "ユーザー定義の項目の番号",
+                  "minimum" : 1,
+                  "maximum" : 10,
+                  "example" : 1
+                },
+                "content" : {
+                  "type" : "string",
+                  "description" : "ユーザー定義の項目の値",
+                  "minLength" : 0,
+                  "maxLength" : 255
+                }
+              }
+            }
+          }
+        }
+      },
+      "documentAttributeUpsertRequest" : {
+        "description" : "書類情報作成・更新用 オブジェクト",
+        "type" : "object",
+        "properties" : {
+          "title" : {
+            "description" : "管理用タイトル",
+            "type" : "string"
+          },
+          "counterparty" : {
+            "description" : "契約相手の名称",
+            "type" : "string"
+          },
+          "contract_at" : {
+            "description" : "契約締結日 nullを許容する",
+            "type" : "string",
+            "format" : "date",
+            "default" : null
+          },
+          "validity_start_at" : {
+            "description" : "契約開始日 nullを許容する",
+            "type" : "string",
+            "format" : "date",
+            "default" : null
+          },
+          "validity_end_at" : {
+            "description" : "契約終了日 nullを許容する",
+            "type" : "string",
+            "format" : "date",
+            "default" : null
+          },
+          "validity_end_notice_at" : {
+            "description" : "解約通知期限 nullを許容する",
+            "type" : "string",
+            "format" : "date",
+            "default" : null
+          },
+          "auto_update" : {
+            "description" : "自動更新の有無:\n  * 0 - 指定なし\n  * 1 - あり\n  * 2 - なし\n",
+            "type" : "integer",
+            "enum" : [ 0, 1, 2 ]
+          },
+          "local_id" : {
+            "description" : "管理番号",
+            "type" : "string"
+          },
+          "amount" : {
+            "description" : "取引金額 nullを許容する",
+            "type" : "integer",
+            "default" : null
+          },
+          "options" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "order" : {
+                  "type" : "integer",
+                  "description" : "ユーザー定義の項目の番号",
+                  "minimum" : 1,
+                  "maximum" : 10,
+                  "example" : 1
+                },
+                "content" : {
+                  "type" : "string",
+                  "description" : "ユーザー定義の項目の値"
+                }
+              }
+            }
+          }
+        }
+      },
+      "documentListModel" : {
+        "properties" : {
+          "total" : {
+            "description" : "該当する書類の総数",
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "page" : {
+            "description" : "指定されたページ番号。ページあたりの書類数は最大100件。",
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "documents" : {
+            "description" : "書類データ",
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/documentModel"
+            }
+          }
+        }
+      },
+      "participantModel" : {
+        "properties" : {
+          "id" : {
+            "description" : "宛先ID",
+            "type" : "string",
+            "minLength" : 32,
+            "maxLength" : 36
+          },
+          "email" : {
+            "description" : "宛先のメールアドレス",
+            "type" : "string",
+            "format" : "email"
+          },
+          "name" : {
+            "description" : "宛先の名前",
+            "type" : "string"
+          },
+          "organization" : {
+            "description" : "宛先の会社名",
+            "type" : "string"
+          },
+          "order" : {
+            "description" : "書類内の宛先の順序（送信者は 0）",
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "status" : {
+            "description" : "宛先の状態:\n * 0 - アクセス不可\n * 2 - 下書き\n * 3 - 配信待ち\n * 4 - 確認待ち\n * 6 - 送信済み\n * 7 - 確認済み\n * 8 - 押印または入力済み\n * 9 - 却下\n * 10 - キャンセル\n",
+            "type" : "integer",
+            "enum" : [ 0, 2, 3, 4, 6, 7, 8, 9, 10 ]
+          },
+          "access_code" : {
+            "description" : "宛先に設定されているアクセスコード。APIを使用しているユーザーが値を設定した場合のみレスポンスに含まれる。",
+            "type" : "string"
+          },
+          "language_code" : {
+            "description" : "宛先の言語設定。ja（日本語）、en（英語）、zh-CHS（簡体字）、zh-CHT（繁体字）のいずれか。",
+            "type" : "string"
+          },
+          "processed_at" : {
+            "description" : "各受信者による書類の同意/却下日時（RFC3339準拠）",
+            "type" : "string",
+            "format" : "YYYY-MM-DDThh:mm:ss.SSSSSSZ"
+          },
+          "access_expires_at" : {
+            "description" : "URL有効期限（RFC3339準拠）。statusが4の場合のみレスポンスに含まれる。",
+            "type" : "string",
+            "format" : "YYYY-MM-DDThh:mm:ssZ"
+          }
+        }
+      },
+      "fileModel" : {
+        "properties" : {
+          "id" : {
+            "description" : "ファイルの ID",
+            "type" : "string",
+            "minLength" : 32,
+            "maxLength" : 36
+          },
+          "name" : {
+            "description" : "ファイルのタイトル",
+            "type" : "string"
+          },
+          "order" : {
+            "description" : "書類内のファイルの順序",
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "widgets" : {
+            "description" : "入力項目の一覧",
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/widgetModel"
+            }
+          }
+        }
+      },
+      "widgetModel" : {
+        "properties" : {
+          "id" : {
+            "description" : "入力項目の ID",
+            "type" : "string",
+            "minLength" : 32,
+            "maxLength" : 36
+          },
+          "widget_type" : {
+            "description" : "入力項目の種類:\n * 0 - 押印\n * 1 - フリーテキスト\n * 2 - チェックボックス\n",
+            "type" : "integer",
+            "enum" : [ 0, 1, 2 ]
+          },
+          "participant_id" : {
+            "description" : "入力が割り当てられている宛先の ID",
+            "type" : "string",
+            "minLength" : 32,
+            "maxLength" : 36
+          },
+          "file_id" : {
+            "description" : "入力対象のファイルの ID",
+            "type" : "string",
+            "minLength" : 32,
+            "maxLength" : 36
+          },
+          "page" : {
+            "description" : "入力項目が設定されている対象ファイルのページ番号",
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "x" : {
+            "description" : "入力項目左上の対象ファイル・対象ページにおける設置位置の X 座標",
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "y" : {
+            "description" : "入力項目左上の対象ファイル・対象ページにおける設置位置の Y 座標",
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "w" : {
+            "description" : "入力項目の幅",
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "h" : {
+            "description" : "入力項目の高さ",
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "text" : {
+            "description" : "入力項目に入力されたテキスト",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "入力項目の状態:\n  * 0 - 未入力\n  * 1 - 入力済み\n",
+            "type" : "integer",
+            "enum" : [ 0, 1 ]
+          },
+          "label" : {
+            "description" : "入力項目に入力されたラベル",
+            "type" : "string"
+          },
+          "required" : {
+            "description" : "widget_type が 2 (チェックボックス) の場合のみ含まれる、必須/任意の設定:\n  * true - 必須\n  * false - 任意\n",
+            "type" : "boolean"
+          }
+        }
+      },
+      "userModel" : {
+        "properties" : {
+          "id" : {
+            "description" : "ユーザーの ID",
+            "type" : "string",
+            "minLength" : 32,
+            "maxLength" : 36
+          },
+          "email" : {
+            "description" : "ユーザーのメールアドレス",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "ユーザーの名前",
+            "type" : "string"
+          },
+          "organization" : {
+            "description" : "ユーザーの組織の名称",
+            "type" : "string"
+          },
+          "team" : {
+            "description" : "ユーザーが所属するチーム",
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/teamModel"
+            } ]
+          },
+          "authorities" : {
+            "description" : "ユーザーが保持する権限",
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/userAuthoritiesModel"
+            } ]
+          }
+        }
+      },
+      "userAuthoritiesModel" : {
+        "properties" : {
+          "team_administrator" : {
+            "description" : "チーム管理権限。チームの設定変更とメンバー管理が行える。",
+            "type" : "boolean"
+          },
+          "team_document_administrator" : {
+            "description" : "書類管理権限。チーム内で送受信された書類を閲覧できる。",
+            "type" : "boolean"
+          },
+          "document_approver" : {
+            "description" : "承認者。チームの承認機能が有効な場合、書類の宛先に承認者として追加できる。",
+            "type" : "boolean"
+          }
+        }
+      },
+      "teamModel" : {
+        "properties" : {
+          "id" : {
+            "description" : "チームの ID",
+            "type" : "string",
+            "minLength" : 32,
+            "maxLength" : 36
+          },
+          "name" : {
+            "description" : "チームの名前",
+            "type" : "string"
+          }
+        }
+      }
+    }
+  }
+}

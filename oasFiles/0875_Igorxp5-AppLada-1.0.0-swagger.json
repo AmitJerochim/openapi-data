@@ -1,0 +1,1219 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/Igorxp5/AppLada/1.0.0"
+  } ],
+  "info" : {
+    "description" : "This API enable to connect to AppLada server.",
+    "version" : "1.0.0",
+    "title" : "AppLada API",
+    "contact" : {
+      "email" : "you@your-company.com"
+    },
+    "license" : {
+      "name" : "Apache 2.0",
+      "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "tags" : [ {
+    "name" : "credentials",
+    "description" : "Calls to register and acquire credentials"
+  }, {
+    "name" : "live",
+    "description" : "Calls to interact with realtime service"
+  }, {
+    "name" : "matches",
+    "description" : "Match requests"
+  }, {
+    "name" : "users",
+    "description" : "User requests"
+  }, {
+    "name" : "match subscription",
+    "description" : "Match subscriptions requests"
+  }, {
+    "name" : "match chat",
+    "description" : "Match chat requests"
+  } ],
+  "paths" : {
+    "/sign-in" : {
+      "post" : {
+        "tags" : [ "credentials" ],
+        "summary" : "Login to platform",
+        "operationId" : "login",
+        "description" : "By passing user credentials, the request will return a JWT token to be used in requests that require authentication.",
+        "requestBody" : {
+          "description" : "User credentials",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "username", "password" ],
+                "properties" : {
+                  "username" : {
+                    "type" : "string",
+                    "example" : "igorxp5"
+                  },
+                  "password" : {
+                    "type" : "string",
+                    "example" : "123456"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "User autenticated",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "required" : [ "jwt_token", "expiration_time" ],
+                  "properties" : {
+                    "jwt_token" : {
+                      "type" : "string",
+                      "example" : "eyJhbGciOiJIUzI1NiIsInR5cCIXVCJ9..."
+                    },
+                    "expiration_time" : {
+                      "type" : "integer",
+                      "format" : "int64",
+                      "example" : 1578359399
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/400"
+          },
+          "401" : {
+            "description" : "User or password incorrect",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "allOf" : [ {
+                      "$ref" : "#/components/schemas/ResponseError"
+                    }, {
+                      "type" : "object",
+                      "properties" : {
+                        "code" : {
+                          "type" : "integer",
+                          "example" : 5
+                        },
+                        "message" : {
+                          "type" : "string",
+                          "example" : "User or password incorrect"
+                        }
+                      }
+                    } ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sign-up" : {
+      "post" : {
+        "tags" : [ "credentials" ],
+        "summary" : "Create a new account",
+        "operationId" : "createAccount",
+        "description" : "",
+        "requestBody" : {
+          "description" : "Pass data to create a account",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/User"
+                }, {
+                  "type" : "object",
+                  "properties" : {
+                    "google_account_oauth_key" : {
+                      "readOnly" : true
+                    },
+                    "password_digest" : {
+                      "readOnly" : true
+                    },
+                    "password" : {
+                      "type" : "string"
+                    }
+                  }
+                } ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Account created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Username or email is already in use",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "allOf" : [ {
+                      "$ref" : "#/components/schemas/ResponseError"
+                    }, {
+                      "type" : "object",
+                      "properties" : {
+                        "code" : {
+                          "type" : "integer",
+                          "example" : 6
+                        },
+                        "message" : {
+                          "type" : "string",
+                          "example" : "Username is already in use"
+                        }
+                      }
+                    } ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/matches" : {
+      "get" : {
+        "tags" : [ "matches" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "Finds matches by location and search radius",
+        "operationId" : "findMatches",
+        "description" : "By passing a location range, you can get matches registered at chosen range. The result will return matches sorted by distance of center point in descending order.\n",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "latitude",
+          "description" : "Search center point latitude",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "geolocation"
+          }
+        }, {
+          "in" : "query",
+          "name" : "longitude",
+          "description" : "Search center point longitude",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "geolocation"
+          }
+        }, {
+          "in" : "query",
+          "name" : "radius",
+          "description" : "Search radius from center point (km)",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 15,
+            "minimum" : 1,
+            "maximum" : 15
+          }
+        }, {
+          "in" : "query",
+          "name" : "status",
+          "description" : "Filter records by status field",
+          "schema" : {
+            "type" : "string",
+            "default" : "*"
+          }
+        }, {
+          "in" : "query",
+          "name" : "offset",
+          "description" : "Offset from first result record",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "limit",
+          "description" : "Maximum number of records to return",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "minimum" : 1,
+            "maximum" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Search matches matching criteria",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "allOf" : [ {
+                      "$ref" : "#/components/schemas/PaginationResponse"
+                    }, {
+                      "type" : "object",
+                      "properties" : {
+                        "next" : {
+                          "type" : "string",
+                          "example" : "http://api.applada.com.br/v1/matches?latitude=-8.18572&longitude=-35.285017&radius=15&offset=20&limit=20"
+                        },
+                        "results" : {
+                          "type" : "array",
+                          "items" : {
+                            "allOf" : [ {
+                              "$ref" : "#/components/schemas/MatchSearchResult"
+                            } ]
+                          }
+                        }
+                      }
+                    } ]
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/400"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "matches" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "Create a new match",
+        "operationId" : "createMatch",
+        "description" : "",
+        "requestBody" : {
+          "description" : "Pass properties to create a match.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Match"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Match created"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/400"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          }
+        }
+      }
+    },
+    "/matches/{id}" : {
+      "get" : {
+        "tags" : [ "matches" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "Get info about the match",
+        "operationId" : "getMatch",
+        "description" : "Get info about a match passing it's id.",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "description" : "Match id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Match that has the given id.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Match"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/400"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "matches" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "Update match info",
+        "operationId" : "updateMatch",
+        "description" : "",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "description" : "Match id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Pass properties to edit a match.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Match"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Match edited",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/403"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "matches" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "Delete a owned match",
+        "operationId" : "deleteMatch",
+        "description" : "",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "description" : "Match id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Match deleted"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/403"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404"
+          }
+        }
+      }
+    },
+    "/matches/{id}/subscriptions" : {
+      "get" : {
+        "tags" : [ "match subscription" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "List match subscriptions",
+        "operationId" : "listMatchSubscriptions",
+        "description" : "",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "description" : "Match id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "offset",
+          "description" : "Offset from first result record",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "limit",
+          "description" : "Maximum number of records to return",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "minimum" : 1,
+            "maximum" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Match subscriptions",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "allOf" : [ {
+                      "$ref" : "#/components/schemas/PaginationResponse"
+                    }, {
+                      "type" : "object",
+                      "properties" : {
+                        "next" : {
+                          "type" : "string",
+                          "example" : "http://api.applada.com.br/v1/matches/1?offset=20&limit=20"
+                        },
+                        "results" : {
+                          "type" : "array",
+                          "items" : {
+                            "allOf" : [ {
+                              "$ref" : "#/components/schemas/MatchSubscription"
+                            } ]
+                          }
+                        }
+                      }
+                    } ]
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "match subscription" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "Subscribe to the match",
+        "operationId" : "subscribeMatch",
+        "description" : "The user that request this path will be subscribed in the match",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "description" : "Match id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "201" : {
+            "description" : "Match subscription created"
+          },
+          "400" : {
+            "description" : "User is already subscribe in the match",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "errors" : {
+                      "type" : "array",
+                      "items" : {
+                        "allOf" : [ {
+                          "type" : "string",
+                          "example" : "User is already subscribe in the match"
+                        } ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "match subscription" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "Cancel match participation",
+        "operationId" : "deleteMatchSubscription",
+        "description" : "The user that request to this path, will cancel him participation in match.",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "description" : "Match id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Participation canceled"
+          },
+          "400" : {
+            "description" : "User is not subscribe in the match",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "errors" : {
+                      "type" : "array",
+                      "items" : {
+                        "allOf" : [ {
+                          "type" : "string",
+                          "example" : "User is not subscribe in the match"
+                        } ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404"
+          }
+        }
+      }
+    },
+    "/matches/{id}/messages" : {
+      "get" : {
+        "tags" : [ "match chat" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "List match chat messages",
+        "operationId" : "listMatchChatMessages",
+        "description" : "Return message list in descending order by send date",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "description" : "Match id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "offset",
+          "description" : "Offset of messages list",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "default" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "limit",
+          "description" : "Limit of messages to return",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "default" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Match chat messages",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/MatchChatMessage"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/403"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "match chat" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "Send a message to match chat group",
+        "operationId" : "sendMatchChatMessage",
+        "description" : "",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "description" : "Match id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "201" : {
+            "description" : "Message sent successfully"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/403"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404"
+          }
+        }
+      }
+    },
+    "/users" : {
+      "get" : {
+        "tags" : [ "users" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "Find a user by name or username",
+        "operationId" : "findUser",
+        "description" : "",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "search",
+          "description" : "Keyword to find user by name or username",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "offset",
+          "description" : "Offset from first result record",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "minimum" : 0
+          }
+        }, {
+          "in" : "query",
+          "name" : "limit",
+          "description" : "Maximum number of records to return",
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 20,
+            "minimum" : 1,
+            "maximum" : 20
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "User",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "allOf" : [ {
+                      "$ref" : "#/components/schemas/PaginationResponse"
+                    }, {
+                      "type" : "object",
+                      "properties" : {
+                        "results" : {
+                          "type" : "array",
+                          "items" : {
+                            "allOf" : [ {
+                              "$ref" : "#/components/schemas/User"
+                            } ]
+                          }
+                        }
+                      }
+                    } ]
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          }
+        }
+      }
+    },
+    "/users/{username}" : {
+      "get" : {
+        "tags" : [ "users" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "View user profile",
+        "operationId" : "viewUser",
+        "description" : "",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "username",
+          "description" : "User's username",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "User",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "users" ],
+        "security" : [ {
+          "JwtToken" : [ ]
+        } ],
+        "summary" : "Edit user profile",
+        "operationId" : "editUser",
+        "description" : "Only the own profile can edit itself profile",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "username",
+          "description" : "User's username",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Pass fields and values to edit profile.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/User"
+                }, {
+                  "type" : "object",
+                  "properties" : {
+                    "google_account_oauth_key" : {
+                      "readOnly" : true
+                    },
+                    "password_digest" : {
+                      "readOnly" : true
+                    },
+                    "password" : {
+                      "type" : "string"
+                    }
+                  }
+                } ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "User",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/401"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/403"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Match" : {
+        "type" : "object",
+        "required" : [ "id", "title", "description", "category", "owner", "location", "date", "duration", "created_date" ],
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "example" : 15802,
+            "readOnly" : true
+          },
+          "title" : {
+            "type" : "string",
+            "example" : "Sunday match at 11 o'clock"
+          },
+          "description" : {
+            "type" : "string",
+            "example" : "All sunday at 11 o'clock"
+          },
+          "limit_participants" : {
+            "type" : "integer",
+            "description" : "Maximum participant subscriptions. Value must be grater than 0 or equal -1 (infinite).",
+            "example" : 10,
+            "minimum" : 1,
+            "default" : -1
+          },
+          "category" : {
+            "type" : "string",
+            "enum" : [ "soccer", "volleyball", "basketball" ]
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "on_hold", "on_going", "finished" ]
+          },
+          "location" : {
+            "$ref" : "#/components/schemas/Location"
+          },
+          "owner" : {
+            "type" : "string",
+            "description" : "Owner's username",
+            "example" : "igorxp5",
+            "readOnly" : true
+          },
+          "date" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1578359399
+          },
+          "duration" : {
+            "type" : "string",
+            "format" : "time",
+            "example" : "01:00"
+          },
+          "created_date" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1578359399,
+            "readOnly" : true
+          }
+        }
+      },
+      "MatchSearchResult" : {
+        "type" : "object",
+        "required" : [ "match", "distance" ],
+        "properties" : {
+          "match" : {
+            "$ref" : "#/components/schemas/Match"
+          },
+          "distance" : {
+            "type" : "number",
+            "example" : 6.8
+          }
+        }
+      },
+      "User" : {
+        "type" : "object",
+        "required" : [ "username", "name", "level", "email" ],
+        "properties" : {
+          "username" : {
+            "type" : "string",
+            "example" : "igorxp5",
+            "readOnly" : true
+          },
+          "name" : {
+            "type" : "string",
+            "example" : "Igor Fernandes"
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "example" : "igorxp5@gmail.com"
+          },
+          "level" : {
+            "type" : "integer",
+            "example" : 5,
+            "readOnly" : true
+          },
+          "password_digest" : {
+            "type" : "string",
+            "writeOnly" : true
+          },
+          "google_account_oauth_key" : {
+            "type" : "string",
+            "writeOnly" : true
+          },
+          "registred_date" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1578359399,
+            "readOnly" : true
+          }
+        }
+      },
+      "MatchSubscription" : {
+        "type" : "object",
+        "required" : [ "user", "match_id", "date" ],
+        "properties" : {
+          "user" : {
+            "type" : "object",
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/User"
+            } ]
+          },
+          "match_id" : {
+            "type" : "integer",
+            "example" : 15802
+          },
+          "date" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1578359399
+          }
+        }
+      },
+      "MatchChatMessage" : {
+        "type" : "object",
+        "required" : [ "sender", "match_id", "message", "date" ],
+        "properties" : {
+          "sender" : {
+            "type" : "string",
+            "example" : "igorxp5"
+          },
+          "match_id" : {
+            "type" : "integer",
+            "example" : 15802
+          },
+          "message" : {
+            "type" : "string",
+            "example" : "I'm coming in 10 minutes"
+          },
+          "date" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1578359399
+          }
+        }
+      },
+      "Location" : {
+        "type" : "object",
+        "required" : [ "latitude", "longitude" ],
+        "properties" : {
+          "latitude" : {
+            "type" : "string",
+            "format" : "geolocation",
+            "example" : "-8.0117"
+          },
+          "longitude" : {
+            "type" : "string",
+            "format" : "geolocation",
+            "example" : "-34.9529"
+          }
+        }
+      },
+      "PaginationResponse" : {
+        "type" : "object",
+        "required" : [ "count", "results" ],
+        "properties" : {
+          "count" : {
+            "type" : "integer",
+            "example" : 1
+          },
+          "next" : {
+            "type" : "string",
+            "example" : "http://api.applada.com.br/v1/users?offset=20&limit=20"
+          },
+          "previous" : {
+            "type" : "string",
+            "example" : null
+          },
+          "results" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object"
+            }
+          }
+        }
+      },
+      "ResponseError" : {
+        "type" : "object",
+        "required" : [ "code", "error_message" ],
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "example" : 1
+          },
+          "message" : {
+            "type" : "string",
+            "example" : "Error message"
+          }
+        }
+      }
+    },
+    "responses" : {
+      "400" : {
+        "description" : "Bad input parameters",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "errors" : {
+                  "type" : "array",
+                  "items" : {
+                    "allOf" : [ {
+                      "type" : "string",
+                      "example" : "Bad input parameters"
+                    } ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "401" : {
+        "description" : "Credentials not passed in header or invalid credentials",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "errors" : {
+                  "type" : "array",
+                  "items" : {
+                    "allOf" : [ {
+                      "type" : "string",
+                      "example" : "Invalid JWT Token"
+                    } ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "403" : {
+        "description" : "The user of credentials don't have permission to call the request",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "errors" : {
+                  "type" : "array",
+                  "items" : {
+                    "allOf" : [ {
+                      "type" : "string",
+                      "example" : "You do not have permission to perform this action"
+                    } ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "404" : {
+        "description" : "Resource or item not found",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "errors" : {
+                  "type" : "array",
+                  "items" : {
+                    "allOf" : [ {
+                      "type" : "string",
+                      "example" : "Resource or item not found"
+                    } ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "JwtToken" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    }
+  }
+}

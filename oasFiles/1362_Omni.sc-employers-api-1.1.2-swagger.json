@@ -1,0 +1,279 @@
+{
+  "info" : {
+    "title" : "EmployersAPI",
+    "description" : "API specification for EmployersAPI",
+    "version" : "1.1.2",
+    "contact" : {
+      "name" : "OmniScience",
+      "url" : "https://omniscience.cimn",
+      "email" : "contact@omniscience.com"
+    }
+  },
+  "openapi" : "3.0.2",
+  "paths" : {
+    "/healthcheck" : {
+      "get" : {
+        "summary" : "Returns a simple message and version number, to verify that the service is working.",
+        "operationId" : "healthcheck",
+        "responses" : {
+          "200" : {
+            "description" : "Successfull reply from server",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/responses/rootResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search" : {
+      "post" : {
+        "summary" : "Searches for similar companies given name, address and zipcode.  Supported queries: Name Only, Address + City + Zip, Name + Address + City + Zip. In Development: Name + Zip",
+        "operationId" : "search",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/searchRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/responses/searchResponse"
+                }
+              }
+            }
+          },
+          "default" : {
+            "description" : "",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/responses/errorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "searchRequest" : {
+        "type" : "object",
+        "required" : [ "query" ],
+        "properties" : {
+          "query" : {
+            "$ref" : "#/components/schemas/querySchema"
+          }
+        }
+      },
+      "querySchema" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "address" : {
+            "type" : "string",
+            "pattern" : "^d+ .+$"
+          },
+          "city" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "zipcode" : {
+            "type" : "integer",
+            "minimum" : 1,
+            "maximum" : 99999
+          }
+        }
+      },
+      "employersSchema" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "address" : {
+            "type" : "string"
+          },
+          "city" : {
+            "type" : "string"
+          },
+          "zipcode" : {
+            "type" : "integer"
+          }
+        }
+      },
+      "matchSchema" : {
+        "type" : "object",
+        "properties" : {
+          "match_confidence" : {
+            "type" : "number"
+          },
+          "match_method" : {
+            "type" : "string"
+          }
+        }
+      },
+      "matchesSchema" : {
+        "type" : "object",
+        "properties" : {
+          "location_id" : {
+            "type" : "string"
+          },
+          "match" : {
+            "$ref" : "#/components/schemas/matchSchema"
+          },
+          "prefill_fields" : {
+            "type" : "object"
+          }
+        }
+      },
+      "resultsSchema" : {
+        "type" : "object",
+        "required" : [ "meta", "records" ],
+        "properties" : {
+          "meta" : {
+            "$ref" : "#/components/schemas/metaSchema"
+          },
+          "records" : {
+            "$ref" : "#/components/schemas/recordSchema"
+          }
+        }
+      },
+      "recordSchema" : {
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/components/schemas/profileSchema"
+        }
+      },
+      "profileSchema" : {
+        "type" : "object",
+        "required" : [ "employers_data", "matches" ],
+        "properties" : {
+          "employers_data" : {
+            "$ref" : "#/components/schemas/employersSchema"
+          },
+          "matches" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/matchesSchema"
+            }
+          }
+        }
+      },
+      "metaSchema" : {
+        "type" : "object",
+        "required" : [ "generated_on", "api_version" ],
+        "properties" : {
+          "generated_on" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "api_version" : {
+            "type" : "string"
+          }
+        }
+      }
+    },
+    "responses" : {
+      "rootResponse" : {
+        "description" : "Response for server status",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "required" : [ "version", "status", "application" ],
+              "properties" : {
+                "version" : {
+                  "type" : "string"
+                },
+                "status" : {
+                  "type" : "string"
+                },
+                "application" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "searchResponse" : {
+        "description" : "Response for matched results",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "required" : [ "results" ],
+              "properties" : {
+                "results" : {
+                  "$ref" : "#/components/schemas/resultsSchema"
+                }
+              }
+            }
+          }
+        }
+      },
+      "errorResponse" : {
+        "description" : "Response for server errors",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "required" : [ "status", "error", "message", "code" ],
+              "properties" : {
+                "status" : {
+                  "type" : "string"
+                },
+                "error" : {
+                  "type" : "string"
+                },
+                "message" : {
+                  "anyOf" : [ {
+                    "type" : "string"
+                  }, {
+                    "type" : "object"
+                  } ]
+                },
+                "code" : {
+                  "type" : "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "ApiKeyAuth" : {
+        "type" : "apiKey",
+        "in" : "header",
+        "name" : "X-API-Key"
+      },
+      "JWT" : {
+        "type" : "apiKey",
+        "in" : "header",
+        "name" : "Authorization",
+        "description" : "JWT (OAuth) Token issued by trusted source"
+      }
+    }
+  },
+  "security" : [ {
+    "ApiKeyAuth" : [ ]
+  }, {
+    "JWT" : [ ]
+  } ]
+}

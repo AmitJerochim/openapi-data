@@ -1,0 +1,1118 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "version" : "1.0",
+    "title" : "Knowable Contract Repository",
+    "description" : "Contract Repository\n  "
+  },
+  "servers" : [ {
+    "url" : "https://stage.api.theknowable.com",
+    "description" : "Knowable's Stage Environment"
+  }, {
+    "url" : "https://api.theknowable.com",
+    "description" : "Knowable's Production Environment"
+  } ],
+  "paths" : {
+    "/contracts/{id}/pdf" : {
+      "get" : {
+        "summary" : "Retrieves the binary pdf.",
+        "tags" : [ "contract" ],
+        "operationId" : "getPDF",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Contract's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/pdf" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "description" : "Organization Not Found"
+          }
+        }
+      }
+    },
+    "/projects" : {
+      "get" : {
+        "summary" : "Get a list of projects for the requestors organization",
+        "tags" : [ "projects" ],
+        "operationId" : "listProjects",
+        "description" : "List of projects defined for the Organization.  There's typically one project per organization.  However, under some unique requirements there can be more than one.\n",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "cookie",
+          "schema" : {
+            "$ref" : "#/components/headers/cookie"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/projects"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "description" : "Organization Not Found"
+          }
+        }
+      }
+    },
+    "/projects/{id}/contracts" : {
+      "get" : {
+        "summary" : "Search for contracts in the system by any field.",
+        "tags" : [ "contract" ],
+        "operationId" : "searchContracts",
+        "description" : "Use the fields API to build field specific quearies.  This API is limited to 10000 total results.\n",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Project's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "in" : "query",
+          "name" : "search",
+          "description" : "Optional filter object\n",
+          "schema" : {
+            "$ref" : "#/components/schemas/contractQuery"
+          },
+          "style" : "form",
+          "explode" : true
+        }, {
+          "in" : "header",
+          "name" : "cookie",
+          "schema" : {
+            "$ref" : "#/components/headers/cookie"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "See \"#/components/schemas/contract schema for all oneOf property examples\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/contracts"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid Request"
+          },
+          "403" : {
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "description" : "Project Not Found"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Submit a new contract to the system.",
+        "tags" : [ "contract" ],
+        "operationId" : "uploadContracts",
+        "description" : "Upload a new contract to the project.\n",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Project's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "in" : "header",
+          "name" : "cookie",
+          "schema" : {
+            "$ref" : "#/components/headers/cookie"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "fileName" : {
+                    "type" : "string"
+                  },
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  },
+                  "data" : {
+                    "type" : "string",
+                    "description" : "json stringify intake data.  See #/components/schemas/contractUploadRequest for an example of the json object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Ok",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/contractUploadResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid Request",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "string",
+                    "example" : "Field X is required"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "description" : "Project Not Found"
+          }
+        }
+      }
+    },
+    "/projects/{id}/contracts/fields" : {
+      "get" : {
+        "summary" : "Get the field definitions for the entire data model.",
+        "tags" : [ "Data Model" ],
+        "operationId" : "getFields",
+        "description" : "Get an project's data model.\n",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Project's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "cookie",
+          "schema" : {
+            "$ref" : "#/components/headers/cookie"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/fields"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "description" : "Project Not Found"
+          }
+        }
+      }
+    },
+    "/projects/{id}/contracts/attachments" : {
+      "post" : {
+        "summary" : "Add a new attachment to one or more contracts.",
+        "tags" : [ "attachment" ],
+        "operationId" : "uploadAttachment",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Project's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "cookie",
+          "schema" : {
+            "$ref" : "#/components/headers/cookie"
+          }
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "fileName" : {
+                    "type" : "string"
+                  },
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  },
+                  "contractIds" : {
+                    "type" : "array",
+                    "items" : {
+                      "type" : "string",
+                      "format" : "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Returns {data: 'ok'}",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "description" : "Project Not Found"
+          }
+        }
+      }
+    },
+    "/projects/{id}/contracts/{contractId}/attachments" : {
+      "get" : {
+        "summary" : "Retrive a list of all attachments for the contract.",
+        "tags" : [ "attachment" ],
+        "operationId" : "listAttachment",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Project's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "contractId",
+          "in" : "path",
+          "description" : "Contract's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "cookie",
+          "schema" : {
+            "$ref" : "#/components/headers/cookie"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Returns a list of attachments",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/attachment"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "description" : "Project/Contract Not Found"
+          }
+        }
+      }
+    },
+    "/projects/{id}/contracts/{contractId}/attachments/{attachmentId}" : {
+      "get" : {
+        "summary" : "Download an attachment.",
+        "tags" : [ "attachment" ],
+        "operationId" : "getAttachment",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Project's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "contractId",
+          "in" : "path",
+          "description" : "Contract's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "attachmentId",
+          "in" : "path",
+          "description" : "Attachment's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "cookie",
+          "schema" : {
+            "$ref" : "#/components/headers/cookie"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Download an attachment file of varying file types",
+            "content" : {
+              "application/*" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "description" : "Project/Contract/Attachment Not Found"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Delete an attachment.",
+        "tags" : [ "attachment" ],
+        "operationId" : "deleteAttachment",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Project's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "contractId",
+          "in" : "path",
+          "description" : "Contract's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "attachmentId",
+          "in" : "path",
+          "description" : "Attachment's Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "header",
+          "name" : "cookie",
+          "schema" : {
+            "$ref" : "#/components/headers/cookie"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Returns {data: 'ok'}",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Forbidden"
+          },
+          "404" : {
+            "description" : "Project/Contract/Attachment Not Found"
+          }
+        }
+      }
+    },
+    "/serviceaccounts" : {
+      "post" : {
+        "summary" : "Allows for systems to exchange credentials for a authorization token.",
+        "tags" : [ "auth" ],
+        "operationId" : "authServiceAccount",
+        "description" : "Sytems can provide their client_id and account credentials to retrieve an authentication token to call other APIs.\n",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/serviceAccountRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/serviceAccountResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Invalid Credentials"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "headers" : {
+      "cookie" : {
+        "description" : "Authorization Token user={bearer token}",
+        "schema" : {
+          "type" : "string"
+        },
+        "example" : "user=lsjdflskjdw23rl3j.l32j423l3kj23.lsjdf"
+      }
+    },
+    "securitySchemes" : {
+      "cookieAuth" : {
+        "type" : "apiKey",
+        "in" : "cookie",
+        "name" : "user",
+        "description" : "User's JWT token"
+      }
+    },
+    "schemas" : {
+      "meta" : {
+        "type" : "object",
+        "properties" : {
+          "currentPage" : {
+            "type" : "integer"
+          },
+          "grandTotal" : {
+            "type" : "integer"
+          },
+          "pageCount" : {
+            "type" : "integer"
+          },
+          "total" : {
+            "type" : "integer"
+          }
+        }
+      },
+      "category" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "uuid"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Project's name"
+          },
+          "organizationId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Organization's uuid or 00000000-0000-0000-0000-000000000000 for global"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Project's uuid or 00000000-0000-0000-0000-000000000000 for global"
+          },
+          "order" : {
+            "type" : "integer",
+            "description" : "The order the category should show in UI"
+          }
+        }
+      },
+      "contract" : {
+        "type" : "object",
+        "description" : "Contracts properties are dynamic based on the data extracted and the organizations data model. All values can be a single value of the specific field's type or an array of values.\n",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Contract's uniqe id"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "The project's id"
+          },
+          "organizationId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "The organization's id"
+          },
+          "fileName" : {
+            "type" : "string"
+          },
+          "size" : {
+            "type" : "integer",
+            "description" : "File size in bytes"
+          },
+          "familyId" : {
+            "type" : "string",
+            "description" : "Unique identifier for a family of documents"
+          },
+          "controlNumber" : {
+            "type" : "string",
+            "description" : "Family member unique identifier"
+          },
+          "masterControlNumber" : {
+            "type" : "string",
+            "description" : "Parent family member's unique identifier"
+          },
+          "status" : {
+            "type" : "string",
+            "description" : "The current review status of the document"
+          },
+          "uploadedBy" : {
+            "type" : "string",
+            "description" : "Display name of the upload user"
+          },
+          "uploadedById" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Id of the upload user"
+          },
+          "created_at" : {
+            "type" : "string",
+            "description" : "The upload date",
+            "example" : "2019-01-31T00:00:00.000Z"
+          },
+          "textField" : {
+            "description" : "Data for fields of type 0, 1, 4, 6.        \n",
+            "oneOf" : [ {
+              "type" : "string",
+              "example" : "Some Value"
+            }, {
+              "type" : "array",
+              "items" : {
+                "type" : "string",
+                "example" : [ "Value 1", "Value 2" ]
+              }
+            } ]
+          },
+          "numberField" : {
+            "description" : "Data for fields of type 8.\n",
+            "oneOf" : [ {
+              "type" : "number",
+              "example" : "1.05",
+              "format" : "double"
+            }, {
+              "type" : "array",
+              "items" : {
+                "type" : "number",
+                "format" : "double",
+                "example" : "[1, 1.05]"
+              }
+            } ]
+          },
+          "dateField" : {
+            "description" : "Data for fields of type 2 and 3. Field type 2 should be treated as a date only. Field type 3 should be treated as a datetime.\n",
+            "oneOf" : [ {
+              "type" : "string",
+              "example" : "2019-01-31T00:00:00.000Z"
+            }, {
+              "type" : "array",
+              "items" : {
+                "type" : "string",
+                "example" : [ "2019-01-31T00:00:00.000Z", "2019-03-31T00:00:00.000Z" ]
+              }
+            } ]
+          },
+          "booleanField" : {
+            "description" : "Data for fields of type 5.\n",
+            "oneOf" : [ {
+              "type" : "boolean"
+            }, {
+              "type" : "array",
+              "items" : {
+                "type" : "boolean",
+                "example" : "[true, false]"
+              }
+            } ]
+          }
+        }
+      },
+      "contracts" : {
+        "type" : "object",
+        "properties" : {
+          "_meta" : {
+            "$ref" : "#/components/schemas/meta"
+          },
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/contract"
+            }
+          }
+        }
+      },
+      "attachment" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Attachment's unique identifier"
+          },
+          "fileName" : {
+            "type" : "string"
+          },
+          "uploadedById" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "uploadedBy" : {
+            "type" : "string",
+            "description" : "Upload user's display name"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "description" : "Postgres sql date upload date",
+            "example" : "2019-01-31 00:00:00.000+00"
+          }
+        }
+      },
+      "field" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Field's unique identifier"
+          },
+          "validation" : {
+            "type" : "string",
+            "description" : "Validation regex"
+          },
+          "validationMessage" : {
+            "type" : "string",
+            "description" : "Message for the UI to display in the case of a validation error."
+          },
+          "fieldName" : {
+            "type" : "string",
+            "description" : "Name of the fields no spaces camel case"
+          },
+          "default" : {
+            "type" : "string",
+            "description" : "Default value"
+          },
+          "placeHolder" : {
+            "type" : "string",
+            "description" : "Placeholder text"
+          },
+          "organizationId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Organization's uuid"
+          },
+          "disabled" : {
+            "type" : "boolean",
+            "description" : "Disable a field from being returned by the api."
+          },
+          "categories" : {
+            "$ref" : "#/components/schemas/category"
+          },
+          "projectId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "The project's uuid"
+          },
+          "type" : {
+            "type" : "integer",
+            "description" : "Field type indicator."
+          },
+          "label" : {
+            "type" : "string",
+            "description" : "Label to be displayed in UI."
+          },
+          "options" : {
+            "$ref" : "#/components/schemas/options"
+          }
+        }
+      },
+      "fields" : {
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/field"
+            }
+          }
+        }
+      },
+      "option" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Id of the option record."
+          },
+          "fieldId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Id for the field this will be an option for."
+          },
+          "label" : {
+            "type" : "string",
+            "description" : "The human readable option name."
+          },
+          "value" : {
+            "type" : "string",
+            "description" : "The value to be saved in the DB."
+          },
+          "order" : {
+            "type" : "integer",
+            "description" : "The order to display the option in the dropdown."
+          }
+        }
+      },
+      "options" : {
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/option"
+            }
+          }
+        }
+      },
+      "project" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "uuid"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Project's name"
+          },
+          "organizationId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Organization's uuid"
+          },
+          "relativityWorkspaceId" : {
+            "type" : "string",
+            "description" : "Relativity Workspace Id"
+          },
+          "relativityPrefix" : {
+            "type" : "string",
+            "description" : "The prefix id to identify fields in relativity"
+          }
+        }
+      },
+      "projects" : {
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/project"
+            }
+          }
+        }
+      },
+      "contractQuery" : {
+        "type" : "object",
+        "properties" : {
+          "filters" : {
+            "type" : "object",
+            "properties" : {
+              "page" : {
+                "type" : "integer",
+                "default" : 1
+              },
+              "pageSize" : {
+                "type" : "integer",
+                "default" : 20
+              },
+              "exampleTextField" : {
+                "type" : "string",
+                "example" : "Value to search for"
+              },
+              "search" : {
+                "type" : "string",
+                "example" : "Value to search for",
+                "description" : "Searches for the search value in all fields and OCR"
+              }
+            }
+          },
+          "primarySort" : {
+            "type" : "string",
+            "description" : "Field to sort on and direction.  Fields of type 6 are invalid for sorting",
+            "example" : "uploadedBy.asc"
+          },
+          "secondarySort" : {
+            "type" : "string",
+            "description" : "Field to sort on and direction.  Fields of type 6 are invalid for sorting",
+            "example" : "created_at.asc"
+          }
+        }
+      },
+      "serviceAccountRequest" : {
+        "type" : "object",
+        "properties" : {
+          "appId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "userName" : {
+            "type" : "string"
+          },
+          "password" : {
+            "type" : "string"
+          }
+        }
+      },
+      "serviceAccountResponse" : {
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "type" : "object",
+            "properties" : {
+              "tokenType" : {
+                "type" : "string",
+                "default" : "bearer"
+              },
+              "accessToken" : {
+                "type" : "string"
+              }
+            }
+          }
+        }
+      },
+      "intakeFormFieldString" : {
+        "type" : "object",
+        "properties" : {
+          "fieldName" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "string"
+          }
+        }
+      },
+      "intakeFormFieldDate" : {
+        "type" : "object",
+        "properties" : {
+          "fieldName" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "string",
+            "example" : "2019-01-31T00:00:00.000Z"
+          }
+        }
+      },
+      "intakeFormFieldInt" : {
+        "type" : "object",
+        "properties" : {
+          "fieldName" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "number"
+          }
+        }
+      },
+      "intakeFormFieldBool" : {
+        "type" : "object",
+        "properties" : {
+          "fieldName" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "intakeFormFieldArrayOfStrings" : {
+        "type" : "object",
+        "properties" : {
+          "fieldName" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "intakeFormFieldArrayOfDates" : {
+        "type" : "object",
+        "properties" : {
+          "fieldName" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "example" : "2019-01-31T00:00:00.000Z"
+            }
+          }
+        }
+      },
+      "intakeFormFieldArrayOfInts" : {
+        "type" : "object",
+        "properties" : {
+          "fieldName" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "array",
+            "items" : {
+              "type" : "number"
+            }
+          }
+        }
+      },
+      "intakeFormFieldArrayOfBools" : {
+        "type" : "object",
+        "properties" : {
+          "fieldName" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "array",
+            "items" : {
+              "type" : "boolean"
+            }
+          }
+        }
+      },
+      "contractUploadRequest" : {
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "type" : "object",
+            "properties" : {
+              "id" : {
+                "type" : "string",
+                "format" : "uuid",
+                "description" : "Identifier to the data schema this is requred if the fields property is present"
+              },
+              "fields" : {
+                "type" : "array",
+                "items" : {
+                  "anyOf" : [ {
+                    "$ref" : "#/components/schemas/intakeFormFieldString"
+                  }, {
+                    "$ref" : "#/components/schemas/intakeFormFieldInt"
+                  }, {
+                    "$ref" : "#/components/schemas/intakeFormFieldBool"
+                  }, {
+                    "$ref" : "#/components/schemas/intakeFormFieldDate"
+                  }, {
+                    "$ref" : "#/components/schemas/intakeFormFieldArrayOfStrings"
+                  }, {
+                    "$ref" : "#/components/schemas/intakeFormFieldArrayOfDates"
+                  }, {
+                    "$ref" : "#/components/schemas/intakeFormFieldArrayOfInts"
+                  }, {
+                    "$ref" : "#/components/schemas/intakeFormFieldArrayOfBools"
+                  } ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "contractUploadResponse" : {
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "type" : "object",
+            "properties" : {
+              "id" : {
+                "type" : "string",
+                "format" : "uuid"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

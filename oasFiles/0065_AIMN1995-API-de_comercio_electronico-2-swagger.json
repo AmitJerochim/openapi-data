@@ -1,0 +1,277 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "url" : "https://apiintegracion.ins-cr.com/v2",
+    "description" : "Ambiente de integración"
+  }, {
+    "url" : "https://apiproduccion.ins-cr.com/v2",
+    "description" : "Ambiente de producción"
+  } ],
+  "info" : {
+    "description" : "API de comercio electrónico del INS",
+    "version" : "2",
+    "title" : "API de comercio electrónico del INS",
+    "contact" : {
+      "email" : "arquitectura@ins-cr.com"
+    },
+    "license" : {
+      "name" : "Apache 2.0",
+      "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "tags" : [ {
+    "name" : "Pagos",
+    "description" : "Operaciones asociadas a la gestión de pagos"
+  } ],
+  "paths" : {
+    "/pagos/cargotarjeta" : {
+      "post" : {
+        "tags" : [ "Pagos" ],
+        "summary" : "Realiza un cargo a una tarjeta",
+        "operationId" : "CrearCargoTarjeta",
+        "description" : "Realiza un cargo a una tarjeta de débito/crédito para que sea utilizado posteriormente como medio de pago",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CrearCargoTarjeta"
+              }
+            }
+          },
+          "description" : "Datos de la tarjeta sobre la que se aplicará el cargo. Estos datos deben enviarse cifrados mediante un algoritmo de llave pública (RSA). El INS se encarga de suministrar la llave requerida para el cifrado."
+        },
+        "responses" : {
+          "200" : {
+            "description" : "El cargo fue generado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CrearCargoTarjetaResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Token ausente o inválido",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenInvalido"
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Método no permitido",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MetodoNoPermitido"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error en el servidor",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorInternoServidor"
+                }
+              }
+            }
+          },
+          "504" : {
+            "description" : "Tiempo de espera agotado",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TiempoEsperaAgotado"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "CrearCargoTarjeta" : {
+        "type" : "object",
+        "required" : [ "identificacionTransaccion", "comercio", "terminal", "numeroTarjeta", "mesExpiracion", "anioExpiracion", "detalleCargo", "montoTransaccion", "correoElectronico" ],
+        "properties" : {
+          "identificacionTransaccion" : {
+            "type" : "string",
+            "example" : "SNhQBIvG9cZND3P0kFwzKA==",
+            "description" : "Identificacion unica de la transaccion de autorizacion enviadala cual estará conformada por: Fecha(AAAAMMDD) Ej: 20191028. Codigo del Cliente Ej: 001. Consucutivo propio del Cliente Ej: 0000000001."
+          },
+          "comercio" : {
+            "type" : "string",
+            "example" : "GNVRxAF5+L+4SKQBkr8P7w==",
+            "description" : "Comercio que aplicada la autorizacion de rebajo de tarjeta. (15 Posiciones)"
+          },
+          "terminal" : {
+            "type" : "string",
+            "example" : "wVDoEsWkT5SOSbi1wR4mUA==",
+            "description" : "Terminal por el cual es aplicada la autorizacion del rebajo a la tarjeta. (8 Posiciones)"
+          },
+          "numeroTarjeta" : {
+            "type" : "string",
+            "example" : "tVM5fkwSlxK4miLvt5yPlA",
+            "description" : "Número de tarjeta encriptado."
+          },
+          "mesExpiracion" : {
+            "type" : "string",
+            "example" : "reLAyrNMUGuFujtdRfWMZQ",
+            "description" : "Mes de expiración de la tarjeta"
+          },
+          "anioExpiracion" : {
+            "type" : "string",
+            "example" : "W9w9DNjTDSxa7bCmLOPsxw",
+            "description" : "Año de expiración de la tarjeta"
+          },
+          "detalleCargo" : {
+            "type" : "string",
+            "example" : "0mlL01n/iAuUc+gOaLvUVQ==",
+            "description" : "Descripción o detalle del cargo"
+          },
+          "montoTransaccion" : {
+            "type" : "string",
+            "example" : "W9w9DNjTDSxa7bCmLOPsxw",
+            "description" : "Monto a rebajar en la transaccion en el cual se debe enviar sin separador de miles, unicamente con (.) para separar decimales. Ej: 3000.00"
+          },
+          "numeroAutorizacion" : {
+            "type" : "integer",
+            "example" : "wVDoEsJLjGBjSOSbi1wR4mUA==",
+            "description" : "Número de autorización del débito"
+          },
+          "correoElectronico" : {
+            "type" : "string",
+            "example" : "OAH6UpFE1pEhLbEBBxq/EA==",
+            "description" : "Correo electrónico donde será enviado la factura electrónica"
+          }
+        }
+      },
+      "CrearCargoTarjetaResponse" : {
+        "type" : "object",
+        "required" : [ "mensaje", "esAprobada" ],
+        "properties" : {
+          "mensaje" : {
+            "type" : "string",
+            "example" : "Procesado satisfactoriamente"
+          },
+          "esAprobada" : {
+            "type" : "boolean",
+            "example" : true,
+            "description" : "Indica si el cargo fue aplicado (true) o no (false)"
+          },
+          "respuestaComercio" : {
+            "type" : "string",
+            "example" : "APPROVED (043459)",
+            "description" : "Mensaje de respuesta del comercio"
+          },
+          "numeroAutorizacion" : {
+            "type" : "integer",
+            "example" : 589374,
+            "description" : "Número de autorización del débito"
+          },
+          "consecutivoPago" : {
+            "type" : "integer",
+            "example" : 12345,
+            "description" : "Consecutivo de la transacción, permite identificar un cargo a una tarjeta de forma única. Se utiliza como entrada en el servicio de aplicación de deudas para relacionar ambas transacciones, es decir, para identificar cual cargo de tarjeta será utilizado como medio de pago al momento de dar la deuda por aplicada."
+          },
+          "identificacionTransaccion" : {
+            "type" : "string",
+            "example" : "201910280010000000001",
+            "description" : "Identificacion unica de la transaccion de autorizacion enviadala cual estará conformada por: Fecha(AAAAMMDD) Ej: 20191028. Codigo del Cliente Ej: 001. Consucutivo propio del Cliente Ej: 0000000001."
+          }
+        }
+      },
+      "TiempoEsperaAgotado" : {
+        "type" : "object",
+        "required" : [ "type", "title" ],
+        "properties" : {
+          "type" : {
+            "type" : "integer",
+            "example" : "http://www.api.ins-cr.com/documentacion/problemas/tipoesperaagotado"
+          },
+          "title" : {
+            "type" : "string",
+            "example" : "Tiempo de espera agotado"
+          },
+          "detail" : {
+            "type" : "string",
+            "example" : "El proveedor del servicio no respondio en el tiempo de espera establecido"
+          }
+        }
+      },
+      "ErrorInternoServidor" : {
+        "type" : "object",
+        "required" : [ "type", "title" ],
+        "properties" : {
+          "type" : {
+            "type" : "integer",
+            "example" : "http://www.api.ins-cr.com/documentacion/problemas/ErrorInternoServidor"
+          },
+          "title" : {
+            "type" : "string",
+            "example" : "Ocurrió un error al procesar la solicitud"
+          }
+        }
+      },
+      "MetodoNoPermitido" : {
+        "type" : "object",
+        "required" : [ "type" ],
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "example" : "http://www.api.ins-cr.com/documentacion/problemas/metodonopermitido"
+          },
+          "title" : {
+            "type" : "string",
+            "example" : "Metodo no permitido"
+          },
+          "detail" : {
+            "type" : "string",
+            "example" : "El método POST no está permitodo"
+          }
+        }
+      },
+      "TokenInvalido" : {
+        "type" : "object",
+        "required" : [ "type" ],
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "example" : "http://www.api.ins-cr.com/documentacion/problemas/tokeninvalido"
+          },
+          "title" : {
+            "type" : "string",
+            "example" : "Token ausente o inválido"
+          },
+          "detail" : {
+            "type" : "string",
+            "example" : "No se recibió un token de seguridad o este es inválido"
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "OAuth2" : {
+        "type" : "oauth2",
+        "flows" : {
+          "clientCredentials" : {
+            "tokenUrl" : "/api/v1/connect/token",
+            "scopes" : {
+              "tipocambio" : "Otorga permisos para consultar LOS cargos de tarjetas y enviar cargos de tarjeta"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security" : [ {
+    "OAuth2" : [ ]
+  } ]
+}

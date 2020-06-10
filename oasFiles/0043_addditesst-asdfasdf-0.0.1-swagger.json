@@ -1,0 +1,145 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "version" : "0.0.1",
+    "title" : "ADDI API - Autenticación para el API de integraciones con tiendas en línea",
+    "description" : "Este documento describe la manera en que se efectúa la autenticación al  API de integraciones con tiendas en línea, y poder crear aplicaciones de crédito  con ADDI.<br><br> El proceso de autenticación sucede en [Auth0](https://auth0.com/) quién actúa  como plataforma Idaas (Identity as a Service), siendo la responsable de generar  JSON Web Tokens que son usados en los llamados a los recursos HTTP expuestos por el API.<br><br> Auth0 provee un Sandbox para crear tokens e interactuar con el API en un ambiente de staging, de la misma manera provee un ambiente productivo. Por lo tanto, las credenciales del  Sandbox y del ambiente productivo, serán proveídas por ADDI durante el proceso de integración de una tienda en linea (ecommerce) por medio de correos encriptados que se envían por separado.<br><br> <b>https://additest.auth0.com</b> Sandbox Server (Genera tokens para usar en el ambiente de staging)<br> <b>https://adelante.auth0.com</b> Servidor de Producción\n",
+    "contact" : {
+      "email" : "gvalencia@addi.com"
+    }
+  },
+  "tags" : [ {
+    "name" : "authentication",
+    "description" : "Autenticación"
+  } ],
+  "paths" : {
+    "/oauth/token" : {
+      "post" : {
+        "tags" : [ "authentication" ],
+        "summary" : "Generar un JSON Web Token (JWT)",
+        "description" : "Recurso HTTP que permite generar un JWT, el cuál debe ser usado para efectuar llamados a todo recurso expuesto por el API de integración de tiendas en línea.<br><br>\n",
+        "operationId" : "createAuthToken",
+        "requestBody" : {
+          "$ref" : "#/components/requestBodies/AuthRequest"
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Token JWT generado exitosamente",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Tipos de error 4xx",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Tipos de error 5xx",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers" : [ {
+    "url" : "https://additest.auth0.com",
+    "description" : "Sandbox Server (Genera tokens para usar en el ambiente de staging)"
+  }, {
+    "url" : "https://adelante.auth0.com",
+    "description" : "Servidor de Producción"
+  } ],
+  "components" : {
+    "requestBodies" : {
+      "AuthRequest" : {
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/AuthRequest"
+            }
+          }
+        },
+        "description" : "Parámetros necesarios para la generación de un token JWT.",
+        "required" : true
+      }
+    },
+    "schemas" : {
+      "AuthRequest" : {
+        "type" : "object",
+        "required" : [ "audience", "grant_type", "client_id", "client_secret" ],
+        "properties" : {
+          "audience" : {
+            "type" : "string",
+            "example" : "https://api.staging.addi.com",
+            "description" : "Refiere al API al cual se desea obtener acceso. Staging: https://api.staging.addi.com  Producción: https://api.addi.com\n"
+          },
+          "grant_type" : {
+            "type" : "string",
+            "example" : "client_credentials",
+            "description" : "Tipo de credenciales que se intercambian con Auth0. El valor de este campo debe ser  siempre: client_credentials\n"
+          },
+          "client_id" : {
+            "type" : "string",
+            "example" : "LOzXiHhw5ZXK6mYeDo6PEANvg",
+            "description" : "Identificador del aliado y de la tienda codificado en Base 64  que se provee para poder identificar donde se realiza la originación.\n"
+          },
+          "client_secret" : {
+            "type" : "string",
+            "example" : "DSJHPt7kUbRdB8U9XfCXXe4eTXD9EPg",
+            "description" : "Secreto codificado en Base 64 que se provee a cada aliado para la  integración entre el Ecommerce y la plataforma ADDI. Se resalta que este secreto debe ser almacenado de manera segura del lado del servidor de integración\n"
+          }
+        }
+      },
+      "AuthResponse" : {
+        "type" : "object",
+        "required" : [ "access_token", "token_type", "expires_in" ],
+        "properties" : {
+          "access_token" : {
+            "type" : "string",
+            "format" : "access_token",
+            "example" : "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6Ik9FRXhPVVE1UWprMU1EUXpNMFl4UVRVek56UkdRVU14TURZeU5FRTRPRGMxTTBFd09UWkZRdyJ9.eyJpc3MiOiJodHRwczovL2FkZGl0ZXN0LmF1dGgwLmNvbS8iLCJzdWIiOiJhdXRoMHw1YzZjMjg5MDUzZjIxZjYzNjZhNWRmOTIiLCJhdWQiOlsiaHR0cHM6Ly9hcGkuYWRkaS5jb20iLCJodHRwczovL2Fk",
+            "description" : "Token JWT\n"
+          },
+          "token_type" : {
+            "type" : "string",
+            "format" : "access_token",
+            "example" : "Bearer"
+          },
+          "expires_in" : {
+            "type" : "string",
+            "format" : "double",
+            "example" : 86400
+          }
+        }
+      },
+      "ApiErrorResponse" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "example" : "001-001"
+          },
+          "message" : {
+            "type" : "string",
+            "example" : "Mensaje que describe el error"
+          }
+        }
+      }
+    }
+  }
+}

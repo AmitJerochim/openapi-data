@@ -1,0 +1,188 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/centiglobe/pay/1.0.0"
+  } ],
+  "info" : {
+    "description" : "Centiglobe payOut interface",
+    "version" : "1.0.0",
+    "title" : "Centiglobe payOut",
+    "contact" : {
+      "email" : "contact@centiglobe.com"
+    },
+    "license" : {
+      "name" : "Apache 2.0",
+      "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "paths" : {
+    "/startPayOut" : {
+      "post" : {
+        "summary" : "Initiates payout sequence",
+        "tags" : [ "payout" ],
+        "operationId" : "startPayOut",
+        "description" : "startPayOut verifies the given account including a KYC\n",
+        "responses" : {
+          "201" : {
+            "description" : "item created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "required" : [ "payOutId", "userValid" ],
+                  "properties" : {
+                    "payOutId" : {
+                      "type" : "string",
+                      "example" : "ff5433d0-d2a8-4ed5-bd7a-f59af51a9660"
+                    },
+                    "userValid" : {
+                      "type" : "string",
+                      "example" : "UNKNOWN"
+                    }
+                  },
+                  "type" : "object"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "bad format"
+          },
+          "404" : {
+            "description" : "account not available"
+          },
+          "500" : {
+            "description" : "internal error"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "required" : [ "destination", "payOutAmount" ],
+                "properties" : {
+                  "destination" : {
+                    "$ref" : "#/components/schemas/destination"
+                  },
+                  "payOutAmount" : {
+                    "$ref" : "#/components/schemas/payOutAmount"
+                  }
+                }
+              },
+              "examples" : {
+                "EUR to IBAN" : {
+                  "description" : "Payout EUR to IBAN",
+                  "value" : {
+                    "destination" : {
+                      "account" : "41351300039",
+                      "service" : "IBAN"
+                    },
+                    "payOutAmount" : {
+                      "value" : 10.5,
+                      "currency" : "EUR"
+                    }
+                  }
+                },
+                "SEK to Swish" : {
+                  "description" : "Payout SEK to Swish",
+                  "value" : {
+                    "destination" : {
+                      "account" : "+46707588464",
+                      "service" : "Swish"
+                    },
+                    "payOutAmount" : {
+                      "value" : 800,
+                      "currency" : "SEK"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/completePayOut" : {
+      "post" : {
+        "summary" : "Finilizes payout sequence",
+        "tags" : [ "payout" ],
+        "operationId" : "completePayOut",
+        "description" : "completePayOut triggers the completion of payout which include validation of tranfer on the blockchain\n",
+        "responses" : {
+          "200" : {
+            "description" : "successful"
+          },
+          "400" : {
+            "description" : "bad format"
+          },
+          "404" : {
+            "description" : "transaction not found"
+          },
+          "500" : {
+            "description" : "internal error"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "required" : [ "payOutId", "userValid" ],
+                "properties" : {
+                  "payOutId" : {
+                    "description" : "Id received from startPayOut transaction",
+                    "type" : "string",
+                    "example" : "ff5433d0-d2a8-4ed5-bd7a-f59af51a9660"
+                  },
+                  "transactionId" : {
+                    "description" : "Id received from block chain when",
+                    "type" : "string",
+                    "example" : "86d3e7c6-4edc-4ddc-b587-0734125062a5"
+                  }
+                },
+                "type" : "object"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "destination" : {
+        "required" : [ "account", "service" ],
+        "properties" : {
+          "account" : {
+            "type" : "string",
+            "example" : "41351300039"
+          },
+          "service" : {
+            "type" : "string",
+            "example" : "IBAN"
+          }
+        },
+        "type" : "object"
+      },
+      "payOutAmount" : {
+        "required" : [ "value", "currency" ],
+        "properties" : {
+          "value" : {
+            "type" : "number",
+            "example" : 10.8,
+            "format" : "double",
+            "minimum" : 0.0,
+            "description" : "Value in given currency to be payed out"
+          },
+          "currency" : {
+            "type" : "string",
+            "example" : "EUR",
+            "minLength" : 3,
+            "maxLength" : 3,
+            "description" : "Currency to be used for payout (ISO4217 format)"
+          }
+        },
+        "type" : "object"
+      }
+    }
+  }
+}

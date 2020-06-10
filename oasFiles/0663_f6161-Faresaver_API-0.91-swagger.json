@@ -1,0 +1,343 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "description" : "FairFly Faresaver API for TMCs",
+    "version" : "0.91",
+    "title" : "Faresaver",
+    "contact" : {
+      "email" : "ami@fairfly.com"
+    }
+  },
+  "tags" : [ {
+    "name" : "FairFly Side",
+    "description" : "API Endpoints that are implemented on FairFly's side"
+  }, {
+    "name" : "TMC Side",
+    "description" : "API Endpoints that are implemented on the TMC's side"
+  } ],
+  "security" : [ {
+    "APIKeyQueryParam" : [ "api_key" ]
+  } ],
+  "paths" : {
+    "/pnr" : {
+      "post" : {
+        "tags" : [ "FairFly Side" ],
+        "summary" : "[FairFly Endpoint] Push a new or updated PNR to FairFly",
+        "description" : "We require our system to be updated with every PNR creation or change so that we can optimize hits and prevent any errors*. You should implement code that sends a call to our API upon every 'End Transaction' in the GDS.\n\n*We have safety nets on our side to prevent errors but they cause suboptimal operation of the system and therefore are not recommended.",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "record_locator" : {
+                    "type" : "string"
+                  },
+                  "account_id" : {
+                    "type" : "string"
+                  },
+                  "department_id" : {
+                    "type" : "string"
+                  },
+                  "pcc" : {
+                    "type" : "string"
+                  },
+                  "reason_type" : {
+                    "type" : "string",
+                    "enum" : [ "CREATE", "UPDATE", "CANCEL" ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Received and job created to sync the PNR",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "status" : {
+                      "type" : "string",
+                      "example" : "OK"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "405" : {
+            "description" : "Bad input"
+          }
+        }
+      }
+    },
+    "/deals" : {
+      "get" : {
+        "tags" : [ "FairFly Side" ],
+        "summary" : "[FairFly Endpoint] Export Savings opportunities for further analysis",
+        "description" : "",
+        "parameters" : [ {
+          "name" : "deal_type",
+          "in" : "query",
+          "description" : "Which deal types to export?",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "Deals Not Sent", "Deals Accepted", "Deals Not Accepted" ]
+          }
+        }, {
+          "name" : "account_id",
+          "description" : "The Account ID as it appears in the database",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "pcc",
+          "description" : "The PCC name(s) to filter by",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }, {
+          "name" : "continent",
+          "in" : "query",
+          "required" : false,
+          "explode" : true,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "North America", "South America", "Europe", "Africa", "Asia", "Oceania" ]
+            }
+          }
+        }, {
+          "name" : "corporate_branch",
+          "in" : "query",
+          "description" : "The Corporate Branches to filter by",
+          "required" : false,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }, {
+          "name" : "currency",
+          "description" : "The ISO currency code to convert all money values into. e.g USD, EUR, GPB etc",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "USD"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "CSV multi part download"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "405" : {
+            "description" : "Bad input"
+          }
+        }
+      }
+    },
+    "/rebooking/success" : {
+      "post" : {
+        "tags" : [ "TMC Side" ],
+        "summary" : "[TMC Endpoint] API endpoint to recive updates about successful rebookings",
+        "description" : "",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/RebookingResult"
+                }, {
+                  "type" : "object",
+                  "properties" : {
+                    "net_savings" : {
+                      "type" : "number",
+                      "example" : 350.2
+                    }
+                  }
+                } ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Received"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "405" : {
+            "description" : "Bad input"
+          }
+        }
+      }
+    },
+    "/rebooking/failure" : {
+      "post" : {
+        "tags" : [ "TMC Side" ],
+        "summary" : "[TMC Endpoint] API endpoint to recive updates about failed rebookings that require manual intervention",
+        "description" : "",
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/RebookingResult"
+                }, {
+                  "type" : "object",
+                  "properties" : {
+                    "failed_reason_code" : {
+                      "type" : "string",
+                      "example" : 1005
+                    },
+                    "failed_reason_description" : {
+                      "type" : "string",
+                      "example" : "Could not issue the new ticket"
+                    },
+                    "failed_step" : {
+                      "$ref" : "#/components/schemas/RebookingStep"
+                    }
+                  }
+                } ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Received"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "405" : {
+            "description" : "Bad input"
+          }
+        }
+      }
+    }
+  },
+  "externalDocs" : {
+    "description" : "FairFly Home page",
+    "url" : "https://www.fairfly.com"
+  },
+  "components" : {
+    "schemas" : {
+      "RebookingStep" : {
+        "type" : "object",
+        "properties" : {
+          "timestamp" : {
+            "type" : "string",
+            "format" : "timestamp",
+            "description" : "ISO Timestamp as a string",
+            "example" : "2020-01-01T14:00:00"
+          },
+          "request_xml_url" : {
+            "type" : "string"
+          },
+          "response_xml_url" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string",
+            "example" : "Voided old eticket"
+          }
+        }
+      },
+      "RebookingResult" : {
+        "type" : "object",
+        "properties" : {
+          "record_locator" : {
+            "type" : "string"
+          },
+          "fairfly_pnr_id" : {
+            "type" : "string",
+            "example" : "UUID"
+          },
+          "rebooking_flow_id" : {
+            "type" : "string",
+            "example" : "UUID"
+          },
+          "account_id" : {
+            "type" : "string",
+            "example" : "UUID"
+          },
+          "rebooked_at" : {
+            "type" : "string",
+            "format" : "timestamp",
+            "description" : "ISO Timestamp as a string",
+            "example" : "2020-01-01T14:00:00"
+          },
+          "original_details" : {
+            "$ref" : "#/components/schemas/PNRFare"
+          },
+          "new_details" : {
+            "$ref" : "#/components/schemas/PNRFare"
+          },
+          "steps_taken" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RebookingStep"
+            }
+          }
+        }
+      },
+      "PNRFare" : {
+        "type" : "object",
+        "properties" : {
+          "total_price" : {
+            "type" : "number",
+            "example" : 1230.2
+          },
+          "fare_basis_codes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "example" : "FABCS0C/SAD"
+            }
+          },
+          "eticket_number" : {
+            "type" : "string",
+            "example" : "12983712390-12"
+          }
+        }
+      }
+    },
+    "responses" : {
+      "UnauthorizedError" : {
+        "description" : "API key is missing or invalid"
+      }
+    },
+    "securitySchemes" : {
+      "APIKeyQueryParam" : {
+        "type" : "apiKey",
+        "in" : "query",
+        "name" : "api_key"
+      }
+    }
+  }
+}

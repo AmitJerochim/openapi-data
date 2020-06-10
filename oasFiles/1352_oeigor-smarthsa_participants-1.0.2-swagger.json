@@ -1,0 +1,1210 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "title" : "SmartHSA Participants (Microservice)",
+    "description" : "Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.",
+    "version" : "1.0.2"
+  },
+  "servers" : [ {
+    "url" : "http://TBD.TBD.com/v1",
+    "description" : "Server description..."
+  }, {
+    "url" : "http://staging-api.TBD.com",
+    "description" : "Server description..."
+  } ],
+  "paths" : {
+    "/participants/{ParticipantIdPathParam}/OnBoardingStepsRemaining" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/UserInfo"
+      }, {
+        "$ref" : "#/components/parameters/ParticipantIdPathParam"
+      } ],
+      "get" : {
+        "summary" : "return onboardingsteps remaining",
+        "operationId" : "getParticipantOnboardingSteps",
+        "description" : "Get participants remaining onboarding steps",
+        "responses" : {
+          "200" : {
+            "description" : "Return remaining onboarding steps for a participant",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "Items" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/OnBoardingSteps"
+                      }
+                    }
+                  },
+                  "description" : "list of onboarding steps remaining. If LastSkippedOnboardingStep is null - all of them, otherwise, steps following LastSkippedOnboardingStep",
+                  "example" : [ "SwitchToDirectDeposit", "AddMobilePhone", "AddEmailAddress", "SignUpForAlerts", "AttachInsuranceCarrier", "SetUpMedicalCabinet", "AddCondition", "EnableLocationTracking", "IsHsaHolder", "IsTutorialCompleted" ]
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      }
+    },
+    "/summary" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/UserInfo"
+      }, {
+        "$ref" : "#/components/parameters/ParticipantIdQueryParam"
+      } ],
+      "head" : {
+        "summary" : "return summary headers",
+        "operationId" : "getParticipantSummary",
+        "description" : "Get participants summry score, Created, lastUpdated, opportunityCount. If participantId queryParam is not provided, find/create a participant with the PAN (found in UserInfo header)",
+        "responses" : {
+          "200" : {
+            "description" : "Return participant's summary, as headers",
+            "headers" : {
+              "X-Score" : {
+                "$ref" : "#/components/headers/X-Score"
+              },
+              "X-Created" : {
+                "$ref" : "#/components/headers/X-Created"
+              },
+              "X-LastUpdated" : {
+                "$ref" : "#/components/headers/X-LastUpdated"
+              },
+              "X-OpportunityCount" : {
+                "$ref" : "#/components/headers/X-OpportunityCount"
+              },
+              "X-ParticipantId" : {
+                "$ref" : "#/components/headers/X-ParticipantId"
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      }
+    },
+    "/participants/{ParticipantIdPathParam}/score" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/UserInfo"
+      }, {
+        "$ref" : "#/components/parameters/ParticipantIdPathParam"
+      }, {
+        "$ref" : "#/components/parameters/RecalculateQueryParam"
+      } ],
+      "get" : {
+        "summary" : "get participant's score",
+        "operationId" : "getParticipantScore",
+        "description" : "Get participant's score",
+        "responses" : {
+          "200" : {
+            "description" : "Return participant's score",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "Score" : {
+                      "type" : "number",
+                      "format" : "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      }
+    },
+    "/participants/" : {
+      "get" : {
+        "summary" : "Get a list of participants based on criteria",
+        "operationId" : "getParticipants",
+        "description" : "Get a list of participants, optionally paged, sorted and filtered. Private API, used by internal/offline services only.",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/PageSizeQueryParam"
+        }, {
+          "$ref" : "#/components/parameters/PageNumberQueryParam"
+        }, {
+          "$ref" : "#/components/parameters/SortOrderQueryParam"
+        }, {
+          "$ref" : "#/components/parameters/SortFieldQueryParam"
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/ParticipantsResponse"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "create a new partcipant",
+        "operationId" : "createPartipant",
+        "description" : "Create a new participant. This is a private API, to create a participant. At run-time participants will be created lazily, on any access to /participants/id",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/UserInfo"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Participant"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/schemas/Participant"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/DuplicateContent"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      }
+    },
+    "/participants/{ParticipantIdPathParam}" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/UserInfo"
+      }, {
+        "$ref" : "#/components/parameters/ParticipantIdPathParam"
+      } ],
+      "get" : {
+        "summary" : "get participant",
+        "operationId" : "getParticipant",
+        "description" : "Get participant\n",
+        "responses" : {
+          "200" : {
+            "description" : "ok",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Participant"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "update participant",
+        "operationId" : "updateParticipant",
+        "description" : "Update participant",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Participant"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "ok",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Participant"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      }
+    },
+    "/participants/{ParticipantIdPathParam}/prescriptions" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/ParticipantIdPathParam"
+      }, {
+        "$ref" : "#/components/parameters/UserInfo"
+      } ],
+      "get" : {
+        "summary" : "get participant's prescriptions",
+        "operationId" : "getPrescriptions",
+        "description" : "Get prescriptions\n",
+        "responses" : {
+          "200" : {
+            "description" : "ok",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/responses/PrescriptionsResponse"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "adds a new prescription",
+        "operationId" : "addPrescription",
+        "description" : "Adds a new prescription for a participant.",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Prescription"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/DuplicateContent"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      }
+    },
+    "/participants/{ParticipantIdPathParam}/prescriptions/{IdPathParam}" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/ParticipantIdPathParam"
+      }, {
+        "$ref" : "#/components/parameters/IdPathParam"
+      }, {
+        "$ref" : "#/components/parameters/UserInfo"
+      } ],
+      "delete" : {
+        "summary" : "delete a prescription",
+        "operationId" : "deletePrescription",
+        "description" : "Remove a prescription from participant.",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      },
+      "get" : {
+        "summary" : "get a prescription",
+        "operationId" : "getPrescription",
+        "description" : "Get a single prescription",
+        "responses" : {
+          "200" : {
+            "description" : "ok",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Prescription"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "update price of a prescription",
+        "operationId" : "updatePrescriptionPrice",
+        "description" : "update a prescription with a new price (the only prescription update allowed)",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "Price",
+          "required" : true,
+          "description" : "new price",
+          "schema" : {
+            "type" : "number",
+            "format" : "currency"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      }
+    },
+    "/participants/{ParticipantIdPathParam}/pharmacy" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/ParticipantIdPathParam"
+      }, {
+        "$ref" : "#/components/parameters/UserInfo"
+      } ],
+      "post" : {
+        "summary" : "set participant's pharmacy",
+        "operationId" : "setParticipantPharmacy",
+        "description" : "Set default pharmacy for a participant",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Pharmacy"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/DuplicateContent"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "delete default pharmacy",
+        "operationId" : "deleteParticipantPharmacy",
+        "description" : "Delete default pharmacy for a participant",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      }
+    },
+    "/participants/{ParticipantIdPathParam}/insurance" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/UserInfo"
+      }, {
+        "$ref" : "#/components/parameters/ParticipantIdPathParam"
+      } ],
+      "post" : {
+        "summary" : "set insurance information",
+        "operationId" : "setInsuranceInformation",
+        "description" : "Set insurance information for a participant",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InsuranceInformation"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/DuplicateContent"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "delete insurance information",
+        "operationId" : "deleteInsuranceInformation",
+        "description" : "Delete inurance information for a participant",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      }
+    },
+    "/participants/{ParticipantIdPathParam}/conditions" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/ParticipantIdPathParam"
+      }, {
+        "$ref" : "#/components/parameters/UserInfo"
+      } ],
+      "post" : {
+        "summary" : "add a new condition",
+        "operationId" : "addCondition",
+        "description" : "Add a new condition, for a participant or dependent",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PersonCondition"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/schemas/PersonCondition"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "409" : {
+            "$ref" : "#/components/responses/DuplicateContent"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      },
+      "get" : {
+        "summary" : "get conditions",
+        "operationId" : "getConditions",
+        "description" : "get conditions, for participant and his/her dependents\n",
+        "responses" : {
+          "200" : {
+            "description" : "ok",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PersonCondition"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "set conditions",
+        "operationId" : "setConditions",
+        "description" : "set conditions, for the whole family (TBD need to figure out how to store/referencefamily members)\n",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "items" : {
+                  "$ref" : "#/components/schemas/PersonCondition"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "ok",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PersonCondition"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      }
+    },
+    "/participants/{ParticipantIdPathParam}/conditions/{IdPathParam}" : {
+      "parameters" : [ {
+        "$ref" : "#/components/parameters/ParticipantIdPathParam"
+      }, {
+        "$ref" : "#/components/parameters/IdPathParam"
+      }, {
+        "$ref" : "#/components/parameters/UserInfo"
+      } ],
+      "delete" : {
+        "summary" : "delete a condition",
+        "operationId" : "deleteCondition",
+        "description" : "Remove a condition from participant.",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      },
+      "get" : {
+        "summary" : "get a condition",
+        "operationId" : "getCondition",
+        "description" : "Get a single condition",
+        "responses" : {
+          "200" : {
+            "description" : "ok",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PersonCondition"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultError"
+          }
+        }
+      }
+    }
+  },
+  "security" : [ {
+    "bearerAuth" : [ ]
+  } ],
+  "components" : {
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    },
+    "parameters" : {
+      "UserInfo" : {
+        "in" : "header",
+        "name" : "UserInfo",
+        "required" : true,
+        "schema" : {
+          "type" : "string"
+        },
+        "description" : "PAN"
+      },
+      "ParticipantIdQueryParam" : {
+        "in" : "query",
+        "name" : "ParticipantId",
+        "required" : false,
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid"
+        }
+      },
+      "ParticipantIdPathParam" : {
+        "in" : "path",
+        "name" : "ParticipantIdPathParam",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid"
+        },
+        "description" : "Internal participant id"
+      },
+      "IdPathParam" : {
+        "in" : "path",
+        "name" : "IdPathParam",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid"
+        },
+        "description" : "an id"
+      },
+      "NameQueryParam" : {
+        "in" : "query",
+        "name" : "Name",
+        "required" : true,
+        "schema" : {
+          "type" : "string"
+        },
+        "description" : "a name"
+      },
+      "RecalculateQueryParam" : {
+        "in" : "query",
+        "name" : "Recalculate",
+        "required" : false,
+        "description" : "if true, recalculate the score first",
+        "schema" : {
+          "type" : "boolean"
+        }
+      },
+      "PageNumberQueryParam" : {
+        "in" : "query",
+        "name" : "PageNumber",
+        "required" : false,
+        "schema" : {
+          "type" : "number",
+          "format" : "integer",
+          "default" : 1
+        },
+        "description" : "page requested (default = 1)"
+      },
+      "PageSizeQueryParam" : {
+        "in" : "query",
+        "name" : "PageSize",
+        "required" : false,
+        "schema" : {
+          "type" : "number",
+          "format" : "integer"
+        },
+        "description" : "page size requested"
+      },
+      "SortOrderQueryParam" : {
+        "in" : "query",
+        "name" : "SortOrder",
+        "required" : false,
+        "schema" : {
+          "type" : "string"
+        },
+        "description" : "sort order"
+      },
+      "SortFieldQueryParam" : {
+        "in" : "query",
+        "name" : "SortField",
+        "required" : false,
+        "schema" : {
+          "type" : "string"
+        },
+        "description" : "sort options"
+      },
+      "ParticipantFilterQueryParam" : {
+        "in" : "query",
+        "name" : "ParticipantFilter",
+        "required" : false,
+        "description" : "participant filter, include toplevel properties only, not subordinates",
+        "schema" : {
+          "$ref" : "#/components/schemas/Participant"
+        }
+      }
+    },
+    "schemas" : {
+      "OnBoardingSteps" : {
+        "type" : "string",
+        "enum" : [ "SwitchToDirectDeposit", "AddMobilePhone", "AddEmailAddress", "SignUpForAlerts", "AttachInsuranceCarrier", "SetUpMedicalCabinet", "AddCondition", "EnableLocationTracking", "IsHsaHolder", "IsTutorialCompleted" ]
+      },
+      "Participant" : {
+        "type" : "object",
+        "description" : "a Participant",
+        "required" : [ "pan" ],
+        "properties" : {
+          "Score" : {
+            "type" : "number",
+            "format" : "integer"
+          },
+          "IsProvidersSearched" : {
+            "type" : "boolean",
+            "description" : "true of provider search was performed, at least once"
+          },
+          "IsLocationTrackingEnabled" : {
+            "type" : "boolean",
+            "description" : "true if location tracking was turned on"
+          },
+          "IsFundingCalculatorUsed" : {
+            "type" : "boolean",
+            "description" : "true if user has visited funding calculator page"
+          },
+          "IsTutorialCompleted" : {
+            "type" : "boolean",
+            "description" : "true if user has completed the tutorial"
+          },
+          "IsHsaHolder" : {
+            "type" : "boolean",
+            "description" : "true if user is an HSA holder"
+          },
+          "IsPrescriptionAdded" : {
+            "type" : "boolean",
+            "description" : "true if a prescription jas been added, at least once"
+          },
+          "LastSkippedOnboardingStep" : {
+            "$ref" : "#/components/schemas/OnBoardingSteps"
+          },
+          "PAN" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "Pharmacy" : {
+            "$ref" : "#/components/schemas/Pharmacy"
+          },
+          "Prescriptions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Prescription"
+            }
+          },
+          "Conditions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PersonCondition"
+            }
+          },
+          "Radius" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "InsuranceInformation" : {
+            "$ref" : "#/components/schemas/InsuranceInformation"
+          }
+        }
+      },
+      "Pharmacy" : {
+        "type" : "object",
+        "description" : "a Pharmacy",
+        "required" : [ "pharmacyName" ],
+        "properties" : {
+          "Id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "Address1" : {
+            "type" : "string"
+          },
+          "Address2" : {
+            "type" : "string"
+          },
+          "ChainCode" : {
+            "type" : "string"
+          },
+          "City" : {
+            "type" : "string"
+          },
+          "Class" : {
+            "type" : "string"
+          },
+          "city" : {
+            "type" : "string"
+          },
+          "Distance" : {
+            "type" : "number"
+          },
+          "Latitude" : {
+            "type" : "number"
+          },
+          "Longitude" : {
+            "type" : "number"
+          },
+          "Nabp" : {
+            "type" : "string"
+          },
+          "Name" : {
+            "type" : "string"
+          },
+          "Phone" : {
+            "type" : "string"
+          },
+          "State" : {
+            "type" : "string"
+          },
+          "Type" : {
+            "type" : "string"
+          },
+          "ZipCode" : {
+            "type" : "string"
+          }
+        },
+        "example" : {
+          "Address1" : "sample string 4",
+          "Address2" : "sample string 5",
+          "ChainCode" : "sample string 3",
+          "City" : "sample string 6",
+          "Class" : "sample string 14",
+          "Distance" : 12,
+          "Latitude" : 10,
+          "Longitude" : 11,
+          "Nabp" : "sample string 2",
+          "Name" : "sample string 1",
+          "Phone" : "sample string 9",
+          "State" : "sample string 7",
+          "Type" : "sample string 13",
+          "ZipCode" : "sample string 8"
+        }
+      },
+      "Prescription" : {
+        "type" : "object",
+        "required" : [ "Price", "Days", "Quantity", "Drug", "PAN", "DependentId" ],
+        "properties" : {
+          "Id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "Price" : {
+            "type" : "number",
+            "format" : "currency"
+          },
+          "Days" : {
+            "type" : "number",
+            "format" : "int32"
+          },
+          "Quantity" : {
+            "type" : "number"
+          },
+          "Dosage" : {
+            "type" : "string"
+          },
+          "Drug" : {
+            "$ref" : "#/components/schemas/Drug"
+          },
+          "PAN" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "DependentId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "TBD"
+          }
+        }
+      },
+      "Drug" : {
+        "type" : "object",
+        "description" : "this",
+        "required" : [ "Ndc", "DrugName", "Mony", "Type", "Gpi", "Otc" ],
+        "properties" : {
+          "Ndc" : {
+            "type" : "string"
+          },
+          "DrugName" : {
+            "type" : "string"
+          },
+          "Mony" : {
+            "type" : "string"
+          },
+          "Type" : {
+            "type" : "string"
+          },
+          "PackageSize" : {
+            "type" : "number",
+            "format" : "double"
+          },
+          "ProductName" : {
+            "type" : "string"
+          },
+          "Gpi" : {
+            "type" : "string"
+          },
+          "Otc" : {
+            "type" : "string"
+          },
+          "Ingredient" : {
+            "type" : "boolean"
+          },
+          "EquivalentNdc" : {
+            "type" : "string"
+          },
+          "Strength" : {
+            "type" : "string"
+          }
+        },
+        "example" : {
+          "DrugName" : "sample string 2",
+          "EquivalentNdc" : "sample string 11",
+          "Gpi" : "sample string 8",
+          "Ingredient" : true,
+          "Mony" : "sample string 4",
+          "Ndc" : "sample string 1",
+          "Otc" : true,
+          "PackageSize" : 6,
+          "ProductName" : "sample string 7",
+          "Strength" : "sample string 3",
+          "Type" : "sample string 5"
+        }
+      },
+      "Error" : {
+        "type" : "object",
+        "properties" : {
+          "Code" : {
+            "type" : "string"
+          },
+          "Message" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "Code", "Message" ]
+      },
+      "InsuranceInformation" : {
+        "description" : "participant's medical insurance information",
+        "type" : "object",
+        "properties" : {
+          "Carrier" : {
+            "type" : "string"
+          },
+          "Group" : {
+            "type" : "string"
+          },
+          "Uuid" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PersonCondition" : {
+        "description" : "Medical Condition associated with a person. If DependentId is present - the condition is for dependent, otherwise - for the participant",
+        "type" : "object",
+        "required" : [ "Id" ],
+        "properties" : {
+          "Id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "DependentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
+      "Paging" : {
+        "description" : "Paging info for a collection",
+        "type" : "object",
+        "properties" : {
+          "TotalPages" : {
+            "type" : "number",
+            "format" : "integer",
+            "description" : "total number of pages"
+          },
+          "TotalItems" : {
+            "type" : "number",
+            "format" : "integer",
+            "description" : "total number of items in the collection"
+          },
+          "PageNumber" : {
+            "type" : "number",
+            "format" : "integer",
+            "description" : "page number for the page being returned"
+          },
+          "PageSize" : {
+            "type" : "number",
+            "format" : "integer",
+            "description" : "page size"
+          },
+          "SortField" : {
+            "type" : "string",
+            "description" : "field to sort by"
+          },
+          "SortOrder" : {
+            "enum" : [ "asc", "desc" ],
+            "description" : "sort order"
+          }
+        }
+      }
+    },
+    "responses" : {
+      "NotFound" : {
+        "description" : "The specified resource was not found",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "DuplicateContent" : {
+        "description" : "The specified resource alread exists",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized" : {
+        "description" : "Unauthorized",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "BadRequest" : {
+        "description" : "Invalid request body or parameter",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "DefaultError" : {
+        "description" : "Default",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "PrescriptionsResponse" : {
+        "description" : "Prescriptions response",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "Items" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Prescription"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ParticipantsResponse" : {
+        "description" : "Participants response, with pagination info",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "Items" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Participant"
+                  }
+                },
+                "Paging" : {
+                  "$ref" : "#/components/schemas/Paging"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "headers" : {
+      "X-Score" : {
+        "schema" : {
+          "type" : "integer"
+        }
+      },
+      "X-Created" : {
+        "schema" : {
+          "type" : "string",
+          "format" : "date-time"
+        }
+      },
+      "X-LastUpdated" : {
+        "schema" : {
+          "type" : "string",
+          "format" : "date-time"
+        }
+      },
+      "X-OpportunityCount" : {
+        "schema" : {
+          "type" : "integer"
+        }
+      },
+      "X-ParticipantId" : {
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid"
+        }
+      }
+    }
+  }
+}

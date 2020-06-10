@@ -1,0 +1,563 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "Senta Client API",
+    "description" : "Client API offered by Senta",
+    "version" : "1.4"
+  },
+  "security" : [ {
+    "apiKey" : [ ]
+  } ],
+  "servers" : [ {
+    "url" : "https://{practice}.senta.co",
+    "description" : "The URL of your Senta workspace",
+    "variables" : {
+      "practice" : {
+        "default" : "demo"
+      }
+    }
+  } ],
+  "paths" : {
+    "/api/clients/{clientViewId}" : {
+      "get" : {
+        "summary" : "List Clients",
+        "tags" : [ "Client" ],
+        "description" : "Take any publicly-browsable client list, e.g. `https://acme.senta.co/c/l/v08a361263f4a` - the `v08a361263f4a` is the \"viewId\", i.e. the unique id of the client list that has been created by the practice. This view specifies both a filter (in this case \"Prospects only\") and a set of columns (\"Client name\", \"State\", \"Type\", \"Business area\", \"Telephone\")\n\nTake that viewId and instead access it via the public API: that same filtered data will be returned in JSON format.\n\nNote that internal field names are transformed to the column names used in the list, e.g. clientstate becomes \"State\", and title becomes \"Client name\".",
+        "parameters" : [ {
+          "name" : "clientViewId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "description" : "The unique id of the client list that has been created by the practice"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Valid Response"
+          },
+          "403" : {
+            "description" : "API key invalid"
+          },
+          "500" : {
+            "description" : "Malformed request"
+          }
+        }
+      }
+    },
+    "/api/clients/{clientId}" : {
+      "get" : {
+        "parameters" : [ {
+          "name" : "clientId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "description" : "Subset of company data is returned"
+        } ],
+        "tags" : [ "Client" ],
+        "responses" : {
+          "200" : {
+            "description" : "Valid Response"
+          },
+          "403" : {
+            "description" : "API key invalid"
+          },
+          "500" : {
+            "description" : "Malformed request"
+          }
+        },
+        "summary" : "Get Client",
+        "description" : "Take any client id, e.g. `c260af21ede8f` and access it via the GET url above: a JSON subset of the company data is returned, e.g.:\n\n  ```\n  {\n    \"doc\": {\n      \"_id\": \"c260af21ede8f\",\n      \"contacts\": [\n        {\n          \"email\": \"tammy.bailey@example.com\",\n          \"mobile\": \"07700 900898\",\n          \"lastname\": \"Bailey\",\n          \"firstname\": \"Tammy\"\n        }\n      ],\n      \"web\": \"www.watchfulcobweb.co\",\n      \"town\": \"Sherborne\",\n      \"title\": \"Watchful Cobweb\",\n      \"twitter\": \"watchfulcobweb\",\n      \"address1\": \"8 Somerset Hall Road\",\n      \"address2\": \"\",\n      \"district\": \"\",\n      \"postcode\": \"DT9 3BV\",\n      \"telephone\": \"01632 963561\",\n      \"clienttype\": \"Partnership\",\n      \"clientstate\": \"Prospect\",\n      \"businessarea\": \"Veterinary\"\n    }\n  }\n  ```\n\n"
+      },
+      "put" : {
+        "tags" : [ "Client" ],
+        "description" : "As per \"Get Client\", but using HTTP method PUT, will cause an Update to occur for any properties submitted.\n\n  The actual properties available will depend on what is configured within Settings > Forms > Edit Client and Edit Contact.\n\n```\n{\n  \"doc\": {\n    \"title\": \"Watchful Cobweb Ltd\",\n    \"clientstate\": \"Client\",\n    \"paymentmethod\": \"Monthly\",\n    \"vatservice\": true,\n    \"contacts\": [\n      {\n        \"email\": \"tammy.bailey@example.com\",\n        \"mobile\": \"07700 900898\",\n        \"lastname\": \"Bailey\",\n        \"firstname\": \"Tammy\",\n        \"shareholding\": 50\n      },\n      {\n        \"email\": \"roger.smith@example.com\",\n        \"mobile\": \"07462 810392\",\n        \"lastname\": \"Smith\",\n        \"firstname\": \"Roger\",\n        \"shareholding\": 50\n      }\n    ]\n  }\n}\n```\n\nThis partial update will cause the following to happen:\n\n* The \"title\" and \"clientstate\" fields will have their previous values overwritten, i.e.:\n  * \"Watchful Cobweb\" -> \"Watchful Cobweb Ltd\"\n  * \"Prospect\" -> \"Client\"\n* The \"paymentmethod\" will have a value set for the first time\n* The service \"VAT service\" will be enabled\n* The existing contact \"Tammy Bailey\" will have a new value for \"shareholding\"\n* A new contact \"Roger Smith\" will be added\n\nNote that switching from prospect to client, and enabling the VAT service, will cause jobs to kick off just the same as if those changes were made within the Practice workspace.\n\nThe return value is the entire new state of the company, in the same format as \"Get client\" above, e.g:\n\n```\n{\n  \"doc\": {\n    \"_id\": \"c260af21ede8f\",\n    \"contacts\": [\n      {\n        \"email\": \"tammy.bailey@example.com\",\n        \"mobile\": \"07700 900898\",\n        \"lastname\": \"Bailey\",\n        \"firstname\": \"Tammy\",\n        \"shareholding\": 50\n      },\n      {\n        \"email\": \"roger.smith@example.com\",\n        \"mobile\": \"07462 810392\",\n        \"lastname\": \"Smith\",\n        \"firstname\": \"Roger\",\n        \"shareholding\": 50\n      }\n    ],\n    \"web\": \"www.watchfulcobweb.co\",\n    \"town\": \"Sherborne\",\n    \"title\": \"Watchful Cobweb Ltd\",\n    \"total\": 0,\n    \"twitter\": \"watchfulcobweb\",\n    \"address1\": \"8 Somerset Hall Road\",\n    \"address2\": \"\",\n    \"district\": \"\",\n    \"postcode\": \"DT9 3BV\",\n    \"telephone\": \"01632 963561\",\n    \"clienttype\": \"Partnership\",\n    \"clientstate\": \"Client\",\n    \"businessarea\": \"Veterinary\",\n    \"vatservice\": true,\n    \"paymentmethod\": \"Monthly\"\n  }\n}\n```",
+        "parameters" : [ {
+          "name" : "clientId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "description" : "Update any properties submitted"
+        } ],
+        "requestBody" : {
+          "description" : "Company fields to be updated",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/client"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Valid Response with full company data",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/client"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "API key invalid"
+          },
+          "500" : {
+            "description" : "Malformed request"
+          }
+        },
+        "summary" : "Update Client"
+      }
+    },
+    "/api/clients" : {
+      "post" : {
+        "tags" : [ "Client" ],
+        "summary" : "Create new client",
+        "description" : "Create a brand new company, using the properties submitted.\n\nThe return value is the entire state of the newly-created company, in the same format as \"Get client\" above, including the newly-assigned _id.",
+        "requestBody" : {
+          "description" : "Create new client",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/newclient"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Valid Response with full company data",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/client"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "API key invalid"
+          },
+          "500" : {
+            "description" : "Malformed request"
+          }
+        }
+      }
+    },
+    "/api/jobs" : {
+      "get" : {
+        "tags" : [ "Jobs" ],
+        "description" : "Returns the set of jobs relating to a specific client",
+        "parameters" : [ {
+          "name" : "cid",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "description" : "The id of the client to filter by"
+        }, {
+          "name" : "wid",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "description" : "The id of the job template to filter by"
+        }, {
+          "name" : "status",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "description" : "The status of the job - pick from 'pending', 'ready', 'overdue', 'completed', 'cancelled'"
+        }, {
+          "name" : "x-auth",
+          "in" : "header",
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "52f74975-56ea-412f-802e-ed4d932d0072"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Valid Response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "docs" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/job"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "API key invalid"
+          },
+          "500" : {
+            "description" : "Malformed request"
+          }
+        },
+        "summary" : "Get Jobs"
+      }
+    },
+    "/api/notes" : {
+      "post" : {
+        "tags" : [ "Notes" ],
+        "summary" : "Create new note",
+        "description" : "Create a note attached to a company and (optionally) a job\n\nThe return value is the entire note",
+        "requestBody" : {
+          "description" : "Note text, company ID and a (optionally) job id",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "properties" : {
+                  "cid" : {
+                    "type" : "string",
+                    "description" : "the id of the company to which this note relates",
+                    "example" : "c260af21ede8f"
+                  },
+                  "jid" : {
+                    "type" : "string",
+                    "description" : "the optional id of the job to which this note relates",
+                    "example" : "jgede54650fde"
+                  },
+                  "text" : {
+                    "type" : "string",
+                    "description" : "the text of the note - can include html",
+                    "example" : "Here is some <b>text</b> for the note"
+                  },
+                  "notetype" : {
+                    "type" : "string",
+                    "description" : "optional type of note - defaults simply to \"Note\"",
+                    "example" : "Phone call"
+                  },
+                  "date" : {
+                    "type" : "string",
+                    "description" : "optional date & time this note refers to - defaults to time of posting",
+                    "example" : "2019-08-26T00:00:00.000Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Valid Response with full company data",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/note"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "API key invalid"
+          },
+          "500" : {
+            "description" : "Malformed request"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "securitySchemes" : {
+      "apiKey" : {
+        "type" : "apiKey",
+        "description" : "API key to authorize requests.",
+        "name" : "x-auth",
+        "in" : "header"
+      }
+    },
+    "schemas" : {
+      "client" : {
+        "type" : "object",
+        "description" : "Doc container for the client",
+        "properties" : {
+          "doc" : {
+            "type" : "object",
+            "description" : "Object representing the company, containing the fields customised by your practice.",
+            "properties" : {
+              "_id" : {
+                "type" : "string",
+                "example" : "c260af21ede8f"
+              },
+              "title" : {
+                "type" : "string",
+                "example" : "Mostly Harmless PLC"
+              },
+              "clientstate" : {
+                "type" : "string",
+                "example" : "Client"
+              },
+              "contacts" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "email" : {
+                      "type" : "string",
+                      "example" : "bob.jones@example.com"
+                    },
+                    "mobile" : {
+                      "type" : "number",
+                      "example" : "09876 543212"
+                    },
+                    "lastname" : {
+                      "type" : "string",
+                      "example" : "Jones"
+                    },
+                    "firstname" : {
+                      "type" : "string",
+                      "example" : "Bob"
+                    },
+                    "shareholding" : {
+                      "type" : "number",
+                      "example" : 50
+                    }
+                  }
+                }
+              },
+              "web" : {
+                "type" : "string",
+                "example" : "www.watchfulcobweb.co"
+              },
+              "town" : {
+                "type" : "string",
+                "example" : "Sherborne"
+              },
+              "total" : {
+                "type" : "number",
+                "example" : 0
+              },
+              "twitter" : {
+                "type" : "string",
+                "example" : "watchfulcobweb"
+              },
+              "address1" : {
+                "type" : "string",
+                "example" : "8 Somerset Hall Road"
+              },
+              "address2" : {
+                "type" : "string",
+                "example" : ""
+              },
+              "district" : {
+                "type" : "string",
+                "example" : ""
+              },
+              "postcode" : {
+                "type" : "string",
+                "example" : "DT9 3BV"
+              },
+              "telephone" : {
+                "type" : "string",
+                "example" : "09876 543212"
+              },
+              "clienttype" : {
+                "type" : "string",
+                "example" : "Partnership"
+              },
+              "businessarea" : {
+                "type" : "string",
+                "example" : "Veterinary"
+              },
+              "vatservice" : {
+                "type" : "boolean",
+                "example" : true
+              },
+              "paymentmethod" : {
+                "type" : "string",
+                "example" : "Monthly"
+              }
+            }
+          }
+        }
+      },
+      "newclient" : {
+        "type" : "object",
+        "description" : "Doc container for the client",
+        "properties" : {
+          "doc" : {
+            "type" : "object",
+            "description" : "Object representing the company, containing the fields customised by your practice.",
+            "properties" : {
+              "title" : {
+                "type" : "string",
+                "example" : "Mostly Harmless PLC"
+              },
+              "clientstate" : {
+                "type" : "string",
+                "example" : "Client"
+              },
+              "contacts" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "email" : {
+                      "type" : "string",
+                      "example" : "bob.jones@example.com"
+                    },
+                    "mobile" : {
+                      "type" : "number",
+                      "example" : "09876 543212"
+                    },
+                    "lastname" : {
+                      "type" : "string",
+                      "example" : "Jones"
+                    },
+                    "firstname" : {
+                      "type" : "string",
+                      "example" : "Bob"
+                    },
+                    "shareholding" : {
+                      "type" : "number",
+                      "example" : 50
+                    }
+                  }
+                }
+              },
+              "web" : {
+                "type" : "string",
+                "example" : "www.watchfulcobweb.co"
+              },
+              "town" : {
+                "type" : "string",
+                "example" : "Sherborne"
+              },
+              "total" : {
+                "type" : "number",
+                "example" : 0
+              },
+              "twitter" : {
+                "type" : "string",
+                "example" : "watchfulcobweb"
+              },
+              "address1" : {
+                "type" : "string",
+                "example" : "8 Somerset Hall Road"
+              },
+              "address2" : {
+                "type" : "string",
+                "example" : ""
+              },
+              "district" : {
+                "type" : "string",
+                "example" : ""
+              },
+              "postcode" : {
+                "type" : "string",
+                "example" : "DT9 3BV"
+              },
+              "telephone" : {
+                "type" : "string",
+                "example" : "09876 543212"
+              },
+              "clienttype" : {
+                "type" : "string",
+                "example" : "Partnership"
+              },
+              "businessarea" : {
+                "type" : "string",
+                "example" : "Veterinary"
+              },
+              "vatservice" : {
+                "type" : "boolean",
+                "example" : true
+              },
+              "paymentmethod" : {
+                "type" : "string",
+                "example" : "Monthly"
+              }
+            }
+          }
+        }
+      },
+      "job" : {
+        "type" : "object",
+        "properties" : {
+          "_id" : {
+            "type" : "string",
+            "description" : "the unique id of this job",
+            "example" : "j78ecbe073def"
+          },
+          "cid" : {
+            "type" : "string",
+            "description" : "the id of the company to which this job relates",
+            "example" : "c260af21ede8f"
+          },
+          "wid" : {
+            "type" : "string",
+            "description" : "the id of the job template",
+            "example" : "w263ba3fa138b"
+          },
+          "title" : {
+            "type" : "string",
+            "description" : "the name of this type of job, taken from the job template",
+            "example" : "Accounts setup"
+          },
+          "date" : {
+            "type" : "string",
+            "description" : "the main date of this job https://support.senta.co/support/solutions/articles/5000577623-pivotal-dates",
+            "example" : "2019-08-26T00:00:00.000Z"
+          }
+        }
+      },
+      "note" : {
+        "type" : "object",
+        "properties" : {
+          "_id" : {
+            "type" : "string",
+            "description" : "the unique id of this note",
+            "example" : "n263ba3fa138b"
+          },
+          "cid" : {
+            "type" : "string",
+            "description" : "the id of the company to which this note relates",
+            "example" : "c260af21ede8f"
+          },
+          "jid" : {
+            "type" : "string",
+            "description" : "the id of the job to which this note relates",
+            "example" : "jgede54650fde"
+          },
+          "text" : {
+            "type" : "string",
+            "description" : "the text of the note - can include html",
+            "example" : "Here is some <b>text</b> for the note"
+          },
+          "notetype" : {
+            "type" : "string",
+            "description" : "the type of note",
+            "example" : "Phone call"
+          },
+          "date" : {
+            "type" : "string",
+            "description" : "the date & time this note refers to",
+            "example" : "2019-08-26T00:00:00.000Z"
+          }
+        }
+      }
+    }
+  }
+}

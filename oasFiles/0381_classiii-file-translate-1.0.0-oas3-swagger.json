@@ -1,0 +1,913 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "description" : "trial server",
+    "url" : "https://translate.classiii.info/api/v1"
+  } ],
+  "info" : {
+    "description" : "ファイル翻訳APIドキュメント",
+    "version" : "1.0.0-oas3",
+    "title" : "ファイル翻訳API",
+    "contact" : {
+      "email" : "s-liu@rozetta.jp"
+    },
+    "license" : {
+      "name" : "Apache 2.0",
+      "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "tags" : [ {
+    "name" : "file-translate",
+    "description" : "ファイル翻訳API"
+  }, {
+    "name" : "translate-result",
+    "description" : "翻訳結果API取得"
+  }, {
+    "name" : "downloads",
+    "description" : "翻訳結果APIダウンロード"
+  }, {
+    "name" : "callback",
+    "description" : "ファイル翻訳完成した時\n\n （一つのファイル単位で、 \n\n 一つのファイルには複数言語を翻訳する場合、複数の通知する。）、\n\n ユーザーはコールバックURL設定している場合、\n\n ユーザーへ自動的に結果を通知する。\n\n このAPIはコールバックの取得、更新、削除を行うAPIです。\n\n"
+  } ],
+  "paths" : {
+    "/auth-code" : {
+      "post" : {
+        "tags" : [ "file-translate" ],
+        "summary" : "認証コード",
+        "description" : "T-4OOのユーザーの情報により、\n認証コードを取得、クライアント側でパスワードが暗号化される。\n",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "orgId" : {
+                    "type" : "string",
+                    "description" : "会社Id"
+                  },
+                  "userId" : {
+                    "type" : "string",
+                    "description" : "ユーザーId"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthCodeResp"
+                },
+                "example" : {
+                  "status" : "success",
+                  "data" : {
+                    "id" : "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "bad orgId or bad userId"
+          }
+        }
+      }
+    },
+    "/authenticate" : {
+      "post" : {
+        "tags" : [ "file-translate" ],
+        "summary" : "ユーザー情報認証",
+        "description" : "T-4OOのユーザーの情報\n\n （ユーザー情報は会社Id、ユーザーId、暗号化されたパスワード三つの情報。\n\n パスワードの暗号化方法はRC4というアルゴリズムを使って暗号化する。）\n\n 認証を行い、認証できたら、accessKeyとsecretKeyを発行する。\n\n accessKeyとsecretKeyはファイル翻訳APIに必須な項目signatureを生成する。",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "orgId" : {
+                    "type" : "string",
+                    "description" : "会社Id"
+                  },
+                  "userId" : {
+                    "type" : "string",
+                    "description" : "ユーザーId"
+                  },
+                  "password" : {
+                    "type" : "string",
+                    "description" : "パスワード"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthenticationResp"
+                },
+                "example" : {
+                  "status" : "success",
+                  "data" : {
+                    "accessKey" : "8c76e418-9842-455b-aac1-5be28e8e4e94",
+                    "secretKey" : "d290f1ee-6c54-4b01-90e6-d701748f0851"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "bad orgId or bad userId"
+          }
+        }
+      }
+    },
+    "/file-translate" : {
+      "post" : {
+        "tags" : [ "file-translate" ],
+        "summary" : "ファイル翻訳実行",
+        "description" : "ClassIII APIで発行したaccessKeyとsecretKeyを利用し、ファイル内容を翻訳。 doc(x)、xls(x),ppt(x),pdfのファイルを対応する多言語翻訳。",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "accessKey",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "ご所持しているAccessKeyもしくはT-4OOの登録情報より取得。 詳細は [/auth-code](#/file-translate/post_auth_code) と [/authenticate](#/file-translate/post_authenticate)をご参照ください。"
+        }, {
+          "in" : "header",
+          "name" : "nonce",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "数値の文字列。 リクエスト毎に増加させる必要があります。 通常はUNIXタイムスタンプを使うのがおすすめです。"
+        }, {
+          "in" : "header",
+          "name" : "signature",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "暗号化署名。 sha256とhmacアルゴリズムを使用し、 自分のsecretKeyにnonceとurl（ドメイン以外の部分）で署名し、 生成させた16進数の文字列。"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "fieldId" : {
+                    "type" : "string",
+                    "description" : "分野Id"
+                  },
+                  "targetLangs" : {
+                    "type" : "string",
+                    "description" : "翻訳したい言語(json配列からstringになる，複数でも良い)"
+                  },
+                  "files" : {
+                    "description" : "ファイル配列",
+                    "type" : "array",
+                    "items" : {
+                      "type" : "string",
+                      "format" : "binary"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/QueueResultResp"
+                },
+                "example" : {
+                  "status" : "success",
+                  "data" : {
+                    "translateId" : "8c76e418-9842-455b-aac1-5be28e8e4e94"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "internal error"
+          }
+        },
+        "callbacks" : {
+          "translated_notification" : {
+            "mycallback-url" : {
+              "post" : {
+                "parameters" : [ {
+                  "in" : "header",
+                  "name" : "accessKey",
+                  "schema" : {
+                    "type" : "string"
+                  },
+                  "required" : true,
+                  "description" : "ご客様お持ちaccessKeyです。"
+                } ],
+                "responses" : {
+                  "200" : {
+                    "description" : "Successful operation",
+                    "content" : {
+                      "application/json" : {
+                        "schema" : {
+                          "$ref" : "#/components/schemas/TranslateResultResp"
+                        },
+                        "example" : {
+                          "status" : "success",
+                          "data" : {
+                            "translateId" : "8c76e418-9842-455b-aac1-5be28e8e4e94",
+                            "done" : false,
+                            "langs" : [ "en" ],
+                            "fieldId" : 1,
+                            "createdAt" : "2019-07-21T17:32:28Z",
+                            "items" : [ {
+                              "translateItemId" : "8c76e418-9842-455b-aac1-5be28e8e4e94",
+                              "lang" : "ja",
+                              "wordCount" : 1000,
+                              "detectedLang" : "en",
+                              "done" : true,
+                              "originalName" : "test.pdf",
+                              "downloaded" : true,
+                              "error" : false
+                            } ]
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "500" : {
+                    "description" : "internal error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/translate-result/{translateId}" : {
+      "get" : {
+        "tags" : [ "translate-result" ],
+        "summary" : "翻訳結果取得",
+        "description" : "ユーザー情報により、指定された翻訳結果を取得",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "accessKey",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "ご所持しているAccessKeyもしくはT-4OOの登録情報より取得。 詳細は [/auth-code](#/file-translate/post_auth_code) と [/authenticate](#/file-translate/post_authenticate)をご参照ください。"
+        }, {
+          "in" : "header",
+          "name" : "nonce",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "数値の文字列。 リクエスト毎に増加させる必要があります。 通常はUNIXタイムスタンプを使うのがおすすめです。"
+        }, {
+          "in" : "header",
+          "name" : "signature",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "暗号化署名。 sha256とhmacアルゴリズムを使用し、 自分のsecretKeyにnonceとurl（ドメイン以外の部分）で署名し、 生成させた16進数の文字列。"
+        }, {
+          "in" : "path",
+          "name" : "translateId",
+          "description" : "翻訳Id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TranslateResultResp"
+                },
+                "example" : {
+                  "status" : "success",
+                  "data" : {
+                    "translateId" : "8c76e418-9842-455b-aac1-5be28e8e4e94",
+                    "done" : false,
+                    "langs" : [ "zh-CN", "ja" ],
+                    "fieldId" : 1,
+                    "createdAt" : "2019-07-21T17:32:28Z",
+                    "items" : [ {
+                      "translateItemId" : "8c76e418-9842-455b-aac1-5be28e8e4e94",
+                      "lang" : "ja",
+                      "wordCount" : 1000,
+                      "detectedLang" : "zh-CN",
+                      "done" : true,
+                      "originalName" : "test.pdf",
+                      "downloaded" : true,
+                      "error" : false
+                    } ]
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "internal error"
+          }
+        }
+      }
+    },
+    "/translate-result/all" : {
+      "get" : {
+        "tags" : [ "translate-result" ],
+        "summary" : "全部翻訳結果取得",
+        "description" : "ユーザー情報により、指定された翻訳結果を全て取得",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "accessKey",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "ご所持しているAccessKeyもしくはT-4OOの登録情報より取得。 詳細は [/auth-code](#/file-translate/post_auth_code) と [/authenticate](#/file-translate/post_authenticate)をご参照ください。"
+        }, {
+          "in" : "header",
+          "name" : "nonce",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "数値の文字列。 リクエスト毎に増加させる必要があります。 通常はUNIXタイムスタンプを使うのがおすすめです。"
+        }, {
+          "in" : "header",
+          "name" : "signature",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "暗号化署名。 sha256とhmacアルゴリズムを使用し、 自分のsecretKeyにnonceとurl（ドメイン以外の部分）で署名し、 生成させた16進数の文字列。"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArrayOfTranslateResultResp"
+                },
+                "example" : {
+                  "status" : "success",
+                  "data" : [ {
+                    "translateId" : "8c76e418-9842-455b-aac1-5be28e8e4e94",
+                    "done" : false,
+                    "langs" : [ "zh-CN", "ja" ],
+                    "fieldId" : 1,
+                    "createdAt" : "2019-07-21T17:32:28Z",
+                    "items" : [ {
+                      "translateItemId" : "8c76e418-9842-455b-aac1-5be28e8e4e94",
+                      "lang" : "ja",
+                      "wordCount" : 1000,
+                      "detectedLang" : "zh-CN",
+                      "done" : false,
+                      "originalName" : "test.pdf",
+                      "downloaded" : true,
+                      "error" : false
+                    } ]
+                  } ]
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "internal error"
+          }
+        }
+      }
+    },
+    "/translate-result/retry" : {
+      "get" : {
+        "tags" : [ "translate-result" ],
+        "summary" : "翻訳エラーになった時、ファイルを再び翻訳する",
+        "description" : "翻訳エラーになった時、ファイルを再び翻訳する",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "accessKey",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "ご所持しているAccessKeyもしくはT-4OOの登録情報より取得。 詳細は [/auth-code](#/file-translate/post_auth_code) と[/authenticate](#/file-translate/post_authenticate)をご参照ください。"
+        }, {
+          "in" : "header",
+          "name" : "nonce",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "数値の文字列。 リクエスト毎に増加させる必要があります。 通常はUNIXタイムスタンプを使うのがおすすめです。"
+        }, {
+          "in" : "header",
+          "name" : "signature",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "暗号化署名。 sha256とhmacアルゴリズムを使用し、 自分のsecretKeyにnonceとurl（ドメイン以外の部分）で署名し、 生成させた16進数の文字列。"
+        }, {
+          "in" : "query",
+          "name" : "ids",
+          "description" : "再翻訳アイテムId(translateItemId)，json string配列。",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "example" : "8c76e418-9842-455b-aac1-5be28e8e4e94,d290f1ee-6c54-4b01-90e6-d701748f0851"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Result"
+                },
+                "example" : {
+                  "status" : "success",
+                  "data" : null
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "internal error"
+          }
+        }
+      }
+    },
+    "/downloads" : {
+      "get" : {
+        "tags" : [ "downloads" ],
+        "summary" : "翻訳されたファイルをダウンロード",
+        "description" : "翻訳アイテムIdにより，翻訳されたファイルを取得",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "accessKey",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "ご所持しているAccessKeyもしくはT-4OOの登録情報より取得。 詳細は [/auth-code](#/file-translate/post_auth_code) と [/authenticate](#/file-translate/post_authenticate)をご参照ください。"
+        }, {
+          "in" : "header",
+          "name" : "nonce",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "数値の文字列。 リクエスト毎に増加させる必要があります。 通常はUNIXタイムスタンプを使うのがおすすめです。"
+        }, {
+          "in" : "header",
+          "name" : "signature",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "暗号化署名。 sha256とhmacアルゴリズムを使用し、 自分のsecretKeyにnonceとurl（ドメイン以外の部分）で署名し、 生成させた16進数の文字列。"
+        }, {
+          "in" : "query",
+          "name" : "ids",
+          "description" : "翻訳アイテムId(translateItemId)，json string配列。",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "example" : "8c76e418-9842-455b-aac1-5be28e8e4e94,d290f1ee-6c54-4b01-90e6-d701748f0851"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "zip file",
+            "content" : {
+              "application/zip" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "internal error"
+          }
+        }
+      }
+    },
+    "/callback" : {
+      "get" : {
+        "tags" : [ "callback" ],
+        "summary" : "ユーザー設定しているコールバックURLを取得",
+        "description" : "accessKeyにより，コールバックURLを取得",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "accessKey",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "ご所持しているAccessKeyもしくはT-4OOの登録情報より取得。 詳細は [/auth-code](#/file-translate/post_auth_code) と [/authenticate](#/file-translate/post_authenticate)をご参照ください。"
+        }, {
+          "in" : "header",
+          "name" : "nonce",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "数値の文字列。 リクエスト毎に増加させる必要があります。 通常はUNIXタイムスタンプを使うのがおすすめです。"
+        }, {
+          "in" : "header",
+          "name" : "signature",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "暗号化署名。 sha256とhmacアルゴリズムを使用し、 自分のsecretKeyにnonceとurl（ドメイン以外の部分）で署名し、 生成させた16進数の文字列。"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CallbackUrlResp"
+                },
+                "example" : {
+                  "status" : "success",
+                  "data" : "https://myserver.com/translated-result-callback"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "internal error"
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "callback" ],
+        "summary" : "ユーザー設定しているコールバック追加または更新",
+        "description" : "accessKeyにより，ユーザー設定しているコールバック追加または更新",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "accessKey",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "ご所持しているAccessKeyもしくはT-4OOの登録情報より取得。 詳細は [/auth-code](#/file-translate/post_auth_code) と [/authenticate](#/file-translate/post_authenticate)をご参照ください。"
+        }, {
+          "in" : "header",
+          "name" : "nonce",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "数値の文字列。 リクエスト毎に増加させる必要があります。 通常はUNIXタイムスタンプを使うのがおすすめです。"
+        }, {
+          "in" : "header",
+          "name" : "signature",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "暗号化署名。 sha256とhmacアルゴリズムを使用し、 自分のsecretKeyにnonceとurl（ドメイン以外の部分）で署名し、 生成させた16進数の文字列。"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "callbackUrl" : {
+                    "type" : "string",
+                    "description" : "コールバックURL"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Result"
+                },
+                "example" : {
+                  "status" : "success",
+                  "data" : null
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "internal error"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "callback" ],
+        "summary" : "ユーザー設定しているコールバックURL削除",
+        "description" : "accessKeyにより，コールバックURLを削除",
+        "parameters" : [ {
+          "in" : "header",
+          "name" : "accessKey",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "ご所持しているAccessKeyもしくはT-4OOの登録情報より取得。 詳細は [/auth-code](#/file-translate/post_auth_code) と [/authenticate](#/file-translate/post_authenticate)をご参照ください。"
+        }, {
+          "in" : "header",
+          "name" : "nonce",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "数値の文字列。 リクエスト毎に増加させる必要があります。 通常はUNIXタイムスタンプを使うのがおすすめです。"
+        }, {
+          "in" : "header",
+          "name" : "signature",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "暗号化署名。 sha256とhmacアルゴリズムを使用し、 自分のsecretKeyにnonceとurl（ドメイン以外の部分）で署名し、 生成させた16進数の文字列。"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Result"
+                },
+                "example" : {
+                  "status" : "success",
+                  "data" : null
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "internal error"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Result" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "example" : "\"success\"",
+            "description" : "\"success　または　failure\""
+          }
+        }
+      },
+      "AuthCodeResp" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Result"
+        }, {
+          "type" : "object",
+          "properties" : {
+            "data" : {
+              "$ref" : "#/components/schemas/AuthCode"
+            }
+          }
+        } ]
+      },
+      "AuthCode" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "パースワードを暗号化するため",
+            "example" : "\"d290f1ee-6c54-4b01-90e6-d701748f0851\""
+          }
+        },
+        "xml" : {
+          "name" : "AuthCode"
+        }
+      },
+      "AuthenticationResp" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Result"
+        }, {
+          "type" : "object",
+          "properties" : {
+            "data" : {
+              "$ref" : "#/components/schemas/Authentication"
+            }
+          }
+        } ]
+      },
+      "Authentication" : {
+        "type" : "object",
+        "properties" : {
+          "accessKey" : {
+            "type" : "string",
+            "format" : "uuid",
+            "example" : "\"8c76e418-9842-455b-aac1-5be28e8e4e94\""
+          },
+          "secretKey" : {
+            "type" : "string",
+            "format" : "uuid",
+            "example" : "\"efffb72b-b2c5-458f-8388-42b2627e2c82\""
+          }
+        },
+        "xml" : {
+          "name" : "Authentication"
+        }
+      },
+      "QueueResultResp" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Result"
+        }, {
+          "type" : "object",
+          "properties" : {
+            "data" : {
+              "$ref" : "#/components/schemas/QueueResult"
+            }
+          }
+        } ]
+      },
+      "QueueResult" : {
+        "type" : "object",
+        "properties" : {
+          "translateId" : {
+            "type" : "string",
+            "example" : "\"8c76e418-9842-455b-aac1-5be28e8e4e94\""
+          }
+        },
+        "xml" : {
+          "name" : "QueueResult"
+        }
+      },
+      "TranslateItem" : {
+        "type" : "object",
+        "properties" : {
+          "translateItemId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "example" : "\"123_8c76e418-9842-455b-aac1-5be28e8e4e94\"",
+            "description" : "数字_uuiという形"
+          },
+          "lang" : {
+            "type" : "string",
+            "example" : "\"ja\"",
+            "description" : "一部の言語（zh-CN、zh-TWなど）以外はISO 639-1コードで指定します。"
+          },
+          "wordCount" : {
+            "type" : "integer",
+            "example" : 1000
+          },
+          "detectedLang" : {
+            "type" : "string",
+            "example" : "\"zh-CN\"",
+            "description" : "ファイルの言語を自動認識して、その言語を"
+          },
+          "done" : {
+            "type" : "boolean",
+            "example" : false,
+            "description" : "ファイル翻訳完成フラグ"
+          },
+          "originalName" : {
+            "type" : "string",
+            "example" : "\"test.pdf\""
+          },
+          "downloaded" : {
+            "type" : "boolean",
+            "example" : false,
+            "description" : "翻訳完成ファイル一度ダウンロードしたら、trueになる"
+          },
+          "error" : {
+            "type" : "boolean",
+            "example" : false,
+            "description" : "翻訳エラーになったら、trueになって、retryできます。retryできない場合、CLASS IIIへご連絡ください。"
+          }
+        }
+      },
+      "TranslateResultResp" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Result"
+        }, {
+          "type" : "object",
+          "properties" : {
+            "data" : {
+              "$ref" : "#/components/schemas/TranslateResult"
+            }
+          }
+        } ]
+      },
+      "TranslateResult" : {
+        "type" : "object",
+        "properties" : {
+          "translateId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "example" : "\"8c76e418-9842-455b-aac1-5be28e8e4e94\""
+          },
+          "done" : {
+            "type" : "boolean",
+            "example" : false,
+            "description" : "全部ファイルと全部言語完成したら、trueになる"
+          },
+          "langs" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "example" : [ "zh-CN", "ja", "zh-TW" ]
+          },
+          "fieldId" : {
+            "type" : "integer",
+            "example" : 1,
+            "description" : "分野ID"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time",
+            "example" : "\"2019-01-15T23:00:00Z\""
+          },
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TranslateItem"
+            }
+          }
+        },
+        "xml" : {
+          "name" : "TranslateResult"
+        }
+      },
+      "ArrayOfTranslateResultResp" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Result"
+        }, {
+          "type" : "object",
+          "properties" : {
+            "data" : {
+              "$ref" : "#/components/schemas/ArrayOfTranslateResult"
+            }
+          }
+        } ]
+      },
+      "ArrayOfTranslateResult" : {
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/components/schemas/TranslateResult"
+        }
+      },
+      "CallbackUrlResp" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Result"
+        }, {
+          "type" : "object",
+          "properties" : {
+            "data" : {
+              "$ref" : "#/components/schemas/CallbackUrl"
+            }
+          }
+        } ]
+      },
+      "CallbackUrl" : {
+        "type" : "string",
+        "example" : "\"https://myserver.com/translated-result-callback\""
+      }
+    }
+  }
+}

@@ -1,0 +1,189 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "description" : "auto floor plan api",
+    "version" : "1.1",
+    "title" : "Auto Floor Plan API",
+    "contact" : {
+      "email" : "satoshi.baba@housmart.com"
+    },
+    "license" : {
+      "name" : "Apache 2.0",
+      "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "tags" : [ {
+    "name" : "floor_plan",
+    "description" : "generate floor plan"
+  } ],
+  "paths" : {
+    "/generate" : {
+      "post" : {
+        "tags" : [ "floor_plan" ],
+        "summary" : "generate inferred floor plan",
+        "operationId" : "generate_floor_plan",
+        "description" : "図面データの方位マーク・テキストを置き換えた図面を作成するAPIです。",
+        "responses" : {
+          "200" : {
+            "description" : "間取り図および方位情報を出力します",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FloorPlanItem"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "不正なパラメータ"
+          },
+          "404" : {
+            "description" : "元の画像データが存在しない場合"
+          },
+          "500" : {
+            "description" : "内部エラー"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "id", "image_url" ],
+                "properties" : {
+                  "id" : {
+                    "type" : "string",
+                    "example" : "19234",
+                    "description" : "画像のID"
+                  },
+                  "image_url" : {
+                    "type" : "string",
+                    "example" : "s3://img-kawlu/cond_image/19234.png",
+                    "description" : "画像のURL(S3のみ)"
+                  },
+                  "output_image" : {
+                    "type" : "boolean",
+                    "example" : true,
+                    "description" : "機械学習の結果を出力するか(開発用途向け） s3://auto-floor-plan-api 以下に出力します"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers" : [ {
+    "url" : "https://virtserver.swaggerhub.com/bibio/auto_floor_map/1.0.0"
+  } ],
+  "components" : {
+    "schemas" : {
+      "FloorPlanItem" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "画像ID",
+            "example" : "19234"
+          },
+          "date" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "日付 (ISO8601)",
+            "example" : "2020-02-17T13:16:30.306476+09:00"
+          },
+          "duration" : {
+            "type" : "number",
+            "format" : "float",
+            "description" : "処理時間(秒)",
+            "example" : "18.93"
+          },
+          "image_url" : {
+            "type" : "string",
+            "description" : "入力画像のURL",
+            "example" : "s3://img-kawlu/cond_image/19234.png"
+          },
+          "output_image_url" : {
+            "type" : "string",
+            "description" : "出力画像のURL(output_imageがfalseのときはnullを返します)",
+            "example" : "s3://img-kawlu/cond_image/19234.png"
+          },
+          "text" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TextItem"
+            }
+          },
+          "direction_mark" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DirectionMarkItem"
+            }
+          }
+        }
+      },
+      "TextItem" : {
+        "type" : "object",
+        "properties" : {
+          "transcribe_the_image" : {
+            "type" : "string",
+            "example" : "バルコニー",
+            "description" : "認識した文字列"
+          },
+          "text_direction" : {
+            "type" : "integer",
+            "example" : 1,
+            "description" : "文字の方向(0: 横・左→右, 1: 横・下->上, 2: 横・上→下, 3: 縦・上→下)"
+          },
+          "geometry" : {
+            "type" : "array",
+            "description" : "文字を配置するボックスの座標の配列",
+            "minItems" : 4,
+            "maxItems" : 4,
+            "items" : {
+              "$ref" : "#/components/schemas/Coordinate"
+            }
+          }
+        }
+      },
+      "DirectionMarkItem" : {
+        "type" : "object",
+        "properties" : {
+          "angle" : {
+            "type" : "number",
+            "format" : "float",
+            "example" : -60,
+            "description" : "方位マークの角度(北を0とし、反時計回りが正) -180°〜180°"
+          },
+          "geometry" : {
+            "type" : "array",
+            "minItems" : 4,
+            "maxItems" : 4,
+            "description" : "方位マークを配置するボックスの座標の配列",
+            "items" : {
+              "$ref" : "#/components/schemas/Coordinate"
+            }
+          }
+        }
+      },
+      "Coordinate" : {
+        "type" : "object",
+        "properties" : {
+          "x" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 10,
+            "description" : "画像の左上からのX座標(ピクセル)"
+          },
+          "y" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 20,
+            "description" : "画像の左上からのY座標(ピクセル)"
+          }
+        }
+      }
+    }
+  }
+}

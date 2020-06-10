@@ -1,0 +1,833 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "description" : "API docs for Project Peter\n",
+    "version" : "0.2.0",
+    "title" : "Project Peter",
+    "termsOfService" : "http://swagger.io/terms/",
+    "contact" : {
+      "email" : "mills.josef@rakatalabs.io"
+    },
+    "license" : {
+      "name" : "Apache 2.0",
+      "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "servers" : [ {
+    "url" : "https://project-peter.herokuapp.com",
+    "description" : "Production server (uses live data)"
+  }, {
+    "url" : "http://localhost:8888",
+    "description" : "Local server (uses test data)"
+  } ],
+  "externalDocs" : {
+    "description" : "Find out more about Swagger",
+    "url" : "http://swagger.io"
+  },
+  "tags" : [ {
+    "name" : "user",
+    "description" : "Endpoints about user"
+  }, {
+    "name" : "company",
+    "description" : "Endpoints about companies"
+  }, {
+    "name" : "third_party",
+    "description" : "Endpoints about third parties"
+  } ],
+  "paths" : {
+    "/users" : {
+      "get" : {
+        "tags" : [ "user" ],
+        "summary" : "Get all users",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "description" : "This returs a list of all users. NB:This can only be done by the superadmin",
+        "operationId" : "getAllUsers",
+        "responses" : {
+          "200" : {
+            "description" : "OK. An array of User objects"
+          },
+          "404" : {
+            "description" : "No user found"
+          }
+        }
+      }
+    },
+    "/users/register" : {
+      "post" : {
+        "tags" : [ "user" ],
+        "summary" : "Register a new user",
+        "operationId" : "register",
+        "requestBody" : {
+          "description" : "Requestbody should be a json that matches User schema",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/User"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "New user registered successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserWithoutPassword"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Could not register new user"
+          }
+        }
+      }
+    },
+    "/users/login" : {
+      "post" : {
+        "tags" : [ "user" ],
+        "summary" : "Logs user into the system and returns an access token. Can also be used to refresh a token.",
+        "security" : [ {
+          "basicAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "description" : "The request body content-type is application/x-www-form-urlencoded. This means the request body is effectively a query string (e.g. username=bob&password=pw&grant_type=password). Refer to https://aqueduct.io/docs/tut/oauth2/#setting-up-oauth-20-authenticating-users for an example implementation in Dart",
+          "required" : true,
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequestBody"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Successful login",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Invalid username/password"
+          },
+          "400" : {
+            "description" : "Invalid client. Check client Id and secret in Authorization header"
+          }
+        }
+      }
+    },
+    "/users/logout" : {
+      "delete" : {
+        "tags" : [ "user" ],
+        "summary" : "Logs out currently logged in user session. The request header should have a Bearer Authorization (Authorization: Bearer <ACCESS_TOKEN>)",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Logout successful"
+          },
+          "401" : {
+            "description" : "Unauthorized. Wrong access_token"
+          }
+        }
+      }
+    },
+    "/users/{email}" : {
+      "get" : {
+        "tags" : [ "user" ],
+        "summary" : "Get user by user name",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "operationId" : "getUserByEmail",
+        "parameters" : [ {
+          "name" : "email",
+          "in" : "path",
+          "description" : "The email of the user to be fetched.",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK. User's details'",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserWithoutPassword"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "User not found"
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "user" ],
+        "summary" : "Update user by email",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "operationId" : "updateUser",
+        "parameters" : [ {
+          "name" : "email",
+          "in" : "path",
+          "description" : "The email of the user to be updated.",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK. User with email specified",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserWithoutPassword"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "User not found"
+          }
+        }
+      }
+    },
+    "/companies" : {
+      "get" : {
+        "tags" : [ "company" ],
+        "summary" : "Get all companies.",
+        "operationId" : "getAllCompanies",
+        "responses" : {
+          "200" : {
+            "description" : "OK. [{...},{...},{...},...]"
+          },
+          "404" : {
+            "description" : "No company found"
+          },
+          "400" : {
+            "description" : "Could not fetch all companies"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "company" ],
+        "summary" : "Register a new company",
+        "operationId" : "addCompany",
+        "requestBody" : {
+          "description" : "Request body should be a json that matches Company schema",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Company"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Company registered successfully",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Company"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Could not create new company. Check properties provided."
+          }
+        }
+      }
+    },
+    "/companies/{companyId}" : {
+      "get" : {
+        "tags" : [ "company" ],
+        "summary" : "Get company with given id",
+        "operationId" : "getCompanyByEmail",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "description" : "The email of the company to be fetched.",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK. {...}",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Company"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Company not found"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "company" ],
+        "summary" : "Get company with given id",
+        "operationId" : "updateCompany",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "description" : "The email of the company to be updated.",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK {...}",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Company"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Company not updated"
+          }
+        }
+      }
+    },
+    "/companies/{companyId}/employees/count" : {
+      "get" : {
+        "tags" : [ "company" ],
+        "summary" : "Get the number of employees in a company",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "description" : "This returs the number of employees in a company.",
+        "operationId" : "getNumEmployees",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "description" : "The ID of the company",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK. {'numEmployees' : ...}"
+          },
+          "404" : {
+            "description" : "Company not found"
+          }
+        }
+      }
+    },
+    "/companies/{companyId}/employees" : {
+      "get" : {
+        "tags" : [ "company" ],
+        "summary" : "Fetch an array of the employees in a company.",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "description" : "This returs an array of the employees in a company.",
+        "operationId" : "getAllEmployeesOfCompany",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "description" : "The ID of the company",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK. {'employees' : [...]}"
+          },
+          "404" : {
+            "description" : "Company not found"
+          },
+          "400" : {
+            "description" : "Could not fetch employees"
+          }
+        }
+      }
+    },
+    "/companies/{companyId}/payroll" : {
+      "put" : {
+        "tags" : [ "company" ],
+        "summary" : "Upload payroll.",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "description" : "Upload payroll",
+        "operationId" : "uploadPayroll",
+        "parameters" : [ {
+          "name" : "companyId",
+          "in" : "path",
+          "description" : "The ID of the company",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK. {...}",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Payroll"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Company not found"
+          },
+          "400" : {
+            "description" : "Payroll not uploaded"
+          }
+        }
+      }
+    },
+    "/employees" : {
+      "post" : {
+        "tags" : [ "company" ],
+        "summary" : "Add employees to a company.",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "description" : "Can add a single employee or add employees in bulk. Specify that with the query parameter 'isBulk'",
+        "operationId" : "addAllEmployeesToCompany",
+        "parameters" : [ {
+          "name" : "isBulk",
+          "in" : "query",
+          "description" : "0-true, 1-false",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK. {...}"
+          },
+          "400" : {
+            "description" : "Could not add new employee(s starting from <email>) OR Wrong query parameter"
+          }
+        }
+      }
+    },
+    "/employees/{email}/payslip" : {
+      "get" : {
+        "tags" : [ "company" ],
+        "summary" : "Fetch employee payslip",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "description" : "Fetch employee payslip",
+        "operationId" : "getEmployeePayslip",
+        "parameters" : [ {
+          "name" : "email",
+          "in" : "path",
+          "description" : "0-true, 1-false",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "month",
+          "in" : "query",
+          "description" : "month",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        }, {
+          "name" : "year",
+          "in" : "query",
+          "description" : "year",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK. {'payslip': ...}"
+          },
+          "404" : {
+            "description" : "Employee not found OR No payrolls uploaded by company OR No record with specified date OR Wrong query parameters"
+          },
+          "400" : {
+            "description" : "Could not fetch company payrolls"
+          }
+        }
+      }
+    },
+    "/thirdParties" : {
+      "get" : {
+        "tags" : [ "third_party" ],
+        "summary" : "Get all third parties.",
+        "operationId" : "getAllThirdParties",
+        "responses" : {
+          "200" : {
+            "description" : "OK. [{...},{...},{...},...]"
+          },
+          "404" : {
+            "description" : "No third parties found"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "third_party" ],
+        "summary" : "Register a new third party",
+        "operationId" : "addThirdParty",
+        "requestBody" : {
+          "description" : "Requestbody should be a json that matches Third party schema",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ThirdParty"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK. {...}",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThirdParty"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Could not create new third party. Check properties provided."
+          }
+        }
+      }
+    },
+    "/thirdParties/{id}" : {
+      "get" : {
+        "tags" : [ "third_party" ],
+        "summary" : "Fetch third party with given id",
+        "operationId" : "getThirdPartyById",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "The id of the third party to be fetched.",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThirdParty"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No third party found"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "securitySchemes" : {
+      "project_peter_auth" : {
+        "type" : "oauth2",
+        "flows" : {
+          "implicit" : {
+            "authorizationUrl" : "https://project-peter.herokuapp.com/users/login",
+            "scopes" : {
+              "write:users" : "modify pets in your account",
+              "read:users" : "read your pets"
+            }
+          }
+        }
+      },
+      "basicAuth" : {
+        "type" : "http",
+        "scheme" : "basic",
+        "description" : "username => clientId, password => secret"
+      },
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      }
+    },
+    "schemas" : {
+      "User" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "bigInteger"
+          },
+          "username" : {
+            "type" : "string",
+            "description" : "Use emails"
+          },
+          "firstname" : {
+            "type" : "string"
+          },
+          "lastname" : {
+            "type" : "string"
+          },
+          "password" : {
+            "type" : "string"
+          },
+          "avatar" : {
+            "type" : "string"
+          },
+          "phoneNum" : {
+            "type" : "string"
+          },
+          "roles" : {
+            "description" : "User roles. A comma separated string for multiple roles. Roles include [employee,companyAdmin,thirdPartyAdmin,superAdmin,error]",
+            "type" : "string"
+          }
+        },
+        "xml" : {
+          "name" : "User"
+        }
+      },
+      "UserWithoutPassword" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "bigInteger"
+          },
+          "username" : {
+            "type" : "string",
+            "description" : "The user's email address"
+          },
+          "firstname" : {
+            "type" : "string"
+          },
+          "lastname" : {
+            "type" : "string"
+          },
+          "avatar" : {
+            "type" : "string"
+          },
+          "phoneNum" : {
+            "type" : "string"
+          },
+          "employer" : {
+            "type" : "object"
+          },
+          "roles" : {
+            "description" : "User roles. A comma separated string for multiple roles. Roles include [employee,companyAdmin,thirdPartyAdmin,superAdmin,error]",
+            "type" : "string"
+          }
+        },
+        "xml" : {
+          "name" : "UserWithoutPass"
+        }
+      },
+      "Company" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "The company's ID"
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "The company's email address"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "The company's name"
+          },
+          "address" : {
+            "type" : "string",
+            "description" : "The company's address"
+          },
+          "phoneNum" : {
+            "type" : "string",
+            "description" : "The company's phone number"
+          },
+          "avatar" : {
+            "type" : "string",
+            "description" : "Company avatar"
+          },
+          "employees" : {
+            "type" : "object",
+            "description" : "Array of employees"
+          },
+          "payrollSchema" : {
+            "type" : "string",
+            "description" : "Payroll schema. Comma separated."
+          },
+          "payrolls" : {
+            "type" : "object",
+            "description" : "Array of payrolls uploaded"
+          },
+          "paymentMethod" : {
+            "type" : "string",
+            "description" : "Company's payment method'"
+          }
+        },
+        "xml" : {
+          "name" : "Company"
+        }
+      },
+      "ThirdParty" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "The third party's ID"
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "The third party's email address"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "The third party's name"
+          },
+          "address" : {
+            "type" : "string",
+            "description" : "The third party's address"
+          },
+          "phoneNum" : {
+            "type" : "string",
+            "description" : "The third party's phone number"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "Types of third parties: [bank,insurance,hirePurchase,error]"
+          }
+        },
+        "xml" : {
+          "name" : "ThirdParty"
+        }
+      },
+      "LoginResponse" : {
+        "type" : "object",
+        "properties" : {
+          "access_token" : {
+            "type" : "string"
+          },
+          "token_type" : {
+            "type" : "string"
+          },
+          "expires_in" : {
+            "type" : "integer"
+          },
+          "refresh_token" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LoginRequestBody" : {
+        "type" : "object",
+        "properties" : {
+          "username" : {
+            "type" : "string"
+          },
+          "password" : {
+            "type" : "string"
+          },
+          "grant_type" : {
+            "type" : "string",
+            "example" : "password"
+          }
+        }
+      },
+      "RefreshTokenRequestBody" : {
+        "type" : "object",
+        "description" : "The schema of the body to send to /users/login when refreshing a token",
+        "properties" : {
+          "grant_type" : {
+            "type" : "string",
+            "example" : "refresh_token"
+          },
+          "refresh_token" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Payroll" : {
+        "type" : "object",
+        "description" : "Payroll object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "dateTime" : {
+            "type" : "string"
+          },
+          "payroll" : {
+            "type" : "string",
+            "description" : "json encoded array of objects"
+          },
+          "company" : {
+            "type" : "object"
+          }
+        }
+      },
+      "DefaultPayslipSchema" : {
+        "type" : "object",
+        "description" : "The schema of the default entries in a payslip",
+        "properties" : {
+          "basic_salary" : {
+            "type" : "integer"
+          },
+          "tax" : {
+            "type" : "integer"
+          },
+          "ssnit" : {
+            "type" : "integer"
+          },
+          "provident_fund" : {
+            "type" : "integer"
+          },
+          "payment_method" : {
+            "type" : "string",
+            "enum" : [ "bank_transfer", "cash" ]
+          }
+        }
+      }
+    }
+  }
+}

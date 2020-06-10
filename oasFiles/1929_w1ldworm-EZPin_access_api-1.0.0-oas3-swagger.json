@@ -1,0 +1,668 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "version" : "1.0.0-oas3",
+    "title" : "EZPin Access API",
+    "description" : "Public API for EZPin service"
+  },
+  "paths" : {
+    "/auth/token/" : {
+      "post" : {
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "client_id" : {
+                    "type" : "string",
+                    "example" : "13319",
+                    "description" : "Provided by EZPin"
+                  },
+                  "secret_key" : {
+                    "type" : "string",
+                    "example" : "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzayI6IjYxZGZmNmU4LTY3YTctNG",
+                    "description" : "Provided by EZPin"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "access" : {
+                      "type" : "string",
+                      "example" : "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhY2Nlc3NfaWQiOj",
+                      "description" : "Access token for APIs"
+                    },
+                    "expire" : {
+                      "type" : "number",
+                      "example" : 312645,
+                      "description" : "Token expire time in (ms)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "detail" : {
+                      "type" : "string",
+                      "example" : "user not found. please enter correct data",
+                      "description" : "API error details"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogs/" : {
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "limit",
+          "schema" : {
+            "type" : "number",
+            "example" : 10
+          }
+        }, {
+          "in" : "query",
+          "name" : "offset",
+          "schema" : {
+            "type" : "number",
+            "example" : 10
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of catalogs",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "number",
+                      "example" : 256,
+                      "description" : "Number of total catalogs"
+                    },
+                    "next" : {
+                      "type" : "string",
+                      "example" : "https://api.ezpaypin.com/access-api/v1/catalogs/?limit=10&offset=20"
+                    },
+                    "previous" : {
+                      "type" : "string",
+                      "example" : "https://api.ezpaypin.com/access-api/v1/catalogs/?limit=10&offset=0"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/Catalog"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/" : {
+      "post" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "sku" : {
+                    "type" : "number",
+                    "description" : "Product SKU",
+                    "example" : 321
+                  },
+                  "quantity" : {
+                    "type" : "number",
+                    "description" : "quantity of product"
+                  },
+                  "price" : {
+                    "type" : "number",
+                    "example" : 10
+                  },
+                  "email" : {
+                    "type" : "string",
+                    "example" : "support@ezpin.com"
+                  },
+                  "pre_oder" : {
+                    "type" : "number",
+                    "example" : 0
+                  },
+                  "pin" : {
+                    "type" : "number",
+                    "example" : 4567
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "406" : {
+            "description" : "Pin error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "detail" : {
+                      "type" : "string",
+                      "example" : "wrong pin"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Error",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "detail" : {
+                      "type" : "string",
+                      "example" : "some error happened. please call administrator."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{order_id}/" : {
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "order_id",
+          "required" : true,
+          "schema" : {
+            "type" : "number",
+            "example" : 10
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Order"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{order_id}/cards/" : {
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "order_id",
+          "required" : true,
+          "schema" : {
+            "type" : "number",
+            "example" : 10
+          }
+        }, {
+          "in" : "query",
+          "name" : "limit",
+          "schema" : {
+            "type" : "number",
+            "example" : 2
+          }
+        }, {
+          "in" : "query",
+          "name" : "offset",
+          "schema" : {
+            "type" : "number",
+            "example" : 2
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of cards",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "count" : {
+                      "type" : "number",
+                      "example" : 10,
+                      "description" : "Number of total catalogs"
+                    },
+                    "next" : {
+                      "type" : "string",
+                      "example" : "https://api.ezpaypin.com/vendors/v1/orders/10/cards/?limit=2&offset=4"
+                    },
+                    "previous" : {
+                      "type" : "string",
+                      "example" : "https://api.ezpaypin.com/vendors/v1/orders/10/cards/?limit=2&offset=0"
+                    },
+                    "results" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/Card"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cards/check/" : {
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "barcode",
+          "schema" : {
+            "type" : "number",
+            "example" : 12567312867231867
+          },
+          "required" : true
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "barcode" : {
+                      "type" : "string",
+                      "example" : 12567312867231867
+                    },
+                    "product" : {
+                      "type" : "string",
+                      "example" : "iTunes $10"
+                    },
+                    "sku" : {
+                      "type" : "number",
+                      "example" : 15
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cards/activate/" : {
+      "post" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "barcode" : {
+                    "type" : "number",
+                    "example" : 12567312867231867
+                  },
+                  "sku" : {
+                    "type" : "number",
+                    "example" : 10.0
+                  },
+                  "pin" : {
+                    "type" : "number",
+                    "example" : 4567
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Transaction"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cards/{transaction_id}/" : {
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "transaction_id",
+          "schema" : {
+            "type" : "number",
+            "example" : 50
+          },
+          "required" : true
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Transaction"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/notification_config/" : {
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Configuration"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Configuration"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "detail" : {
+                      "type" : "string",
+                      "description" : "API message",
+                      "example" : "API setting added successfully"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers" : [ {
+    "url" : "https://api.ezpaypin.com/vendors/v1"
+  } ],
+  "components" : {
+    "schemas" : {
+      "Catalog" : {
+        "type" : "object",
+        "properties" : {
+          "sku" : {
+            "type" : "number",
+            "example" : 23
+          },
+          "title" : {
+            "type" : "number",
+            "example" : "iTunes $400"
+          },
+          "min_price" : {
+            "type" : "number",
+            "example" : 400.0
+          },
+          "max_price" : {
+            "type" : "number",
+            "example" : 400.0
+          },
+          "description" : {
+            "type" : "string",
+            "example" : "Test"
+          },
+          "currency" : {
+            "$ref" : "#/components/schemas/Currency"
+          },
+          "categories" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Category"
+            }
+          },
+          "pre_order" : {
+            "type" : "boolean",
+            "example" : false
+          }
+        }
+      },
+      "Currency" : {
+        "type" : "object",
+        "properties" : {
+          "country" : {
+            "type" : "string",
+            "example" : "America"
+          },
+          "currency" : {
+            "type" : "string",
+            "example" : "Dollar"
+          },
+          "symbol" : {
+            "type" : "string",
+            "example" : "$"
+          }
+        }
+      },
+      "Category" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "example" : "iTunes US"
+          }
+        }
+      },
+      "Product" : {
+        "type" : "object",
+        "properties" : {
+          "sku" : {
+            "type" : "number",
+            "example" : 76
+          },
+          "title" : {
+            "type" : "string",
+            "example" : "iTunes $10"
+          }
+        }
+      },
+      "Order" : {
+        "type" : "object",
+        "properties" : {
+          "order_id" : {
+            "type" : "number",
+            "example" : 89
+          },
+          "email" : {
+            "type" : "string",
+            "example" : "support@ezpin.com"
+          },
+          "status" : {
+            "type" : "number",
+            "example" : 1
+          },
+          "status_text" : {
+            "type" : "string",
+            "example" : "accept"
+          },
+          "created_time" : {
+            "type" : "string",
+            "example" : "2020-02-01T10:58:34.430613"
+          },
+          "product" : {
+            "$ref" : "#/components/schemas/Product"
+          },
+          "count" : {
+            "type" : "number",
+            "example" : 10
+          },
+          "unit_price" : {
+            "type" : "number",
+            "example" : 9.5
+          },
+          "is_completed" : {
+            "type" : "boolean",
+            "example" : true
+          }
+        }
+      },
+      "Card" : {
+        "type" : "object",
+        "properties" : {
+          "card_number" : {
+            "type" : "string",
+            "example" : 520868849856
+          },
+          "pin_code" : {
+            "type" : "string",
+            "example" : 3216493287345
+          }
+        }
+      },
+      "Transaction" : {
+        "type" : "object",
+        "properties" : {
+          "transaction_id" : {
+            "type" : "number",
+            "example" : 50
+          },
+          "barcode" : {
+            "type" : "string",
+            "example" : 12567312867231867
+          },
+          "product" : {
+            "type" : "string",
+            "example" : "iTunes $10"
+          },
+          "status" : {
+            "type" : "number",
+            "example" : -1
+          },
+          "status_text" : {
+            "type" : "string",
+            "example" : "Pending"
+          },
+          "currency" : {
+            "type" : "string",
+            "example" : "USD"
+          },
+          "created_time" : {
+            "type" : "string",
+            "example" : "2020-02-03T13:27:12.250248"
+          }
+        }
+      },
+      "Configuration" : {
+        "type" : "object",
+        "properties" : {
+          "endpoint" : {
+            "type" : "string",
+            "example" : "https://example.com"
+          },
+          "confidential_key" : {
+            "type" : "string",
+            "example" : "ikasd7823q4lmk132jk"
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "Bearer"
+      }
+    },
+    "responses" : {
+      "UnauthorizedError" : {
+        "description" : "Access token is missing or invalid"
+      }
+    }
+  }
+}

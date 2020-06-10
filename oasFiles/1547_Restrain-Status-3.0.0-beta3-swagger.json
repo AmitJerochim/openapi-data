@@ -1,0 +1,851 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/Restrain/Status/1.0.0"
+  } ],
+  "info" : {
+    "description" : "Status API",
+    "version" : "3.0.0-beta3",
+    "title" : "Vehicle status API",
+    "contact" : {
+      "email" : "support@restrain.pl"
+    }
+  },
+  "tags" : [ {
+    "name" : "users",
+    "description" : "Secured calls authenticated users only"
+  } ],
+  "paths" : {
+    "/v3/authenticate/login" : {
+      "post" : {
+        "summary" : "Logs in and returns the authentication  cookie",
+        "description" : "Test curl and jq:<br/> export TOKEN=$(curl -s -X POST http://${HOST}/hermes-rest-ext/v3/authenticate/login -H 'cache-control: no-cache' -H 'content-type: application/json' -d '{\"login\":\"testlogin\", \"password\":\"test_password\", \"language\":\"pl\"}' | jq -r '.token')\n",
+        "requestBody" : {
+          "required" : true,
+          "description" : "A JSON body containing the username and password.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Credentials"
+              }
+            }
+          }
+        },
+        "security" : [ ],
+        "responses" : {
+          "200" : {
+            "description" : "Successfully authenticated. The token is returned in a JTW json entity. You have to include the cookie \"Authorization=Bearer ${token}\" in subsequent requests. The token is valid for 12 hours. After expiration time use have to login again.\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LoggedUser"
+                }
+              }
+            },
+            "headers" : {
+              "Set-Cookie" : {
+                "schema" : {
+                  "type" : "string",
+                  "example" : "Authorization=Bearer WEWR879FAS7DF89AS7F98AS7F98A7SFD98A7SF98A7SF7A9S87F9A8S7F9AS87F9AS7F9ASD7F; Path=/; HttpOnly"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/v3/authenticate/logout" : {
+      "post" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "users" ],
+        "summary" : "logout the user",
+        "operationId" : "logout",
+        "description" : "Logout the user - don't implemented yet!<br/> Remove the JWT token from the client session.<br/> Test curl:<br/> curl -X POST https://$HOST/hermes-rest-ext/v3/authenticate/logout -H \"Authorization: Bearer ${TOKEN}\"\n",
+        "responses" : {
+          "200" : {
+            "description" : "logged out"
+          }
+        }
+      }
+    },
+    "/v3/vehicle/mobile/status" : {
+      "get" : {
+        "tags" : [ "users" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "list vehicles status",
+        "description" : "Returns a list of vehicle statuses. Specialized method for the mobile application.<br/> Test curl:<br/> curl -X GET  https://$HOST/hermes-rest-ext/v3/vehicle/mobile/status -H 'cache-control: no-cache' -H \"Authorization: Bearer ${TOKEN}\"\n",
+        "operationId" : "getCurrentVehicleStatus",
+        "parameters" : [ {
+          "name" : "group_id",
+          "in" : "query",
+          "description" : "the vehicle group id",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "query",
+          "in" : "query",
+          "description" : "the vehicle name or its part, case insensitive",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "sort",
+          "in" : "query",
+          "description" : "the filed used to sort plus sort indicator [asc|desc]",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "description" : "maximum number of records to be dowloaded",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "offset",
+          "in" : "query",
+          "description" : "the first row returned by limit will be determined by the offset value.",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "status response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/CurrentVehicleStatus"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/AccessDenied"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/UnexpectedError"
+          }
+        }
+      }
+    },
+    "/v3/vehicle/list" : {
+      "get" : {
+        "tags" : [ "users" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "list vehicles",
+        "description" : "Returns a list of all vehicles from the system that the user has access to<br/> Test curl:<br/> curl -X GET  https://$HOST/hermes-rest-ext/v3/vehicle/list -H 'cache-control: no-cache' -H \"Authorization: Bearer ${TOKEN}\"\n",
+        "operationId" : "getVehicleList",
+        "parameters" : [ {
+          "name" : "query",
+          "in" : "query",
+          "description" : "the vehicle name or its part, case insensitive",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "description" : "maximum number of records to be dowloaded",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "name" : "offset",
+          "in" : "query",
+          "description" : "the first row returned by limit will be determined by the offset value.",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "status response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/VehicleEntity"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/AccessDenied"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/UnexpectedError"
+          }
+        }
+      }
+    },
+    "/v3/vehicle/{vehicleRegistryNumber}/ignition/lock" : {
+      "post" : {
+        "tags" : [ "users" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "locks the vehicle ignition",
+        "description" : "Sends ignition lock request to the vehicle<br/> The operation is asynchronous and there may be a delay between calling the command and executing it on the vehicle.<br/> Test curl:<br/> curl -X POST  https://$HOST/hermes-rest-ext/v3/vehicle/${VEHICLE_REGNO}/ignition/lock   -H 'cache-control: no-cache' -H \"Authorization: Bearer ${TOKEN}\"\n",
+        "operationId" : "vehicleIgnitionLock",
+        "parameters" : [ {
+          "name" : "vehicleRegistryNumber",
+          "in" : "path",
+          "description" : "the vehicle registry number, case insensitive",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "status response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IgnitionLockStatus"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/AccessDenied"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/UnexpectedError"
+          }
+        }
+      }
+    },
+    "/v3/vehicle/{vehicleRegistryNumber}/ignition/unlock" : {
+      "post" : {
+        "tags" : [ "users" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "unlocks the vehicle ignition",
+        "description" : "Sends ignition unlock request to the vehicle<br/> The operation is asynchronous and there may be a delay between calling the command and executing it on the vehicle.<br/> Test curl:<br/> curl -X POST  https://$HOST/hermes-rest-ext/v3/vehicle/${VEHICLE_REGNO}/ignition/unlock   -H 'cache-control: no-cache' -H \"Authorization: Bearer ${TOKEN}\"\n",
+        "operationId" : "vehicleIgnitionUnlock",
+        "parameters" : [ {
+          "name" : "vehicleRegistryNumber",
+          "in" : "path",
+          "description" : "the vehicle registry number, case insensitive",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "status response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IgnitionLockStatus"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/AccessDenied"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/UnexpectedError"
+          }
+        }
+      }
+    },
+    "/v3/vehicle/{vehicleRegistryNumber}/ignition/lock/status" : {
+      "get" : {
+        "tags" : [ "users" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "returns the vehicle ignition lock status",
+        "description" : "Returns ignition lock request status for the vehicle<br/> Test curl:<br/> curl -X GET  https://$HOST/hermes-rest-ext/v3/vehicle/${VEHICLE_REGNO}/ignition/lock/status   -H 'cache-control: no-cache' -H \"Authorization: Bearer ${TOKEN}\"\n",
+        "operationId" : "vehicleIgnitionLockStatus",
+        "parameters" : [ {
+          "name" : "vehicleRegistryNumber",
+          "in" : "path",
+          "description" : "the vehicle registry number, case insensitive",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "status response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IgnitionLockStatus"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/AccessDenied"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/UnexpectedError"
+          }
+        }
+      }
+    },
+    "/v3/process/concrete/event/list" : {
+      "get" : {
+        "tags" : [ "users" ],
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "returns the list of concrete delivery process business events",
+        "description" : "Returns the list of concrete delivery process business events<br/> Test curl:<br/> curl -X GET  https://$HOST/hermes-rest-ext/v3/process/concrete/event/list?timeFrom=1469527617000&timeTo=1469427617000   -H 'cache-control: no-cache' -H \"Authorization: Bearer ${TOKEN}\"\n",
+        "operationId" : "concreteEventList",
+        "parameters" : [ {
+          "name" : "timeFrom",
+          "in" : "query",
+          "description" : "the query begin time exclusieve [unix time] CET",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1469527617000
+          }
+        }, {
+          "name" : "timeTo",
+          "in" : "query",
+          "description" : "the query end time inclusive  [unix time] CET",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1469427617000
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "event list",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConcreteEvent"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/AccessDenied"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/UnexpectedError"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "responses" : {
+      "NotFound" : {
+        "description" : "The specified resource was not found",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized" : {
+        "description" : "The request has failed an authorisation check. This can happen for a variety of reasons, such as an invalid or expired JWT token, or invalid customer credentials.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "AccessDenied" : {
+        "description" : "Access was denied",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "UnexpectedError" : {
+        "description" : "Unexpected error. Something went wrong during the checking process.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas" : {
+      "Credentials" : {
+        "type" : "object",
+        "required" : [ "login", "password" ],
+        "properties" : {
+          "login" : {
+            "type" : "string",
+            "example" : "shaggy"
+          },
+          "password" : {
+            "type" : "string",
+            "writeOnly" : true,
+            "example" : "admin123"
+          },
+          "language" : {
+            "type" : "string",
+            "example" : "pl",
+            "default" : "pl",
+            "enum" : [ "pl", "en" ]
+          }
+        }
+      },
+      "LoggedUser" : {
+        "type" : "object",
+        "required" : [ "jwt", "login", "name" ],
+        "properties" : {
+          "token" : {
+            "type" : "string",
+            "example" : "WEWR879FAS7DF89AS7F98AS7F98A7SFD98A7SF98A7SF7A9S87F9A8S7F9AS87F9AS7F9ASD7F"
+          },
+          "login" : {
+            "type" : "string",
+            "example" : "shaggy"
+          },
+          "name" : {
+            "type" : "string",
+            "example" : "Jonh Doe Admin"
+          }
+        }
+      },
+      "CurrentVehicleStatus" : {
+        "type" : "object",
+        "properties" : {
+          "location" : {
+            "$ref" : "#/components/schemas/DescribedLocation"
+          },
+          "ignition" : {
+            "$ref" : "#/components/schemas/Ignition"
+          },
+          "vehicleId" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 16753,
+            "description" : "unique identifier of the vehicle"
+          },
+          "name" : {
+            "type" : "string",
+            "example" : "Kia Cee'd",
+            "description" : "name of the vehicle"
+          },
+          "registryNumber" : {
+            "type" : "string",
+            "example" : "WI 1234",
+            "description" : "registry number of the vehicle"
+          },
+          "driverName" : {
+            "type" : "string",
+            "example" : "John Doe",
+            "description" : "a driver identified by tacho card"
+          },
+          "lastFrame" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1469527617000,
+            "description" : "the last frame/location date [unix time]"
+          },
+          "directionAngle" : {
+            "type" : "number",
+            "format" : "float",
+            "example" : 0.0,
+            "description" : "vehicle direction"
+          },
+          "moving" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 0,
+            "description" : "the vehicle is moving [0|1]"
+          },
+          "vehicleType" : {
+            "$ref" : "#/components/schemas/VehicleType"
+          },
+          "sensors" : {
+            "description" : "vehicle sensors",
+            "type" : "array",
+            "minItems" : 0,
+            "maxItems" : 6,
+            "items" : {
+              "$ref" : "#/components/schemas/VehicleSensor"
+            }
+          }
+        }
+      },
+      "DescribedLocation" : {
+        "type" : "object",
+        "properties" : {
+          "lat" : {
+            "type" : "number",
+            "format" : "float",
+            "example" : 52.26354849422781,
+            "description" : "latitude"
+          },
+          "lon" : {
+            "type" : "number",
+            "format" : "float",
+            "example" : 20.920178790493694,
+            "description" : "longitude"
+          },
+          "country" : {
+            "type" : "string",
+            "example" : "Polska",
+            "description" : "country name"
+          },
+          "countryISOCode" : {
+            "type" : "string",
+            "example" : "PL",
+            "description" : "iso code of the country"
+          },
+          "city" : {
+            "type" : "string",
+            "example" : "Warszawa",
+            "description" : "city name"
+          },
+          "street" : {
+            "type" : "string",
+            "example" : "Burakowska 5",
+            "description" : "street name with address numer"
+          },
+          "streetRef" : {
+            "type" : "string",
+            "example" : "E23",
+            "description" : "street reference number"
+          },
+          "areas" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "example" : [ "pharmacy", "grocery store" ]
+          },
+          "streetLevel" : {
+            "type" : "string",
+            "example" : "primary",
+            "description" : "street lever according to wiki.openstreetmap.org highway"
+          },
+          "describedLocation" : {
+            "type" : "string",
+            "example" : "Warszawa, ul. Burakowska 5",
+            "description" : "combined city and street, optional street ref"
+          }
+        }
+      },
+      "Ignition" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "$ref" : "#/components/schemas/IgnitionStatus"
+          },
+          "description" : {
+            "type" : "string",
+            "example" : "data older than 1h [i18n]",
+            "description" : "description of the ignition status"
+          }
+        }
+      },
+      "IgnitionStatus" : {
+        "type" : "integer",
+        "format" : "int32",
+        "description" : "Ignition status:\n  * `0` - turned off - red\n  * `1` - turned on - green\n  * `2` - turned on the vehicle is not moving - yellow\n  * `3` - data older than 1h - blue\n  * `4` - order delivery - black\n  * `5` - location error - purple\n  * `6` - special sensor status - gray\n  * `7` - ignition lock - gray, crossed    \n"
+      },
+      "SubjectEntity" : {
+        "type" : "object",
+        "required" : [ "name", "subjectId" ],
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "example" : "Speed"
+          },
+          "subjectId" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 4321
+          }
+        }
+      },
+      "VehicleEntity" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/SubjectEntity"
+        }, {
+          "type" : "object",
+          "required" : [ "subjectType" ],
+          "properties" : {
+            "subjectType" : {
+              "type" : "string",
+              "example" : "VEHICLE"
+            },
+            "platesNumber" : {
+              "type" : "string",
+              "example" : "AB 123C",
+              "description" : "license plates number"
+            },
+            "vehicleTypeKey" : {
+              "type" : "string",
+              "example" : "PUMP",
+              "enum" : [ "PUMP", "CAR", "tdb" ],
+              "description" : "the vehicle type key - unique type name"
+            }
+          }
+        } ]
+      },
+      "VehicleType" : {
+        "type" : "object",
+        "properties" : {
+          "key" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 10,
+            "description" : "vehicle type number"
+          },
+          "name" : {
+            "type" : "string",
+            "example" : "Sales representative",
+            "description" : "vehicle type name"
+          },
+          "groupId" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 1,
+            "description" : "type number of grouped vehicles"
+          },
+          "groupName" : {
+            "type" : "string",
+            "example" : "Vehicles",
+            "description" : "type name of grouped vehicles (i18n) - for aggregation on the map"
+          }
+        }
+      },
+      "VehicleSensor" : {
+        "type" : "object",
+        "required" : [ "caption", "value", "type", "key", "order" ],
+        "properties" : {
+          "caption" : {
+            "type" : "string",
+            "example" : "Velocity"
+          },
+          "value" : {
+            "description" : "Value of the sensor. Always represented as a string with us number format. Data time represented as  epoch [unix time].",
+            "type" : "string",
+            "example" : "130000.4"
+          },
+          "unit" : {
+            "type" : "string",
+            "example" : "km"
+          },
+          "type" : {
+            "type" : "string",
+            "example" : "Integer",
+            "enum" : [ "Integer", "String", "Date", "Time", "Float", "Boolean", "..." ]
+          },
+          "format" : {
+            "type" : "string",
+            "example" : ".2f",
+            "description" : "Data format for presentation for numeric fields. Formatting according to java String.format method"
+          },
+          "key" : {
+            "type" : "string",
+            "example" : "DISTANCE_TACHO",
+            "description" : "unique sensor key"
+          },
+          "order" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 1
+          }
+        }
+      },
+      "IgnitionLockStatus" : {
+        "type" : "object",
+        "required" : [ "lockStatus" ],
+        "properties" : {
+          "lockStatus" : {
+            "type" : "string",
+            "example" : "STOP_SEND",
+            "enum" : [ "NONE", "STOP_SEND", "STOP_POSTPONED", "STOP_CONFIRMED", "STOP_ERROR", "START_SEND", "START_CONFIRMED", "START_ERROR" ]
+          },
+          "statusDate" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1469527617000,
+            "description" : "the last frame/location date [unix time] CET"
+          },
+          "lockUserLogin" : {
+            "type" : "string",
+            "example" : "companyAdmin",
+            "description" : "the user on request whose the status has been set"
+          }
+        },
+        "description" : "Lock status:\n  * `NONE` - the vehicle was not in the ignition lock/unlock process \n  * `STOP_SEND` - the ignition lock request has been sent to the vehicle but not confirmed by the vehicle yet\n  * `STOP_POSTPONED` - the igniotion lock dosn't meet safety condition, the process will be continued where vehicle will stop \n  * `STOP_CONFIRMED` - the ignition lock has been executed and confirmed by the vehicle\n  * `STOP_ERROR` - the ignition lock cannot be executed on the vehicle\n  * `START_SEND` - the ignition unlock request has been sent to the vehicle but not confirmed by the vehicle yet\n  * `START_CONFIRMED` - the ignition unlock has been executed and confirmed by the vehicle\n  * `START_ERROR` - the ignition unlock cannot be executed on the vehicle\n"
+      },
+      "ConcreteEvent" : {
+        "type" : "object",
+        "required" : [ "eventId", "type", "time", "detectionTime", "vehicle" ],
+        "properties" : {
+          "eventId" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 23894234,
+            "description" : "unique name of the event"
+          },
+          "type" : {
+            "type" : "string",
+            "example" : "IN_DELIVERY",
+            "enum" : [ "AWAIT", "IN_DELIVERY", "CUSTOMER_ENTER", "PUMPING_START", "PUMPING_END", "CUSTOMER_EXIT", "RETURN", "LOAD_AWAIT", "LOAD_START", "LOAD_END", "UNLOAD_STAET", "UNLOAD_END" ],
+            "description" : "type of the event according to the process description. tbd"
+          },
+          "time" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1469527617000,
+            "description" : "time when the event occured [unix time] CET"
+          },
+          "detectionTime" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1469527617000,
+            "description" : "time when the event detected [unix time] CET"
+          },
+          "vehicle" : {
+            "$ref" : "#/components/schemas/VehicleEntity"
+          },
+          "locations" : {
+            "type" : "array",
+            "description" : "list of locations when the event occured",
+            "items" : {
+              "$ref" : "#/components/schemas/LocationEntity"
+            }
+          }
+        }
+      },
+      "LocationEntity" : {
+        "type" : "object",
+        "required" : [ "locationId", "name" ],
+        "properties" : {
+          "locationId" : {
+            "type" : "integer",
+            "format" : "int32",
+            "example" : 234234234,
+            "description" : "the location unique ID"
+          },
+          "name" : {
+            "type" : "string",
+            "example" : "the company location",
+            "description" : "name of the location defined by a user"
+          },
+          "type" : {
+            "type" : "string",
+            "example" : "BASE",
+            "enum" : [ "BASE", "CUSTOMER", "DELIVERY", "OTHER" ],
+            "description" : "type of location, predefined in the system or defined by a user"
+          }
+        }
+      },
+      "Error" : {
+        "required" : [ "code", "message" ],
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "message" : {
+            "type" : "string"
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    }
+  }
+}

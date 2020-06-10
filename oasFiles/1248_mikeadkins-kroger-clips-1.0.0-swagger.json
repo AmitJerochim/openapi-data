@@ -1,0 +1,250 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/mikeadkins/kroger-clips/1.0.0"
+  }, {
+    "description" : "Kroger Clips API",
+    "url" : "https://kroger.ibotta.com"
+  } ],
+  "info" : {
+    "description" : "API for receiving Kroger clips from Immar",
+    "version" : "1.0.0",
+    "title" : "Kroger Clips",
+    "contact" : {
+      "email" : "mike.adkins@ibotta.com"
+    }
+  },
+  "x-amazon-apigateway-api-key-source" : "HEADER",
+  "tags" : [ {
+    "name" : "clips",
+    "description" : "Kroger offer clip operations"
+  } ],
+  "paths" : {
+    "/offers/clip" : {
+      "post" : {
+        "tags" : [ "clips" ],
+        "summary" : "Webhook for kroger clip events",
+        "operationId" : "getClip",
+        "description" : "Receives a clip from Kroger",
+        "requestBody" : {
+          "description" : "Optional description in *Markdown*",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ClipRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClipResponse"
+                }
+              }
+            },
+            "headers" : {
+              "Content-Language" : {
+                "$ref" : "#/components/headers/contentLanguage"
+              }
+            }
+          },
+          "401" : {
+            "description" : "Request needs authentication with the IPN API",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClipResponse"
+                },
+                "example" : {
+                  "title" : "Unauthorized",
+                  "detail" : "Request needs authentication with the IPN API.",
+                  "success" : false
+                }
+              }
+            },
+            "headers" : {
+              "Content-Language" : {
+                "$ref" : "#/components/headers/contentLanguage"
+              }
+            }
+          },
+          "403" : {
+            "description" : "Request not allowed",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClipResponse"
+                },
+                "example" : {
+                  "title" : "Not Allowed",
+                  "detail" : "Request not allowed.",
+                  "success" : false
+                }
+              }
+            },
+            "headers" : {
+              "Content-Language" : {
+                "$ref" : "#/components/headers/contentLanguage"
+              }
+            }
+          },
+          "404" : {
+            "description" : "Resource does not exist",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClipResponse"
+                },
+                "example" : {
+                  "title" : "Not Found",
+                  "detail" : "The requested resource is not found.",
+                  "success" : false
+                }
+              }
+            },
+            "headers" : {
+              "Content-Language" : {
+                "$ref" : "#/components/headers/contentLanguage"
+              }
+            }
+          },
+          "409" : {
+            "description" : "Item was already clipped by another platform or clips are depleted",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClipResponse"
+                },
+                "example" : {
+                  "title" : "Clip Conflict",
+                  "detail" : "Item was already clipped by another platform or clips are depleted.",
+                  "reason_code" : "not_first_clip",
+                  "approximate_clips_available" : 0,
+                  "success" : false,
+                  "offerId" : "/offers/4434"
+                }
+              }
+            },
+            "headers" : {
+              "Content-Language" : {
+                "$ref" : "#/components/headers/contentLanguage"
+              }
+            }
+          },
+          "500" : {
+            "description" : "A server error occurred",
+            "content" : {
+              "application/problem+json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ClipResponse"
+                },
+                "example" : {
+                  "title" : "Server Error",
+                  "detail" : "A server error occurred.",
+                  "success" : false,
+                  "offerId" : "/offers/4434"
+                }
+              }
+            },
+            "headers" : {
+              "Content-Language" : {
+                "$ref" : "#/components/headers/contentLanguage"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ClipResponse" : {
+        "type" : "object",
+        "description" : "The response to a clip modification operation",
+        "properties" : {
+          "title" : {
+            "type" : "string",
+            "description" : "A short, human-readable summary",
+            "example" : "Success"
+          },
+          "success" : {
+            "type" : "boolean",
+            "description" : "if this clip action was successful",
+            "example" : true
+          },
+          "reason_code" : {
+            "type" : "string",
+            "description" : "symbolic reason for the success code",
+            "enum" : [ "unknown", "ok", "not_first_clip", "no_clips_available" ],
+            "example" : "ok"
+          },
+          "detail" : {
+            "type" : "string",
+            "description" : "Non-machine-parsable message about the clip action",
+            "example" : "Offer clipped"
+          },
+          "approximate_clips_available" : {
+            "type" : "number",
+            "description" : "The number of clips available",
+            "example" : 1298
+          },
+          "offerId" : {
+            "type" : "string",
+            "description" : "The partner offer id",
+            "example" : "/offers/4434"
+          }
+        },
+        "required" : [ "success", "reason_code", "detail" ]
+      },
+      "ClipRequest" : {
+        "type" : "object",
+        "description" : "The request of a kroger clip",
+        "properties" : {
+          "cardNumber" : {
+            "type" : "string",
+            "description" : "The unique card number of the purchaser",
+            "example" : "48074221"
+          },
+          "offerId" : {
+            "type" : "string",
+            "description" : "The partner offer id",
+            "example" : "1157995"
+          },
+          "bannerId" : {
+            "type" : "integer",
+            "description" : "The id of the store brand",
+            "example" : 5
+          },
+          "couponValue" : {
+            "type" : "number",
+            "format" : "int32",
+            "description" : "The value of the clipped offer",
+            "example" : 0.5
+          },
+          "date" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Time of clip",
+            "example" : "2017-07-21T17:32:28Z"
+          }
+        },
+        "required" : [ "cardNumber", "bannerId", "offerId", "couponValue", "date" ]
+      }
+    },
+    "headers" : {
+      "contentLanguage" : {
+        "description" : "Language",
+        "schema" : {
+          "type" : "string"
+        },
+        "example" : "en"
+      }
+    }
+  }
+}

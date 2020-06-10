@@ -1,0 +1,1205 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "description" : "ZEVS v2 API Docs \n",
+    "version" : "2.0.0-oas3",
+    "title" : "ZEVS"
+  },
+  "tags" : [ {
+    "description" : "Операции с автомобилями",
+    "name" : "vehicles"
+  }, {
+    "description" : "Транзакции зарядок",
+    "name" : "transactions"
+  }, {
+    "description" : "Операции с пользователями",
+    "name" : "customers"
+  }, {
+    "description" : "Операции с зарядными станциями",
+    "name" : "chargings"
+  }, {
+    "description" : "Авторизация",
+    "name" : "auth"
+  }, {
+    "description" : "Оплата",
+    "name" : "bindings"
+  } ],
+  "paths" : {
+    "/v2/auth/login" : {
+      "post" : {
+        "tags" : [ "auth" ],
+        "summary" : "Аутентификация пользователя",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json:" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "accessToken" : {
+                      "type" : "string"
+                    },
+                    "refreshToken" : {
+                      "type" : "string"
+                    },
+                    "ecards" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "string"
+                      }
+                    },
+                    "customer" : {
+                      "$ref" : "#/components/schemas/PublicCustomer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Неправильный пароль"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "email" : {
+                    "type" : "string"
+                  },
+                  "password" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        }
+      }
+    },
+    "/v2/auth/refresh" : {
+      "post" : {
+        "tags" : [ "auth" ],
+        "summary" : "Получение нового access token",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json:" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "accessToken" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "refreshToken" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        }
+      }
+    },
+    "/v2/auth/password/reset" : {
+      "post" : {
+        "tags" : [ "auth" ],
+        "summary" : "Запрос сброса пароля",
+        "description" : "Высылает email, содержащий url с токеном для сброса пароля",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "422" : {
+            "description" : "Нет пользователя с таким email"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "email" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        }
+      }
+    },
+    "/v2/auth/password/reset/confirm" : {
+      "post" : {
+        "tags" : [ "auth" ],
+        "summary" : "Подтверждение сброса пароля",
+        "description" : "Устанавливает новый пароль, если токен действителен",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "422" : {
+            "description" : "Пароль меньше 8 символов"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "token" : {
+                    "type" : "string"
+                  },
+                  "password" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        }
+      }
+    },
+    "/v2/auth/password/change" : {
+      "post" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "auth" ],
+        "summary" : "Изменение пароля",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "422" : {
+            "description" : "Неправильный старый пароль"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "oldPassword" : {
+                    "type" : "string"
+                  },
+                  "newPassword" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        }
+      }
+    },
+    "/v2/bindings" : {
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "bindings" ],
+        "summary" : "Получение списка банковских связок текущего пользователя",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json:" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "object",
+                    "properties" : {
+                      "id" : {
+                        "type" : "integer",
+                        "format" : "int64"
+                      },
+                      "method" : {
+                        "type" : "string"
+                      },
+                      "maskedPan" : {
+                        "type" : "string"
+                      },
+                      "deafult_" : {
+                        "type" : "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        }
+      }
+    },
+    "/v2/bindings/{id}" : {
+      "delete" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "bindings" ],
+        "summary" : "Удаление связки текущего пользователя",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "422" : {
+            "description" : "Связка с таким id не существует"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        }
+      }
+    },
+    "/v2/bindings/form" : {
+      "post" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "bindings" ],
+        "summary" : "Получение формы с новой связкой",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json:" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "errorMessage" : {
+                      "type" : "string"
+                    },
+                    "formUrl" : {
+                      "type" : "string"
+                    },
+                    "paymentId" : {
+                      "type" : "integer",
+                      "format" : "int64"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        }
+      }
+    },
+    "/v2/bindings/result" : {
+      "post" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "bindings" ],
+        "summary" : "Получение результата новой связки",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "id",
+          "description" : "paymentId",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json:" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "errorMessage" : {
+                      "type" : "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "422" : {
+            "description" : "Оплата с таким id не существует"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        }
+      }
+    },
+    "/v2/chargings/start" : {
+      "post" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "chargings" ],
+        "summary" : "Запрос начала зарядки",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "success" : {
+                      "type" : "boolean"
+                    },
+                    "errorCode" : {
+                      "type" : "integer",
+                      "format" : "int32",
+                      "description" : "Расшифровка кодов\n1 - NO_ERROR\n2 - PAYMENT_METHOD_NOT_SPECIFIED\n3 - NO_ACTIVE_SESSION\n4 - REJECTED_BY_STATION\n"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "connectorId" : {
+                    "type" : "integer",
+                    "format" : "int64"
+                  },
+                  "rfId" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        }
+      }
+    },
+    "/v2/chargings/stop" : {
+      "post" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "chargings" ],
+        "summary" : "Запрос конца зарядки",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json:" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "success" : {
+                      "type" : "boolean"
+                    },
+                    "errorCode" : {
+                      "type" : "integer",
+                      "format" : "int32",
+                      "description" : "Расшифровка кодов\n1 - NO_ERROR\n2 - PAYMENT_METHOD_NOT_SPECIFIED\n3 - NO_ACTIVE_SESSION\n4 - REJECTED_BY_STATION\n"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "rfId" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        }
+      }
+    },
+    "/v2/chargings/pictures/{id}" : {
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "chargings" ],
+        "summary" : "Получение фотографии коннектора",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "description" : "id коннектора",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "image/jpeg" : {
+                "schema" : {
+                  "type" : "string",
+                  "format" : "binary"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        }
+      }
+    },
+    "/v2/chargings" : {
+      "get" : {
+        "tags" : [ "chargings" ],
+        "summary" : "Получение списка станций",
+        "description" : "- Если не указан ни один параметр, возвращает все станции\n- Если указан параметр owner, возвращает станции с владельцем owner\n- Если указаны параметры latitude, dLatitude, longitude, dLongitude, возвращает станции со значением широты в промежутке [latitude - dLatitude, latitude + dLatitude], и со значением долготы в промежутке [longitude - dLongitude, longitude + dLongitude]\n- Если указаны параметры owner, latitude, dLatitude, longitude, dLongitude,\n  возвращает станции с владельцем owner, со значением широты в промежутке [latitude - dLatitude, latitude + dLatitude], и со значением долготы в промежутке [longitude - dLongitude, longitude + dLongitude]\n",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "owner",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "latitude",
+          "required" : false,
+          "schema" : {
+            "type" : "number"
+          }
+        }, {
+          "in" : "query",
+          "name" : "dLatitude",
+          "required" : false,
+          "schema" : {
+            "type" : "number"
+          }
+        }, {
+          "in" : "query",
+          "name" : "longitude",
+          "required" : false,
+          "schema" : {
+            "type" : "number"
+          }
+        }, {
+          "in" : "query",
+          "name" : "dLongitude",
+          "required" : false,
+          "schema" : {
+            "type" : "number"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json:" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "object",
+                        "properties" : {
+                          "address" : {
+                            "type" : "string"
+                          },
+                          "locationDescription" : {
+                            "type" : "string"
+                          },
+                          "providerDescription" : {
+                            "type" : "string"
+                          },
+                          "accessDescription" : {
+                            "type" : "string"
+                          },
+                          "connectors" : {
+                            "type" : "array",
+                            "items" : {
+                              "type" : "object",
+                              "properties" : {
+                                "id" : {
+                                  "type" : "integer",
+                                  "format" : "int64"
+                                },
+                                "state" : {
+                                  "type" : "integer",
+                                  "format" : "int32",
+                                  "description" : "0 - READY\n1 - DISABLED\n2 - CHARGING\n"
+                                },
+                                "latitude" : {
+                                  "type" : "number",
+                                  "format" : "double"
+                                },
+                                "longitude" : {
+                                  "type" : "number",
+                                  "format" : "double"
+                                },
+                                "sticker" : {
+                                  "type" : "integer",
+                                  "format" : "int32"
+                                },
+                                "power" : {
+                                  "type" : "number",
+                                  "format" : "double"
+                                },
+                                "price" : {
+                                  "type" : "number",
+                                  "format" : "double"
+                                },
+                                "outlets" : {
+                                  "type" : "array",
+                                  "items" : {
+                                    "type" : "integer",
+                                    "format" : "int32",
+                                    "description" : "0 - DEFAULT\n1 - SHUKO\n2 - MENNEKES\n3 - YAZAKI\n4 - CCS\n5 - SAE\n6 - CHAdeMO\n7 - LeGrand\n"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        }
+      }
+    },
+    "/v2/customers" : {
+      "post" : {
+        "tags" : [ "customers" ],
+        "summary" : "Регистрация пользователя",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json:" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CustomerRegistered"
+                }
+              }
+            }
+          },
+          "302" : {
+            "description" : "Пользователь с таким email уже зарегистрирован"
+          },
+          "422" : {
+            "description" : "Пароль меньше 8 символов / пустые поля"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Customer"
+              }
+            }
+          },
+          "required" : true
+        }
+      },
+      "put" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "customers" ],
+        "summary" : "Обновление информации о текущем пользователе",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateCustomer"
+              }
+            }
+          },
+          "required" : true
+        }
+      },
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "customers" ],
+        "summary" : "Получение информации о текущем пользователе",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json:" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicCustomer"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        }
+      }
+    },
+    "/v2/customers/ucm-token" : {
+      "put" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "customers" ],
+        "summary" : "Обновление ключа Firebase у текущего пользователя",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "token" : {
+                    "type" : "string"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        }
+      }
+    },
+    "/v2/customers/ecards" : {
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "customers" ],
+        "summary" : "Получение списка id всех карт пользователя",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json:" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "array",
+                      "items" : {
+                        "type" : "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        }
+      }
+    },
+    "/v2/vehicles" : {
+      "post" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "vehicles" ],
+        "summary" : "Добавление автомобиля к текущему пользователю",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "424" : {
+            "description" : "Автомобиль с таким номером уже зарегистрирован"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "$ref" : "#/components/requestBodies/Vehicle"
+        }
+      },
+      "put" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "vehicles" ],
+        "summary" : "Обновление автомобиля у текущего пользователя",
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "424" : {
+            "description" : "Автомобиль с таким номером не зарегистрирован"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        },
+        "requestBody" : {
+          "$ref" : "#/components/requestBodies/Vehicle"
+        }
+      },
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "vehicles" ],
+        "summary" : "Получение списка всех автомобилей пользователя",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json:" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Vehicles"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        }
+      }
+    },
+    "/v2/transactions/{rfId}" : {
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "transactions" ],
+        "summary" : "Получение списка всех зарядок по карте с rfId",
+        "parameters" : [ {
+          "name" : "rfId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Transactions"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "424" : {
+            "description" : "rfId не принадлежит пользователю"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        }
+      }
+    },
+    "/v2/transactions/active/{rfId}" : {
+      "get" : {
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "tags" : [ "transactions" ],
+        "summary" : "Получение списка активных зарядок по карте с rfId",
+        "parameters" : [ {
+          "name" : "rfId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ActiveTransactions"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/UnauthorizedError"
+          },
+          "424" : {
+            "description" : "rfId не принадлежит пользователю"
+          },
+          "500" : {
+            "description" : "Неизвестная ошибка"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    },
+    "responses" : {
+      "UnauthorizedError" : {
+        "description" : "Неправильный access token"
+      }
+    },
+    "requestBodies" : {
+      "Vehicle" : {
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Vehicle"
+            }
+          }
+        },
+        "required" : true
+      }
+    },
+    "schemas" : {
+      "Customer" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "firstName" : {
+            "type" : "string"
+          },
+          "lastName" : {
+            "type" : "string"
+          },
+          "middleName" : {
+            "type" : "string"
+          },
+          "password" : {
+            "type" : "string"
+          },
+          "mobile" : {
+            "type" : "string"
+          },
+          "inn" : {
+            "type" : "string"
+          },
+          "birthday" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "city" : {
+            "type" : "string"
+          }
+        }
+      },
+      "UpdateCustomer" : {
+        "type" : "object",
+        "properties" : {
+          "firstName" : {
+            "type" : "string"
+          },
+          "lastName" : {
+            "type" : "string"
+          },
+          "middleName" : {
+            "type" : "string"
+          },
+          "mobile" : {
+            "type" : "string"
+          },
+          "inn" : {
+            "type" : "string"
+          },
+          "birthday" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "city" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PublicCustomer" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "firstName" : {
+            "type" : "string"
+          },
+          "lastName" : {
+            "type" : "string"
+          },
+          "middleName" : {
+            "type" : "string"
+          },
+          "mobile" : {
+            "type" : "string"
+          },
+          "inn" : {
+            "type" : "string"
+          },
+          "birthday" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "city" : {
+            "type" : "string"
+          }
+        }
+      },
+      "CustomerRegistered" : {
+        "type" : "object",
+        "properties" : {
+          "ecard" : {
+            "type" : "string"
+          },
+          "accessToken" : {
+            "type" : "string"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          },
+          "customer" : {
+            "$ref" : "#/components/schemas/PublicCustomer"
+          }
+        }
+      },
+      "Vehicle" : {
+        "type" : "object",
+        "properties" : {
+          "manufacturer" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "year" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "color" : {
+            "type" : "string"
+          },
+          "licensePlate" : {
+            "type" : "string"
+          }
+        }
+      },
+      "Vehicles" : {
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Vehicle"
+            }
+          }
+        }
+      },
+      "Transactions" : {
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "started" : {
+                  "type" : "integer",
+                  "format" : "int64"
+                },
+                "duration" : {
+                  "type" : "integer",
+                  "format" : "int64"
+                },
+                "money" : {
+                  "type" : "number",
+                  "format" : "float"
+                },
+                "kwh" : {
+                  "type" : "number",
+                  "format" : "float"
+                },
+                "address" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ActiveTransactions" : {
+        "type" : "object",
+        "properties" : {
+          "data" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "connectorId" : {
+                  "type" : "integer",
+                  "format" : "int64"
+                },
+                "started" : {
+                  "type" : "integer",
+                  "format" : "int64"
+                },
+                "kwh" : {
+                  "type" : "number",
+                  "format" : "float"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

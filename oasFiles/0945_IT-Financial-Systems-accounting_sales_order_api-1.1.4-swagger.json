@@ -1,0 +1,848 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "title" : "Revenue Accounting Sales Order API",
+    "description" : "AA Revenue Accounting - Sales Order API |\nversion   date    changes |\n-------   ------  ------------------------------------- |\n1.1.0     7/2019  add FeeType to the PriceType\n",
+    "contact" : {
+      "email" : "steve_bishop@verizon.net"
+    },
+    "license" : {
+      "name" : "Apache 2.0",
+      "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version" : "1.1.4"
+  },
+  "servers" : [ {
+    "url" : "https://virtserver.swaggerhub.com/sdbishop1963/AAiRA-API/1.1.0",
+    "description" : "SwaggerHub API Auto Mocking"
+  } ],
+  "tags" : [ {
+    "name" : "admins",
+    "description" : "Secured Admin-only calls"
+  }, {
+    "name" : "developers",
+    "description" : "Operations available to regular developers"
+  } ],
+  "paths" : {
+    "/salesorder" : {
+      "get" : {
+        "tags" : [ "developers" ],
+        "summary" : "searches sales order",
+        "description" : "By passing in the appropriate options, you can search for\npreviously submitted sales orders\n",
+        "operationId" : "searchSalesOrder",
+        "parameters" : [ {
+          "name" : "searchString",
+          "in" : "query",
+          "description" : "pass an optional search string for looking up sales order",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "search results matching criteria",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IATA_OrderSalesInformationNotifRQ"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "bad input parameter"
+          },
+          "401" : {
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "description" : "Forbidden"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          },
+          "503" : {
+            "description" : "Service Unavailable"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "admins" ],
+        "summary" : "submits a new sales order",
+        "description" : "submits a sales order to revenue accounting",
+        "operationId" : "submitSalesOrder",
+        "requestBody" : {
+          "description" : "Sales Order to submit",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/IATA_OrderSalesInformationNotifRQ"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "202" : {
+            "description" : "sales order accepted"
+          },
+          "400" : {
+            "description" : "bad request object -- invalid input, object invalid"
+          },
+          "401" : {
+            "description" : "Unauthorized"
+          },
+          "403" : {
+            "description" : "Forbidden"
+          },
+          "409" : {
+            "description" : "duplicate sales order already exists"
+          },
+          "500" : {
+            "description" : "Internal Server Error"
+          },
+          "503" : {
+            "description" : "Service Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "IATA_OrderSalesInformationNotifRQ" : {
+        "required" : [ "request" ],
+        "type" : "object",
+        "properties" : {
+          "augmentationPoint" : {
+            "$ref" : "#/components/schemas/AugmentationPoint"
+          },
+          "party" : {
+            "$ref" : "#/components/schemas/PartyType"
+          },
+          "payloadAttributes" : {
+            "$ref" : "#/components/schemas/IATA_PayloadStandardAttributesType"
+          },
+          "request" : {
+            "$ref" : "#/components/schemas/RequestType"
+          }
+        },
+        "description" : "A push message from an Airline Order Management system to an Airline Accounting system, with all information about the Order required by the accounting such as the status of the Order and Services, the price charged to the Customer, Payment information, internal values per Service etc."
+      },
+      "RequestType" : {
+        "type" : "object",
+        "properties" : {
+          "dataLists" : {
+            "$ref" : "#/components/schemas/DataListsType"
+          },
+          "orders" : {
+            "type" : "array",
+            "description" : "The list of orders",
+            "items" : {
+              "$ref" : "#/components/schemas/OrderType"
+            }
+          }
+        },
+        "description" : "OrderSalesInformationNotifRQ request information."
+      },
+      "OrderType" : {
+        "required" : [ "orderId", "orderItem", "ownerTypeCode" ],
+        "type" : "object",
+        "properties" : {
+          "creationDateTime" : {
+            "$ref" : "#/components/schemas/DateTimeType"
+          },
+          "orderId" : {
+            "type" : "string",
+            "description" : "Carrier assigned ID which uniquely identifies a specific Order across several messages. It has very specific format  [A-Z]{2}[0-9]{3}[A-Z0-9]{8}. It's generated when te consumer calls the aair-sales-order-service."
+          },
+          "orderItem" : {
+            "type" : "array",
+            "description" : "the list of ordered items. An individually priced item within an Order, made up of one or more Services. May or may not be a selected Offer Item",
+            "items" : {
+              "$ref" : "#/components/schemas/OrderItemType"
+            }
+          },
+          "ownerCode" : {
+            "$ref" : "#/components/schemas/AirlineDesigCodeType"
+          },
+          "ownerTypeCode" : {
+            "$ref" : "#/components/schemas/OwnerTypeCodeType"
+          },
+          "paymentInfo" : {
+            "type" : "array",
+            "description" : "Information related to the settlement of a transaction through monetary or other compensations. For example, a payment may be applied to an entire Order or individual Order Items.",
+            "items" : {
+              "$ref" : "#/components/schemas/PaymentInfoType"
+            }
+          },
+          "statusCode" : {
+            "$ref" : "#/components/schemas/OrderStatusCodeType"
+          },
+          "totalPrice" : {
+            "$ref" : "#/components/schemas/PriceType"
+          },
+          "webAddressURI" : {
+            "type" : "string",
+            "description" : "URI for callback to inform about accounting details.",
+            "format" : "uri-reference"
+          }
+        },
+        "description" : "A uniquely identified record of the agreement of one party with another to receive products and services under specified terms and conditions. Order supports the sale of a flexible range of airline products and services that are not necessarily Journey based (e.g. subscription services)."
+      },
+      "OrderItemType" : {
+        "required" : [ "orderItemId", "price", "service" ],
+        "type" : "object",
+        "properties" : {
+          "orderItemId" : {
+            "type" : "string",
+            "description" : "unique id for this order item."
+          },
+          "price" : {
+            "$ref" : "#/components/schemas/PriceType"
+          },
+          "service" : {
+            "type" : "array",
+            "description" : "The instance of a specific flight or Service Definition as it has been offered (and eventually ordered and consumed) in the context of a specific Offer and/or Order.",
+            "items" : {
+              "$ref" : "#/components/schemas/ServiceType"
+            }
+          },
+          "statusCode" : {
+            "$ref" : "#/components/schemas/OrderItemStatusCodeType"
+          },
+          "fareDetail" : {
+            "type" : "array",
+            "description" : "The amount charged by the carrier for usage of its services.",
+            "items" : {
+              "$ref" : "#/components/schemas/FareDetailType"
+            }
+          }
+        },
+        "description" : "An individually priced item within an Order, made up of one or more Services. May or may not be a selected Offer Item."
+      },
+      "DataListsType" : {
+        "type" : "object",
+        "properties" : {
+          "contactInfoList" : {
+            "type" : "array",
+            "description" : "The list of Contact info items.",
+            "items" : {
+              "$ref" : "#/components/schemas/ContactInfoListType"
+            }
+          },
+          "paxList" : {
+            "type" : "array",
+            "description" : "Passenger info list",
+            "items" : {
+              "$ref" : "#/components/schemas/PaxListType"
+            }
+          },
+          "serviceDefinitionList" : {
+            "type" : "array",
+            "description" : "Service Definition data list",
+            "items" : {
+              "$ref" : "#/components/schemas/ServiceDefinitionListType"
+            }
+          }
+        },
+        "description" : "Data List definition for this message."
+      },
+      "AugmentationPoint" : {
+        "type" : "object",
+        "properties" : {
+          "aaMessageAttributes" : {
+            "$ref" : "#/components/schemas/AAMessageAttributes"
+          }
+        },
+        "description" : "The Augmentation Point element contains attributes not defined elsewhere in the IATA One Order schema."
+      },
+      "PartyType" : {
+        "required" : [ "sender" ],
+        "type" : "object",
+        "properties" : {
+          "sender" : {
+            "$ref" : "#/components/schemas/SenderType"
+          }
+        },
+        "description" : "Message / Transaction Party(s) information. Note that information about parties is intended for business use, it is not intended for transaction authentication and routing of the message."
+      },
+      "SenderType" : {
+        "type" : "object",
+        "properties" : {
+          "enabledSystem" : {
+            "$ref" : "#/components/schemas/EnabledSystemType"
+          }
+        },
+        "description" : "Information related to the party sending this message."
+      },
+      "EnabledSystemType" : {
+        "type" : "object",
+        "properties" : {
+          "contactInfoRefId" : {
+            "type" : "array",
+            "description" : "Reference to a ContactInfoID",
+            "example" : "CON-001",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Name of the enabled system.",
+            "example" : "LoyaltyDept"
+          },
+          "systemId" : {
+            "type" : "string",
+            "description" : "Identifier of the enabled system.",
+            "example" : "4510550"
+          }
+        },
+        "description" : "A system enabled to transact with AAiRA using this message."
+      },
+      "AAMessageAttributes" : {
+        "type" : "object",
+        "properties" : {
+          "messageType" : {
+            "type" : "string",
+            "description" : "Defines the type of the message. OSIN stands for Order Sales Information Notification that AAiRA receives from its Sales Channel. OPIN is Order Payment Information Notification that AAiRA receives from its Payment Channel.",
+            "example" : "OSIN | OPIN"
+          },
+          "transactionType" : {
+            "type" : "string",
+            "description" : "This field holds the transaction type. For an \"OSIN\" this field's value would be \"SALES\" and for an \"OPIN\" it would be \"PAYMENT\". This field is one of the parameters that is used to lookup into the Business rules tables to create the subledger entries for accounting.",
+            "example" : "SALES | PAYMENT"
+          },
+          "accountingType" : {
+            "type" : "string",
+            "description" : "This field holds the accounting type. For \"SALES\" this field's value would be either \"ORDER\" or \"REFUND\" and for a \"PAYMENT\" it would be \"BILLING\" or \"REFUND\". This field is one of the parameters that is used to lookup into the Business rules tables to create the subledger entries for accounting.",
+            "example" : "ORDER | BILLING | REFUND"
+          }
+        },
+        "description" : "This data element contains details of the transaction that AAiRA receives from the consumer. This specifically holds details on the type of the message received from the clients."
+      },
+      "IATA_PayloadStandardAttributesType" : {
+        "type" : "object",
+        "properties" : {
+          "altLangId" : {
+            "type" : "string",
+            "description" : "Identifies the alternate language for a customer or message."
+          },
+          "correlationId" : {
+            "type" : "string",
+            "description" : "Allow end-to-end correlation of log messages with the corresponding Web service message throughout the processing of the Web service message. universally unique identifier (UUID) example: <uuid>",
+            "example" : "<uuid>"
+          },
+          "echoTokenText" : {
+            "type" : "string",
+            "description" : "A reference for additional message identification, assigned by the requesting host system. When a request message includes an echo token the corresponding response message MUST include an echo token with an identical value.",
+            "example" : "<client-specific-id>"
+          },
+          "primaryLangId" : {
+            "type" : "string",
+            "description" : "Identifes the primary language preference for the message."
+          },
+          "retransmissionInd" : {
+            "type" : "boolean",
+            "description" : "When true, indicates the message is being re-sent after a failure.",
+            "example" : false
+          },
+          "seqNumber" : {
+            "type" : "number",
+            "description" : "Used to identify the sequence number of the transaction as assigned by the sending system; allows for an application to process messages in a certain order or to request a resynchronization of messages in the event that a system has been off-line and needs to retrieve messages that were missed."
+          },
+          "timestamp" : {
+            "$ref" : "#/components/schemas/DateTimeType"
+          },
+          "trxId" : {
+            "type" : "string",
+            "description" : "A unique identifier to relate all messages within a transaction (e.g. this would be sent in all request and response messages that are part of an on-going transaction)",
+            "example" : "busTx-<uuid>"
+          },
+          "trxStatusCode" : {
+            "type" : "string",
+            "description" : "This indicates where this message falls within a sequence of messages.",
+            "example" : "busTx-seq-<sequence number>"
+          },
+          "versionNumber" : {
+            "type" : "number",
+            "description" : "Message version number",
+            "example" : "1.1.4"
+          }
+        },
+        "description" : "The IATA_PayloadStdAttributes defines the standard attributes that appear on the root element for all IATA payloads."
+      },
+      "ServiceType" : {
+        "required" : [ "deliveryProvider", "internalValue", "paxRefId", "serviceId", "serviceRefId" ],
+        "type" : "object",
+        "properties" : {
+          "deliveryProvider" : {
+            "$ref" : "#/components/schemas/DeliveryProviderType"
+          },
+          "deliveryStatusCode" : {
+            "$ref" : "#/components/schemas/ServiceDeliveryStatusCodeType"
+          },
+          "internalValue" : {
+            "$ref" : "#/components/schemas/PriceType"
+          },
+          "paxRefId" : {
+            "type" : "string",
+            "description" : "Reference to a Passenger ID",
+            "example" : "PAX-001"
+          },
+          "serviceAssociations" : {
+            "$ref" : "#/components/schemas/ServiceAssociationsType"
+          },
+          "serviceId" : {
+            "type" : "string",
+            "description" : "Uniquely Identifies a Service within the context of one message."
+          },
+          "serviceRefId" : {
+            "type" : "string",
+            "description" : "reference to a unique service in this message."
+          },
+          "statusCode" : {
+            "$ref" : "#/components/schemas/CodeType"
+          }
+        },
+        "description" : "The instance of a specific flight or Service Definition as it has been offered (and eventually ordered and consumed) in the context of a specific Offer and/or Order."
+      },
+      "PaymentMethodType" : {
+        "type" : "object",
+        "properties" : {
+          "paymentCard" : {
+            "$ref" : "#/components/schemas/PaymentCardType"
+          },
+          "check" : {
+            "$ref" : "#/components/schemas/CheckType"
+          },
+          "bankTransfer" : {
+            "$ref" : "#/components/schemas/BankTransferType"
+          }
+        },
+        "description" : "A form of procedure for the payment of goods or services, plus any transactional information specific to the payment method other than the amount. It's an enumeration."
+      },
+      "PaymentInfoType" : {
+        "required" : [ "amount", "orderItemRefId", "orderRefId", "paymentInfoId", "paymentRefId" ],
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "$ref" : "#/components/schemas/AmountType"
+          },
+          "orderItemRefId" : {
+            "type" : "string",
+            "description" : "Carrier assigned ID which exists uniquely within an Order."
+          },
+          "orderRefId" : {
+            "type" : "string",
+            "description" : "Reference to an Order ID for this payment."
+          },
+          "paymentInfoId" : {
+            "type" : "string",
+            "description" : "Uniquely identifies payment information within a message."
+          },
+          "paymentMethod" : {
+            "$ref" : "#/components/schemas/PaymentMethodType"
+          },
+          "paymentRefId" : {
+            "type" : "string",
+            "description" : "If creating the order after payment authorization it is a way of linking an order to an existing payment reference. example: PSP Reference Number from Payment Services",
+            "example" : "PSP Reference Number from Payment Services"
+          },
+          "desc" : {
+            "$ref" : "#/components/schemas/DescType"
+          },
+          "paymentStatusCode" : {
+            "$ref" : "#/components/schemas/PaymentStatusCodeType"
+          },
+          "typeCode" : {
+            "$ref" : "#/components/schemas/CodeType"
+          }
+        },
+        "description" : "Information related to the settlement of a transaction through monetary or other compensations. For example, a payment may be applied to an entire Order or individual Order Items."
+      },
+      "PaymentCardType" : {
+        "type" : "object",
+        "properties" : {
+          "cardBrandCode" : {
+            "$ref" : "#/components/schemas/CreditCardVendorCodeType"
+          },
+          "cardNumber" : {
+            "$ref" : "#/components/schemas/PaymentCardNumberType"
+          }
+        },
+        "description" : "A device that enables its owner (the cardholder) to make a payment by electronic funds transfer."
+      },
+      "CheckType" : {
+        "type" : "object",
+        "properties" : {
+          "checkNumber" : {
+            "type" : "string",
+            "description" : "Number found on the check which uniquely identifies the check being used as payment."
+          }
+        },
+        "description" : "A written order instructing a financial institution to pay immediately on demand a specified amount of money from the check writer's account to the person named on the check or, if a specific person is not named, to whoever bears the check to the institution for payment."
+      },
+      "BankTransferType" : {
+        "type" : "object",
+        "properties" : {
+          "bankAccountID" : {
+            "type" : "string",
+            "description" : "The bank account identifier."
+          }
+        },
+        "description" : "Bank Account payment method definition. Customer bank accounts for payments, either for paper checks or electronic funds transfer."
+      },
+      "DeliveryProviderType" : {
+        "required" : [ "id", "name" ],
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "the unique identifier for a delivery provider"
+          },
+          "name" : {
+            "$ref" : "#/components/schemas/NameType"
+          }
+        },
+        "description" : "is the uniqu e identifier for a delivery provider.  is agreed identifier with the airline."
+      },
+      "DateTimeType" : {
+        "type" : "string",
+        "format" : "CYY-MM-DDThh:mm:ss[Z|(+|-)hh:mm]",
+        "description" : "A date time identifies a date and time of day to various common resolutions: year, month, week, day, hour, minute, second, and fraction of second.When the Consumer creates the AAiRA order.",
+        "example" : "2019-06-07T10:40:52.000Z"
+      },
+      "PaxType" : {
+        "required" : [ "paxId" ],
+        "type" : "object",
+        "properties" : {
+          "paxId" : {
+            "type" : "string",
+            "description" : "Uniquely identifies a Passenger within the context of one message."
+          }
+        },
+        "description" : "Any person except members of the crew carried or to be carried with the consent of the carrier, on board of any transport vehicle such as aircraft, train, bus, ship. Holds the attributes specific to a one booking, from shopping to fulfillment."
+      },
+      "PriceType" : {
+        "type" : "object",
+        "properties" : {
+          "baseAmount" : {
+            "$ref" : "#/components/schemas/AmountType"
+          },
+          "taxSummary" : {
+            "type" : "array",
+            "description" : "Tax summary information.",
+            "items" : {
+              "$ref" : "#/components/schemas/TaxSummaryType"
+            }
+          },
+          "totalAmount" : {
+            "$ref" : "#/components/schemas/AmountType"
+          },
+          "fee" : {
+            "$ref" : "#/components/schemas/FeeType"
+          }
+        },
+        "description" : "The amount of money expected, required, or given in payment for something."
+      },
+      "TaxSummaryType" : {
+        "required" : [ "tax" ],
+        "type" : "object",
+        "properties" : {
+          "tax" : {
+            "type" : "array",
+            "description" : "the collection of taxes.",
+            "items" : {
+              "$ref" : "#/components/schemas/TaxType"
+            }
+          },
+          "totalTaxAmount" : {
+            "$ref" : "#/components/schemas/AmountType"
+          }
+        },
+        "description" : "Tax summary information."
+      },
+      "TaxType" : {
+        "required" : [ "amount", "taxCode" ],
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "$ref" : "#/components/schemas/AmountType"
+          },
+          "taxCode" : {
+            "type" : "string",
+            "description" : "IATA TTBS Tax Code. Example: US, GST?Candadian",
+            "enum" : [ "US", "XG" ]
+          },
+          "taxName" : {
+            "$ref" : "#/components/schemas/NameType"
+          },
+          "taxTypeCode" : {
+            "type" : "string",
+            "description" : "Indicates the type of tax (e.g. Applied or Exempt).",
+            "enum" : [ "APPLIED", "EXEMPT" ]
+          }
+        },
+        "description" : "A compulsory contribution to state revenue, levied by the government on workers' income and business profits or added to the cost of some goods, services, and transactions."
+      },
+      "IndividualType" : {
+        "type" : "object",
+        "properties" : {
+          "givenName" : {
+            "type" : "string"
+          },
+          "surname" : {
+            "type" : "string"
+          }
+        },
+        "description" : "A single human being as distinct from a group, class, or family."
+      },
+      "IDType" : {
+        "type" : "string",
+        "description" : "An identifier is a character string used to uniquely identify one instance of an object within an identification scheme."
+      },
+      "NameType" : {
+        "type" : "string",
+        "description" : "A name is a word or phrase that constitutes the distinctive designation of a person, place, thing or concept"
+      },
+      "OrderStatusCodeType" : {
+        "type" : "string",
+        "description" : "represents the statuses of an Order:  CLOSED - Once all Order Items are FULLY PAID and Services are either DELIVERED or REFUNDED or EXPIRED; FROZEN - emergency lock; OPENED-Order was built based on offer information. ",
+        "enum" : [ "CLOSED", "FROZEN", "OPENED" ]
+      },
+      "PaymentStatusCodeType" : {
+        "type" : "string",
+        "description" : "values for payment status codes <br>This field is required for Payment Services <br>ACCEPTED - The commitments to pay was accepted./At the Payment Level to indicate that a payment has been authorized, etc.  or the status in not needed    <br>ALLOCATED - The value of compensation was allocated to the corresponding Order Item.  <br>CLOSED - The payment process was done. <br>COMMITTED - The payer has committed to pay the compensation. <br>RECEIVED - The compensation was received. <br>REFUNDED - The compensation was transfered back to the payer./When an order item is cancelled or changed, we expect that any payments applied to the item will be un-applied.  this leaves a credit balance on the order that can be applied to a new item of refunded. <br>SENT - The compensation was transfered.",
+        "enum" : [ "ACCEPTED", "ALLOCATED", "CLOSED", "COMMITTED", "RECEIVED", "REFUNDED", "SENT" ]
+      },
+      "CreditCardVendorCodeType" : {
+        "type" : "string",
+        "description" : "CC vendor code",
+        "enum" : [ "VI", "MC", "AX", "DC", "TP" ]
+      },
+      "PaymentCardNumberType" : {
+        "type" : "string",
+        "description" : "This is the masked or truncated card number indicated on the payment card."
+      },
+      "OwnerTypeCodeType" : {
+        "type" : "string",
+        "description" : "Specifies the type of Owner for a given Offer/Order/Order Item (E.g. ORA, POA).",
+        "enum" : [ "ORA", "POA" ]
+      },
+      "OrderItemStatusCodeType" : {
+        "type" : "string",
+        "description" : "shows the current statuses of an Order Item: CANCELLED BY CUSTOMER - The Order Item reservation is cancelled by the Customer; ENTITLED - Customer is entitled to receive the Order Item; NOT ENTITLED - Customer is not entitled to receive the Order Item until certain conditions are met.",
+        "enum" : [ "CANCELLED_BY_CUSTOMER", "ENTITLED", "NOT_ENTITLED" ]
+      },
+      "FareDetailType" : {
+        "type" : "object",
+        "properties" : {
+          "tourCode" : {
+            "$ref" : "#/components/schemas/CodeType",
+            "description" : "Tour Code. As an example - ITGF12. For AAiRA the consumer sends the contractId number here."
+          }
+        },
+        "description" : "The amount charged by the carrier for usage of its services."
+      },
+      "AirlineDesigCodeType" : {
+        "pattern" : "([A-Z]{3}|[A-Z]{2})|([0-9][A-Z])|([A-Z][0-9])",
+        "type" : "string",
+        "description" : "Either the IATA-defined 2-character code or the ICAO-defined 3-character code of an airline, as per the length of the value. The codelist contents of IATA Resolution 762  airline codes, or of ICAO airline codes. {codeListAgencyName}IATA or ICAO{/codeListAgencyName} {codeListName}Resolution 762  Airline Codes or ICAO Airline Codes{/codeListName}"
+      },
+      "AmountType" : {
+        "required" : [ "currencyCode", "value" ],
+        "type" : "object",
+        "properties" : {
+          "value" : {
+            "type" : "string",
+            "example" : "15.00"
+          },
+          "currencyCode" : {
+            "type" : "string",
+            "example" : "USD",
+            "enum" : [ "USD" ]
+          },
+          "decimal" : {
+            "type" : "integer"
+          }
+        },
+        "description" : "An amount is a number of monetary units specified in a currency."
+      },
+      "CodeType" : {
+        "type" : "string",
+        "description" : "A code is a character string of letters, numbers, special characters (except escape sequences), and symbols. Acceptable Type codes are CREDIT CARD, CHECK, WIRE TRANSFER."
+      },
+      "ServiceDeliveryStatusCodeType" : {
+        "type" : "string",
+        "description" : "Represents the current status of a service item. ",
+        "enum" : [ "DELIVERED", "EXPIRED", "FAILED_TO_DELIVER", "IN_PROGRESS", "NOT_CLAIMED", "READY_TO_DELIVER", "READY_TO_PROCEED", "REMOVED", "SUSPENDED", "UNABLE_TO_DELIVER" ]
+      },
+      "ContactInfoListType" : {
+        "type" : "object",
+        "properties" : {
+          "contactInfo" : {
+            "type" : "array",
+            "description" : "The contact list",
+            "items" : {
+              "$ref" : "#/components/schemas/ContactInfoType"
+            }
+          }
+        },
+        "description" : "Contact info data list definition."
+      },
+      "ContactInfoType" : {
+        "required" : [ "contactInfoId" ],
+        "type" : "object",
+        "properties" : {
+          "contactInfoId" : {
+            "type" : "string",
+            "description" : "Uniquely Identifies a set of Contact Information, within the context of one message. Ex- CON-00N. Where N being the number of contexts."
+          },
+          "contactTypeText" : {
+            "type" : "string",
+            "description" : "Classification for a particular set of contact information (e.g. Primary, Payment, etc.) Consumer support person."
+          },
+          "emailAddress" : {
+            "$ref" : "#/components/schemas/EmailAddressType"
+          }
+        },
+        "description" : "The electronic or geographic address which a party has provided as the contact channel. For example, contact email, contact postal address, contact phone number."
+      },
+      "EmailAddressType" : {
+        "required" : [ "emailAddressText" ],
+        "type" : "object",
+        "properties" : {
+          "emailAddressText" : {
+            "type" : "string",
+            "description" : "The email address which should be used for contact purposes."
+          },
+          "labelText" : {
+            "type" : "string",
+            "description" : "Label to describe the email"
+          }
+        },
+        "description" : "The email address which should be used for contact purposes."
+      },
+      "PaxListType" : {
+        "type" : "object",
+        "properties" : {
+          "pax" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PaxType"
+            }
+          }
+        },
+        "description" : "Passenger data list definition."
+      },
+      "ServiceDefinitionListType" : {
+        "required" : [ "serviceDefinition" ],
+        "type" : "object",
+        "properties" : {
+          "serviceDefinition" : {
+            "type" : "array",
+            "description" : "Description and characteristics of a non-flight product or service that can be separately sold and delivered. E.g. bag, seat, meal on a flight.",
+            "items" : {
+              "$ref" : "#/components/schemas/ServiceDefinitionType"
+            }
+          }
+        },
+        "description" : "list of service definitions"
+      },
+      "ServiceDefinitionType" : {
+        "required" : [ "desc", "name", "rfic", "rfisc" ],
+        "type" : "object",
+        "properties" : {
+          "desc" : {
+            "type" : "array",
+            "description" : "An account or representation of the certain or major aspects, characteristics, or features of the service.",
+            "items" : {
+              "$ref" : "#/components/schemas/DescType"
+            }
+          },
+          "name" : {
+            "$ref" : "#/components/schemas/NameType"
+          },
+          "ownerCode" : {
+            "$ref" : "#/components/schemas/AirlineDesigCodeType"
+          },
+          "rfic" : {
+            "$ref" : "#/components/schemas/RFICType"
+          },
+          "rfisc" : {
+            "$ref" : "#/components/schemas/RFISCType"
+          },
+          "serviceCode" : {
+            "$ref" : "#/components/schemas/CodeType"
+          },
+          "serviceDefinitionId" : {
+            "type" : "string",
+            "description" : "Uniquely Identifies a Service Definition within the context of one message."
+          }
+        },
+        "description" : "Description and characteristics of a non-flight product or service that can be separately sold and delivered. E.g. bag, seat, meal on a flight."
+      },
+      "RFICType" : {
+        "type" : "string",
+        "description" : "Reason For Issuance Subcode  ",
+        "enum" : [ "A", "I" ]
+      },
+      "RFISCType" : {
+        "type" : "string",
+        "description" : "Reason For Issuance Subcode ",
+        "enum" : [ "MIB", "MIG", "MIT", "NCF", "ACF", "CEF", "CSF", "CRF", "CTF", "FTA", "TCF", "CRE" ]
+      },
+      "DescType" : {
+        "type" : "object",
+        "properties" : {
+          "descText" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ServiceAssociationsType" : {
+        "type" : "object",
+        "properties" : {
+          "serviceDefinitionRef" : {
+            "$ref" : "#/components/schemas/ServiceDefinitionRefType"
+          }
+        },
+        "description" : "References to the details of this Service.  May include a Service Definition."
+      },
+      "ServiceDefinitionRefType" : {
+        "required" : [ "serviceDefinitionRefId" ],
+        "type" : "object",
+        "properties" : {
+          "serviceDefinitionRefId" : {
+            "type" : "string",
+            "description" : "References a Service Definition ID within this message."
+          }
+        },
+        "description" : "Airline specific definition of a product or service (excluding flights) that can be separately sold and delivered. e.g. bag, seat, meal on a flight"
+      },
+      "FeeType" : {
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "$ref" : "#/components/schemas/AmountType"
+          },
+          "descText" : {
+            "type" : "string"
+          },
+          "desigText" : {
+            "type" : "string",
+            "description" : "For internal purposes the desigText is used to lookup into the fee_gl_accounting_primitives table to create the fee entry in our subledger. The column name is feeKey in the rules table."
+          },
+          "refundInd" : {
+            "type" : "boolean",
+            "description" : "The refund indicator field denotes whether a fee is refundable or not."
+          }
+        },
+        "description" : "Amount added on to a charge for a specific product, purpose, or service."
+      }
+    }
+  }
+}

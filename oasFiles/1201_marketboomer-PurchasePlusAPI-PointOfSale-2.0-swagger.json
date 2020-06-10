@@ -1,0 +1,2017 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "version" : "2.0",
+    "title" : "PurchasePlus API - Point of Sale Module",
+    "description" : "Allows the purchaser to import Point of Sale (POS) data from external systems into Purchase Plus which decrements the quantity sold from their current Inventory Stock Levels.\n\n## How to use\nThis guide assumes that you're [authenticated](https://marketboomer.com/api/#tab-b8106c79f3608a9f44f) and have [set up the POS Outlet Code](http://docs.purchaseplus.com/en/articles/3457555-setting-up-the-point-of-sale-module#linking-your-pos-outlet-code-to-an-inventory-stock-location) to an Inventory Stock Location in PurchasePlus.\n\nLet's say `Purchaser<#id:1>` wants to transfer sold items from their POS system to PurchasePlus.\n\n### 1. Creating a sale\n`POST` to [`/point_of_sale/api/purchasers/1/sales`](#/Sale/postSaleByPurchaserId) with the required request body to create a sale object. Using the endpoint should return:\n\n```\n{\n  \"data\": {\n    \"id\": \"1000\",\n    \"type\": \"sales\",\n    \"attributes\": {\n      \"id\": 1000,\n      \"completed_at\": \"2015-05-18T06:18:49.051Z\",\n      \"created_at\": \"2015-05-18T06:18:49.051Z\",\n      \"organisation_id\": 1,\n      \"started_at\": \"2015-05-18T06:18:49.051Z\",\n      \"state\": \"open\",\n      \"transaction_date\": \"2015-05-18T06:18:49.051Z\",\n      \"updated_at\": \"2015-05-18T06:18:49.051Z\"\n    }\n  }\n}\n```\n\nTake the `id` attribute (either from `data` or `attributes`). We will use this as reference when creating the line items.\n\n### 2. Adding line items\nWe're now ready to add the items sold inside a sale. To do this, `POST` to [`/point_of_sale/api/sales/1000/lines`](#/Line/postLineBySaleId) with the required request body. This should return the following JSON:\n\n```\n{\n  \"data\": {\n    \"id\": \"10000\",\n    \"type\": \"lines\",\n    \"attributes\": {\n      \"created_at\": \"2019-10-31T01:06:34.882Z\",\n      \"id\": 10000,\n      \"outlet_code\": \"OUTLET144\",\n      \"outlet_id\": 2000,\n      \"plu_code\": \"ITEM123\",\n      \"plu_description\": \"Beer\",\n      \"product_id\": 3000,\n      \"quantity\": 4.0,\n      \"sale_id\": 1000,\n      \"sell_tax\": 0.0,\n      \"sell_total_ex_tax\": 0.0,\n      \"sell_unit_price\": 9.5,\n      \"sell_unit_tax\": 0.0,\n      \"sell_unit_tax_percentage\": 0.0,\n      \"state\": \"open\",\n      \"transaction_date\": \"2015-05-18T06:18:49.051Z\",\n      \"updated_at\": \"2019-10-31T01:33:07.828Z\"\n    }\n  }\n}\n```\n\nYou can double-check if you've added the correct items by doing a `GET` to [`/point_of_sale/api/sales/1000/lines`](#/Line/getLinesBySaleId).\n\n### 3. Initiating the transfer\nOnce you've added the line items to the sale, we're ready to start the Inventory stock decrement process. To do this, `POST` to [`/point_of_sale/api/sales/1000/transfer`](#/Transfer/transferSaleBySaleId). Using the endpoint should return a `Sale` object with a `processing` state. This will initiate a transfer from the outlet location to a `SaleExpenseLocation` (see Inventory module) which will then decrement Inventory stock levels for the items sold.\n\n### 4. Checking transfer status\nThere are three ways to check the status of a transfer. All of them should return data with the `state` attribute:\n\n- **via the `Transfer` object:** `GET` [`/point_of_sale/api/sales/1000/transfers`](#/Transfer/getTransfersBySaleId)\n- **via the `Sale` object:** `GET` [`/point_of_sale/api/sales/1000`](#/Sale/getSalesByPurchaserId)\n- **via the `Line` object:** `GET` [`/point_of_sale/api/sales/1000/lines`](#/Line/getLinesBySaleId)\n\nState | Description\n------|------------\n`open` | Sale was successfully created (via API) or imported (via UI).\n`processing` | Sale is currently transferring to Inventory.\n`complete` | Sale was successfully transferred.\n`failed` | Sale failed to transfer.\n"
+  },
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/marketboomer/PurchasePlusAPI-PointOfSale/2.0/point_of_sale"
+  }, {
+    "description" : "PurchasePlus Production",
+    "url" : "https://api.purchaseplus.com"
+  }, {
+    "description" : "PurchasePlus Staging",
+    "url" : "https://staging.api.purchaseplus.com"
+  }, {
+    "description" : "PurchasePlus Demo",
+    "url" : "https://demo.api.purchaseplus.com"
+  } ],
+  "tags" : [ {
+    "name" : "Import",
+    "description" : "CSV import of a Sale"
+  }, {
+    "name" : "ImportLine",
+    "description" : "Parsed CSV line from an import"
+  }, {
+    "name" : "ImportFormat",
+    "description" : "Available formats of the CSV data allowed for import"
+  }, {
+    "name" : "Line",
+    "description" : "Contains information about a product sold"
+  }, {
+    "name" : "Purchaser",
+    "description" : "An organisation that purchases goods and services"
+  }, {
+    "name" : "Sale",
+    "description" : "A document containing point-of-sale line data"
+  }, {
+    "name" : "SaleExport",
+    "description" : "CSV export of a Sale"
+  }, {
+    "name" : "Transfer",
+    "description" : "An event that initiates the stock decrement in PurchasePlus"
+  } ],
+  "paths" : {
+    "/point_of_sale/api/purchasers/{purchaserId}" : {
+      "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/pathitems/~1api~1purchasers~1%7BpurchaserId%7D"
+    },
+    "/point_of_sale/api/purchasers/{purchaserId}/imports" : {
+      "get" : {
+        "tags" : [ "Import" ],
+        "summary" : "Sale imports made by purchaser",
+        "description" : "Returns list of sale imports made by the purchaser.",
+        "operationId" : "getImportsByPurchaserId",
+        "parameters" : [ {
+          "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/parameters/purchaserId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/vnd.mbapi.v2+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/Import"
+                      }
+                    },
+                    "links" : {
+                      "type" : "object",
+                      "properties" : {
+                        "first" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the first page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/purchasers/100/imports?page=1&per_page=25"
+                        },
+                        "last" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the last page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/purchasers/100/imports?page=10&per_page=25"
+                        },
+                        "prev" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the previous page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/purchasers/100/imports?page=1&per_page=25"
+                        },
+                        "next" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the next page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/purchasers/100/imports?page=10&per_page=25"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Import" ],
+        "summary" : "Import sale data",
+        "description" : "Creates sale based on CSV data.",
+        "operationId" : "postImportByPurchaserId",
+        "parameters" : [ {
+          "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/parameters/purchaserId"
+        } ],
+        "requestBody" : {
+          "$ref" : "#/components/requestBodies/import"
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/ImportSuccessResponse"
+          },
+          "400" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "406" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotAcceptableError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/imports/{importId}" : {
+      "get" : {
+        "tags" : [ "Import" ],
+        "summary" : "Finds import by ID",
+        "description" : "Returns an import made by the purchaser. Once an import is approved, the stock decrement process will be initiated.\n",
+        "operationId" : "getImportById",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/importId"
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/ImportSuccessResponse"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Import" ],
+        "summary" : "Update an import",
+        "description" : "Updates an import object.",
+        "operationId" : "patchImportById",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/importId"
+        } ],
+        "requestBody" : {
+          "$ref" : "#/components/requestBodies/import"
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/ImportSuccessResponse"
+          },
+          "400" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "406" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotAcceptableError"
+          },
+          "409" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ConflictError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/imports/{importId}/lines" : {
+      "get" : {
+        "tags" : [ "ImportLine" ],
+        "summary" : "Lines from from Import",
+        "description" : "Returns list of items imported from the CSV.",
+        "operationId" : "getImportLinesByImportId",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/importId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/vnd.mbapi.v2+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/ImportLine"
+                      }
+                    },
+                    "links" : {
+                      "type" : "object",
+                      "properties" : {
+                        "first" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the first page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/import/4000/import_lines?page=1&per_page=25"
+                        },
+                        "last" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the last page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/import/4000/import_lines?page=10&per_page=25"
+                        },
+                        "prev" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the previous page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/import/4000/import_lines?page=1&per_page=25"
+                        },
+                        "next" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the next page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/import/4000/import_lines?page=10&per_page=25"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/imports/{importId}/approve" : {
+      "post" : {
+        "tags" : [ "Import" ],
+        "summary" : "Approve an import",
+        "description" : "Triggers the transfer of a sale import to the Inventory to initiate the stock decrement.",
+        "operationId" : "approveImportByImportId",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/importId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/vnd.mbapi.v2+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "$ref" : "#/components/schemas/Import"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "409" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ConflictError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/import_formats" : {
+      "get" : {
+        "tags" : [ "ImportFormat" ],
+        "summary" : "Import formats available in PurchasePlus",
+        "description" : "Returns list of available import formats that PurchasePlus will use to parse CSV data.",
+        "operationId" : "getImportFormats",
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/vnd.mbapi.v2+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/ImportFormat"
+                      }
+                    },
+                    "links" : {
+                      "type" : "object",
+                      "properties" : {
+                        "first" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the first page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/import_formats?page=1&per_page=25"
+                        },
+                        "last" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the last page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/import_formats?page=10&per_page=25"
+                        },
+                        "prev" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the previous page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/import_formats?page=1&per_page=25"
+                        },
+                        "next" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the next page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/purchasers/100/imports?page=10&per_page=25"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/import_formats/{importFormatId}" : {
+      "get" : {
+        "tags" : [ "ImportFormat" ],
+        "summary" : "Finds import format by ID",
+        "description" : "Returns an import format",
+        "operationId" : "getImportFormatByImportFormatId",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/importFormatId"
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/ImportFormatSuccessResponse"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/purchasers/{purchaserId}/sales" : {
+      "get" : {
+        "tags" : [ "Sale" ],
+        "summary" : "Sales made by purchaser",
+        "description" : "Returns list of sales made by the purchaser.",
+        "operationId" : "getSalesByPurchaserId",
+        "parameters" : [ {
+          "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/parameters/purchaserId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/vnd.mbapi.v2+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/Sale"
+                      }
+                    },
+                    "links" : {
+                      "type" : "object",
+                      "properties" : {
+                        "first" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the first page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/purchasers/100/sales?page=1&per_page=25"
+                        },
+                        "last" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the last page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/purchasers/100/sales?page=10&per_page=25"
+                        },
+                        "prev" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the previous page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/purchasers/100/sales?page=1&per_page=25"
+                        },
+                        "next" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the next page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/purchasers/100/sales?page=10&per_page=25"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Sale" ],
+        "summary" : "Create a sale",
+        "description" : "Creates a `Sale` object that will contain the line items sold.",
+        "operationId" : "postSaleByPurchaserId",
+        "parameters" : [ {
+          "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/parameters/purchaserId"
+        } ],
+        "requestBody" : {
+          "$ref" : "#/components/requestBodies/sale"
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/SaleSuccessResponse"
+          },
+          "400" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "406" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotAcceptableError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/sales/{saleId}" : {
+      "get" : {
+        "tags" : [ "Sale" ],
+        "summary" : "Finds sale by ID",
+        "description" : "Returns a sale made by the purchaser. Once a sale is made, it can be transferred to the Inventory to initiate the stock decrement.\n",
+        "operationId" : "getSaleById",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/saleId"
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/SaleSuccessResponse"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Sale" ],
+        "summary" : "Update a sale",
+        "description" : "Updates a sale object.",
+        "operationId" : "patchSaleById",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/saleId"
+        } ],
+        "requestBody" : {
+          "$ref" : "#/components/requestBodies/sale"
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/SaleSuccessResponse"
+          },
+          "400" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "406" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotAcceptableError"
+          },
+          "409" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ConflictError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Sale" ],
+        "summary" : "Delete a sale",
+        "description" : "Deletes a sale object. Note that this operation requires that lines inside it are deleted first.",
+        "operationId" : "deleteSaleById",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/saleId"
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/DeleteSuccessResponse"
+          },
+          "400" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "409" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ConflictError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/sales/{saleId}/lines" : {
+      "get" : {
+        "tags" : [ "Line" ],
+        "summary" : "Products sold from a sale",
+        "description" : "Returns list of items sold from a specific sale.",
+        "operationId" : "getLinesBySaleId",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/saleId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/vnd.mbapi.v2+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/Line"
+                      }
+                    },
+                    "links" : {
+                      "type" : "object",
+                      "properties" : {
+                        "first" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the first page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/lines?page=1&per_page=25"
+                        },
+                        "last" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the last page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/lines?page=10&per_page=25"
+                        },
+                        "prev" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the previous page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/lines?page=1&per_page=25"
+                        },
+                        "next" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the next page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/lines?page=10&per_page=25"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Line" ],
+        "summary" : "Create a line",
+        "description" : "Creates a `Line` object that will contain the details of the item sold.",
+        "operationId" : "postLineBySaleId",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/saleId"
+        } ],
+        "requestBody" : {
+          "$ref" : "#/components/requestBodies/line"
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/LineSuccessResponse"
+          },
+          "400" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "406" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotAcceptableError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/sales/{saleId}/sale_exports" : {
+      "get" : {
+        "tags" : [ "SaleExport" ],
+        "summary" : "Exports from a sale",
+        "description" : "Returns list of exports done on a sale.",
+        "operationId" : "getSaleExportsBySaleId",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/saleId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/vnd.mbapi.v2+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/SaleExport"
+                      }
+                    },
+                    "links" : {
+                      "type" : "object",
+                      "properties" : {
+                        "first" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the first page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/sale_exports?page=1&per_page=25"
+                        },
+                        "last" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the last page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/sale_exports?page=10&per_page=25"
+                        },
+                        "prev" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the previous page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/sale_exports?page=1&per_page=25"
+                        },
+                        "next" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the next page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/lines?page=10&per_page=25"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "SaleExport" ],
+        "summary" : "Export a sale",
+        "description" : "Creates a CSV export of a sale.",
+        "operationId" : "postSaleExportBySaleId",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/saleId"
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/SaleExportSuccessResponse"
+          },
+          "400" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "406" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotAcceptableError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/lines/{lineId}" : {
+      "get" : {
+        "tags" : [ "Line" ],
+        "summary" : "Finds line item by ID",
+        "description" : "Returns a `Line` object containing data about the item sold",
+        "operationId" : "getLineById",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/lineId"
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/LineSuccessResponse"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Line" ],
+        "summary" : "Update a line",
+        "description" : "Updates a `Line` object.",
+        "operationId" : "patchLineById",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/lineId"
+        } ],
+        "requestBody" : {
+          "$ref" : "#/components/requestBodies/line"
+        },
+        "responses" : {
+          "200" : {
+            "$ref" : "#/components/responses/LineSuccessResponse"
+          },
+          "400" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "406" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotAcceptableError"
+          },
+          "409" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ConflictError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Line" ],
+        "summary" : "Delete a line",
+        "description" : "Deletes a `Line` object.",
+        "operationId" : "deleteLineById",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/lineId"
+        } ],
+        "responses" : {
+          "200" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/DeleteSuccessResponse"
+          },
+          "400" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "409" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ConflictError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/sales/{saleId}/transfers" : {
+      "get" : {
+        "tags" : [ "Transfer" ],
+        "summary" : "Transfers made for a sale",
+        "description" : "Returns list of transfers made for a sale.",
+        "operationId" : "getTransfersBySaleId",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/saleId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/vnd.mbapi.v2+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "type" : "array",
+                      "items" : {
+                        "$ref" : "#/components/schemas/Transfer"
+                      }
+                    },
+                    "links" : {
+                      "type" : "object",
+                      "properties" : {
+                        "first" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the first page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sales/1000/transfers?page=1&per_page=25"
+                        },
+                        "last" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "description" : "Endpoint for the last page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sales/1000/transfers?page=10&per_page=25"
+                        },
+                        "prev" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the previous page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sales/1000/transfers?page=1&per_page=25"
+                        },
+                        "next" : {
+                          "type" : "string",
+                          "readOnly" : true,
+                          "nullable" : true,
+                          "description" : "Endpoint for the next page of data",
+                          "example" : "https://api.purchaseplus.com/point_of_sale/api/sales/1000/transfers?page=10&per_page=25"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/point_of_sale/api/sales/{saleId}/transfer" : {
+      "post" : {
+        "tags" : [ "Transfer" ],
+        "summary" : "Transfer a sale to inventory",
+        "description" : "Triggers the transfer of a sale to the Inventory to initiate the stock decrement. Returns the `Sale` object.",
+        "operationId" : "transferSaleBySaleId",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/saleId"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "content" : {
+              "application/vnd.mbapi.v2+json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "data" : {
+                      "$ref" : "#/components/schemas/Sale"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/BadRequestError"
+          },
+          "401" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/UnauthorisedError"
+          },
+          "403" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ForbiddenError"
+          },
+          "404" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/NotFoundError"
+          },
+          "409" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ConflictError"
+          },
+          "500" : {
+            "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/responses/ServerError"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Purchaser" : {
+        "$ref" : "https://api.swaggerhub.com/domains/marketboomer/PurchasePlusAPI/2.0#/components/schemas/Purchaser"
+      },
+      "Import" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "JSONAPI ID of the import",
+            "example" : "4000"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "JSONAPI Type",
+            "example" : "imports"
+          },
+          "attributes" : {
+            "type" : "object",
+            "required" : [ "transaction_date" ],
+            "properties" : {
+              "id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "Unique identifier for the import",
+                "example" : 4000
+              },
+              "approver_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "nullable" : true,
+                "description" : "ID of the user who approved the import. This is only applicable for sales created via CSV import.",
+                "example" : 200
+              },
+              "completed_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when transfer was completed",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "created_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when import was created",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "creator_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID of the user who created the import.",
+                "example" : 200
+              },
+              "import_file_name_download_url" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Download URL for the .csv file uploaded to PurchasePlus."
+              },
+              "import_information" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Details the number of rows successfully/unsuccessfully imported.",
+                "example" : "Total 11 of 40 rows have been imported and 29 rows failed."
+              },
+              "results_file_name_download_url" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Download URL for the .csv file containing the results of the import. The file details which lines were successfully/unsucessfully imported."
+              },
+              "organisation_unit_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID for the purchaser the import belongs to",
+                "example" : 1
+              },
+              "started_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when transfer was started",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "state" : {
+                "type" : "string",
+                "readOnly" : true,
+                "enum" : [ "approved", "approving", "imported", "open", "processing", "failed" ],
+                "description" : "Current state of the sale.\n\nstate | description\n------|------------\n`approved` | Import was approved; sale is automatically created and transfer initiated.\n`approving` | Import is currently being transferred.\n`imported` | Import was successfully transferred. See `/transfer`.\n`open` | Import was successfully created (via API) or imported (via UI).\n`processing` | File is currently being imported to the system.\n`failed` | Import failed.\n"
+              },
+              "transaction_date" : {
+                "type" : "string",
+                "format" : "date-time",
+                "description" : "Timestamp when the sale happened",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "updated_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when import was last updated",
+                "example" : "2015-05-18T06:18:49.051Z"
+              }
+            }
+          }
+        }
+      },
+      "ImportLine" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "JSONAPI ID of the import line item",
+            "example" : "5000"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "JSONAPI Type",
+            "example" : "import_lines"
+          },
+          "attributes" : {
+            "type" : "object",
+            "required" : [ "outlet_code", "plu_code", "quantity", "sell_unit_price" ],
+            "properties" : {
+              "id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "Unique identifier for the import line item.",
+                "example" : 5000
+              },
+              "created_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when item was created.",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "error_message" : {
+                "type" : "string",
+                "description" : "Semicolon-separated list of errors when the line import was attempted",
+                "example" : "PLU Code is invalid.; Quantity must be a positive number"
+              },
+              "outlet_code" : {
+                "type" : "string",
+                "description" : "The POS outlet code which determines where item was sold.",
+                "example" : "OUTLET201"
+              },
+              "plu_code" : {
+                "type" : "string",
+                "description" : "PLU code for the item sold.",
+                "example" : "ITEM1231"
+              },
+              "plu_description" : {
+                "type" : "string",
+                "description" : "Description of the item.",
+                "example" : "My Item"
+              },
+              "quantity" : {
+                "type" : "number",
+                "description" : "Quantity sold.",
+                "example" : 1
+              },
+              "raw_data" : {
+                "type" : "string",
+                "description" : "CSV string that was used to generate this import line",
+                "example" : "2,,333333,,-20,10,,10,2020-01-24,House White Glass,-200.0\n"
+              },
+              "sell_total" : {
+                "type" : "number",
+                "description" : "Product of the quantity and sell unit price.",
+                "example" : 132.2
+              },
+              "sell_unit_price" : {
+                "type" : "number",
+                "description" : "Sale price excluding tax.",
+                "example" : 122
+              },
+              "state" : {
+                "type" : "string",
+                "readOnly" : true,
+                "enum" : [ "open", "complete", "failed" ],
+                "description" : "Current state of the line item.\n\nstate | description\n------|------------\n`open` | Item was successfully added (via API) or imported (via UI).\n`complete` | Item was successfully transferred. See `/transfer`.\n`failed` | Item failed to transfer.\n"
+              },
+              "transaction_date" : {
+                "type" : "string",
+                "format" : "date-time",
+                "description" : "Timestamp/date when item was sold. If this field is empty, it will take the transaction date of the sale it belongs to.",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "updated_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when item was last updated.",
+                "example" : "2015-05-18T06:18:49.051Z"
+              }
+            }
+          },
+          "links" : {
+            "type" : "object",
+            "properties" : {
+              "self" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Endpoint for the line itself",
+                "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/lines/10000"
+              }
+            }
+          }
+        }
+      },
+      "ImportFormat" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "JSONAPI ID of the import format",
+            "example" : "4000"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "JSONAPI Type",
+            "example" : "import_formats"
+          },
+          "attributes" : {
+            "type" : "object",
+            "properties" : {
+              "id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "Unique identifier for the import format",
+                "example" : 6000
+              },
+              "created_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when import format was created",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "delimiter" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Delimiter used by the file to separate values",
+                "example" : ","
+              },
+              "header_mapping" : {
+                "type" : "object",
+                "readOnly" : true,
+                "description" : "How this format maps to the attributes of the Line object",
+                "example" : {
+                  "my_outlet_code" : "outlet_code",
+                  "my_plu_code" : "plu_code",
+                  "my_quantity" : "quantity",
+                  "my_sell_unit_price" : "sell_unit_price"
+                }
+              },
+              "headers" : {
+                "type" : "array",
+                "readOnly" : true,
+                "description" : "Contains the order of the columns and their header names",
+                "items" : {
+                  "type" : "string"
+                },
+                "example" : [ "my_outlet_code", "my_plu_code", "my_quantity", "my_sell_unit_price" ]
+              },
+              "identifier" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Row value used to determine whether to import that line. Used in conjuction with `identifier_name`",
+                "example" : "MID"
+              },
+              "identifier_name" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "When present, it will be used as a key to fetch the row data and compares the value to the `identifier`. If the value of that row is equal to the `identifier`, that line will be imported. This is usually used for custom formats other than the default PurchasePlus uses.\n",
+                "example" : "export_record_type"
+              },
+              "included_header" : {
+                "type" : "boolean",
+                "readOnly" : true,
+                "description" : "Indicates whether this format has headers inside its contents",
+                "example" : true
+              },
+              "is_default" : {
+                "type" : "boolean",
+                "readOnly" : true,
+                "description" : "Indicates whether this format is the default one PurchasePlus uses",
+                "example" : true
+              },
+              "name" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Name of the import format",
+                "example" : "Default"
+              },
+              "updated_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when import format was last updated",
+                "example" : "2015-05-18T06:18:49.051Z"
+              }
+            }
+          }
+        }
+      },
+      "Line" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "JSONAPI ID of the line item",
+            "example" : "1000"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "JSONAPI Type",
+            "example" : "lines"
+          },
+          "attributes" : {
+            "type" : "object",
+            "required" : [ "outlet_code", "plu_code", "quantity", "sell_unit_price" ],
+            "properties" : {
+              "id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "Unique identifier for the line item.",
+                "example" : 10000
+              },
+              "created_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when item was created.",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "outlet_code" : {
+                "type" : "string",
+                "description" : "The POS outlet code which determines where item was sold.",
+                "example" : "OUTLET201"
+              },
+              "outlet_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID for the POS outlet where item was sold."
+              },
+              "plu_code" : {
+                "type" : "string",
+                "description" : "PLU code for the item sold.",
+                "example" : "ITEM1231"
+              },
+              "plu_description" : {
+                "type" : "string",
+                "description" : "Description of the item.",
+                "example" : "My Item"
+              },
+              "product_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID for the product of the item sold. See Goods module.",
+                "example" : 300
+              },
+              "quantity" : {
+                "type" : "number",
+                "description" : "Quantity sold.",
+                "example" : 1
+              },
+              "sale_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID for the sale the item belongs to."
+              },
+              "sell_tax" : {
+                "type" : "number",
+                "description" : "Total tax amount.",
+                "example" : 12.2
+              },
+              "sell_total_ex_tax" : {
+                "type" : "number",
+                "description" : "Total sale price excluding tax.",
+                "example" : 132.2
+              },
+              "sell_unit_price" : {
+                "type" : "number",
+                "description" : "Sale price excluding tax.",
+                "example" : 122
+              },
+              "sell_unit_tax" : {
+                "type" : "number",
+                "description" : "Tax amount.",
+                "example" : 12.2
+              },
+              "sell_unit_tax_percentage" : {
+                "type" : "number",
+                "description" : "Tax percentage based on sale price.",
+                "example" : 10
+              },
+              "state" : {
+                "type" : "string",
+                "readOnly" : true,
+                "enum" : [ "open", "complete", "failed" ],
+                "description" : "Current state of the line item.\n\nstate | description\n------|------------\n`open` | Item was successfully added (via API) or imported (via UI).\n`complete` | Item was successfully transferred. See `/transfer`.\n`failed` | Item failed to transfer.\n"
+              },
+              "transaction_date" : {
+                "type" : "string",
+                "format" : "date-time",
+                "description" : "Timestamp/date when item was sold. If this field is empty, it will take the transaction date of the sale it belongs to.",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "updated_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when item was last updated.",
+                "example" : "2015-05-18T06:18:49.051Z"
+              }
+            }
+          },
+          "links" : {
+            "type" : "object",
+            "properties" : {
+              "self" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Endpoint for the line itself",
+                "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/lines/10000"
+              }
+            }
+          }
+        }
+      },
+      "Sale" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "JSONAPI ID of the sale",
+            "example" : "1000"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "JSONAPI Type",
+            "example" : "sales"
+          },
+          "attributes" : {
+            "type" : "object",
+            "required" : [ "transaction_date" ],
+            "properties" : {
+              "id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "Unique identifier for the sale",
+                "example" : 1000
+              },
+              "approver_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "nullable" : true,
+                "description" : "ID of the user who approved the sale. This is only applicable for sales created via CSV import.",
+                "example" : 200
+              },
+              "completed_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when transfer was completed",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "created_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when sale was created",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "creator_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID of the user who created the sale.",
+                "example" : 200
+              },
+              "organisation_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID for the purchaser the sale belongs to",
+                "example" : 1
+              },
+              "started_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when transfer was started",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "state" : {
+                "type" : "string",
+                "readOnly" : true,
+                "enum" : [ "open", "processing", "complete", "failed" ],
+                "description" : "Current state of the sale.\n\nstate | description\n------|------------\n`open` | Sale was successfully created (via API) or imported (via UI).\n`processing` | Sale is currently transferring to Inventory.\n`complete` | Sale was successfully transferred. See `/transfer`.\n`failed` | Sale failed to transfer.\n"
+              },
+              "transaction_date" : {
+                "type" : "string",
+                "format" : "date-time",
+                "description" : "Timestamp when the sale happened",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "updated_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when sale was last updated",
+                "example" : "2015-05-18T06:18:49.051Z"
+              }
+            }
+          },
+          "relationships" : {
+            "type" : "object",
+            "properties" : {
+              "lines" : {
+                "type" : "object",
+                "description" : "Endpoint for the line items in a sale",
+                "properties" : {
+                  "links" : {
+                    "type" : "object",
+                    "properties" : {
+                      "self" : {
+                        "type" : "string",
+                        "readOnly" : true,
+                        "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/lines"
+                      }
+                    }
+                  }
+                }
+              },
+              "transfers" : {
+                "type" : "object",
+                "description" : "Endpoint for the transfers done in a sale",
+                "properties" : {
+                  "links" : {
+                    "type" : "object",
+                    "properties" : {
+                      "self" : {
+                        "type" : "string",
+                        "readOnly" : true,
+                        "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000/transfers"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "links" : {
+            "type" : "object",
+            "properties" : {
+              "self" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Endpoint for the sale itself",
+                "example" : "https://api.purchaseplus.com/point_of_sale/api/sale/1000"
+              }
+            }
+          }
+        }
+      },
+      "SaleExport" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "JSONAPI ID of the sale export",
+            "example" : "3000"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "JSONAPI Type",
+            "example" : "sale_exports"
+          },
+          "attributes" : {
+            "type" : "object",
+            "properties" : {
+              "id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "Unique identifier for the sale export",
+                "example" : 3000
+              },
+              "completed_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when sale export was completed",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "created_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when sale export was created",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "creator_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID of the user who created the sale export.",
+                "example" : 200
+              },
+              "export_download_url" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Download URL for the .csv file export of the sale."
+              },
+              "organisation_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID for the purchaser the sale export belongs to",
+                "example" : 1
+              },
+              "sale_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID for the sale from which the export will be generated."
+              },
+              "started_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when sale export was started",
+                "example" : "2015-05-18T06:18:49.051Z"
+              },
+              "state" : {
+                "type" : "string",
+                "readOnly" : true,
+                "enum" : [ "open", "processing", "complete", "failed" ],
+                "description" : "Current state of the sale.\n\nstate | description\n------|------------\n`open` | Sale export was successfully created (via API) or imported (via UI).\n`processing` | Sale is currently exporting.\n`complete` | Sale was successfully exported.\n`failed` | Sale failed to export.\n"
+              },
+              "updated_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when sale export was last updated",
+                "example" : "2015-05-18T06:18:49.051Z"
+              }
+            }
+          }
+        }
+      },
+      "Transfer" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "JSONAPI ID of the transfer",
+            "example" : "1000"
+          },
+          "type" : {
+            "type" : "string",
+            "description" : "JSONAPI Type",
+            "example" : "sale_transfers"
+          },
+          "attributes" : {
+            "type" : "object",
+            "properties" : {
+              "id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "Unique identifier for the transfer",
+                "example" : 20000
+              },
+              "created_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when the transfer was created"
+              },
+              "destination_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID of the `SaleExpenseLocation` where the sale transfer goes to. See Inventory module."
+              },
+              "fault_message" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Error description of a failed transfer."
+              },
+              "predecessor_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID of the `Sale` where the sale transfer was created."
+              },
+              "origin_id" : {
+                "type" : "integer",
+                "format" : "int64",
+                "readOnly" : true,
+                "description" : "ID of the `Location` linked to the outlet where the sale transfer originated. See Inventory module."
+              },
+              "state" : {
+                "type" : "string",
+                "readOnly" : true,
+                "enum" : [ "open", "complete", "cancelled" ],
+                "description" : "Current state of the transfer. See Inventory module."
+              },
+              "transfer_number" : {
+                "type" : "string",
+                "readOnly" : true,
+                "description" : "Human-readable identifier PurchasePlus generates whenever a sale transfer is initiated."
+              },
+              "type" : {
+                "type" : "string",
+                "readOnly" : true,
+                "enum" : [ "Inventory::SaleTransfer" ],
+                "description" : "Type of the transfer. All transfers done via the Point of Sale module are `Inventory::SaleTransfer`s. See Inventory module for more types."
+              },
+              "updated_at" : {
+                "type" : "string",
+                "format" : "date-time",
+                "readOnly" : true,
+                "description" : "Timestamp when the transfer was last updated."
+              }
+            }
+          }
+        }
+      }
+    },
+    "parameters" : {
+      "importId" : {
+        "name" : "importId",
+        "in" : "path",
+        "description" : "ID of the import",
+        "required" : true,
+        "schema" : {
+          "type" : "integer",
+          "format" : "int64",
+          "example" : 4000
+        }
+      },
+      "importFormatId" : {
+        "name" : "importFormatId",
+        "in" : "path",
+        "description" : "ID of the import format",
+        "required" : true,
+        "schema" : {
+          "type" : "integer",
+          "format" : "int64",
+          "example" : 6000
+        }
+      },
+      "lineId" : {
+        "name" : "lineId",
+        "in" : "path",
+        "description" : "ID of the line",
+        "required" : true,
+        "schema" : {
+          "type" : "integer",
+          "format" : "int64",
+          "example" : 10000
+        }
+      },
+      "saleId" : {
+        "name" : "saleId",
+        "in" : "path",
+        "description" : "ID of the sale",
+        "required" : true,
+        "schema" : {
+          "type" : "integer",
+          "format" : "int64",
+          "example" : 1000
+        }
+      }
+    },
+    "requestBodies" : {
+      "import" : {
+        "description" : "A multi-part form object containing import sale data",
+        "required" : true,
+        "content" : {
+          "multipart/form-data" : {
+            "schema" : {
+              "required" : [ "import" ],
+              "properties" : {
+                "import" : {
+                  "type" : "object",
+                  "properties" : {
+                    "import" : {
+                      "type" : "string",
+                      "oneOf" : [ {
+                        "format" : "base64"
+                      }, {
+                        "format" : "binary"
+                      } ],
+                      "description" : "The import file. Can be a binary file or a `text/csv` base64-encoded string",
+                      "example" : "data:text/csv;base64,..."
+                    },
+                    "transaction_date" : {
+                      "$ref" : "#/components/schemas/Import/properties/attributes/properties/transaction_date"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "line" : {
+        "description" : "A JSON object containing line data",
+        "required" : true,
+        "content" : {
+          "application/x-www-form-urlencoded" : {
+            "schema" : {
+              "required" : [ "line" ],
+              "properties" : {
+                "line" : {
+                  "$ref" : "#/components/schemas/Line/properties/attributes"
+                }
+              }
+            }
+          }
+        }
+      },
+      "sale" : {
+        "description" : "A JSON object containing sale data",
+        "required" : true,
+        "content" : {
+          "application/x-www-form-urlencoded" : {
+            "schema" : {
+              "required" : [ "sale" ],
+              "properties" : {
+                "sale" : {
+                  "$ref" : "#/components/schemas/Sale/properties/attributes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses" : {
+      "ImportSuccessResponse" : {
+        "description" : "Import operation was successful.",
+        "content" : {
+          "application/vnd.mbapi.v2+json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "data" : {
+                  "$ref" : "#/components/schemas/Import"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ImportFormatSuccessResponse" : {
+        "description" : "Import operation was successful.",
+        "content" : {
+          "application/vnd.mbapi.v2+json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "data" : {
+                  "$ref" : "#/components/schemas/ImportFormat"
+                }
+              }
+            }
+          }
+        }
+      },
+      "LineSuccessResponse" : {
+        "description" : "Line operation was successful.",
+        "content" : {
+          "application/vnd.mbapi.v2+json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "data" : {
+                  "$ref" : "#/components/schemas/Line"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SaleSuccessResponse" : {
+        "description" : "Sale operation was successful.",
+        "content" : {
+          "application/vnd.mbapi.v2+json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "data" : {
+                  "$ref" : "#/components/schemas/Sale"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SaleExportSuccessResponse" : {
+        "description" : "SaleExport operation was successful.",
+        "content" : {
+          "application/vnd.mbapi.v2+json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "data" : {
+                  "$ref" : "#/components/schemas/SaleExport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "access_token" : {
+        "type" : "apiKey",
+        "name" : "Access-token",
+        "in" : "header"
+      },
+      "client" : {
+        "type" : "apiKey",
+        "name" : "Client",
+        "in" : "header"
+      },
+      "uid" : {
+        "type" : "apiKey",
+        "name" : "Uid",
+        "in" : "header"
+      }
+    }
+  },
+  "security" : [ {
+    "access_token" : [ ]
+  }, {
+    "client" : [ ]
+  }, {
+    "uid" : [ ]
+  } ]
+}

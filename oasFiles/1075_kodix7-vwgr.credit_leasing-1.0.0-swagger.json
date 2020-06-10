@@ -1,0 +1,175 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "description" : "credit",
+    "url" : "https://master-vgr-credit.vgr.kodix.dev"
+  } ],
+  "info" : {
+    "description" : "Сервис расчета ежемесячных платежей банков-партнеров vgr",
+    "version" : "1.0.0",
+    "title" : "Kodix credit and leasing calculator",
+    "contact" : {
+      "email" : "vw@kodix.ru"
+    }
+  },
+  "tags" : [ {
+    "name" : "leasing",
+    "description" : "leasing programms"
+  }, {
+    "name" : "credit",
+    "description" : "credit programms"
+  } ],
+  "paths" : {
+    "/v1/leasing/limits" : {
+      "get" : {
+        "tags" : [ "leasing" ],
+        "summary" : "bank leasing programm limits",
+        "operationId" : "searchInventory",
+        "description" : "Возвращает минимальные и максимальные параметры лизинговых программ\n",
+        "responses" : {
+          "200" : {
+            "description" : "request success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LimitsResponse"
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "internal server error"
+          }
+        }
+      }
+    },
+    "/v1/leasing/payments" : {
+      "post" : {
+        "tags" : [ "leasing" ],
+        "summary" : "leasing monthly payments for all available banks",
+        "description" : "Возвращает размер ежемесячного платежа для каждого из доступных банков по\nзаданным параметрам. Если расчет для банка не удался, в поле error возвращается ошибка от банковской системы\n",
+        "responses" : {
+          "200" : {
+            "description" : "request success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "invalid input, object invalid"
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PaymentRequest"
+              }
+            }
+          },
+          "description" : "leasing programm limits"
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "PaymentRequest" : {
+        "type" : "object",
+        "required" : [ "price", "term", "down_payment" ],
+        "properties" : {
+          "price" : {
+            "type" : "number",
+            "example" : 1200000.5,
+            "description" : "Цена объекта лизинга"
+          },
+          "term" : {
+            "type" : "integer",
+            "example" : 60,
+            "description" : "Период кредитования в месяцах"
+          },
+          "down_payment" : {
+            "description" : "Размер первоначального взноса в %",
+            "type" : "number",
+            "example" : 35
+          },
+          "residual_payement" : {
+            "type" : "number",
+            "example" : 600000,
+            "description" : "Размер остаточного платежа"
+          }
+        }
+      },
+      "PaymentBankResponse" : {
+        "type" : "object",
+        "properties" : {
+          "bank" : {
+            "type" : "string",
+            "description" : "Символьный код банка"
+          },
+          "title" : {
+            "type" : "string",
+            "description" : "Наименование банка"
+          },
+          "payment" : {
+            "type" : "number",
+            "description" : "Размер ежемесячного платежа"
+          },
+          "error" : {
+            "type" : "string",
+            "description" : "Ошибка банковской системы"
+          }
+        }
+      },
+      "PaymentResponse" : {
+        "type" : "object",
+        "properties" : {
+          "error" : {
+            "type" : "string",
+            "description" : "Серверная ошибка обраотки запроса"
+          },
+          "banks" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PaymentBankResponse"
+            },
+            "description" : "Массив расчета платежей для доступных банков"
+          }
+        }
+      },
+      "LimitsBankResponse" : {
+        "type" : "object",
+        "properties" : {
+          "bank" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "min_down_payment" : {
+            "type" : "number"
+          },
+          "max_down_payment" : {
+            "type" : "number"
+          },
+          "min_term" : {
+            "type" : "integer"
+          },
+          "max_term" : {
+            "type" : "integer"
+          }
+        }
+      },
+      "LimitsResponse" : {
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/components/schemas/LimitsBankResponse"
+        }
+      }
+    }
+  }
+}

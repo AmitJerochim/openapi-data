@@ -1,0 +1,318 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "version" : "1.0.0",
+    "title" : "FairPay API",
+    "description" : "# __Bevezetés__\nJelen dokumentáció célja, hogy bemutassa a FairPay fizetési platformot, annak használatát és a kereskedő által implementálandó végpontokat. \n\n### Milyen előnnyel jár a FairPay fizetési platform használata?\n* __Biztonságosabb__: bankkártyás fizetéssel szemben nem kerül kényes pénzügyi adat kiadásra\n* __Kényelmesebb__: átutalással és nem rögzitett kártyás adatokkal történő kártyás vásárlással szemben akár 3 kattintással jóváhagyható\n* __Kontrollálható__: teljes mértékben a fogyasztó által inicializált és jóváhagyott\n\nFizetési megoldásunk alapja, hogy az átutalással történő online fizetést egy pár kattintásos fizetési folyamattá alakítjuk függetlenül attól, hogy a fogyasztó hol bankol. Erre az új, összes EUs országban kiterjesztésre kerülő, PSD2 rendelet teremt lehetőséget. \n\n# __Biztonság__\nA tranzakcióban érintett felek közötti kommunikáció hitelességének és megmásíthatatlanságának biztosítása érdekében a FairPay fizetési platform a JSON Web Token (JWT) technológiát használja a HMAC SHA256 aláírási algoritmussal. Az interfész minden pontján, ahol HTTP kérés vagy válasz törzsrészében utazik adat, azok a JWT szabványnak megfelelően kerülnek elkódolásra és aláírásra.\n\nA JWT szabvány egy bevált mód a végpontok közötti hiteles adattovábbításra. Egy JSON Web Token három fő részből áll, ezek a fejrész, a törzs és az aláírás. A fejrész a tokenre vonatkozó metainformációkat tartalmazza, mint a használt aláírási algoritmus, a token kibocsátásának időpontja vagy a kiállító neve. A token törzse egy tetszőleges JSON objektum, amelynek formátumát az alábbi OpenAPI leíró határozza meg. Az aláírás rész az fejrész és a törzs base64 kódolt tartalmának az aláírását tartalmazza SHA256 algoritmus szerint.\n\nA JWT tokenek kezeléséhez minden elterjedt programozási nyelven elérhető könnyen használható programkönyvtár, amelyek segítségével a tokenek előállítása, aláírása, hitelességének ellenőrzése egyszerűen megoldható.\n\n### __PHP mintakód JWT token generálására__\n```\n<?php\n  require __DIR__ . '/vendor/autoload.php';\n  use Firebase\\JWT\\JWT;\n  $key = \"FairPay Example API key\";\n  $startPaymentRequest = array(\n    \"successURL\" => \"https://mywebshop.hu/paymentSuccess.php\",\n    \"errorURL\" => \"https://mywebshop.hu/paymentError.php\",\n    \"ipnCallbackURL\" => \"https://mywebshop.hu/api/payments/ipn\",\n    \"locale\" => \"hu_HU\",\n    \"transactionID\" => \"MYWEBSHOP-2019/01\",\n    \"description\" => \"MyWebshop rendelés\",\n    \"currency\" => \"HUF\",\n    \"totalAmount\" => 661440,\n    \"merchantID\" => \"M00001\",\n    \"paymentItems\" => array(\n      array(\n        \"name\" => \"Dell P2411h\",\n        \"quantity\" => 12,\n        \"unitPrice\" => 55120,\n        \"code\" => \"DISPLAY01\"\n      )\n    )\n  );\n  $jwt = JWT::encode($startPaymentRequest, $key);\n  echo $jwt;\n?>\n```\n\n# Platform működése\nAz alábbi szekvencia diagram szemlélteti a platform működését, annak szereplőit, életciklusait és a közöttük végbemenő üzenetváltásokat.\n\n<img src=\"http://gbsolutions.io/wp-content/uploads/2019/09/fairpay-seq.png\" />\n\n### __Fizetés kezdeményezése__\n1. A vásárló a kiválasztja a kereskedő oldalán a FairPay fizetési módot\n2. A kereskedő háttérrendszere összeállítja a StartPaymentRequest-et és elküldi a FairPay háttérrendszerének\n3. A StartPaymentResponse-ban kapott tranzakció azonosítót a kereskedő hozzárendeli a saját tranzakciójához és eltárolja azt\n4. A kereskedő átirányítja a vásárlót a FairPay platform felületére\n\n### __Fizetés megszakítása a FairPay platform felületén__\n5. A vásárló a FairPay platform felületén megszakítja a fizetési folyamatot\n6. FairPay átirányítja a vásárlót a sikertelen fizetést jelző oldalra\n7. Kereskedő tájékoztatja a vásárlót a fizetés sikertelenségéről\n\n### __Sikertelen fizetés__\n8. A vásárló kiválasztja a számlavezető bankját a FairPay platform felületén\n9. A FairPay átirányítja a vásárlót a számlavezető bankjának felületére azonosítás és tranzakció engedélyezés céljából\n10. A vásárló megszakítja a folyamatot vagy nem ad engedélyt a tranzakcióra vagy egyéb tranzakciós hiba történik\n11. A számlavezető bank jelzi a sikertelen tranzakciót a FairPay platformnak\n12. FairPay átirányítja a vásárlót a sikertelen fizetést jelző oldalra\n13. Kereskedő tájékoztatja a vásárlót a fizetés sikertelenségéről\n\n### __Sikeres fizetés__\n14. A vásárló kiválasztja a számlavezető bankját a FairPay platform felületén\n15. A FairPay átirányítja a vásárlót a számlavezető bankjának felületére azonosítás és tranzakció engedélyezés céljából\n16. A vásárló sikeresen azonosítja magát és engedélyezi a fizetést\n17. A számlavezető bank jelzi a sikeres tranzakciót a FairPay platformnak\n18. FairPay átirányítja a vásárlót a sikeres fizetést jelző oldalra\n19. Kereskedő tájékoztatja a vásárlót a fizetés sikerességéről\n\n### __Fizetés állapotának változása__\n20. A FairPay platform folyamatosan ellenőrzi a fizetés állapotát, mindaddig amíg végállapotba nem kerül\n21. A FairPay platform eltárolja a számlavezető bank által közölt állapotot és ellenőrzi, hogy történt-e változás az előző állapothoz képest\n22. A fizetés állapotának változása esetén a FairPay platform meghívja a kereskedő által kötelezően implementálandó ipn végpontot és átadja a fizetéshez és tranzakcióhoz tartozó egyedi azonosítókat, valamint az új állapotot\n23. Opcionálisan a kereskedő tájékoztatja a vásárlót a fizetés állapotának változásáról\n\n### __Fizetés állapotának lekérdezése__ (opcionális)\n24. A kereskedő háttérrendszere a FairPay platform által osztott egyedi azonosítóval meghívja a /payments/{paymentID}/status végpontot\n25. A FairPay platform ellenőrzi a fizetés állapotát a számlavezető banknál\n26. A FairPay platform válaszban megküldi a kereskedőnek a fizetés aktuális állapotát\n27. A kereskedő feldolgozza a válaszban visszaadott állapotot és eltárolja azt\n28. Opcionálisan a kereskedő tájékoztatja a vásárlót a fizetés állapotának változásáról\n\n# __Végpontok__ részletes leírása\n"
+  },
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/GB-Solutions-Zrt/FairPay-API/1.0.0"
+  } ],
+  "paths" : {
+    "/payments" : {
+      "post" : {
+        "summary" : "Fizetési folyamat indítása",
+        "description" : "Fizetés indítására szolgáló végpont. Válaszként a fizetéshez tartozó azonosító és a FairPay felületére mutató URL kerül megküldésre. A fizetéshez tartozó azonosítóval lehetséges a fizetés státuszának lekérdezése. A válasz feldolgozása után a FairPay felületére mutató URL-re szükséges a vásárlót átirányítani.",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StartPaymentRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StartPaymentResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters" : [ ],
+        "operationId" : "startPayment",
+        "tags" : [ "FairPay által implementált" ]
+      }
+    },
+    "/payments/{paymentID}/status" : {
+      "get" : {
+        "summary" : "Fizetési állapot lekérdezése (opcionális)",
+        "tags" : [ "FairPay által implementált" ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IPNUpdate"
+                }
+              }
+            }
+          }
+        },
+        "parameters" : [ {
+          "schema" : {
+            "type" : "string"
+          },
+          "in" : "path",
+          "name" : "paymentID",
+          "required" : true
+        } ],
+        "description" : "Fizetési állapot lekérdezése szolgáló végpont. Válaszként a fizetéshez tartozó utolsó IPN állapot kerül elküldésre. Implementálása kereskedői oldalon opcionális, a rendszer minden státuszváltozásról IPN üzenetet küld a kereskedő által kötelezően implementálandó IPN végpontra."
+      }
+    },
+    "/success" : {
+      "get" : {
+        "summary" : "Sikeres fizetés oldal",
+        "tags" : [ "Kereskedő által implementálandó" ],
+        "responses" : {
+          "200" : {
+            "description" : "Sikeres fizetést jelző oldal jelenik meg"
+          }
+        },
+        "parameters" : [ {
+          "schema" : {
+            "type" : "string"
+          },
+          "in" : "query",
+          "name" : "transactionID",
+          "description" : "Kereskedő oldali tranzakció azonosító",
+          "required" : true
+        }, {
+          "schema" : {
+            "type" : "string"
+          },
+          "in" : "query",
+          "name" : "statusCode",
+          "required" : true,
+          "description" : "Fizetési művelet státuszkód"
+        }, {
+          "schema" : {
+            "type" : "string"
+          },
+          "in" : "query",
+          "name" : "statusMessage",
+          "required" : true,
+          "description" : "Fizetés státuszát leíró lokalizált üzenet"
+        }, {
+          "schema" : {
+            "type" : "string"
+          },
+          "in" : "query",
+          "name" : "paymentID",
+          "required" : true,
+          "description" : "A fizetés FairPay oldali azonosítója"
+        } ],
+        "description" : "A FairPay fizetési oldalán sikeresen befejezett művelet után a böngésző átirányít erre az oldalra, amely az ügyfél számára a sikeres fizetést jelzi. Fontos, hogy a visszairányítás még nem jelzi hitelesen a tranzakció sikeres lezárultát, nem kezdődhet meg a teljesítés. A sikeres fizetést az IPN üzenet megérkezése jelzi."
+      }
+    },
+    "/error" : {
+      "get" : {
+        "summary" : "Sikertelen fizetés oldal",
+        "tags" : [ "Kereskedő által implementálandó" ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "description" : "A FairPay fizetési oldalán sikertelenül befejezett művelet után a böngésző átirányít erre az oldalra, amely az ügyfél számára a sikertelen fizetést jelzi.",
+        "parameters" : [ {
+          "schema" : {
+            "type" : "string"
+          },
+          "in" : "query",
+          "name" : "transactionID",
+          "description" : "Kereskedő oldali tranzakció azonosító",
+          "required" : true
+        }, {
+          "schema" : {
+            "type" : "string"
+          },
+          "in" : "query",
+          "name" : "statusCode",
+          "required" : true,
+          "description" : "Fizetési művelet státuszkód"
+        }, {
+          "schema" : {
+            "type" : "string"
+          },
+          "in" : "query",
+          "name" : "statusMessage",
+          "required" : true,
+          "description" : "Fizetés státuszát leíró lokalizált üzenet"
+        }, {
+          "schema" : {
+            "type" : "string"
+          },
+          "in" : "query",
+          "name" : "paymentID",
+          "description" : "A fizetés FairPay oldali azonosítója",
+          "required" : true
+        } ]
+      }
+    },
+    "/ipn" : {
+      "post" : {
+        "summary" : "Instant Payment Notification (IPN) üzenetek fogadására szolgáló kereskedői végpont",
+        "tags" : [ "Kereskedő által implementálandó" ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "description" : "Instant Payment Notification (IPN) üzenetek fogadására szolgáló kereskedői végpont.",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/IPNUpdate"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "StartPaymentRequest" : {
+        "title" : "StartPaymentRequest",
+        "type" : "object",
+        "properties" : {
+          "errorURL" : {
+            "type" : "string",
+            "format" : "uri",
+            "description" : "A FairPay fizetési oldalán sikertelenül lezárult művelet után a böngésző átirányít az itt megadott URL-re. Az URL a kereskedői oldalon a sikertelen fizetést jelző oldalra kell irányítson.\n",
+            "example" : "https://mywebshop.hu/paymentError.php"
+          },
+          "successURL" : {
+            "type" : "string",
+            "format" : "uri",
+            "description" : "A FairPay fizetési oldalán sikeresen befejezett művelet után a böngésző átirányít az itt megadott URL-re. Az URL a kereskedői oldalon a sikeres fizetést jelző oldalra kell irányítson. Fontos, hogy a visszairányítás még nem jelzi hitelesen a tranzakció sikeres lezárultát, nem kezdődhet meg a teljesítés. A sikeres fizetést az IPN üzenet megérkezése jelzi.",
+            "example" : "https://mywebshop.hu/paymentSuccess.php"
+          },
+          "ipnCallbackURL" : {
+            "type" : "string",
+            "format" : "uri",
+            "description" : "IPN (Instant Payment Notification) információk átadása számára megadott végpont. A FairPay fizetési szervere a kereskedői oldal szerverén ezt a végpontot fogja meghívni, amikor a tranzakció státusza módosul. A fizetés csak akkor tekinthető befejezettnek, ha ez a végpont meghívásra került.",
+            "example" : "https://mywebshop.hu/api/payments/ipn"
+          },
+          "locale" : {
+            "type" : "string",
+            "enum" : [ "hu_HU", "en_EN" ],
+            "description" : "A fizetőoldal nyelvi beállításai"
+          },
+          "transactionID" : {
+            "type" : "string",
+            "description" : "Kereskedő oldali tranzakció azonosító",
+            "example" : "MYWEBSHOP-2019/01"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Vásárlási tranzakcióhoz tartozó leírás, amely megjelenik a fizetőoldalon",
+            "example" : "MyWebshop rendelés"
+          },
+          "currency" : {
+            "type" : "string",
+            "enum" : [ "HUF", "USD", "EUR" ],
+            "description" : "A vásárlás pénzneme"
+          },
+          "totalAmount" : {
+            "type" : "number",
+            "description" : "A vásárlás végösszege. Maximum 2 tizedesjegyet tartalmazhat, tizedeselválasztó karakter: '.'",
+            "format" : "double",
+            "example" : 55312
+          },
+          "merchantID" : {
+            "type" : "string",
+            "description" : "Kereskedő azonosító kód, melyet a FairPay regisztráció során generál a FairPay",
+            "example" : "M00001"
+          },
+          "paymentItems" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PaymentItem"
+            }
+          }
+        },
+        "required" : [ "errorURL", "successURL", "ipnCallbackURL", "transactionID", "currency", "totalAmount", "merchantID" ]
+      },
+      "PaymentItem" : {
+        "title" : "PaymentItem",
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Terméknév",
+            "example" : "Dell P2411h"
+          },
+          "quantity" : {
+            "type" : "number",
+            "format" : "int",
+            "description" : "Vásárolt mennyiség",
+            "example" : 12
+          },
+          "unitPrice" : {
+            "type" : "string",
+            "description" : "A tétel egységára",
+            "example" : 55120
+          },
+          "code" : {
+            "type" : "string",
+            "description" : "Termékkód",
+            "example" : "DISPLAY01"
+          }
+        },
+        "required" : [ "name", "quantity", "unitPrice", "code" ]
+      },
+      "StartPaymentResponse" : {
+        "title" : "StartPaymentResponse",
+        "type" : "object",
+        "properties" : {
+          "redirectTo" : {
+            "type" : "string",
+            "description" : "A fizetési művelethez tartozó fizetőoldal, a vásárlót ide szükséges átirányítani",
+            "example" : "https://fairpay.io/paymentPage?paymentID=FP000001"
+          },
+          "paymentID" : {
+            "type" : "string",
+            "example" : "FP000001",
+            "description" : "A fizetés FairPay oldali azonosítója"
+          }
+        }
+      },
+      "IPNUpdate" : {
+        "title" : "IPNUpdate",
+        "type" : "object",
+        "properties" : {
+          "paymentID" : {
+            "type" : "string",
+            "description" : "A fizetés FairPay oldali azonosítója",
+            "example" : "FP000001"
+          },
+          "transactionID" : {
+            "type" : "string",
+            "description" : "A tranzakció kereskedő oldali azonosítója",
+            "example" : "MYWEBSHOP-2019/01"
+          },
+          "statusCode" : {
+            "type" : "string",
+            "description" : "Fizetési művelet státuszkód",
+            "example" : "SUCCESS"
+          },
+          "statusMessage" : {
+            "type" : "string",
+            "description" : "Fizetés státuszát leíró lokalizált üzenet",
+            "example" : "Sikeres fizetés"
+          }
+        }
+      }
+    }
+  }
+}

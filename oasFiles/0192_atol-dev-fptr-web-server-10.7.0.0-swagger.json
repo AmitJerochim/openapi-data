@@ -1,0 +1,5189 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "title" : "АТОЛ. Web-сервер ККТ",
+    "description" : "Web-сервер предназначен для обеспечения доступа к одной и более ККТ нескольким клиентам.\nВыполнение большинства операций ведётся через очередь JSON-заданий, но многие запросы вынесены\nв отдельные операции, выполнение которых не требует добавления их в очередь.\nКаждое **задание** может состоять из одной или более **задач**, описанных в JSON-формате.\nОбщий алгоритм работы с заданиями такой:\n- отправить задание на сервер\n- запросить результат задания\n\nСервер также обрабатывает потери связи, сбои ФН и окончания бумаги (по настройке), в этих случаях очередь выполнения\nможет быть заблокирована до разрешения сбойной ситуации.\n\nСам сервер можно установить как сервис, в таком случае он может запускаться автоматически\nс ОС. Требуется также установленный драйвер ДТО10 соответствующих архитектуры и разрядности.\n\nПоддерживаются ОС Windows (x86, x64) и Linux (x86, x64, arm, arm64).\n\nРасположение логов Web-сервера зависит от ОС:\n- на Windows - в каталоге *C:\\Program Data\\ATOL\\AtolFptrWebServer*\n- на Linux - в каталоге */var/log/AtolFptrWebServer*\n\nЛоги ДТО10 также перенаправляются в каталог логов Web-сервера. Web-сервер\nдописывает часть своих логов в логи драйвера по тегу **Web**.\n\nРасположение логов можно менять при запуске Web-сервера в режиме приложения.\nВсе доступные параметры запуска будут выведены в консоль при запуске исполняемого\nфайла Web-сервера с ключом **-h**.\n",
+    "version" : "10.7.0.0"
+  },
+  "externalDocs" : {
+    "description" : "Онлайн-документация ДТО10",
+    "url" : "https://integration.atol.ru"
+  },
+  "paths" : {
+    "/api/v2/serverInfo" : {
+      "get" : {
+        "tags" : [ "Общие запросы" ],
+        "summary" : "Получение информации о сервере",
+        "description" : "Возвращает версии компонентов WEB-сервера и прочую информацию.\n",
+        "responses" : {
+          "200" : {
+            "description" : "Устройство успешно добавлено",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ServerInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/settings" : {
+      "get" : {
+        "tags" : [ "Работа с настройками WEB-сервера" ],
+        "summary" : "Получение настроек WEB-сервера",
+        "description" : "Возвращает глобальные настройки WEB-сервера.\n",
+        "responses" : {
+          "200" : {
+            "description" : "Настройки успешно прочитаны",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GlobalSettings"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Работа с настройками WEB-сервера" ],
+        "summary" : "Изменение настроек WEB-сервера",
+        "description" : "Изменяет глобальные настройки WEB-сервера.\nПри этом происходит перезапуск очередей заданий ККТ.\n",
+        "requestBody" : {
+          "description" : "Настройки WEB-сервера",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GlobalSettings"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Настройки успешно изменены"
+          }
+        }
+      }
+    },
+    "/api/v2/devices" : {
+      "get" : {
+        "tags" : [ "Работа со списком ККТ" ],
+        "summary" : "Получение списка ККТ",
+        "description" : "Возвращает список ККТ с их настройками, включая флаги режимов работы.\n\nВ случае, если устройств нет, возвращает пустой список.\n",
+        "responses" : {
+          "200" : {
+            "description" : "Список ККТ успешно прочитан",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Device"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Работа со списком ККТ" ],
+        "summary" : "Добавление новой ККТ",
+        "description" : "Добавляет в список устройств новую ККТ.\n\nПараметры **isActive** и **isDefault** игнорируются. Если добавляемое устройство - единственное,\nпараметр **isDefault** автоматически устанавливает в **true**.\n",
+        "requestBody" : {
+          "description" : "Описание ККТ, которую нужно подключить.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Device"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "ККТ успешно добавлена"
+          },
+          "400" : {
+            "description" : "Неверный формат описания ККТ",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Устройство с таким id уже существует",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/devices/{deviceID}" : {
+      "get" : {
+        "tags" : [ "Работа со списком ККТ" ],
+        "summary" : "Получение описания ККТ",
+        "description" : "Возвращает описание ККТ по заданному идентификатору с её настройками, включая флаги режимов работы.\n",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "path",
+          "description" : "Идентификатор ККТ",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Настройки успешно прочитаны",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Device"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ не найдена",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Работа со списком ККТ" ],
+        "summary" : "Изменение настроек ККТ",
+        "description" : "Данным методом нельзя изменить параметры **id**, **isActive** и **isDefault**. Для изменения параметров **isActive** и **isDefault** нужно использовать соответствующие методы их раздела *Управление режимом работы ККТ*. Для изменение **id** нужно удалить устройство и добавить заново.",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "path",
+          "description" : "Идентификатор ККТ",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "description" : "Новые настройки ККТ",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Device"
+              },
+              "example" : {
+                "name" : "АТОЛ 22Ф №1",
+                "connectionSettings" : {
+                  "port" : "tcp",
+                  "ipAddress" : "10.12.55.65",
+                  "ipPort" : 5555
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Настройки успешно изменены",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Device"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Неверный формат настроек",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ не найдена",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Работа со списком ККТ" ],
+        "summary" : "Удаление ККТ",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "path",
+          "description" : "Идентификатор ККТ",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "ККТ успешно удалена"
+          },
+          "404" : {
+            "description" : "ККТ не найдена",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/utils/deviceParametersStruct" : {
+      "get" : {
+        "tags" : [ "Получение констант и перечислений" ],
+        "summary" : "Получение структуры описания ККТ",
+        "description" : "Возвращает параметры по умолчанию для настройки ККТ. Рекомендуется запрашивать перед созданием нового устройства\nи менять необходимые поля.\n",
+        "responses" : {
+          "200" : {
+            "description" : "Настройки успешно прочитаны",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Device"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/utils/mapping" : {
+      "get" : {
+        "tags" : [ "Получение констант и перечислений" ],
+        "summary" : "Получение списка возможных значений для настроек",
+        "responses" : {
+          "200" : {
+            "description" : "Список значений успешно прочитан",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Mapping"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/setDefaultDevice" : {
+      "post" : {
+        "tags" : [ "Управление режимом работы ККТ" ],
+        "summary" : "Изменение устройства по умолчанию",
+        "description" : "Изменяет устройство по умолчанию. При обращении к такому устройству не нужно передавать deviceID.\nТакже именно с ним работает режим совместимости.\n",
+        "requestBody" : {
+          "description" : "Описание ККТ. Достаточно передать только ID.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Device"
+              },
+              "example" : {
+                "id" : "KKT_1"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "ККТ по умолчанию успешно установлена"
+          },
+          "400" : {
+            "description" : "Неверный формат описания ККТ",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ не найдена",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/activateDevice" : {
+      "post" : {
+        "tags" : [ "Управление режимом работы ККТ" ],
+        "summary" : "Активация ККТ",
+        "description" : "Сервер захватит ККТ для работы, очередь заданий будет запущена.\nТакже без этого не будут работать методы из /api/v2/operations.\n",
+        "requestBody" : {
+          "description" : "Описание ККТ. Достаточно передать только ID.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Device"
+              },
+              "example" : {
+                "id" : "KKT_1"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "ККТ успешно активирована"
+          },
+          "404" : {
+            "description" : "ККТ не найдена",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/deactivateDevice" : {
+      "post" : {
+        "tags" : [ "Управление режимом работы ККТ" ],
+        "summary" : "Деактивация ККТ",
+        "description" : "Сервер освободит ККТ, очередь заданий будет остановлена.\n",
+        "requestBody" : {
+          "description" : "Описание ККТ. Достаточно передать только ID.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Device"
+              },
+              "example" : {
+                "id" : "KKT_1"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "ККТ успешно активирована"
+          },
+          "404" : {
+            "description" : "ККТ не найдена",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/requests" : {
+      "post" : {
+        "tags" : [ "Работа с очередью заданий" ],
+        "summary" : "Добавление нового задания для ККТ",
+        "description" : "Задание будет добавлено в очередь выполнения. Статус задания можно узнать соответствующим методом.\n",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то задание будет помещено в очередь устройства по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Request"
+              },
+              "examples" : {
+                "openShift" : {
+                  "summary" : "Открытие смены",
+                  "value" : {
+                    "uuid" : "0ba40014-5fa5-11ea-b5e9-037d4786a49d",
+                    "request" : [ {
+                      "type" : "openShift",
+                      "operator" : {
+                        "name" : "Иванов",
+                        "vatin" : "123654789507"
+                      }
+                    } ]
+                  }
+                },
+                "openShiftWithAdditionalText" : {
+                  "summary" : "Открытие смены",
+                  "value" : {
+                    "uuid" : "0ba40014-5fa5-11ea-b5e9-037d4786a49d",
+                    "request" : [ {
+                      "type" : "openShift",
+                      "operator" : {
+                        "name" : "Иванов",
+                        "vatin" : "123654789507"
+                      },
+                      "postItems" : [ {
+                        "type" : "text",
+                        "text" : "ОТКРЫТА НОВАЯ СМЕНА",
+                        "alignment" : "center",
+                        "doubleWidth" : true
+                      }, {
+                        "type" : "text",
+                        "text" : "ХОРОШЕГО ДНЯ, КАССИР",
+                        "alignment" : "center",
+                        "doubleWidth" : true
+                      } ]
+                    } ]
+                  }
+                },
+                "closeShift" : {
+                  "summary" : "Открытие смены",
+                  "value" : {
+                    "uuid" : "0ba40014-5fa5-11ea-b5e9-037d4786a49d",
+                    "request" : [ {
+                      "type" : "closeShift",
+                      "operator" : {
+                        "name" : "Иванов",
+                        "vatin" : "123654789507"
+                      }
+                    } ]
+                  }
+                },
+                "receipt" : {
+                  "summary" : "Чек прихода (с печатью на чековой ленте)",
+                  "value" : {
+                    "uuid" : "0ba40014-5fa5-11ea-b5e9-037d4786a49d",
+                    "request" : [ {
+                      "type" : "sell",
+                      "taxationType" : "osn",
+                      "ignoreNonFiscalPrintErrors" : false,
+                      "operator" : {
+                        "name" : "Иванов",
+                        "vatin" : 123654789507
+                      },
+                      "items" : [ {
+                        "type" : "position",
+                        "name" : "Бананы",
+                        "price" : 73.15,
+                        "quantity" : 1.0,
+                        "amount" : 73.15,
+                        "infoDiscountAmount" : 0.0,
+                        "department" : 1,
+                        "measurementUnit" : "кг",
+                        "paymentMethod" : "advance",
+                        "paymentObject" : "commodity",
+                        "nomenclatureCode" : "RE0ELx+WgXhKZ1hKNS5UMTEyMDAw",
+                        "tax" : {
+                          "type" : "vat20"
+                        },
+                        "agentInfo" : {
+                          "agents" : [ "payingAgent", "bankPayingAgent" ],
+                          "payingAgent" : {
+                            "operation" : "Оплата",
+                            "phones" : [ 79161112233 ]
+                          },
+                          "receivePaymentsOperator" : {
+                            "phones" : [ 79163331122 ]
+                          },
+                          "moneyTransferOperator" : {
+                            "phones" : [ 79162223311 ],
+                            "name" : "Оператор перевода",
+                            "address" : "Улица Оператора Перевода д.1",
+                            "vatin" : 321456987121
+                          }
+                        },
+                        "supplierInfo" : {
+                          "phones" : [ 79175555555 ],
+                          "name" : "Поставщик",
+                          "vatin" : 956839506500
+                        }
+                      }, {
+                        "type" : "text",
+                        "text" : "--------------------------------",
+                        "alignment" : "left",
+                        "font" : 0,
+                        "doubleWidth" : false,
+                        "doubleHeight" : false
+                      }, {
+                        "type" : "position",
+                        "name" : "Шуба",
+                        "price" : 51.25,
+                        "quantity" : 2.0,
+                        "amount" : 102.5,
+                        "department" : 1,
+                        "paymentMethod" : "fullPayment",
+                        "paymentObject" : "commodity",
+                        "nomenclatureCode" : {
+                          "type" : "furs",
+                          "gtin" : 98765432101234,
+                          "serial" : "RU-430302-ABC1234567"
+                        },
+                        "tax" : {
+                          "type" : "vat10"
+                        }
+                      }, {
+                        "type" : "text",
+                        "text" : "--------------------------------",
+                        "alignment" : "left",
+                        "font" : 0,
+                        "doubleWidth" : false,
+                        "doubleHeight" : false
+                      }, {
+                        "type" : "position",
+                        "name" : "Кефир",
+                        "price" : 48.45,
+                        "quantity" : 1.0,
+                        "amount" : 48.45,
+                        "department" : 1,
+                        "measurementUnit" : "шт.",
+                        "paymentMethod" : "fullPrepayment",
+                        "paymentObject" : "excise",
+                        "additionalAttribute" : "ID:iASDv3w45",
+                        "tax" : {
+                          "type" : "vat0"
+                        }
+                      }, {
+                        "type" : "barcode",
+                        "barcode" : 123456789012,
+                        "barcodeType" : "EAN13",
+                        "scale" : 2
+                      } ],
+                      "payments" : [ {
+                        "type" : "cash",
+                        "sum" : 2000.0
+                      } ],
+                      "total" : 224.0
+                    } ]
+                  }
+                },
+                "receiptElectronical" : {
+                  "summary" : "Чека прихода (без печати на чековой ленте)",
+                  "value" : {
+                    "uuid" : "0ba40014-5fa5-11ea-b5e9-037d4786a49d",
+                    "request" : [ {
+                      "type" : "sell",
+                      "taxationType" : "osn",
+                      "electronically" : true,
+                      "operator" : {
+                        "name" : "Иванов",
+                        "vatin" : "123654789507"
+                      },
+                      "clientInfo" : {
+                        "emailOrPhone" : "+79161234567"
+                      },
+                      "items" : [ {
+                        "type" : "position",
+                        "name" : "Бананы",
+                        "price" : 73.15,
+                        "quantity" : 1,
+                        "amount" : 73.15,
+                        "infoDiscountAmount" : 0,
+                        "department" : 1,
+                        "measurementUnit" : "кг",
+                        "paymentMethod" : "advance",
+                        "paymentObject" : "commodity",
+                        "tax" : {
+                          "type" : "vat20"
+                        }
+                      }, {
+                        "type" : "position",
+                        "name" : "Шуба",
+                        "price" : 51.25,
+                        "quantity" : 2,
+                        "amount" : 102.5,
+                        "department" : 1,
+                        "paymentMethod" : "fullPayment",
+                        "paymentObject" : "commodity",
+                        "tax" : {
+                          "type" : "vat10"
+                        }
+                      } ],
+                      "payments" : [ {
+                        "type" : "electronically",
+                        "sum" : 175
+                      } ],
+                      "total" : 175
+                    } ]
+                  }
+                },
+                "receiptWithAdditionalText" : {
+                  "summary" : "Чека прихода с печатью акции",
+                  "value" : {
+                    "uuid" : "0ba40014-5fa5-11ea-b5e9-037d4786a49d",
+                    "request" : [ {
+                      "type" : "sell",
+                      "taxationType" : "osn",
+                      "operator" : {
+                        "name" : "Иванов",
+                        "vatin" : "123654789507"
+                      },
+                      "clientInfo" : {
+                        "emailOrPhone" : "+79161234567"
+                      },
+                      "items" : [ {
+                        "type" : "userAttribute",
+                        "name" : "Идентификатор скидки",
+                        "value" : "PP3569YY",
+                        "print" : false
+                      }, {
+                        "type" : "position",
+                        "name" : "Пакет",
+                        "price" : 5,
+                        "quantity" : 2,
+                        "amount" : 10,
+                        "paymentMethod" : "fullPayment",
+                        "paymentObject" : "commodity",
+                        "tax" : {
+                          "type" : "vat10"
+                        }
+                      } ],
+                      "payments" : [ {
+                        "type" : "electronically",
+                        "sum" : 10
+                      } ],
+                      "total" : 10,
+                      "postItems" : [ {
+                        "type" : "text",
+                        "text" : "АКЦИЯ 2 ПАКЕТА ПО ЦЕНЕ ОДНОГО",
+                        "alignment" : "center"
+                      }, {
+                        "type" : "text",
+                        "text" : "ТОЛЬКО В 2018 ГОДУ",
+                        "alignment" : "center"
+                      }, {
+                        "type" : "text",
+                        "text" : "ПРЕДЪЯВИТЕ ЧЕК ДЛЯ ПОЛУЧЕНИЯ СКИДКИ",
+                        "alignment" : "center"
+                      }, {
+                        "type" : "barcode",
+                        "barcode" : "978020137962",
+                        "barcodeType" : "EAN13"
+                      } ]
+                    } ]
+                  }
+                },
+                "receiptWith1162" : {
+                  "summary" : "Чек прихода (маркированный товар, передача 1162)",
+                  "value" : {
+                    "uuid" : "0ba40014-5fa5-11ea-b5e9-037d4786a49d",
+                    "request" : [ {
+                      "type" : "sell",
+                      "taxationType" : "osn",
+                      "operator" : {
+                        "name" : "Иванов",
+                        "vatin" : "123654789507"
+                      },
+                      "clientInfo" : {
+                        "emailOrPhone" : "+79161234567"
+                      },
+                      "items" : [ {
+                        "type" : "position",
+                        "name" : "Лекарство",
+                        "price" : 73.15,
+                        "quantity" : 1,
+                        "amount" : 73.15,
+                        "infoDiscountAmount" : 0,
+                        "department" : 1,
+                        "measurementUnit" : "кг",
+                        "paymentMethod" : "fullPayment",
+                        "paymentObject" : "commodity",
+                        "tax" : {
+                          "type" : "vat20"
+                        },
+                        "nomenclatureCode" : {
+                          "type" : "medicines",
+                          "gtin" : "98765432101234",
+                          "serial" : "ABC1234567890"
+                        }
+                      }, {
+                        "type" : "position",
+                        "name" : "Табак",
+                        "price" : 100,
+                        "quantity" : 2,
+                        "amount" : 200,
+                        "infoDiscountAmount" : 0,
+                        "department" : 1,
+                        "paymentMethod" : "fullPayment",
+                        "paymentObject" : "commodity",
+                        "tax" : {
+                          "type" : "vat20"
+                        },
+                        "nomenclatureCode" : {
+                          "type" : "tobacco",
+                          "gtin" : "98765432101234",
+                          "serial" : "ABC1234"
+                        }
+                      }, {
+                        "type" : "position",
+                        "name" : "Табак",
+                        "price" : 50,
+                        "quantity" : 3,
+                        "amount" : 150,
+                        "infoDiscountAmount" : 0,
+                        "department" : 1,
+                        "paymentMethod" : "fullPayment",
+                        "paymentObject" : "commodity",
+                        "tax" : {
+                          "type" : "vat0"
+                        },
+                        "nomenclatureCode" : {
+                          "type" : "shoes",
+                          "gtin" : "98765432101234",
+                          "serial" : "sgEKKPPcS25y5"
+                        }
+                      }, {
+                        "type" : "position",
+                        "name" : "Шуба",
+                        "price" : 51.25,
+                        "quantity" : 2,
+                        "amount" : 102.5,
+                        "department" : 1,
+                        "paymentMethod" : "fullPayment",
+                        "paymentObject" : "commodity",
+                        "tax" : {
+                          "type" : "vat10"
+                        },
+                        "nomenclatureCode" : {
+                          "type" : "furs",
+                          "serial" : "RU-430302-ABC1234567"
+                        }
+                      }, {
+                        "type" : "position",
+                        "name" : "Позиция с кодом товара",
+                        "price" : 10,
+                        "quantity" : 1.5,
+                        "amount" : 15,
+                        "department" : 1,
+                        "paymentMethod" : "fullPayment",
+                        "paymentObject" : "commodity",
+                        "tax" : {
+                          "type" : "vat10"
+                        },
+                        "nomenclatureCode" : "RE0ELx+WgXhKZ1hKNS5UMTEyMDAw"
+                      } ],
+                      "payments" : [ {
+                        "type" : "electronically",
+                        "sum" : 540
+                      } ],
+                      "total" : 540
+                    } ]
+                  }
+                },
+                "receiptWithMark" : {
+                  "summary" : "Чек прихода (маркированный товар, передача кода маркировки)",
+                  "value" : {
+                    "uuid" : "0ba40014-5fa5-11ea-b5e9-037d4786a49d",
+                    "request" : [ {
+                      "type" : "sell",
+                      "taxationType" : "osn",
+                      "operator" : {
+                        "name" : "Иванов",
+                        "vatin" : "123654789507"
+                      },
+                      "clientInfo" : {
+                        "emailOrPhone" : "+79161234567"
+                      },
+                      "items" : [ {
+                        "type" : "position",
+                        "name" : "Позиция с кодом товара",
+                        "price" : 10,
+                        "quantity" : 1.5,
+                        "amount" : 15,
+                        "department" : 1,
+                        "paymentMethod" : "fullPayment",
+                        "paymentObject" : "commodity",
+                        "tax" : {
+                          "type" : "vat10"
+                        },
+                        "markingCode" : {
+                          "type" : "egais30",
+                          "mark" : "MTM2MjIyMDAwMDU4ODEwOTE4UVdFUkRGRVdUNTEyMzQ1NllHSEZEU1dFUlQ1NllVSUpIR0ZEU0FFUlRZVUlPS0o4SEdGVkNYWlNETEtKSEdGRFNBT0lQTE1OQkdISllUUkRGR0hKS0lSRVdTREZHSEpJT0lVVERXUUFTREZSRVRZVUlVWUdUUkVERkdIVVlUUkVXUVdF"
+                        }
+                      } ],
+                      "payments" : [ {
+                        "type" : "electronically",
+                        "sum" : 15
+                      } ],
+                      "total" : 15
+                    } ]
+                  }
+                },
+                "correction105" : {
+                  "summary" : "Чек коррекции (ФФД 1.05)",
+                  "value" : {
+                    "uuid" : "0ba40014-5fa5-11ea-b5e9-037d4786a49d",
+                    "request" : [ {
+                      "type" : "sellCorrection",
+                      "taxationType" : "osn",
+                      "correctionType" : "self",
+                      "correctionBaseDate" : "2017.07.25",
+                      "correctionBaseNumber" : "1175",
+                      "operator" : {
+                        "name" : "Иванов",
+                        "vatin" : "123654789507"
+                      },
+                      "payments" : [ {
+                        "type" : "cash",
+                        "sum" : 2000
+                      } ],
+                      "taxes" : [ {
+                        "type" : "vat20",
+                        "sum" : 10
+                      }, {
+                        "type" : "vat10",
+                        "sum" : 15
+                      } ]
+                    } ]
+                  }
+                },
+                "correction110" : {
+                  "summary" : "Чек коррекции (ФФД 1.1)",
+                  "value" : [ {
+                    "type" : "sellCorrection",
+                    "taxationType" : "osn",
+                    "electronically" : true,
+                    "ignoreNonFiscalPrintErrors" : false,
+                    "correctionType" : "self",
+                    "correctionBaseDate" : "2017.07.25",
+                    "correctionBaseNumber" : "1175",
+                    "operator" : {
+                      "name" : "Иванов",
+                      "vatin" : "123654789507"
+                    },
+                    "clientInfo" : {
+                      "emailOrPhone" : "+79161234567"
+                    },
+                    "items" : [ {
+                      "type" : "position",
+                      "name" : "Бананы",
+                      "price" : 73.15,
+                      "quantity" : 1,
+                      "amount" : 73.15,
+                      "infoDiscountAmount" : 0,
+                      "department" : 1,
+                      "measurementUnit" : "кг",
+                      "paymentMethod" : "advance",
+                      "paymentObject" : "commodity",
+                      "nomenclatureCode" : "MTIzNDEyMzQ1Njc4MTIzNDU2Nzg5MDEyMzQ1Njc4OTA=",
+                      "tax" : {
+                        "type" : "vat20"
+                      },
+                      "agentInfo" : {
+                        "agents" : [ "payingAgent", "bankPayingAgent" ],
+                        "payingAgent" : {
+                          "operation" : "Оплата",
+                          "phones" : [ "+79161112233" ]
+                        },
+                        "receivePaymentsOperator" : {
+                          "phones" : [ "+79163331122" ]
+                        },
+                        "moneyTransferOperator" : {
+                          "phones" : [ "+79162223311" ],
+                          "name" : "Оператор перевода",
+                          "address" : "Улица Оператора Перевода, д.1",
+                          "vatin" : "321456987121"
+                        }
+                      },
+                      "supplierInfo" : {
+                        "phones" : [ "+79175555555" ],
+                        "name" : "Поставщик",
+                        "vatin" : "956839506500"
+                      }
+                    }, {
+                      "type" : "position",
+                      "name" : "Шуба",
+                      "price" : 51.25,
+                      "quantity" : 2,
+                      "amount" : 102.5,
+                      "department" : 1,
+                      "paymentMethod" : "fullPayment",
+                      "paymentObject" : "commodity",
+                      "nomenclatureCode" : "MTIzNDEyMzQ1Njc4MTIzNDU2Nzg5MDEyMzQ1Njc4OTA=",
+                      "tax" : {
+                        "type" : "vat10"
+                      }
+                    }, {
+                      "type" : "position",
+                      "name" : "Пряники",
+                      "price" : 64.25,
+                      "quantity" : 2,
+                      "amount" : 128.5,
+                      "infoDiscountAmount" : 6,
+                      "department" : 1,
+                      "measurementUnit" : "шт.",
+                      "paymentMethod" : "fullPrepayment",
+                      "paymentObject" : "commodity",
+                      "tax" : {
+                        "type" : "vat10"
+                      }
+                    }, {
+                      "type" : "position",
+                      "name" : "Батон нарезной",
+                      "price" : 38.15,
+                      "quantity" : 1,
+                      "amount" : 38.15,
+                      "department" : 1,
+                      "measurementUnit" : "шт.",
+                      "paymentMethod" : "fullPrepayment",
+                      "paymentObject" : "commodity",
+                      "tax" : {
+                        "type" : "10"
+                      }
+                    }, {
+                      "type" : "position",
+                      "name" : "Кефир",
+                      "price" : 48.45,
+                      "quantity" : 1,
+                      "amount" : 48.45,
+                      "department" : 1,
+                      "measurementUnit" : "шт.",
+                      "paymentMethod" : "fullPrepayment",
+                      "paymentObject" : "excise",
+                      "tax" : {
+                        "type" : "vat0"
+                      }
+                    } ],
+                    "payments" : [ {
+                      "type" : "electronically",
+                      "sum" : 390.7
+                    } ],
+                    "total" : 390.7
+                  } ]
+                },
+                "nonFiscal" : {
+                  "summary" : "Нефискальный документ",
+                  "value" : [ {
+                    "type" : "nonFiscal",
+                    "items" : [ {
+                      "type" : "text",
+                      "text" : "ИНН: 7725760410 КПП: 772501001",
+                      "alignment" : "center"
+                    }, {
+                      "type" : "text",
+                      "text" : "КАССА: 00105700000011 СМЕНА:1",
+                      "alignment" : "center"
+                    }, {
+                      "type" : "text",
+                      "text" : "ЧЕК: 1 ДАТА: 20.06.2017 14:12",
+                      "alignment" : "center"
+                    }, {
+                      "type" : "barcode",
+                      "barcode" : "https://check.egais.ru?id=cf1b1096-3cbc-11e7-b3c1-9b018b2ba3f7",
+                      "barcodeType" : "QR",
+                      "scale" : 7
+                    }, {
+                      "type" : "text",
+                      "text" : "https://check.egais.ru?id=cf1b1096-3cbc-11e7-b3c1-9b018b2ba3f7",
+                      "alignment" : "center"
+                    }, {
+                      "type" : "text",
+                      "text" : "10 58 1c 85 ab 45 29 fa 34 a7 34 10 58 1c 85 ab 45 29 fa 34 a7 34 10 58 1c 85 ab 45 29 fa 34 a7 34 10 58 1c 85 ab 45 29 fa 34 a7 34 34 a7 34 10 58",
+                      "alignment" : "center"
+                    } ]
+                  } ]
+                },
+                "reportX" : {
+                  "summary" : "X-отчёт",
+                  "value" : [ {
+                    "type" : "reportX",
+                    "operator" : {
+                      "name" : "Иванов",
+                      "vatin" : "123654789507"
+                    }
+                  } ]
+                },
+                "cashIn" : {
+                  "summary" : "Внесение",
+                  "value" : [ {
+                    "type" : "cashIn",
+                    "operator" : {
+                      "name" : "Иванов",
+                      "vatin" : "123654789507"
+                    },
+                    "cashSum" : 1150
+                  } ]
+                },
+                "cashOut" : {
+                  "summary" : "Выплата",
+                  "value" : [ {
+                    "type" : "cashOut",
+                    "operator" : {
+                      "name" : "Иванов",
+                      "vatin" : "123654789507"
+                    },
+                    "cashSum" : 1150
+                  } ]
+                },
+                "reportOfdExchangeStatus" : {
+                  "summary" : "Отчёт о состоянии расчётов",
+                  "value" : [ {
+                    "type" : "reportOfdExchangeStatus",
+                    "operator" : {
+                      "name" : "Иванов",
+                      "vatin" : "123654789507"
+                    }
+                  } ]
+                },
+                "printFnDocument" : {
+                  "summary" : "Печать документа из ФН по номеру",
+                  "value" : [ {
+                    "type" : "printFnDocument",
+                    "fiscalDocumentNumber" : 12
+                  } ]
+                },
+                "printLastReceiptCopy" : {
+                  "summary" : "Печать копии последнего чека",
+                  "value" : [ {
+                    "type" : "printLastReceiptCopy"
+                  } ]
+                },
+                "reportDepartments" : {
+                  "summary" : "Печать отчёта по секциям",
+                  "value" : [ {
+                    "type" : "reportDepartments"
+                  } ]
+                },
+                "printDocumentsFromJournal" : {
+                  "summary" : "Печать отчёта по секциям",
+                  "value" : [ {
+                    "type" : "printDocumentsFromJournal",
+                    "filter" : "shiftNumber",
+                    "from" : 1,
+                    "to" : 10
+                  } ]
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Задание успешно добавлено в очередь выполнения для ККТ",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RequestAddResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Задание с таким же uuid уже существует",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "420" : {
+            "description" : "Произошла ошибка во время проверки формата задания",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/requests/{uuid}" : {
+      "get" : {
+        "tags" : [ "Работа с очередью заданий" ],
+        "summary" : "Запрос состояния и результата задания в очереди.",
+        "description" : "Если все задачи имеют статус **ready**, значит, они все выполнены без ошибок.\n\nЕсли одна или несколько из задач имеют статус **wait**,\nзначит, задание еще не начинало выполняться или выполняется в данный момент.\n\nЕсли одна из задач имеет статус **error**, то все задачи после неё (в рамках задания)\nбудут иметь статус **interrupted** и выполняться не будут.\nПользователь может устранить проблему, вызвавшую ошибку выполнения задачи,\nи провести его еще раз, вместе со всеми прерванными подзаданиями.\nДля этого нужно составить новое задание.\n\nСтатус **blocked** означает, что результат фискальной операции неизвестен\n(например, потеряна связь с ККТ). Web-сервер входит в состояние восстановления работоспособности\nи не будет выполнять другие задания до тех пор, пока не узнает результат последней операции.\nПоля **errorCode** и **errorDescription** будут заполнены, т.е. на них можно ориентироваться\nпри устранении неисправности. Как только Web-сервер узнает у ККТ состояние этой операции,\nон обновит состояние соответствующей задачи на *error* или **ready** и, в случае\nотсутствия ошибки, выполнение остальных задач продолжится.\n\nСтатус **inProgress** означает, что задача выполняется в данный момент.\n",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, сервер будет искать задание в очереди устройства по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "uuid",
+          "in" : "path",
+          "description" : "Идентификатор задания",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Состояние задания успешно получено",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RequestResult"
+                },
+                "examples" : {
+                  "openShiftAnswer" : {
+                    "summary" : "Результат открытия смены",
+                    "value" : {
+                      "results" : [ {
+                        "error" : {
+                          "code" : 0,
+                          "description" : "Ошибок нет"
+                        },
+                        "status" : "ready",
+                        "result" : {
+                          "fiscalParams" : {
+                            "fiscalDocumentDateTime" : "2017-07-25T13:16:00+03:00",
+                            "fiscalDocumentNumber" : 70,
+                            "fiscalDocumentSign" : 2.4109209E7,
+                            "fnNumber" : "9999078900000961",
+                            "registrationNumber" : 1002292.0,
+                            "shiftNumber" : 12,
+                            "fnsUrl" : "www.nalog.ru"
+                          },
+                          "warnings" : {
+                            "notPrinted" : true
+                          }
+                        }
+                      } ]
+                    }
+                  },
+                  "closeShiftAnswer" : {
+                    "summary" : "Результат закрытия смены",
+                    "value" : {
+                      "results" : [ {
+                        "error" : {
+                          "code" : 0,
+                          "description" : "Ошибок нет"
+                        },
+                        "status" : "ready",
+                        "result" : {
+                          "fiscalParams" : {
+                            "fiscalDocumentDateTime" : "2017-07-25T13:12:00+03:00",
+                            "fiscalDocumentNumber" : 69,
+                            "fiscalDocumentSign" : "1138986989",
+                            "fnNumber" : "9999078900000961",
+                            "registrationNumber" : 1002292.0,
+                            "shiftNumber" : 11,
+                            "receiptsCount" : 3,
+                            "fnsUrl" : "www.nalog.ru"
+                          },
+                          "warnings" : {
+                            "notPrinted" : false
+                          }
+                        }
+                      } ]
+                    }
+                  },
+                  "receiptAnswer" : {
+                    "summary" : "Результат печати чека",
+                    "value" : {
+                      "results" : [ {
+                        "error" : {
+                          "code" : 0,
+                          "description" : "Ошибок нет"
+                        },
+                        "status" : "ready",
+                        "result" : {
+                          "fiscalParams" : {
+                            "fiscalDocumentDateTime" : "2018-03-06T13:52:00+03:00",
+                            "fiscalDocumentNumber" : 71,
+                            "fiscalDocumentSign" : "1494325660",
+                            "fiscalReceiptNumber" : 1,
+                            "fnNumber" : "9999078900000961",
+                            "registrationNumber" : 1002292.0,
+                            "shiftNumber" : 12,
+                            "total" : 390.75,
+                            "fnsUrl" : "www.nalog.ru"
+                          },
+                          "warnings" : {
+                            "notPrinted" : false
+                          }
+                        }
+                      } ]
+                    }
+                  },
+                  "cashMovementAnswer" : {
+                    "summary" : "Результат внесения/выплаты",
+                    "value" : {
+                      "results" : [ {
+                        "error" : {
+                          "code" : 0,
+                          "description" : "Ошибок нет"
+                        },
+                        "status" : "ready",
+                        "result" : {
+                          "counters" : {
+                            "cashSum" : 1345
+                          }
+                        }
+                      } ]
+                    }
+                  },
+                  "ofdExchangeReportAnswer" : {
+                    "summary" : "Результат печати отчёта о состоянии расчётов",
+                    "value" : {
+                      "results" : [ {
+                        "error" : {
+                          "code" : 0,
+                          "description" : "Ошибок нет"
+                        },
+                        "status" : "ready",
+                        "result" : {
+                          "fiscalParams" : {
+                            "fiscalDocumentDateTime" : "2018-03-06T13:52:00+03:00",
+                            "fiscalDocumentNumber" : 157,
+                            "fiscalDocumentSign" : "1230933772",
+                            "fnNumber" : "9999078900000961",
+                            "fnsUrl" : "nalog.ru",
+                            "receiptsCount" : 0,
+                            "registrationNumber" : "0000000001035160",
+                            "shiftNumber" : 28
+                          },
+                          "errors" : {
+                            "fnCommandCode" : 0,
+                            "documentNumber" : 111,
+                            "fn" : {
+                              "code" : 0,
+                              "description" : "Ошибок нет"
+                            },
+                            "network" : {
+                              "code" : 13617,
+                              "description" : "Отсутствует физический канал связи"
+                            },
+                            "ofd" : {
+                              "code" : 0,
+                              "description" : "Ошибок нет"
+                            }
+                          },
+                          "status" : {
+                            "notSentCount" : 46,
+                            "notSentFirstDocDateTime" : "2018-02-04T11:24:00+03:00",
+                            "notSentFirstDocNumber" : 111
+                          },
+                          "warnings" : {
+                            "notPrinted" : false
+                          }
+                        }
+                      } ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Работа с очередью заданий" ],
+        "summary" : "Удаление задания из очереди",
+        "description" : "Удаляет задание, если оно не выполнено и не выполняется в данный момент",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то задание будет удалено из очереди устройства по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "uuid",
+          "in" : "path",
+          "description" : "Идентификатор задания",
+          "required" : true,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Задание успешно удалено"
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Задание в текущем его состоянии удалить нельзя\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/getRequestsQueueStatus" : {
+      "get" : {
+        "tags" : [ "Работа с очередью заданий" ],
+        "summary" : "Запрос состояния очереди заданий",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, будет возвращено состояние очереди устройства по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Состояние очереди успешно получено",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RequestsQueueStatus"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/operations/queryDeviceInfo" : {
+      "post" : {
+        "tags" : [ "Запросы информации о ККТ" ],
+        "summary" : "Запрос информации о ККТ",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то операция будет выполнена на устройстве по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Запрос выполнен успешно",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeviceInfoResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "408" : {
+            "description" : "За 30 секунд не удалось захватить управление драйвером\n(занят фоновыми непрерываемыми задачами).\nПовторите запрос позже\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "420" : {
+            "description" : "Ошибка при выполнении запроса",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/operations/queryDeviceStatus" : {
+      "post" : {
+        "tags" : [ "Запросы информации о ККТ" ],
+        "summary" : "Запрос статуса ККТ",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то операция будет выполнена на устройстве по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Запрос выполнен успешно",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeviceStatusResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "408" : {
+            "description" : "За 30 секунд не удалось захватить управление драйвером\n(занят фоновыми непрерываемыми задачами).\nПовторите запрос позже\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "420" : {
+            "description" : "Ошибка при выполнении запроса",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/operations/queryShiftStatus" : {
+      "post" : {
+        "tags" : [ "Запросы информации о ККТ" ],
+        "summary" : "Запрос информации о смене в ККТ",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то операция будет выполнена на устройстве по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Запрос выполнен успешно",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShiftStatusResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "408" : {
+            "description" : "За 30 секунд не удалось захватить управление драйвером\n(занят фоновыми непрерываемыми задачами).\nПовторите запрос позже\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "420" : {
+            "description" : "Ошибка при выполнении запроса",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/operations/queryShiftTotals" : {
+      "post" : {
+        "tags" : [ "Запросы информации о ККТ" ],
+        "summary" : "Запрос сменных счетчиков",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то операция будет выполнена на устройстве по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Запрос выполнен успешно",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ShiftTotalsResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "408" : {
+            "description" : "За 30 секунд не удалось захватить управление драйвером\n(занят фоновыми непрерываемыми задачами).\nПовторите запрос позже\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "420" : {
+            "description" : "Ошибка при выполнении запроса",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/operations/queryIncomeTotals" : {
+      "post" : {
+        "tags" : [ "Запросы информации о ККТ" ],
+        "summary" : "Запрос сменных счетчиков по внесениям",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то операция будет выполнена на устройстве по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Запрос выполнен успешно",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IncomeTotalsResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "408" : {
+            "description" : "За 30 секунд не удалось захватить управление драйвером\n(занят фоновыми непрерываемыми задачами).\nПовторите запрос позже\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "420" : {
+            "description" : "Ошибка при выполнении запроса",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/operations/queryOutcomeTotals" : {
+      "post" : {
+        "tags" : [ "Запросы информации о ККТ" ],
+        "summary" : "Запрос сменных счетчиков по выплатам",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то операция будет выполнена на устройстве по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Запрос выполнен успешно",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OutcomeTotalsResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "408" : {
+            "description" : "За 30 секунд не удалось захватить управление драйвером\n(занят фоновыми непрерываемыми задачами).\nПовторите запрос позже\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "420" : {
+            "description" : "Ошибка при выполнении запроса",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/operations/queryReceiptTotals" : {
+      "post" : {
+        "tags" : [ "Запросы информации о ККТ" ],
+        "summary" : "Запрос сменных счетчиков по чекам",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то операция будет выполнена на устройстве по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "type",
+          "in" : "query",
+          "description" : "Тип чека:\n- sell - чек прихода\n- buy - чек расхода\n- sellReturn - чек возврата прихода\n- buyReturn - чек возврата расхода\n",
+          "required" : true,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "sell", "buy", "sellReturn", "buyReturn" ]
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Запрос выполнен успешно",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReceiptTotalsResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "408" : {
+            "description" : "За 30 секунд не удалось захватить управление драйвером\n(занят фоновыми непрерываемыми задачами).\nПовторите запрос позже\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "420" : {
+            "description" : "Ошибка при выполнении запроса",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/operations/queryFnInfo" : {
+      "post" : {
+        "tags" : [ "Запросы информации о ККТ" ],
+        "summary" : "Запрос информации о ФН",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то операция будет выполнена на устройстве по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Запрос выполнен успешно",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FnInfoResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "408" : {
+            "description" : "За 30 секунд не удалось захватить управление драйвером\n(занят фоновыми непрерываемыми задачами).\nПовторите запрос позже\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "420" : {
+            "description" : "Ошибка при выполнении запроса",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/operations/queryFnStatus" : {
+      "post" : {
+        "tags" : [ "Запросы информации о ККТ" ],
+        "summary" : "Запрос статуса ФН",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то операция будет выполнена на устройстве по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Запрос выполнен успешно",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/FnStatusResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "408" : {
+            "description" : "За 30 секунд не удалось захватить управление драйвером\n(занят фоновыми непрерываемыми задачами).\nПовторите запрос позже\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "420" : {
+            "description" : "Ошибка при выполнении запроса",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/operations/queryOfdExchangeStatus" : {
+      "post" : {
+        "tags" : [ "Запросы информации о ККТ" ],
+        "summary" : "Запрос статуса обмена с ОФД",
+        "parameters" : [ {
+          "name" : "deviceID",
+          "in" : "query",
+          "description" : "Идентификатор ККТ. Если отсутствует, то операция будет выполнена на устройстве по умолчанию.\n",
+          "required" : false,
+          "style" : "form",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Запрос выполнен успешно",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OfdExchangeResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "ККТ не активирована",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "ККТ по заданному идентификатору не найдена\nили ККТ по умолчанию не выбрана\nили задание с указанным UUID не найдено\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "408" : {
+            "description" : "За 30 секунд не удалось захватить управление драйвером\n(занят фоновыми непрерываемыми задачами).\nПовторите запрос позже\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          },
+          "420" : {
+            "description" : "Ошибка при выполнении запроса",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "AgentTypeEnum" : {
+        "type" : "string",
+        "description" : "Признак агента:\n  - bankPayingAgent - банковский платежный агент\n  - bankPayingSubagent - банковский платежный субагент\n  - payingAgent - платежный агент\n  - payingSubagent - платежный субагент\n  - attorney - поверенный\n  - commissionAgent - комиссионер\n  - another - другой тип агента\n",
+        "enum" : [ "bankPayingAgent", "bankPayingSubagent", "payingAgent", "payingSubagent", "attorney", "commissionAgent", "another" ]
+      },
+      "TaxationTypeEnum" : {
+        "type" : "string",
+        "description" : "Система налогообложения:\n- osn - общая\n- usnIncome - упрощенная (Доход)\n- usnIncomeOutcome - упрощенная (Доход минус Расход)\n- envd - единый налог на вмененный доход\n- esn - единый сельскохозяйственный налог\n- patent - патентная система налогообложения\n",
+        "enum" : [ "osn", "usnIncome", "usnIncomeOutcome", "envd", "esn", "patent" ]
+      },
+      "ShiftStatusEnum" : {
+        "type" : "string",
+        "description" : "Состояние смены:\n- closed - закрыта\n- opened - открыта\n- expired - истекла (превысила 24 часа)\n",
+        "enum" : [ "closed", "opened", "expired", "unknown" ]
+      },
+      "FfdVersionEnum" : {
+        "type" : "string",
+        "description" : "Версия ФФД:\n- 1.05, 1.1 - соответствующая версия ФФД ККТ\n- unknown - неизвестная версия\n",
+        "enum" : [ 1.05, 1.1, "unknown" ]
+      },
+      "FnFfdVersionEnum" : {
+        "type" : "string",
+        "description" : "Версия ФФД ФН:\n- 1.05, 1.1 - соответствующая версия ФФД ФН\n- unknown - неизвестная версия\n",
+        "enum" : [ 1.05, 1.1, "unknown" ]
+      },
+      "AlignmentEnum" : {
+        "type" : "string",
+        "description" : "Выравнивание:\n- left - по левой стороне\n- center - по центру\n- right - по правой стороне\n",
+        "enum" : [ "left", "center", "right" ]
+      },
+      "TextWrapEnum" : {
+        "type" : "string",
+        "description" : "Перенос:\n- none - не переносить, обрезать по ширине ленты\n- chars - посимвольный перенос\n- words - перенос по словам\n",
+        "enum" : [ "none", "chars", "words" ]
+      },
+      "Error" : {
+        "type" : "object",
+        "description" : "Описание ошибки",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "description" : "Код ошибки (см. документацию на основной драйвер)"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Текст ошибки"
+          }
+        },
+        "example" : {
+          "code" : 0,
+          "description" : "Ошибок нет"
+        }
+      },
+      "ErrorResult" : {
+        "type" : "object",
+        "description" : "Результат с ошибкой и без данных",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/Error"
+          }
+        },
+        "example" : {
+          "error" : {
+            "code" : 504,
+            "description" : "Ошибка"
+          }
+        }
+      },
+      "Device" : {
+        "type" : "object",
+        "description" : "Описание ККТ",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "description" : "Идентификатор ККТ",
+            "maxLength" : 16,
+            "pattern" : "^[a-zA-Z0-9_\\\\-]{1,16}$"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Отображаемое название ККТ",
+            "maxLength" : 128
+          },
+          "connectionSettings" : {
+            "$ref" : "#/components/schemas/ConnectionSettings"
+          },
+          "otherSettings" : {
+            "$ref" : "#/components/schemas/OtherDeviceSettings"
+          },
+          "isActive" : {
+            "type" : "boolean",
+            "description" : "Работа с ККТ (вкл./выкл.)",
+            "default" : false
+          },
+          "isDefault" : {
+            "type" : "boolean",
+            "description" : "Использовать по умолчанию",
+            "default" : false
+          }
+        },
+        "required" : [ "id", "name" ],
+        "example" : {
+          "id" : "KKT_1",
+          "name" : "АТОЛ 22Ф №1",
+          "isActive" : true,
+          "isDefault" : false,
+          "connectionSettings" : {
+            "model" : 500,
+            "accessPassword" : "",
+            "userPassword" : "",
+            "port" : "usb",
+            "com" : "",
+            "baudRate" : 1200,
+            "usbDevice" : "auto",
+            "ipAddress" : "",
+            "ipPort" : 0,
+            "mac" : "",
+            "ofdChannel" : "auto"
+          },
+          "otherSettings" : {
+            "useGlobalScriptsSettings" : true,
+            "scriptsPath" : "",
+            "useGlobalInvertCashDrawerStatusFlag" : true,
+            "invertCashDrawerStatus" : false,
+            "useGlobalAdditionalHeaderLines" : true,
+            "additionalHeaderLines" : "",
+            "useGlobalAdditionalFooterLines" : true,
+            "additionalFooterLines" : ""
+          }
+        }
+      },
+      "ConnectionSettings" : {
+        "type" : "object",
+        "description" : "Настройки связи с ККТ",
+        "properties" : {
+          "model" : {
+            "type" : "integer",
+            "description" : "Модель ККТ:\n- 500 - Определять автоматически\n- 57 - АТОЛ 25Ф\n- 61 - АТОЛ 30Ф\n- 62 - АТОЛ 55Ф\n- 63 - АТОЛ 22Ф (АТОЛ FPrint-22ПТК)\n- 64 - АТОЛ 52Ф\n- 67 - АТОЛ 11Ф\n- 69 - АТОЛ 77Ф\n- 72 - АТОЛ 90Ф\n- 75 - АТОЛ 60Ф\n- 76 - Казначей ФА\n- 77 - АТОЛ 42ФС\n- 78 - АТОЛ 15Ф\n- 80 - АТОЛ 50Ф\n- 81 - АТОЛ 20Ф\n- 82 - АТОЛ 91Ф\n- 84 - АТОЛ 92Ф\n- 87 - АТОЛ 27Ф\n- 93 - АТОЛ 1Ф\n",
+            "enum" : [ 500, 57, 61, 62, 63, 64, 67, 69, 72, 75, 76, 77, 78, 80, 81, 82, 84, 87, 93 ]
+          },
+          "accessPassword" : {
+            "type" : "string",
+            "description" : "Пароль доступа",
+            "maxLength" : 16
+          },
+          "userPassword" : {
+            "type" : "string",
+            "description" : "Пароль пользователя по умолчанию",
+            "maxLength" : 16
+          },
+          "port" : {
+            "type" : "string",
+            "description" : "Канал связи с ККТ:\n- usb - USB\n- com - RS232 или VCOM или TTY\n- tcp - TCP/IP\n- bluetooth - Bluetooth\n",
+            "enum" : [ "usb", "com", "tcp", "bluetooth" ]
+          },
+          "com" : {
+            "type" : "string",
+            "description" : "Название COM-порта / TTY-устройства",
+            "maxLength" : 32
+          },
+          "baudRate" : {
+            "type" : "integer",
+            "description" : "Скорость COM-порта:\n- 1200 - 1200 бод\n- 2400 - 2400 бод\n- 4800 - 4800 бод\n- 9600 - 9600 бод\n- 19200 - 19200 бод\n- 38400 - 38400 бод\n- 57600 - 57600 бод\n- 115200 - 115200 бод\n- 230400 - 230400 бод\n- 460800 - 460800 бод\n- 921600 - 921600 бод\n",
+            "enum" : [ 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600 ]
+          },
+          "usbDevice" : {
+            "type" : "string",
+            "description" : "Идентификатор USB",
+            "maxLength" : 32
+          },
+          "ipAddress" : {
+            "type" : "string",
+            "description" : "IP-адрес ККТ",
+            "maxLength" : 128
+          },
+          "ipPort" : {
+            "type" : "integer",
+            "description" : "IP-порт ККТ",
+            "minimum" : 0,
+            "maximum" : 65535
+          },
+          "mac" : {
+            "type" : "string",
+            "description" : "MAC-адрес Bluetooth ККТ",
+            "pattern" : "^[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}$"
+          },
+          "ofdChannel" : {
+            "type" : "string",
+            "description" : "Канал обмена с ОФД:\n- none - нет\n- auto - определить автоматически\n",
+            "enum" : [ "none", "auto" ]
+          }
+        },
+        "example" : {
+          "model" : 500,
+          "accessPassword" : "",
+          "userPassword" : "",
+          "port" : "usb",
+          "com" : "",
+          "baudRate" : 1200,
+          "usbDevice" : "auto",
+          "ipAddress" : "",
+          "ipPort" : 0,
+          "mac" : "",
+          "ofdChannel" : "auto"
+        }
+      },
+      "Request" : {
+        "type" : "object",
+        "description" : "Задание. Состоит из набора задач",
+        "properties" : {
+          "uuid" : {
+            "type" : "string",
+            "description" : "Идентификатор задания",
+            "format" : "uuid",
+            "example" : "0cbe9ff6-5f85-11ea-bc06-bbffd2fd5315"
+          },
+          "request" : {
+            "minItems" : 1,
+            "type" : "array",
+            "description" : "Состав задания",
+            "items" : {
+              "$ref" : "#/components/schemas/Task"
+            }
+          }
+        },
+        "required" : [ "request", "uuid" ]
+      },
+      "Task" : {
+        "type" : "object",
+        "description" : "Задача",
+        "anyOf" : [ {
+          "$ref" : "#/components/schemas/Receipt"
+        }, {
+          "$ref" : "#/components/schemas/Correction1.05"
+        }, {
+          "$ref" : "#/components/schemas/Correction1.1"
+        }, {
+          "$ref" : "#/components/schemas/NonFiscalDocument"
+        }, {
+          "$ref" : "#/components/schemas/OpenShift"
+        }, {
+          "$ref" : "#/components/schemas/CloseShift"
+        }, {
+          "$ref" : "#/components/schemas/ReportX"
+        }, {
+          "$ref" : "#/components/schemas/CashMovement"
+        }, {
+          "$ref" : "#/components/schemas/ReportOfdExchangeStatus"
+        }, {
+          "$ref" : "#/components/schemas/PrintFnDocument"
+        }, {
+          "$ref" : "#/components/schemas/PrintLastReceiptCopy"
+        }, {
+          "$ref" : "#/components/schemas/DepartmentsReport"
+        }, {
+          "$ref" : "#/components/schemas/JournalReport"
+        }, {
+          "$ref" : "#/components/schemas/Registration"
+        }, {
+          "$ref" : "#/components/schemas/ChangeRegistrationParameters1.05"
+        }, {
+          "$ref" : "#/components/schemas/ChangeRegistrationParameters1.1"
+        }, {
+          "$ref" : "#/components/schemas/CloseArchive"
+        }, {
+          "$ref" : "#/components/schemas/OpenDrawer"
+        }, {
+          "$ref" : "#/components/schemas/SetDateTime"
+        }, {
+          "$ref" : "#/components/schemas/SetDeviceParameters"
+        } ]
+      },
+      "RequestAddResult" : {
+        "type" : "object",
+        "description" : "Результат добавления задания в очередь",
+        "properties" : {
+          "number" : {
+            "type" : "integer",
+            "description" : "Порядковый номер задания в очереди",
+            "example" : 1
+          },
+          "uuid" : {
+            "type" : "string",
+            "description" : "Присвоенный заданию UUID (используется UUID задания)",
+            "example" : "0ba40014-5fa5-11ea-b5e9-037d4786a49d"
+          },
+          "isBlocked" : {
+            "type" : "boolean",
+            "description" : "Признак блокировки очереди",
+            "example" : false
+          },
+          "blockedUUID" : {
+            "type" : "string",
+            "description" : "UUID задания, вызвавшего блокировку очереди",
+            "example" : ""
+          }
+        },
+        "required" : [ "number", "uuid", "isBlocked" ]
+      },
+      "RequestsQueueStatus" : {
+        "type" : "object",
+        "description" : "Состояние очереди заданий",
+        "properties" : {
+          "number" : {
+            "type" : "integer",
+            "description" : "Количество незавершенных заданий в очереди",
+            "example" : 0
+          },
+          "canceled" : {
+            "type" : "integer",
+            "description" : "Количество отмененных заданий",
+            "example" : 4
+          },
+          "ready" : {
+            "type" : "integer",
+            "description" : "Количество завершенных заданий",
+            "example" : 123
+          },
+          "isBlocked" : {
+            "type" : "boolean",
+            "description" : "Признак блокировки очереди",
+            "example" : false
+          },
+          "blockReason" : {
+            "type" : "string",
+            "description" : "Причина блокировки очереди:\n- paperError - ошибка бумаги\n- connectionError - ошибка связи\n- fnError - ошибка ФН\n",
+            "enum" : [ "paperError", "connectionError", "fnError" ],
+            "example" : ""
+          },
+          "blockedUUID" : {
+            "type" : "string",
+            "description" : "UUID задания, вызвавшего блокировку очереди",
+            "example" : ""
+          }
+        },
+        "required" : [ "number", "canceled", "ready", "isBlocked" ]
+      },
+      "RequestResult" : {
+        "type" : "object",
+        "description" : "Результат задания",
+        "properties" : {
+          "results" : {
+            "minItems" : 1,
+            "type" : "array",
+            "description" : "Результат задания. Состоит из списка результатов задач.",
+            "items" : {
+              "$ref" : "#/components/schemas/TaskResult"
+            }
+          }
+        }
+      },
+      "TaskResult" : {
+        "type" : "object",
+        "description" : "Результат задачи",
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/Error"
+          },
+          "status" : {
+            "type" : "string",
+            "description" : "Статус задачи:\n- ready - задача выполнена без ошибок\n- error - задача выполнена с ошибкой\n- wait - задача ожидает выполнения\n- inProgress - задача выполняется\n- interrupted - задача не выполнялась, т.к. предыдущие задачи в задании выполнены с ошибкой\n- blocked - результат задачи неизвестен, очередь выполнения остановлена\n- canceled - задача прервана\n",
+            "enum" : [ "ready", "error", "wait", "inProgress", "interrupted", "blocked", "canceled" ]
+          },
+          "result" : {
+            "type" : "object",
+            "description" : "Данные результата задачи. Формат зависит от исходной задачи",
+            "anyOf" : [ {
+              "$ref" : "#/components/schemas/ReceiptResult"
+            }, {
+              "$ref" : "#/components/schemas/OpenShiftResult"
+            }, {
+              "$ref" : "#/components/schemas/CloseShiftResult"
+            }, {
+              "$ref" : "#/components/schemas/CashMovementResult"
+            }, {
+              "$ref" : "#/components/schemas/ReportOfdExchangeStatusResult"
+            }, {
+              "$ref" : "#/components/schemas/RegistrationResult"
+            }, {
+              "$ref" : "#/components/schemas/ChangeRegistrationParametersResult"
+            }, {
+              "$ref" : "#/components/schemas/CloseArchiveResult"
+            }, {
+              "$ref" : "#/components/schemas/SetDeviceParametersResult"
+            } ]
+          }
+        }
+      },
+      "DeviceInfo" : {
+        "type" : "object",
+        "description" : "Информация о ККТ",
+        "properties" : {
+          "firmwareVersion" : {
+            "type" : "string",
+            "description" : "Версия прошивки",
+            "example" : "1245"
+          },
+          "appVersion" : {
+            "type" : "string",
+            "description" : "Версия ПО ККТ",
+            "example" : "5.7.0"
+          },
+          "boolVersion" : {
+            "type" : "string",
+            "description" : "Версия загрузчика",
+            "example" : "5.7.0"
+          },
+          "scriptsVersion" : {
+            "type" : "string",
+            "description" : "Версия движка шаблонов",
+            "example" : "3"
+          },
+          "scriptsName" : {
+            "type" : "string",
+            "description" : "Наименовние загруженных шаблонов",
+            "example" : "ATCP3003"
+          },
+          "model" : {
+            "type" : "integer",
+            "description" : "Код модели",
+            "example" : 69
+          },
+          "modelName" : {
+            "type" : "string",
+            "description" : "Наименование модели",
+            "example" : "АТОЛ 77Ф"
+          },
+          "receiptLineLength" : {
+            "type" : "integer",
+            "description" : "Ширина чековой ленты в символах для шрифта по умолчанию",
+            "example" : 48
+          },
+          "receiptLineLengthPix" : {
+            "type" : "integer",
+            "description" : "Ширина чековой ленты в пикселях",
+            "example" : 576
+          },
+          "serial" : {
+            "type" : "string",
+            "description" : "Заводской номер ККТ",
+            "example" : "00106900000014"
+          },
+          "ffdVersion" : {
+            "$ref" : "#/components/schemas/FfdVersionEnum"
+          },
+          "fnFfdVersion" : {
+            "$ref" : "#/components/schemas/FnFfdVersionEnum"
+          }
+        }
+      },
+      "DeviceInfoResult" : {
+        "type" : "object",
+        "description" : "Результат запроса информации о ККТ",
+        "properties" : {
+          "deviceInfo" : {
+            "$ref" : "#/components/schemas/DeviceInfo"
+          }
+        }
+      },
+      "DeviceStatus" : {
+        "type" : "object",
+        "description" : "Статус ККТ",
+        "properties" : {
+          "currentDateTime" : {
+            "type" : "string",
+            "description" : "Текущие дата и время",
+            "format" : "date-time"
+          },
+          "shift" : {
+            "$ref" : "#/components/schemas/ShiftStatusEnum"
+          },
+          "blocked" : {
+            "type" : "boolean",
+            "description" : "ККТ заблокирована"
+          },
+          "coverOpened" : {
+            "type" : "boolean",
+            "description" : "Состояние крышки"
+          },
+          "paperPresent" : {
+            "type" : "boolean",
+            "description" : "Наличие бумаги"
+          },
+          "fiscal" : {
+            "type" : "boolean",
+            "description" : "ККТ фискализирована"
+          },
+          "fnFiscal" : {
+            "type" : "boolean",
+            "description" : "ФН фискализирован"
+          },
+          "fnPresent" : {
+            "type" : "boolean",
+            "description" : "ФН обнаружен"
+          },
+          "cashDrawerOpened" : {
+            "type" : "boolean",
+            "description" : "Денежный ящик открыт"
+          }
+        }
+      },
+      "DeviceStatusResult" : {
+        "type" : "object",
+        "description" : "Результат запроса статуса ККТ>",
+        "properties" : {
+          "deviceStatus" : {
+            "$ref" : "#/components/schemas/DeviceStatus"
+          }
+        }
+      },
+      "ShiftStatus" : {
+        "type" : "object",
+        "description" : "Состояние смены",
+        "properties" : {
+          "state" : {
+            "$ref" : "#/components/schemas/ShiftStatusEnum"
+          },
+          "number" : {
+            "type" : "integer",
+            "description" : "Номер текущей смены или номер последней закрытой смены",
+            "example" : 10
+          },
+          "expiredAt" : {
+            "type" : "string",
+            "description" : "Дата и время истечения смены",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ShiftStatusResult" : {
+        "type" : "object",
+        "description" : "Результат запроса состояния смены",
+        "properties" : {
+          "shiftStatus" : {
+            "$ref" : "#/components/schemas/ShiftStatus"
+          }
+        }
+      },
+      "ShiftTotals" : {
+        "type" : "object",
+        "description" : "Сменные итоги",
+        "properties" : {
+          "cashDrawerTotals" : {
+            "$ref" : "#/components/schemas/CashDrawerTotals"
+          },
+          "outcomeTotals" : {
+            "$ref" : "#/components/schemas/OutcomeTotals"
+          },
+          "incomeTotals" : {
+            "$ref" : "#/components/schemas/IncomeTotals"
+          },
+          "receiptsTotals" : {
+            "$ref" : "#/components/schemas/ReceiptsTotals"
+          }
+        }
+      },
+      "ShiftTotalsResult" : {
+        "type" : "object",
+        "properties" : {
+          "shiftTotals" : {
+            "$ref" : "#/components/schemas/ShiftTotals"
+          }
+        },
+        "description" : "Результат запроса сменных итогов"
+      },
+      "CashDrawerTotals" : {
+        "type" : "object",
+        "description" : "Итоги по денежному ящику",
+        "properties" : {
+          "sum" : {
+            "type" : "number",
+            "description" : "Сумма в денежном ящике",
+            "format" : "double"
+          }
+        },
+        "example" : {
+          "sum" : 100
+        }
+      },
+      "IncomeTotals" : {
+        "type" : "object",
+        "description" : "Итоги по внесениям",
+        "properties" : {
+          "sum" : {
+            "type" : "number",
+            "description" : "Сумма внесений",
+            "format" : "double"
+          },
+          "count" : {
+            "type" : "integer",
+            "description" : "Количество внесений"
+          }
+        },
+        "example" : {
+          "sum" : 100,
+          "count" : 2
+        }
+      },
+      "IncomeTotalsResult" : {
+        "type" : "object",
+        "description" : "Результат запроса итогов по внесениям",
+        "properties" : {
+          "incomeTotals" : {
+            "$ref" : "#/components/schemas/IncomeTotals"
+          }
+        }
+      },
+      "OutcomeTotals" : {
+        "type" : "object",
+        "description" : "Итоги по выплатам",
+        "properties" : {
+          "sum" : {
+            "type" : "number",
+            "description" : "Сумма выплат",
+            "format" : "double"
+          },
+          "count" : {
+            "type" : "integer",
+            "description" : "Количество выплат"
+          }
+        },
+        "example" : {
+          "sum" : 100,
+          "count" : 2
+        }
+      },
+      "OutcomeTotalsResult" : {
+        "type" : "object",
+        "description" : "Результат запроса итогов по выплатам",
+        "properties" : {
+          "outcomeTotals" : {
+            "$ref" : "#/components/schemas/OutcomeTotals"
+          }
+        }
+      },
+      "ReceiptTotals" : {
+        "type" : "object",
+        "description" : "Итоги по чекам",
+        "properties" : {
+          "count" : {
+            "type" : "integer",
+            "description" : "Количество чеков"
+          },
+          "payments" : {
+            "$ref" : "#/components/schemas/PaymentsTotals"
+          }
+        }
+      },
+      "ReceiptTotalsResult" : {
+        "type" : "object",
+        "description" : "Результат запроса итогов по чекам",
+        "properties" : {
+          "receiptTotals" : {
+            "$ref" : "#/components/schemas/ReceiptTotals"
+          }
+        }
+      },
+      "SellTotals" : {
+        "description" : "Итоги по чекам прихода",
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/ReceiptTotals"
+        } ]
+      },
+      "BuyTotals" : {
+        "description" : "Итоги по чекам расходам",
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/ReceiptTotals"
+        } ]
+      },
+      "SellReturnTotals" : {
+        "description" : "Итоги по чекам возвратов приходов",
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/ReceiptTotals"
+        } ]
+      },
+      "BuyReturnTotals" : {
+        "description" : "Итоги по чекам возвратов расходов",
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/ReceiptTotals"
+        } ]
+      },
+      "PaymentsTotals" : {
+        "type" : "object",
+        "description" : "Суммы расчетов",
+        "properties" : {
+          "cash" : {
+            "type" : "number",
+            "description" : "Сумма наличных расчетов",
+            "format" : "double"
+          },
+          "electronically" : {
+            "type" : "number",
+            "description" : "Сумма безналичных расчетов",
+            "format" : "double"
+          },
+          "credit" : {
+            "type" : "number",
+            "description" : "Сумма кредитов",
+            "format" : "double"
+          },
+          "prepaid" : {
+            "type" : "number",
+            "description" : "Сумма предоплат",
+            "format" : "double"
+          },
+          "other" : {
+            "type" : "number",
+            "description" : "Сумма расчетов встречным предоставлением",
+            "format" : "double"
+          },
+          "userTypes" : {
+            "type" : "array",
+            "description" : "Суммы расчетов пользовательскими типами оплаты. Количество элементов зависит от ККТ",
+            "items" : {
+              "type" : "number",
+              "format" : "double"
+            }
+          }
+        }
+      },
+      "FnInfo" : {
+        "type" : "object",
+        "description" : "Информация о ФН",
+        "properties" : {
+          "serial" : {
+            "type" : "string",
+            "description" : "Заводской номер ФН",
+            "example" : "9999078900008855"
+          },
+          "livePhase" : {
+            "type" : "string",
+            "description" : "Фаза жизни ФН:\n- init - настройка ФН\n- configured - настроен, готов в активации\n- fiscalMode - фискальный режим\n- postFiscalMode - постфискальный режим\n- accessArchive - доступ к архиву ФН\n- unknown - неизвестная фаза жизни\n",
+            "example" : "fiscalMode"
+          },
+          "ffdVersion" : {
+            "$ref" : "#/components/schemas/FfdVersionEnum"
+          },
+          "fnFfdVersion" : {
+            "$ref" : "#/components/schemas/FnFfdVersionEnum"
+          },
+          "validity" : {
+            "$ref" : "#/components/schemas/FnValidity"
+          },
+          "warnings" : {
+            "$ref" : "#/components/schemas/FnWarnings"
+          }
+        }
+      },
+      "FnInfoResult" : {
+        "type" : "object",
+        "description" : "Результат запроса информации о ФН",
+        "properties" : {
+          "fnInfo" : {
+            "$ref" : "#/components/schemas/FnInfo"
+          }
+        }
+      },
+      "FnStatus" : {
+        "type" : "object",
+        "description" : "Статус ФН",
+        "properties" : {
+          "fiscalDocumentNumber" : {
+            "type" : "integer",
+            "description" : "Номер последнего ФД",
+            "example" : 1245
+          },
+          "fiscalReceiptNumber" : {
+            "type" : "integer",
+            "description" : "Количество чеков за смену (номер ФД последнего чека)",
+            "example" : 10
+          },
+          "warnings" : {
+            "$ref" : "#/components/schemas/FnWarnings"
+          }
+        }
+      },
+      "FnStatusResult" : {
+        "type" : "object",
+        "description" : "Результат запроса статуса ФН",
+        "properties" : {
+          "fnStatus" : {
+            "$ref" : "#/components/schemas/FnStatus"
+          }
+        }
+      },
+      "FnValidity" : {
+        "type" : "object",
+        "description" : "Информация о сроке действия ФН",
+        "properties" : {
+          "numberOfRegistrations" : {
+            "type" : "integer",
+            "description" : "Количество регистраций/перерегистраций"
+          },
+          "registrationsRemaining" : {
+            "type" : "integer",
+            "description" : "Количество оставшихся перерегистраций"
+          },
+          "validityDate" : {
+            "type" : "string",
+            "description" : "Срок действия ФН",
+            "format" : "date-time"
+          }
+        }
+      },
+      "FnWarnings" : {
+        "type" : "object",
+        "description" : "Предупреждения ФН",
+        "properties" : {
+          "criticalError" : {
+            "type" : "boolean",
+            "description" : "Критическая ошибка ФН"
+          },
+          "memoryOverflow" : {
+            "type" : "boolean",
+            "description" : "Память ФН переполнена"
+          },
+          "needReplacement" : {
+            "type" : "boolean",
+            "description" : "Требуется срочная замена ФН"
+          },
+          "ofdTimeout" : {
+            "type" : "boolean",
+            "description" : "Превышено время ожидания ответа от ОФД"
+          },
+          "resourceExhausted" : {
+            "type" : "boolean",
+            "description" : "Исчерпан ресурс ФН"
+          }
+        }
+      },
+      "OfdExchangeStatus" : {
+        "type" : "object",
+        "description" : "Статус обмена с ОФД",
+        "properties" : {
+          "notSentCount" : {
+            "type" : "integer",
+            "description" : "Количество неотправленных документов"
+          },
+          "notSentFirstDocDateTime" : {
+            "type" : "string",
+            "description" : "Дата и время первого неотправленного документа",
+            "format" : "date-time"
+          },
+          "notSentFirstDocNumber" : {
+            "type" : "integer",
+            "description" : "Номер первого неотправленного документа"
+          }
+        }
+      },
+      "OfdExchangeErrors" : {
+        "type" : "object",
+        "description" : "Последняя ошибка обмена с ОФД",
+        "properties" : {
+          "fnCommandCode" : {
+            "type" : "integer",
+            "description" : "Код команды ФН",
+            "example" : 0
+          },
+          "documentNumber" : {
+            "type" : "integer",
+            "description" : "Номер документа ФН",
+            "example" : 2
+          },
+          "fn" : {
+            "$ref" : "#/components/schemas/OfdExchangeErrorsFn"
+          },
+          "ofd" : {
+            "$ref" : "#/components/schemas/OfdExchangeErrorsOfd"
+          },
+          "network" : {
+            "$ref" : "#/components/schemas/OfdExchangeErrorsNetwork"
+          }
+        }
+      },
+      "OfdExchangeResult" : {
+        "type" : "object",
+        "description" : "Результат запроса состояния обмена с ОФД",
+        "properties" : {
+          "ofdExchangeStatus" : {
+            "$ref" : "#/components/schemas/OfdExchangeStatus"
+          },
+          "ofdExchangeErrors" : {
+            "$ref" : "#/components/schemas/OfdExchangeErrors"
+          }
+        }
+      },
+      "Receipt" : {
+        "type" : "object",
+        "description" : "Фискальный чек",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип чека\n- sell - чек прихода\n- buy - чек расхода\n- sellReturn - чек возврата прихода\n- buyReturn - чек возврата расхода\n",
+            "enum" : [ "sell", "buy", "sellReturn", "buyReturn" ],
+            "example" : "sell"
+          },
+          "ignoreNonFiscalPrintErrors" : {
+            "type" : "boolean",
+            "description" : "Игнорировать ошибки при печати нефискальных элементов из items",
+            "default" : false,
+            "example" : true
+          },
+          "electronically" : {
+            "type" : "boolean",
+            "description" : "Электронный чек",
+            "default" : false,
+            "example" : false
+          },
+          "useVAT18" : {
+            "type" : "boolean",
+            "description" : "Использовать при регистрации чека ставку налога 18%",
+            "default" : false,
+            "example" : false
+          },
+          "taxationType" : {
+            "$ref" : "#/components/schemas/TaxationTypeEnum"
+          },
+          "paymentsPlace" : {
+            "type" : "string",
+            "description" : "Место проведения расчетов",
+            "default" : "Не передаётся в ККТ",
+            "example" : "Улица Свободы, 15"
+          },
+          "machineNumber" : {
+            "type" : "string",
+            "description" : "Номер автомата",
+            "default" : "Не передаётся в ККТ",
+            "example" : "NO1524"
+          },
+          "operator" : {
+            "$ref" : "#/components/schemas/Operator"
+          },
+          "clientInfo" : {
+            "$ref" : "#/components/schemas/Client"
+          },
+          "companyInfo" : {
+            "$ref" : "#/components/schemas/Company"
+          },
+          "agentInfo" : {
+            "$ref" : "#/components/schemas/AgentInfo"
+          },
+          "supplierInfo" : {
+            "$ref" : "#/components/schemas/SupplierInfo"
+          },
+          "items" : {
+            "minItems" : 1,
+            "type" : "array",
+            "description" : "Элементы чека",
+            "items" : {
+              "anyOf" : [ {
+                "$ref" : "#/components/schemas/PositionItem"
+              }, {
+                "$ref" : "#/components/schemas/TextItem"
+              }, {
+                "$ref" : "#/components/schemas/BarcodeItem"
+              }, {
+                "$ref" : "#/components/schemas/PictureFromMemoryItem"
+              }, {
+                "$ref" : "#/components/schemas/PixelsItem"
+              }, {
+                "$ref" : "#/components/schemas/AdditionalAttributeItem"
+              }, {
+                "$ref" : "#/components/schemas/UserAttributeItem"
+              } ]
+            }
+          },
+          "payments" : {
+            "type" : "array",
+            "description" : "Оплаты",
+            "items" : {
+              "$ref" : "#/components/schemas/Payment"
+            }
+          },
+          "taxes" : {
+            "type" : "array",
+            "description" : "Налоги на чек",
+            "items" : {
+              "$ref" : "#/components/schemas/ReceiptTax"
+            }
+          },
+          "total" : {
+            "type" : "number",
+            "description" : "Итог чека. Может отличаться от суммы позиций на значение, равное копейкам чека.\nЕсли не задан - высчитывается автоматически из суммы всех позиций\n",
+            "format" : "double",
+            "example" : 100
+          },
+          "preItems" : {
+            "$ref" : "#/components/schemas/PreItems"
+          },
+          "postItems" : {
+            "$ref" : "#/components/schemas/PostItems"
+          }
+        },
+        "required" : [ "items", "payments", "total", "type" ]
+      },
+      "Correction1.05" : {
+        "type" : "object",
+        "description" : "Чек коррекции (ФФД 1.05)",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип чека\n- sellCorrection - чек коррекции прихода\n- buyCorrection - чек коррекции расхода\n",
+            "enum" : [ "sellCorrection", "buyCorrection" ],
+            "example" : "sellCorrection"
+          },
+          "electronically" : {
+            "type" : "boolean",
+            "description" : "Электронный чек",
+            "default" : false,
+            "example" : false
+          },
+          "correctionType" : {
+            "type" : "string",
+            "description" : "Тип коррекции (тег 1173):\n- self - самостоятельно\n- instruction - по предписанию\n",
+            "enum" : [ "self", "instruction" ]
+          },
+          "correctionBaseDate" : {
+            "type" : "string",
+            "description" : "Дата совершения корректируемого расчета (тег 1178)",
+            "format" : "date (YYYY.MM.DD)",
+            "example" : "2017.07.25"
+          },
+          "correctionBaseNumber" : {
+            "type" : "string",
+            "description" : "Номер предписания налогового органа (тег 1179)"
+          },
+          "operator" : {
+            "$ref" : "#/components/schemas/Operator"
+          },
+          "payments" : {
+            "type" : "array",
+            "description" : "Оплаты",
+            "items" : {
+              "$ref" : "#/components/schemas/Payment"
+            }
+          },
+          "taxes" : {
+            "type" : "array",
+            "description" : "Налоги на чек",
+            "items" : {
+              "$ref" : "#/components/schemas/ReceiptTax"
+            }
+          },
+          "total" : {
+            "type" : "number",
+            "description" : "Итог чека. Может отличаться от суммы позиций на значение, равное копейкам чека.\nЕсли не задан - высчитывается автоматически из суммы всех позиций\n",
+            "format" : "double",
+            "default" : 100
+          },
+          "preItems" : {
+            "$ref" : "#/components/schemas/PreItems"
+          },
+          "postItems" : {
+            "$ref" : "#/components/schemas/PostItems"
+          }
+        },
+        "required" : [ "type", "payments", "taxes", "total", "correctionType", "correctionBaseDate", "correctionBaseNumber" ]
+      },
+      "Correction1.1" : {
+        "type" : "object",
+        "description" : "Чек коррекции (ФФД 1.1)",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип чека\n- sellCorrection - чек коррекции прихода\n- buyCorrection - чек коррекции расхода\n- sellReturnCorrection - чек коррекции возврата прихода\n- buyReturnCorrection - чек коррекции возврата расхода\n",
+            "enum" : [ "sellCorrection", "buyCorrection", "sellReturnCorrection", "buyReturnCorrection" ],
+            "example" : "sellCorrection"
+          },
+          "ignoreNonFiscalPrintErrors" : {
+            "type" : "boolean",
+            "description" : "Игнорировать ошибки при печати нефискальных элементов из items",
+            "default" : false,
+            "example" : true
+          },
+          "electronically" : {
+            "type" : "boolean",
+            "description" : "Электронный чек",
+            "default" : false,
+            "example" : false
+          },
+          "correctionType" : {
+            "type" : "string",
+            "description" : "Тип коррекции (тег 1173):\n- self - самостоятельно\n- instruction - по предписанию\n",
+            "enum" : [ "self", "instruction" ],
+            "example" : "self"
+          },
+          "correctionBaseDate" : {
+            "type" : "string",
+            "description" : "Дата совершения корректируемого расчета (тег 1178)",
+            "format" : "date",
+            "example" : "2017.07.25"
+          },
+          "correctionBaseNumber" : {
+            "type" : "string",
+            "description" : "Номер предписания налогового органа (тег 1179)",
+            "example" : "MOS-4516"
+          },
+          "taxationType" : {
+            "$ref" : "#/components/schemas/TaxationTypeEnum"
+          },
+          "paymentsPlace" : {
+            "type" : "string",
+            "description" : "Место проведения расчетов",
+            "default" : "Не передаётся в ККТ",
+            "example" : "Улица свободы, 15"
+          },
+          "machineNumber" : {
+            "type" : "string",
+            "description" : "Номер автомата",
+            "default" : "Не передаётся в ККТ",
+            "example" : "NO1524"
+          },
+          "operator" : {
+            "$ref" : "#/components/schemas/Operator"
+          },
+          "clientInfo" : {
+            "$ref" : "#/components/schemas/Client"
+          },
+          "companyInfo" : {
+            "$ref" : "#/components/schemas/Company"
+          },
+          "agentInfo" : {
+            "$ref" : "#/components/schemas/AgentInfo"
+          },
+          "supplierInfo" : {
+            "$ref" : "#/components/schemas/SupplierInfo"
+          },
+          "items" : {
+            "minItems" : 1,
+            "type" : "array",
+            "description" : "Элементы чека",
+            "items" : {
+              "anyOf" : [ {
+                "$ref" : "#/components/schemas/PositionItem"
+              }, {
+                "$ref" : "#/components/schemas/TextItem"
+              }, {
+                "$ref" : "#/components/schemas/BarcodeItem"
+              }, {
+                "$ref" : "#/components/schemas/PictureFromMemoryItem"
+              }, {
+                "$ref" : "#/components/schemas/PixelsItem"
+              }, {
+                "$ref" : "#/components/schemas/AdditionalAttributeItem"
+              }, {
+                "$ref" : "#/components/schemas/UserAttributeItem"
+              } ]
+            }
+          },
+          "payments" : {
+            "type" : "array",
+            "description" : "Оплаты",
+            "items" : {
+              "$ref" : "#/components/schemas/Payment"
+            }
+          },
+          "taxes" : {
+            "type" : "array",
+            "description" : "Налоги на чек",
+            "items" : {
+              "$ref" : "#/components/schemas/ReceiptTax"
+            }
+          },
+          "total" : {
+            "type" : "number",
+            "description" : "Итог чека. Может отличаться от суммы позиций на значение, равное копейкам чека.\nЕсли не задан - высчитывается автоматически из суммы всех позиций\n",
+            "format" : "double",
+            "example" : 100
+          },
+          "preItems" : {
+            "$ref" : "#/components/schemas/PreItems"
+          },
+          "postItems" : {
+            "$ref" : "#/components/schemas/PostItems"
+          }
+        },
+        "required" : [ "type", "items", "payments", "total", "correctionType", "correctionBaseDate", "correctionBaseNumber" ]
+      },
+      "PreItems" : {
+        "type" : "array",
+        "description" : "Элементы для печати до документа",
+        "items" : {
+          "anyOf" : [ {
+            "$ref" : "#/components/schemas/TextItem"
+          }, {
+            "$ref" : "#/components/schemas/BarcodeItem"
+          }, {
+            "$ref" : "#/components/schemas/PictureFromMemoryItem"
+          }, {
+            "$ref" : "#/components/schemas/PixelsItem"
+          } ]
+        }
+      },
+      "PostItems" : {
+        "type" : "array",
+        "description" : "Элементы для печати после документа",
+        "items" : {
+          "anyOf" : [ {
+            "$ref" : "#/components/schemas/TextItem"
+          }, {
+            "$ref" : "#/components/schemas/BarcodeItem"
+          }, {
+            "$ref" : "#/components/schemas/PictureFromMemoryItem"
+          }, {
+            "$ref" : "#/components/schemas/PixelsItem"
+          } ]
+        }
+      },
+      "PositionItem" : {
+        "type" : "object",
+        "description" : "Позиция фискального чека",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип элемента документа",
+            "enum" : [ "position" ]
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Наименование",
+            "example" : "Молоко"
+          },
+          "price" : {
+            "type" : "number",
+            "description" : "Цена за единицу товара",
+            "format" : "double",
+            "example" : 50.0
+          },
+          "quantity" : {
+            "type" : "number",
+            "description" : "Количество товара",
+            "format" : "double",
+            "example" : 2
+          },
+          "amount" : {
+            "type" : "number",
+            "description" : "Сумма позиции",
+            "format" : "double",
+            "example" : 100.0
+          },
+          "infoDiscountSum" : {
+            "type" : "number",
+            "description" : "Информационная скидка. Не влияет на сумму позиции, остальные параметры должны передаваться с учетом её.\n",
+            "format" : "double",
+            "default" : "0, не печатается",
+            "example" : 10
+          },
+          "tax" : {
+            "$ref" : "#/components/schemas/PositionTax"
+          },
+          "piece" : {
+            "type" : "boolean",
+            "description" : "Признак штучного товара. В количестве не будут напечатаны нули в дробной части",
+            "default" : false,
+            "example" : true
+          },
+          "paymentMethod" : {
+            "type" : "string",
+            "description" : "Признак способа рaсчета (тег 1214):\n- fullPrepayment - предоплата 100%\n- prepayment - предоплата\n- advance - аванс\n- fullPayment - полный расчет\n- partialPayment - частичный расчет и кредит\n- credit - передача в кредит\n- creditPayment - оплата кредита\n",
+            "default" : "fullPrepayment",
+            "enum" : [ "fullPrepayment", "prepayment", "advance", "fullPayment", "partialPayment", "credit", "creditPayment" ]
+          },
+          "paymentObject" : {
+            "type" : "string",
+            "description" : "- commodity или 1 - товар\n- excise или 2 - подакцизный товар\n- job или 3 - работа\n- service или 4 - услуга\n- gamblingBet или 5 - ставка азартной игры\n- gamblingPrize или 6 - выигрыш азартной игры\n- lottery или 7 - лотерейный билет\n- lotteryPrize или 8 - выигрыш лотереи\n- intellectualActivity или 9 - предоставление результатов интерелектуальной деятельности\n- payment или 10 - платеж\n- agentCommission или 11 - агентское вознаграждение\n- composite (устаревшее) или pay или 12 - выплата\n- another или 13 - иной предмет расчета\n- proprietaryLaw или 14 - имущественное право\n- nonOperatingIncome или 15 - внереализационный доход\n- insuranceContributions (устаревшее) или otherContributions или 16 - иные платежи и взносы\n- merchantTax или 17 - торговый сбор\n- resortFee или 18 - курортный сбор\n- deposit или 19 - залог\n- consumption или 20 - расход\n- soleProprietorCPIContributions или 21 - взносы на ОПС ИП\n- cpiContributions или 22 - взносы на ОПС\n- soleProprietorCMIContributions или 23 - взносы на ОМС ИП\n- cmiContributions или 24 - взносы на ОМС\n- csiContributions или 25 - взносы на ОСС\n- casinoPayment или 26 - платеж казино\n",
+            "default" : "commodity",
+            "enum" : [ "commodity", "excise", "job", "service", "gamblingBet", "gamblingPrize", "lottery", "lotteryPrize", "intellectualActivity", "payment", "agentCommission", "composite", "another", "proprietaryLaw", "nonOperatingIncome", "insuranceContributions", "merchantTax", "resortFee", "deposit", "consumption", "soleProprietorCPIContributions", "cpiContributions", "soleProprietorCMIContributions", "cmiContributions", "csiContributions", "casinoPayment" ]
+          },
+          "department" : {
+            "type" : "integer",
+            "description" : "Отдел / секция",
+            "default" : "1, не печатается"
+          },
+          "measurementUnit" : {
+            "type" : "string",
+            "description" : "Единицы измерения количества товара (тег 1197)",
+            "default" : "Не передается в ККТ",
+            "example" : "шт"
+          },
+          "nomenclatureCode" : {
+            "type" : "object",
+            "description" : "Код товара (тег 1162)\n\nЗначение кода товара может быть передано как строкой, так и объектом.\n\nЕсли передается строка, то её значение интерпретируется как base64-закодированное значение реквизита\n1162. В этом случае пользователь должен сам составить значение реквизита, закодировать его в base64\nи передать драйверу.\n\nПри передаче значения кода товара как объекта, драйвер самостоятельно,\nосновываясь на переданных значениях, составляет реквизит 1162.\n",
+            "additionalProperties" : {
+              "oneOf" : [ {
+                "type" : "string",
+                "format" : "base64"
+              }, {
+                "type" : "object",
+                "oneOf" : [ {
+                  "$ref" : "#/components/schemas/FursCommodity"
+                }, {
+                  "$ref" : "#/components/schemas/MedicinesCommodity"
+                }, {
+                  "$ref" : "#/components/schemas/TobaccoCommodity"
+                }, {
+                  "$ref" : "#/components/schemas/ShoesCommodity"
+                } ]
+              } ]
+            },
+            "default" : "Не передается в ККТ",
+            "example" : "RE0ELx+WgXhKZ1hKNS5UMTEyMDAw"
+          },
+          "markingCode" : {
+            "$ref" : "#/components/schemas/MarkingCode"
+          },
+          "agentInfo" : {
+            "$ref" : "#/components/schemas/AgentInfo"
+          },
+          "supplierInfo" : {
+            "$ref" : "#/components/schemas/SupplierInfo"
+          },
+          "additionalAttribute" : {
+            "type" : "string",
+            "description" : "Дополнительный реквизит предмета расчета (тег 1191)",
+            "default" : "Не передается в ККТ",
+            "example" : "ID:iASDv3w45"
+          },
+          "additionalAttributePrint" : {
+            "type" : "boolean",
+            "description" : "Печатать или не печатать дополнительный реквизит предмета расчета",
+            "default" : true,
+            "example" : true
+          },
+          "exciseSum" : {
+            "type" : "number",
+            "description" : "Значение акциза (тег 1229)",
+            "format" : "double",
+            "default" : "Не передается в ККТ",
+            "example" : 0.0
+          },
+          "countryCode" : {
+            "type" : "string",
+            "description" : "Код страны происхождения (тег 1230)",
+            "default" : "Не передается в ККТ",
+            "example" : "ru"
+          },
+          "customsDeclaration" : {
+            "type" : "string",
+            "description" : "Номер таможенной декларации (тег 1231)",
+            "default" : "Не передается в ККТ",
+            "example" : "10714040/140917/0090376"
+          },
+          "userParam3" : {
+            "type" : "string",
+            "description" : "Значение пользовательского параметра 3 (для универсальных счетчиков)",
+            "default" : "Не передается в ККТ",
+            "example" : 1
+          },
+          "userParam4" : {
+            "type" : "string",
+            "description" : "Значение пользовательского параметра 4 (для универсальных счетчиков)",
+            "default" : "Не передается в ККТ",
+            "example" : 2
+          },
+          "userParam5" : {
+            "type" : "string",
+            "description" : "Значение пользовательского параметра 5 (для универсальных счетчиков)",
+            "default" : "Не передается в ККТ",
+            "example" : 3
+          },
+          "userParam6" : {
+            "type" : "string",
+            "description" : "Значение пользовательского параметра 6 (для универсальных счетчиков)",
+            "default" : "Не передается в ККТ",
+            "example" : 4
+          }
+        },
+        "required" : [ "amount", "name", "price", "quantity", "tax", "type" ]
+      },
+      "TextItem" : {
+        "type" : "object",
+        "description" : "Нефискальный текст",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип элемента документа",
+            "enum" : [ "text" ]
+          },
+          "text" : {
+            "type" : "string",
+            "description" : "Текст",
+            "example" : "============================="
+          },
+          "alignment" : {
+            "$ref" : "#/components/schemas/AlignmentEnum"
+          },
+          "wrap" : {
+            "$ref" : "#/components/schemas/TextWrapEnum"
+          },
+          "font" : {
+            "type" : "integer",
+            "description" : "Шрифт",
+            "default" : 0,
+            "example" : 1
+          },
+          "doubleWidth" : {
+            "type" : "boolean",
+            "description" : "Текст двойной ширины",
+            "default" : false,
+            "example" : true
+          },
+          "doubleHeight" : {
+            "type" : "boolean",
+            "description" : "Текст двойной высоты",
+            "default" : false,
+            "example" : false
+          }
+        },
+        "required" : [ "text", "type" ]
+      },
+      "BarcodeItem" : {
+        "type" : "object",
+        "description" : "Штрихкод",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип элемента документа",
+            "enum" : [ "barcode" ]
+          },
+          "barcode" : {
+            "type" : "string",
+            "description" : "Данные штрихкода",
+            "example" : 90311017
+          },
+          "barcodeType" : {
+            "type" : "string",
+            "description" : "Тип штрихкода",
+            "enum" : [ "EAN8", "EAN13", "UPCA", "UPCE", "CODE39", "CODE93", "CODE128", "CODABAR", "ITF", "ITF14", "GS1_128", "PDF417", "QR", "CODE39_EXTENDED" ],
+            "example" : "EAN8"
+          },
+          "alignment" : {
+            "$ref" : "#/components/schemas/AlignmentEnum"
+          },
+          "scale" : {
+            "type" : "integer",
+            "description" : "Коэффициент увеличения",
+            "default" : 1
+          },
+          "height" : {
+            "type" : "integer",
+            "description" : "Высота (только для одномерных ШК)",
+            "default" : 30
+          },
+          "printText" : {
+            "type" : "boolean",
+            "description" : "Печатать значение ШК (только для одномерных ШК)",
+            "default" : true
+          },
+          "overlay" : {
+            "type" : "array",
+            "description" : "Текст для печати рядом с ШК",
+            "items" : {
+              "anyOf" : [ {
+                "$ref" : "#/components/schemas/TextItem"
+              } ]
+            },
+            "example" : [ ]
+          }
+        },
+        "required" : [ "type", "barcode", "barcodeType" ]
+      },
+      "PixelsItem" : {
+        "type" : "object",
+        "description" : "Картинка (массив пикселей)",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип элемента документа",
+            "enum" : [ "pixels" ]
+          },
+          "pixels" : {
+            "type" : "string",
+            "description" : "Массив пикселей. Каждый байт кодирует один пиксель (0 - белый, другие значения - черный). Затем массив кодируется в base64",
+            "format" : "byte",
+            "example" : "/////////wAAAAD//wAAAAD/////////"
+          },
+          "width" : {
+            "type" : "integer",
+            "description" : "Ширина картинки (в пикселях)",
+            "example" : 6
+          },
+          "scale" : {
+            "type" : "integer",
+            "description" : "Процент увеличения",
+            "default" : 100,
+            "example" : 1000
+          },
+          "alignment" : {
+            "$ref" : "#/components/schemas/AlignmentEnum"
+          }
+        },
+        "required" : [ "pixels", "width" ]
+      },
+      "PictureFromMemoryItem" : {
+        "type" : "object",
+        "description" : "Картинка из памяти ККТ",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип элемента документа",
+            "enum" : [ "pictureFromMemory" ]
+          },
+          "pictureNumber" : {
+            "type" : "integer",
+            "description" : "Номер картинки",
+            "example" : 1
+          },
+          "alignment" : {
+            "$ref" : "#/components/schemas/AlignmentEnum"
+          }
+        },
+        "required" : [ "pictureNumber" ]
+      },
+      "UserAttributeItem" : {
+        "type" : "object",
+        "description" : "Дополнительный реквизит пользователя",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип элемента документа",
+            "enum" : [ "userAttribute" ]
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Наименование дополнительного реквизита пользователя",
+            "example" : "Номер документа в учетной системе"
+          },
+          "value" : {
+            "type" : "string",
+            "description" : "Значение дополнительного реквизита пользователя",
+            "example" : 1494325660
+          },
+          "print" : {
+            "type" : "boolean",
+            "description" : "Печатать или не печатать реквизит на чековой ленте",
+            "default" : true
+          }
+        },
+        "required" : [ "name", "value" ]
+      },
+      "AdditionalAttributeItem" : {
+        "type" : "object",
+        "description" : "Дополнительный реквизит чека (БСО)",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип элемента документа",
+            "enum" : [ "additionalAttribute" ]
+          },
+          "value" : {
+            "type" : "string",
+            "description" : "Значение дополнительного реквизита чека (БСО)",
+            "example" : 1494325660
+          },
+          "print" : {
+            "type" : "boolean",
+            "description" : "Печатать или не печатать реквизит на чековой ленте",
+            "default" : true
+          }
+        },
+        "required" : [ "value" ]
+      },
+      "Operator" : {
+        "type" : "object",
+        "description" : "Оператор (кассир)",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Фамилия и должность оператора",
+            "example" : "Иванов И.И."
+          },
+          "vatin" : {
+            "type" : "string",
+            "description" : "ИНН оператора",
+            "example" : 956839506500
+          }
+        }
+      },
+      "Payment" : {
+        "type" : "object",
+        "description" : "Расчет по чеку",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Способ расчета:\n- cash или 0 - наличными\n- electronicaly или 1 - безналичными\n- prepaid или 2 - предварительная оплата (аванс)\n- credir или 3 - последующая оплата (кредит)\n- other или 4 - иная форма оплаты (встречное предоставление)\n- 5-9 - пользовательский тип оплаты\n",
+            "enum" : [ "cash", "electronicaly", "prepaid", "credir", "other" ],
+            "example" : "cash"
+          },
+          "sum" : {
+            "type" : "number",
+            "description" : "Сумма расчета",
+            "format" : "double",
+            "example" : 1000.0
+          },
+          "printItems" : {
+            "type" : "array",
+            "description" : "Текст для печати после оплаты.\nДля использования должен быть специальным образом настроен шаблон чека.\n",
+            "items" : {
+              "anyOf" : [ {
+                "$ref" : "#/components/schemas/TextItem"
+              } ]
+            },
+            "default" : "Не печатается",
+            "example" : [ {
+              "type" : "text",
+              "text" : "в т.ч. плат. карта онлайн = 1000.00 руб"
+            } ]
+          }
+        },
+        "required" : [ "sum", "type" ]
+      },
+      "PositionTax" : {
+        "type" : "object",
+        "description" : "Налог на позицию",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Налоговая ставка:\n- none - без НДС\n- vat0 - НДС 0%\n- vat10 - НДС 10%\n- vat110 - НДС 10/110\n- vat18 - НДС 18%\n- vat118 - НДС 18/118%\n- vat20 - НДС 20%\n- vat120 - НДС 20/120%\n",
+            "enum" : [ "none", "vat0", "vat10", "vat110", "vat18", "vat118", "vat20", "vat120" ],
+            "example" : "vat20"
+          },
+          "sum" : {
+            "type" : "number",
+            "description" : "Сумма налога",
+            "format" : "double",
+            "default" : "Не передаётся в ККТ",
+            "example" : 10.0
+          }
+        },
+        "required" : [ "type" ]
+      },
+      "ReceiptTax" : {
+        "type" : "object",
+        "description" : "Налог на чек",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Налоговая ставка:\n- none - без НДС\n- vat0 - НДС 0%\n- vat10 - НДС 10%\n- vat110 - НДС 10/110\n- vat18 - НДС 18%\n- vat118 - НДС 18/118%\n- vat20 - НДС 20%\n- vat120 - НДС 20/120%\n",
+            "enum" : [ "none", "vat0", "vat10", "vat110", "vat18", "vat118", "vat20", "vat120" ],
+            "example" : "vat20"
+          },
+          "sum" : {
+            "type" : "number",
+            "description" : "Сумма налога",
+            "format" : "double",
+            "example" : 10.0
+          }
+        },
+        "required" : [ "type", "sum" ]
+      },
+      "Client" : {
+        "type" : "object",
+        "description" : "Информация о покупателе",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Наименование покупателя",
+            "default" : "Не передаётся в ККТ",
+            "example" : "ООО Моя Оборона"
+          },
+          "vatin" : {
+            "type" : "string",
+            "description" : "ИНН покупателя",
+            "default" : "Не передаётся в ККТ",
+            "example" : 3664069397
+          },
+          "emailOrPhone" : {
+            "type" : "string",
+            "description" : "E-mail или номер телефона получателя электронной формы чека",
+            "default" : "Не передаётся в ККТ",
+            "example" : 71234567890
+          }
+        }
+      },
+      "Company" : {
+        "type" : "object",
+        "description" : "Информация о продавце",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "description" : "E-mail отправителя электронной формы чека",
+            "default" : "Не передаётся в ККТ",
+            "example" : "company@email.com"
+          }
+        }
+      },
+      "AgentInfo" : {
+        "type" : "object",
+        "description" : "Данные агента",
+        "properties" : {
+          "agents" : {
+            "minItems" : 0,
+            "type" : "array",
+            "description" : "Признаки агента",
+            "items" : {
+              "$ref" : "#/components/schemas/AgentTypeEnum"
+            },
+            "default" : "Не передаётся в ККТ",
+            "example" : [ "commissionAgent", "another" ]
+          },
+          "payingAgent" : {
+            "$ref" : "#/components/schemas/PayingAgent"
+          },
+          "receivePaymentsOperator" : {
+            "$ref" : "#/components/schemas/ReceivePaymentsOperator"
+          },
+          "moneyTransferOperator" : {
+            "$ref" : "#/components/schemas/MoneyTransferOperator"
+          }
+        }
+      },
+      "PayingAgent" : {
+        "type" : "object",
+        "description" : "Данные платежного агента",
+        "properties" : {
+          "operation" : {
+            "type" : "string",
+            "description" : "Операция платежного агента",
+            "default" : "Не передаётся в ККТ",
+            "example" : "Перевод на счёт"
+          },
+          "phones" : {
+            "minItems" : 1,
+            "type" : "array",
+            "description" : "Телефоны платежного агента",
+            "items" : {
+              "type" : "string"
+            },
+            "default" : "Не передаётся в ККТ",
+            "example" : [ 71234567890, 70986754321 ]
+          }
+        }
+      },
+      "ReceivePaymentsOperator" : {
+        "type" : "object",
+        "description" : "Данные оператора по приему платежей",
+        "properties" : {
+          "phones" : {
+            "minItems" : 1,
+            "type" : "array",
+            "description" : "Телефоны оператора по приему платежей",
+            "items" : {
+              "type" : "string"
+            },
+            "default" : "Не передаётся в ККТ",
+            "example" : [ 71234567890, 70986754321 ]
+          }
+        }
+      },
+      "MoneyTransferOperator" : {
+        "type" : "object",
+        "description" : "Данные оператора перевода",
+        "properties" : {
+          "phones" : {
+            "minItems" : 1,
+            "type" : "array",
+            "description" : "Телефоны оператора перевода",
+            "items" : {
+              "type" : "string"
+            },
+            "default" : "Не передаётся в ККТ",
+            "example" : [ 71234567890, 70986754321 ]
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Наименование оператора перевода",
+            "default" : "Не передаётся в ККТ",
+            "example" : "Оператор ОП"
+          },
+          "vatin" : {
+            "type" : "string",
+            "description" : "ИНН оператора перевода",
+            "default" : "Не передаётся в ККТ",
+            "example" : 3664069397
+          },
+          "address" : {
+            "type" : "string",
+            "description" : "Адрес оператора перевода",
+            "default" : "Не передаётся в ККТ",
+            "example" : "Улица Свободы, 16"
+          }
+        }
+      },
+      "SupplierInfo" : {
+        "type" : "object",
+        "description" : "Данные поставщика",
+        "properties" : {
+          "phones" : {
+            "minItems" : 1,
+            "type" : "array",
+            "description" : "Телефоны поставщика",
+            "items" : {
+              "type" : "string"
+            },
+            "default" : "Не передаётся в ККТ",
+            "example" : [ 71234567890, 70986754321 ]
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Наименование поставщика",
+            "default" : "Не передаётся в ККТ",
+            "example" : "Поставщик поставок"
+          },
+          "vatin" : {
+            "type" : "string",
+            "description" : "ИНН поставщика",
+            "example" : 3664069397
+          }
+        }
+      },
+      "NonFiscalDocument" : {
+        "type" : "object",
+        "description" : "Нефискальный документ",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа",
+            "enum" : [ "nonFiscal" ]
+          },
+          "items" : {
+            "minItems" : 1,
+            "type" : "array",
+            "description" : "Элементы документа",
+            "items" : {
+              "anyOf" : [ {
+                "$ref" : "#/components/schemas/TextItem"
+              }, {
+                "$ref" : "#/components/schemas/BarcodeItem"
+              } ]
+            }
+          }
+        },
+        "required" : [ "items", "type" ]
+      },
+      "OpenShift" : {
+        "type" : "object",
+        "description" : "Открытие смены",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа",
+            "enum" : [ "openShift" ]
+          },
+          "electronically" : {
+            "type" : "boolean",
+            "description" : "Признак электронного отчета. Если ККТ не поддерживает такой функционал, параметр будет проигнорирован и отчет будет напечатан.\n",
+            "default" : false
+          },
+          "operator" : {
+            "$ref" : "#/components/schemas/Operator"
+          },
+          "preItems" : {
+            "$ref" : "#/components/schemas/PreItems"
+          },
+          "postItems" : {
+            "$ref" : "#/components/schemas/PostItems"
+          }
+        },
+        "required" : [ "type" ]
+      },
+      "CloseShift" : {
+        "type" : "object",
+        "description" : "Закрытие смены",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа",
+            "enum" : [ "closeShift" ]
+          },
+          "electronically" : {
+            "type" : "boolean",
+            "description" : "Признак электронного отчета. Если ККТ не поддерживает такой функционал, параметр будет проигнорирован и отчет будет напечатан.\n",
+            "default" : false
+          },
+          "operator" : {
+            "$ref" : "#/components/schemas/Operator"
+          },
+          "preItems" : {
+            "$ref" : "#/components/schemas/PreItems"
+          },
+          "postItems" : {
+            "$ref" : "#/components/schemas/PostItems"
+          }
+        },
+        "required" : [ "type" ]
+      },
+      "ReportX" : {
+        "type" : "object",
+        "description" : "Печать X-отчета",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа",
+            "enum" : [ "reportX" ]
+          },
+          "operator" : {
+            "$ref" : "#/components/schemas/Operator"
+          },
+          "preItems" : {
+            "$ref" : "#/components/schemas/PreItems"
+          },
+          "postItems" : {
+            "$ref" : "#/components/schemas/PostItems"
+          }
+        },
+        "required" : [ "type" ]
+      },
+      "CashMovement" : {
+        "type" : "object",
+        "description" : "Внесение/выплата",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа:\n- cashIn - внесение\n- cashOut - выплата\n",
+            "enum" : [ "cashIn", "cashOut" ]
+          },
+          "caseSum" : {
+            "type" : "number",
+            "description" : "Сумма",
+            "format" : "double",
+            "example" : 1000.0
+          },
+          "operator" : {
+            "$ref" : "#/components/schemas/Operator"
+          },
+          "preItems" : {
+            "$ref" : "#/components/schemas/PreItems"
+          },
+          "postItems" : {
+            "$ref" : "#/components/schemas/PostItems"
+          }
+        },
+        "required" : [ "cashSum", "type" ]
+      },
+      "ReportOfdExchangeStatus" : {
+        "type" : "object",
+        "description" : "Отчет о состоянии расчетов",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа",
+            "enum" : [ "reportOfdExchangeStatus" ]
+          },
+          "operator" : {
+            "$ref" : "#/components/schemas/Operator"
+          },
+          "preItems" : {
+            "$ref" : "#/components/schemas/PreItems"
+          },
+          "postItems" : {
+            "$ref" : "#/components/schemas/PostItems"
+          }
+        },
+        "required" : [ "type" ]
+      },
+      "PrintFnDocument" : {
+        "type" : "object",
+        "description" : "Печать документа из ФН по номеру",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа",
+            "enum" : [ "printFnDocument" ]
+          },
+          "fiscalDocumentNumber" : {
+            "type" : "integer",
+            "description" : "Номер документа",
+            "example" : 1542
+          }
+        },
+        "required" : [ "fiscalDocumentNumber", "type" ]
+      },
+      "PrintLastReceiptCopy" : {
+        "type" : "object",
+        "description" : "Печать копии последнего чека",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа",
+            "enum" : [ "printLastReceiptCopy" ]
+          }
+        },
+        "required" : [ "type" ]
+      },
+      "ReceiptResultFiscalParams" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/BaseResultFiscalParams"
+        }, {
+          "type" : "object",
+          "description" : "Фискальные параметры чека",
+          "properties" : {
+            "total" : {
+              "type" : "number",
+              "description" : "Итог чека",
+              "format" : "double",
+              "example" : 390.75
+            },
+            "fiscalReceiptNumber" : {
+              "type" : "integer",
+              "description" : "Номер чека в смене",
+              "example" : 1
+            }
+          }
+        } ]
+      },
+      "OpenShiftResultFiscalParams" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/BaseResultFiscalParams"
+        }, {
+          "type" : "object",
+          "description" : "Фискальные параметры отчета об открытии смены"
+        } ]
+      },
+      "CloseShiftResultFiscalParams" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/BaseResultFiscalParams"
+        }, {
+          "type" : "object",
+          "description" : "Фискальные параметры отчета о закрытии смены",
+          "properties" : {
+            "receiptsCount" : {
+              "type" : "integer",
+              "description" : "Количество чеков за смену",
+              "example" : 3
+            }
+          }
+        } ]
+      },
+      "ReportOfdExchangeStatusResultFiscalParams" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/BaseResultFiscalParams"
+        }, {
+          "type" : "object",
+          "description" : "Фискальные параметры отчета о состоянии расчётов"
+        } ]
+      },
+      "RegistrationResultFiscalParams" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/BaseResultFiscalParams"
+        }, {
+          "type" : "object",
+          "description" : "Фискальные параметры отчета о регистрации"
+        } ]
+      },
+      "ChangeRegistrationParametersResultFiscalParams" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/BaseResultFiscalParams"
+        }, {
+          "type" : "object",
+          "description" : "Фискальные параметры отчета о перерегистрации"
+        } ]
+      },
+      "CloseArchiveResultFiscalParams" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/BaseResultFiscalParams"
+        }, {
+          "type" : "object",
+          "description" : "Фискальные параметры отчета о закрытии архива ФН"
+        } ]
+      },
+      "BaseResultFiscalParams" : {
+        "type" : "object",
+        "description" : "Фискальные параметры документа",
+        "properties" : {
+          "fiscalDocumentNumber" : {
+            "type" : "integer",
+            "description" : "Номер ФД документа",
+            "example" : 157
+          },
+          "fiscalDocumentSign" : {
+            "type" : "string",
+            "description" : "ФПД документа",
+            "example" : 1230933772
+          },
+          "fiscalDocumentDateTime" : {
+            "type" : "string",
+            "description" : "Дата и время документа",
+            "format" : "date-time",
+            "example" : "2018-03-06T13:52:00+03:00"
+          },
+          "shiftNumber" : {
+            "type" : "integer",
+            "description" : "Номер смены",
+            "example" : 28
+          },
+          "fnNumber" : {
+            "type" : "string",
+            "description" : "Номер ФН",
+            "example" : 9999078900000961
+          },
+          "registrationNumber" : {
+            "type" : "string",
+            "description" : "РНМ ККТ",
+            "example" : 1035160
+          },
+          "fnsUrl" : {
+            "type" : "string",
+            "description" : "Адрес сайта ФНС",
+            "example" : "nalog.ru"
+          }
+        }
+      },
+      "FiscalDocumentWarnings" : {
+        "type" : "object",
+        "description" : "Предупреждения, возникающие при формировании фискальных документов",
+        "properties" : {
+          "notPrinted" : {
+            "type" : "boolean",
+            "description" : "Документ закрыт в ФН, но не допечатан. Рекомендуется вывести\nпользователю сообщение о сбое печати и попросить устранить неисправность\n(самый стандартный случай - закончилась бумага).\n"
+          },
+          "nonFiscal" : {
+            "type" : "boolean",
+            "description" : "Признак формирования документа на нефискальной ККТ\n"
+          },
+          "recovered" : {
+            "type" : "boolean",
+            "description" : "Ответ был сформирован в результате восстановления блокировки очереди\nи его данные могут немного отличаться от тех, которые могли бы быть\nполучены при отсутствии сбоя. В большей степени это касается результата\nформирования отчета о состоянии расчетов **errors** и **status**.\n"
+          }
+        }
+      },
+      "ReceiptResult" : {
+        "type" : "object",
+        "description" : "Результат формирования фискального чека или чека коррекции",
+        "properties" : {
+          "fiscalParams" : {
+            "$ref" : "#/components/schemas/ReceiptResultFiscalParams"
+          },
+          "warnings" : {
+            "$ref" : "#/components/schemas/FiscalDocumentWarnings"
+          }
+        }
+      },
+      "OpenShiftResult" : {
+        "type" : "object",
+        "description" : "Результат формирования отчета об открытии смены",
+        "properties" : {
+          "fiscalParams" : {
+            "$ref" : "#/components/schemas/OpenShiftResultFiscalParams"
+          },
+          "warnings" : {
+            "$ref" : "#/components/schemas/FiscalDocumentWarnings"
+          }
+        }
+      },
+      "CloseShiftResult" : {
+        "type" : "object",
+        "description" : "Результат формирования отчета о закрытии смены",
+        "properties" : {
+          "fiscalParams" : {
+            "$ref" : "#/components/schemas/CloseShiftResultFiscalParams"
+          },
+          "warnings" : {
+            "$ref" : "#/components/schemas/FiscalDocumentWarnings"
+          }
+        }
+      },
+      "ReportOfdExchangeStatusResult" : {
+        "type" : "object",
+        "description" : "Результат формирования отчета о состоянии расчетов",
+        "properties" : {
+          "fiscalParams" : {
+            "$ref" : "#/components/schemas/ReportOfdExchangeStatusResultFiscalParams"
+          },
+          "errors" : {
+            "$ref" : "#/components/schemas/OfdExchangeErrors"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/OfdExchangeStatus"
+          },
+          "warnings" : {
+            "$ref" : "#/components/schemas/FiscalDocumentWarnings"
+          }
+        }
+      },
+      "RegistrationResult" : {
+        "type" : "object",
+        "description" : "Результат формирования отчета о регистрации",
+        "properties" : {
+          "fiscalParams" : {
+            "$ref" : "#/components/schemas/RegistrationResultFiscalParams"
+          },
+          "warnings" : {
+            "$ref" : "#/components/schemas/FiscalDocumentWarnings"
+          }
+        }
+      },
+      "ChangeRegistrationParametersResult" : {
+        "type" : "object",
+        "description" : "Результат формирования отчета о перерегистрации",
+        "properties" : {
+          "fiscalParams" : {
+            "$ref" : "#/components/schemas/ChangeRegistrationParametersResultFiscalParams"
+          },
+          "warnings" : {
+            "$ref" : "#/components/schemas/FiscalDocumentWarnings"
+          }
+        }
+      },
+      "CloseArchiveResult" : {
+        "type" : "object",
+        "description" : "Результат формирования отчета о закрытии архива ФН",
+        "properties" : {
+          "fiscalParams" : {
+            "$ref" : "#/components/schemas/CloseArchiveResultFiscalParams"
+          },
+          "warnings" : {
+            "$ref" : "#/components/schemas/FiscalDocumentWarnings"
+          }
+        }
+      },
+      "CashMovementResult" : {
+        "type" : "object",
+        "description" : "Результат внесения/выплаты",
+        "properties" : {
+          "counters" : {
+            "$ref" : "#/components/schemas/CashMovementCounters"
+          }
+        }
+      },
+      "ReceiptsTotals" : {
+        "type" : "object",
+        "description" : "Итоги по чекам",
+        "properties" : {
+          "sell" : {
+            "$ref" : "#/components/schemas/SellTotals"
+          },
+          "buy" : {
+            "$ref" : "#/components/schemas/BuyTotals"
+          },
+          "sellReturn" : {
+            "$ref" : "#/components/schemas/SellReturnTotals"
+          },
+          "buyReturn" : {
+            "$ref" : "#/components/schemas/BuyReturnTotals"
+          }
+        }
+      },
+      "OfdExchangeErrorsFn" : {
+        "type" : "object",
+        "description" : "Ошибка ФН",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "description" : "Код ошибки ФН",
+            "example" : 0
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Описание ошибки ФН",
+            "example" : "Ошибок нет"
+          }
+        }
+      },
+      "OfdExchangeErrorsOfd" : {
+        "type" : "object",
+        "description" : "Ошибка ОФД",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "description" : "Код ошибки ОФД",
+            "example" : 0
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Описание ошибки ОФД",
+            "example" : "Ошибок нет"
+          }
+        }
+      },
+      "OfdExchangeErrorsNetwork" : {
+        "type" : "object",
+        "description" : "Ошибка сети",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "description" : "Код ошибки сети",
+            "example" : 1
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Описание ошибки сети",
+            "example" : "Отсутствует физический канал связи"
+          }
+        }
+      },
+      "CashMovementCounters" : {
+        "type" : "object",
+        "description" : "Счетчики наличности после операции",
+        "properties" : {
+          "cashSum" : {
+            "type" : "number",
+            "description" : "Сумма наличных в денежном ящике",
+            "format" : "double",
+            "example" : 1000
+          }
+        }
+      },
+      "ServerInfo" : {
+        "type" : "object",
+        "description" : "Информация о WEB-сервере",
+        "properties" : {
+          "serverVersion" : {
+            "type" : "string",
+            "description" : "Версия WEB-сервера",
+            "example" : "10.7.0.0"
+          },
+          "driverVersion" : {
+            "type" : "string",
+            "description" : "Версия подключенного драйвера",
+            "example" : "10.7.0.0"
+          },
+          "os" : {
+            "type" : "string",
+            "description" : "Тип ОС, на которой запущен WEB-сервер",
+            "enum" : [ "linux", "windows", "macos" ],
+            "example" : "windows"
+          },
+          "currentDateTime" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Текущее время ПК",
+            "example" : "2017-07-25T13:16:00+03:00"
+          }
+        }
+      },
+      "GlobalSettings" : {
+        "type" : "object",
+        "description" : "Настройки WEB-сервера",
+        "properties" : {
+          "scriptsPath" : {
+            "type" : "string",
+            "description" : "Путь к каталогу со скриптами ДТО10",
+            "maxLength" : 256
+          },
+          "invertCashDrawerStatus" : {
+            "type" : "boolean",
+            "description" : "Инвертировать состояние денежного ящика",
+            "default" : false
+          },
+          "additionalHeaderLines" : {
+            "type" : "string",
+            "description" : "Дополнительные строки заголовка документа"
+          },
+          "additionalFooterLines" : {
+            "type" : "string",
+            "description" : "Дополнительные строки подвала документа"
+          },
+          "blockQueueOnPrintErrors" : {
+            "type" : "boolean",
+            "description" : "Блокировать очередь при окончании бумаги",
+            "default" : false
+          },
+          "deleteRequestsAfter" : {
+            "type" : "integer",
+            "description" : "Время (в минутах), после которого завершенные запросы и их результаты удаляются",
+            "default" : 43200,
+            "minimum" : 0,
+            "maximum" : 4294967295
+          }
+        },
+        "example" : {
+          "scriptsPath" : "",
+          "invertCashDrawerStatus" : false,
+          "additionalHeaderLines" : "",
+          "additionalFooterLines" : "",
+          "blockQueueOnPrintErrors" : false,
+          "deleteRequestsAfter" : 10000
+        }
+      },
+      "OtherDeviceSettings" : {
+        "type" : "object",
+        "description" : "Прочие настройки ККТ",
+        "properties" : {
+          "useGlobalScriptsSettings" : {
+            "type" : "boolean",
+            "description" : "Использовать путь к каталогу со скриптами ДТО10 из настроек WEB-сервера"
+          },
+          "scriptsPath" : {
+            "type" : "string",
+            "description" : "Путь к каталогу со скриптами ДТО10",
+            "maxLength" : 256
+          },
+          "useGlobalInvertCashDrawerStatusFlag" : {
+            "type" : "boolean",
+            "description" : "Использовать значение флага инверсии из настроек WEB-сервера"
+          },
+          "invertCashDrawerStatus" : {
+            "type" : "boolean",
+            "description" : "Инвертировать состояние денежного ящика"
+          },
+          "useGlobalAdditionalHeaderLines" : {
+            "type" : "boolean",
+            "description" : "Использовать дополнительные строки заголовка документа из настроек WEB-сервера"
+          },
+          "additionalHeaderLines" : {
+            "type" : "string",
+            "description" : "Дополнительные строки заголовка документа"
+          },
+          "useGlobalAdditionalFooterLines" : {
+            "type" : "boolean",
+            "description" : "Использовать дополнительные строки подвала документа из настроек WEB-сервера"
+          },
+          "additionalFooterLines" : {
+            "type" : "string",
+            "description" : "Дополнительные строки подвала документа"
+          }
+        }
+      },
+      "MarkingCode" : {
+        "type" : "object",
+        "description" : "Код маркировки",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип марки\n- other - любой код маркировки кроме ЕГАИС 2.0 и ЕГАИС 3.0\n- egais20 - ЕГАИС 2.0\n- egais30 - ЕГАИС 3.0\n",
+            "enum" : [ "other", "egais20", "egais30" ],
+            "default" : "other",
+            "example" : "egais30"
+          },
+          "mark" : {
+            "type" : "string",
+            "description" : "base64-представление кода маркировки",
+            "format" : "base64",
+            "example" : "MTM2MjIyMDAwMDU4ODEwOTE4UVdFUkRGRVdUNTEyMzQ1NllHSEZEU1dFUlQ1NllVSUpIR0ZEU0FFUlRZVUlPS0o4SEdGVkNYWlNETEtKSEdGRFNBT0lQTE1OQkdISllUUkRGR0hKS0lSRVdTREZHSEpJT0lVVERXUUFTREZSRVRZVUlVWUdUUkVERkdIVVlUUkVXUVdF"
+          }
+        },
+        "required" : [ "mark" ]
+      },
+      "DepartmentsReport" : {
+        "type" : "object",
+        "description" : "Отчет по секциям",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа",
+            "enum" : [ "reportDepartments" ]
+          }
+        },
+        "required" : [ "type" ]
+      },
+      "JournalReport" : {
+        "type" : "object",
+        "description" : "Печать документов из БД по заданному диапазону",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа",
+            "enum" : [ "printDocumentsFromJournal" ]
+          },
+          "filter" : {
+            "type" : "string",
+            "description" : "Фильтр документов\n- shiftNumber - по номерам смен\n- fiscalDocumentNumber - по номерам документов\n",
+            "enum" : [ "shiftNumber", "fiscalDocumentNumber" ]
+          },
+          "from" : {
+            "type" : "integer",
+            "description" : "Начало диапазона выгрузки",
+            "example" : 3
+          },
+          "to" : {
+            "type" : "integer",
+            "description" : "Конец диапазона выгрузки",
+            "example" : 10
+          }
+        },
+        "required" : [ "type", "filter", "from", "to" ]
+      },
+      "MappingItem" : {
+        "type" : "object",
+        "description" : "Пара Значение-Описание для настройки",
+        "properties" : {
+          "key" : {
+            "type" : "string",
+            "description" : "Значение настройки",
+            "example" : "VALUE-0"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Описание значения настройки",
+            "example" : "DESCRIPTION-0"
+          }
+        }
+      },
+      "Mapping" : {
+        "type" : "object",
+        "description" : "Возможные значения для настроек",
+        "properties" : {
+          "model" : {
+            "type" : "array",
+            "description" : "Значения моделей ККТ",
+            "items" : {
+              "$ref" : "#/components/schemas/MappingItem"
+            },
+            "example" : [ {
+              "key" : 500,
+              "description" : "Автоматически (АТОЛ)"
+            }, {
+              "key" : 93,
+              "description" : "АТОЛ 1Ф"
+            } ]
+          },
+          "port" : {
+            "type" : "array",
+            "description" : "Значения каналов связи с ККТ",
+            "items" : {
+              "$ref" : "#/components/schemas/MappingItem"
+            },
+            "example" : [ {
+              "key" : "usb",
+              "description" : "USB"
+            }, {
+              "key" : "tcp",
+              "description" : "TCP/IP"
+            } ]
+          },
+          "com" : {
+            "type" : "array",
+            "description" : "Значения COM-порта",
+            "items" : {
+              "$ref" : "#/components/schemas/MappingItem"
+            },
+            "example" : [ {
+              "key" : 1,
+              "description" : "COM1"
+            }, {
+              "key" : 2,
+              "description" : "COM2"
+            } ]
+          },
+          "baudRate" : {
+            "type" : "array",
+            "description" : "Значения скоростей COM-портов",
+            "items" : {
+              "$ref" : "#/components/schemas/MappingItem"
+            },
+            "example" : [ {
+              "key" : 57600,
+              "description" : "57600 бод"
+            }, {
+              "key" : 115200,
+              "description" : "115200 бод"
+            } ]
+          },
+          "usbDevice" : {
+            "type" : "array",
+            "description" : "Значения USB-устройств",
+            "items" : {
+              "$ref" : "#/components/schemas/MappingItem"
+            },
+            "example" : [ {
+              "key" : "auto",
+              "description" : "Автоматически"
+            } ]
+          },
+          "ofdChannel" : {
+            "type" : "array",
+            "description" : "Значения каналов связи с ОФД",
+            "items" : {
+              "$ref" : "#/components/schemas/MappingItem"
+            },
+            "example" : [ {
+              "key" : 2,
+              "description" : "Автоматически"
+            }, {
+              "key" : 0,
+              "description" : "Нет"
+            } ]
+          }
+        }
+      },
+      "FursCommodity" : {
+        "type" : "object",
+        "description" : "Меховое изделие",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип товара - меховое изделие (furs)",
+            "enum" : [ "furs" ]
+          },
+          "serial" : {
+            "type" : "string",
+            "description" : "Контрольный знак",
+            "example" : "RU-430302-ABC1234567"
+          }
+        }
+      },
+      "MedicinesCommodity" : {
+        "type" : "object",
+        "description" : "Лекарство",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип товара - лекарство (medicines)",
+            "enum" : [ "medicines" ]
+          },
+          "gtin" : {
+            "type" : "string",
+            "description" : "Идентификатор продукта GTIN",
+            "example" : 98765432101234
+          },
+          "serial" : {
+            "type" : "string",
+            "description" : "Серийный номер",
+            "example" : "ABC1234567890"
+          }
+        }
+      },
+      "TobaccoCommodity" : {
+        "type" : "object",
+        "description" : "Табачная продукция",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип товара - табачная продукция (tobacco)",
+            "enum" : [ "tobacco" ]
+          },
+          "gtin" : {
+            "type" : "string",
+            "description" : "Идентификатор продукта GTIN",
+            "example" : 98765432101234
+          },
+          "serial" : {
+            "type" : "string",
+            "description" : "Серийный номер",
+            "example" : "ABC1234"
+          }
+        }
+      },
+      "ShoesCommodity" : {
+        "type" : "object",
+        "description" : "Обувь",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип товара - обувь (shoes)",
+            "enum" : [ "shoes" ]
+          },
+          "gtin" : {
+            "type" : "string",
+            "description" : "Идентификатор продукта GTIN",
+            "example" : 98765432101234
+          },
+          "serial" : {
+            "type" : "string",
+            "description" : "Серийный номер",
+            "example" : "sgEKKPPcS25y5"
+          }
+        }
+      },
+      "Registration" : {
+        "type" : "object",
+        "description" : "Регистрация ККТ (ФФД 1.05)",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа",
+            "enum" : [ "registration" ]
+          },
+          "electronically" : {
+            "type" : "boolean",
+            "description" : "Признак электронного отчета. Если ККТ не поддерживает такой функционал, параметр будет проигнорирован и отчет будет напечатан.\n",
+            "default" : false
+          },
+          "operator" : {
+            "$ref" : "#/components/schemas/Operator"
+          },
+          "organization" : {
+            "type" : "object",
+            "description" : "Данные организации",
+            "properties" : {
+              "name" : {
+                "type" : "string",
+                "description" : "Название организации (тег 1048)",
+                "default" : "Не передаётся в ККТ",
+                "example" : "ООО 'АТОЛ'"
+              },
+              "vatin" : {
+                "type" : "string",
+                "description" : "ИНН организации (тег 1018)",
+                "default" : "Не передаётся в ККТ",
+                "example" : "5010051677"
+              },
+              "email" : {
+                "type" : "string",
+                "description" : "E-mail организации (адрес отравителя электронных чеков) (тег 1117)",
+                "default" : "Не передаётся в ККТ",
+                "example" : "email@atol.ru"
+              },
+              "taxationTypes" : {
+                "type" : "array",
+                "description" : "Список систем налогообложения (тег 1062)",
+                "items" : {
+                  "$ref" : "#/components/schemas/TaxationTypeEnum"
+                },
+                "default" : "Не передаётся в ККТ",
+                "example" : [ "osn", "esn" ]
+              },
+              "agents" : {
+                "type" : "array",
+                "description" : "Признаки агента (тег 1057)",
+                "minItems" : 0,
+                "items" : {
+                  "$ref" : "#/components/schemas/AgentTypeEnum"
+                },
+                "default" : "Не передаётся в ККТ",
+                "example" : [ "commissionAgent", "another" ]
+              },
+              "address" : {
+                "type" : "string",
+                "description" : "Адрес расчетов (тег 1009)",
+                "default" : "Не передаётся в ККТ",
+                "example" : "Адрес"
+              }
+            }
+          },
+          "device" : {
+            "type" : "object",
+            "description" : "Данные ККТ",
+            "properties" : {
+              "registrationNumber" : {
+                "type" : "string",
+                "description" : "Регистрационный номер ККТ (тег 1037)",
+                "default" : "Не передаётся в ККТ",
+                "example" : "0000000001002292"
+              },
+              "fnsUrl" : {
+                "type" : "string",
+                "description" : "Адрес сайта ФНС (тег 1060)",
+                "default" : "Не передаётся в ККТ",
+                "example" : "www.nalog.ru"
+              },
+              "offlineMode" : {
+                "type" : "boolean",
+                "description" : "Признак автономного режима (тег 1002)",
+                "default" : "Не передаётся в ККТ"
+              },
+              "machineInstallation" : {
+                "type" : "boolean",
+                "description" : "Признак установки принтера в автомате (тег 1221)",
+                "default" : "Не передаётся в ККТ"
+              },
+              "bso" : {
+                "type" : "boolean",
+                "description" : "Признак АС БСО (тег 1110)",
+                "default" : "Не передаётся в ККТ"
+              },
+              "encryption" : {
+                "type" : "boolean",
+                "description" : "Признак шифрования (тег 1056)",
+                "default" : "Не передаётся в ККТ"
+              },
+              "autoMode" : {
+                "type" : "boolean",
+                "description" : "Признак автоматического режима (тег 1001)",
+                "default" : "Не передаётся в ККТ"
+              },
+              "machineNumber" : {
+                "type" : "string",
+                "description" : "Номер автомата (тег 1036)",
+                "default" : "Не передаётся в ККТ"
+              },
+              "internet" : {
+                "type" : "boolean",
+                "description" : "Признак ККТ для расчетов только в Интернет (тег 1108)",
+                "default" : "Не передаётся в ККТ"
+              },
+              "service" : {
+                "type" : "boolean",
+                "description" : "Признак расчетов за услуги (тег 1109)",
+                "default" : "Не передаётся в ККТ"
+              },
+              "excise" : {
+                "type" : "boolean",
+                "description" : "Продажа подакцизного товара (тег 1207)",
+                "default" : "Не передаётся в ККТ"
+              },
+              "gambling" : {
+                "type" : "boolean",
+                "description" : "Признак проведения азартных игр (тег 1193)",
+                "default" : "Не передаётся в ККТ"
+              },
+              "lottery" : {
+                "type" : "boolean",
+                "description" : "Признак проведения лотереи (тег 1126)",
+                "default" : "Не передаётся в ККТ"
+              },
+              "paymentAddress" : {
+                "type" : "string",
+                "description" : "Место расчетов (тег 1187)",
+                "default" : "Не передаётся в ККТ",
+                "example" : "Адрес места расчетов"
+              },
+              "defaultTaxationType" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/TaxationTypeEnum"
+                }, {
+                  "type" : "string",
+                  "description" : "Система налогообложения по умолчанию:\n- osn - общая\n- usnIncome - упрощенная (Доход)\n- usnIncomeOutcome - упрощенная (Доход минус Расход)\n- envd - единый налог на вмененный доход\n- esn - единый сельскохозяйственный налог\n- patent - патентная система налогообложения\n"
+                } ],
+                "default" : "Не передаётся в ККТ"
+              },
+              "ofdChannel" : {
+                "type" : "string",
+                "description" : "Канал обмена с ОФД:\n- usb - EoU (EthernetOverUsb)\n- ethernet - Ethernet\n- wifi - Wi-Fi\n- gsm - GSM-модем\n- proto - средствами протокола ККТ (EoT, EthernetOverTransport)\n",
+                "enum" : [ "usb", "ethernet", "wifi", "gsm", "proto" ],
+                "default" : "Не передаётся в ККТ"
+              },
+              "ffdVersion" : {
+                "allOf" : [ {
+                  "$ref" : "#/components/schemas/FfdVersionEnum"
+                }, {
+                  "type" : "object",
+                  "default" : "Не передаётся в ККТ"
+                } ]
+              }
+            }
+          },
+          "ofd" : {
+            "type" : "object",
+            "description" : "Данные ОФД",
+            "properties" : {
+              "name" : {
+                "type" : "string",
+                "description" : "Название ОФД (тег 1046)",
+                "default" : "Не передаётся в ККТ",
+                "example" : "ООО 'Эвотор ОФД'"
+              },
+              "vatin" : {
+                "type" : "string",
+                "description" : "ИНН ОФД (тег 1017)",
+                "default" : "Не передаётся в ККТ",
+                "example" : "9715260691"
+              },
+              "host" : {
+                "type" : "string",
+                "description" : "Адрес ОФД",
+                "default" : "Не передаётся в ККТ",
+                "example" : "ofdp.platformaofd.ru"
+              },
+              "port" : {
+                "type" : "integer",
+                "description" : "Порт ОФД  number",
+                "minimum" : 0,
+                "maximum" : 65535,
+                "default" : "Не передаётся в ККТ",
+                "example" : 21101
+              },
+              "dns" : {
+                "type" : "string",
+                "description" : "DNS ОФД",
+                "default" : "Не передаётся в ККТ",
+                "example" : "0.0.0.0"
+              }
+            }
+          }
+        },
+        "required" : [ "type" ]
+      },
+      "ChangeRegistrationParameters1.05" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Registration"
+        }, {
+          "type" : "object",
+          "description" : "Перерегистрация ККТ (ФФД 1.05)",
+          "properties" : {
+            "type" : {
+              "type" : "string",
+              "description" : "Тип документа",
+              "enum" : [ "changeRegistrationParameters" ]
+            },
+            "reason" : {
+              "type" : "string",
+              "description" : "Причина перерегистрации (тег 1101)",
+              "enum" : [ "ofdChange", "attributesChange", "settingsChange" ]
+            }
+          }
+        } ]
+      },
+      "ChangeRegistrationParameters1.1" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Registration"
+        }, {
+          "type" : "object",
+          "description" : "Перерегистрация ККТ (ФФД 1.1)",
+          "properties" : {
+            "type" : {
+              "type" : "string",
+              "description" : "Тип документа",
+              "enum" : [ "changeRegistrationParameters" ]
+            },
+            "changeInfoReasons" : {
+              "type" : "array",
+              "description" : "Список причин изменения параметров регистрации (тег 1205).\n\nЗначением является список из номеров битов из таблицы 16 ФФД\n(Реквизиты, содержащиеся в структуре реквизита «код причины перерегистрации»).\n",
+              "items" : {
+                "type" : "integer"
+              },
+              "example" : [ 1, 2, 3 ]
+            }
+          }
+        } ]
+      },
+      "CloseArchive" : {
+        "type" : "object",
+        "description" : "Закрытие архива ФН",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип документа",
+            "enum" : [ "closeArchive" ]
+          },
+          "electronically" : {
+            "type" : "boolean",
+            "description" : "Признак электронного отчета. Если ККТ не поддерживает такой функционал, параметр будет проигнорирован и отчет будет напечатан.\n",
+            "default" : false
+          },
+          "operator" : {
+            "$ref" : "#/components/schemas/Operator"
+          }
+        }
+      },
+      "OpenDrawer" : {
+        "type" : "object",
+        "description" : "Отрытие денежного ящика",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип операции",
+            "enum" : [ "openCashDrawer" ]
+          }
+        }
+      },
+      "SetDateTime" : {
+        "type" : "object",
+        "description" : "Установка даты и времени в ККТ",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип операции",
+            "enum" : [ "setDateTime" ]
+          },
+          "dateTime" : {
+            "type" : "string",
+            "description" : "Дата и время (формат - yyyy.mm.dd HH:MM:SS)",
+            "pattern" : "/^(\\d{4}).(\\d{2}).(\\d{2}) (\\d{2}):(\\d{2}):(\\d{2})$/"
+          }
+        }
+      },
+      "SetDeviceParameters" : {
+        "type" : "object",
+        "description" : "Запись настроек в ККТ",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "description" : "Тип операции",
+            "enum" : [ "setDeviceParameters" ]
+          },
+          "deviceParameters" : {
+            "type" : "array",
+            "description" : "Список настроек",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "key" : {
+                  "type" : "integer",
+                  "description" : "Идентификатор настройки"
+                },
+                "value" : {
+                  "type" : "string",
+                  "description" : "Значение настройки"
+                }
+              }
+            },
+            "minItems" : 1
+          }
+        }
+      },
+      "SetDeviceParametersResult" : {
+        "type" : "object",
+        "description" : "Результат записи настроек в ККТ",
+        "properties" : {
+          "deviceParameters" : {
+            "type" : "array",
+            "description" : "Список настроек с результатами выполнения",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "key" : {
+                  "type" : "integer",
+                  "description" : "Идентификатор настройки"
+                },
+                "value" : {
+                  "type" : "string",
+                  "description" : "Значение настройки"
+                },
+                "errorCode" : {
+                  "type" : "integer",
+                  "description" : "Код ошибки"
+                },
+                "errorDescription" : {
+                  "type" : "string",
+                  "description" : "Текст ошибки"
+                }
+              }
+            },
+            "minItems" : 1
+          }
+        }
+      }
+    }
+  }
+}

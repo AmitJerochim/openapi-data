@@ -1,0 +1,1281 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "description" : "Dokumentation der API für Cash4Scrap",
+    "version" : "1.0.0",
+    "title" : "Cash4Scrap"
+  },
+  "paths" : {
+    "/user" : {
+      "post" : {
+        "summary" : "Einen neuen Benutzeraccount anlegen",
+        "operationId" : "RegisterUser",
+        "security" : [ ],
+        "responses" : {
+          "200" : {
+            "description" : "Alles hat funktioniert, Account angelegt"
+          },
+          "400" : {
+            "description" : "Fehler - Entweder ein Konto mit diesen Daten existiert schon oder etwas anderes ist schief gegangen. Details im Response Body."
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "email" : {
+                    "type" : "string",
+                    "format" : "email",
+                    "example" : "example@sense4future.de"
+                  },
+                  "password" : {
+                    "type" : "string",
+                    "format" : "password"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/authenticate" : {
+      "post" : {
+        "summary" : "Bestehenden Benutzer authentifizieren um Token zu erhalten",
+        "operationId" : "Authenticate",
+        "security" : [ ],
+        "responses" : {
+          "400" : {
+            "description" : "Problem mit der authentifizierung",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "message" : {
+                      "type" : "string",
+                      "example" : "Email or password is incorrect",
+                      "description" : "Beschreibung des aufgetretenen Problems"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "200" : {
+            "description" : "Benutzer erfolgreich authentifiziert, Token im Response Body",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "email" : {
+                    "type" : "string",
+                    "format" : "email",
+                    "example" : "example@sense4future.de"
+                  },
+                  "password" : {
+                    "type" : "string",
+                    "format" : "password"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user/{id}/profile-picture" : {
+      "parameters" : [ {
+        "name" : "id",
+        "in" : "path",
+        "description" : "UUID des Nutzers",
+        "example" : "c03c82ae-1f7c-424f-5597-08d78866db09",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid"
+        }
+      } ],
+      "post" : {
+        "summary" : "Ein Bild zu einem Item hinzufügen",
+        "operationId" : "UploadProfilePicture",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary",
+                    "description" : "Binärinhalt des hochzuladenden bildes"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Bild erfolgreich hochgeladen",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Kein valides Token, Benutzer konnte nicht authentifiziert werden oder Item gehört nicht dem aktuellen Benutzer"
+          },
+          "404" : {
+            "description" : "User mit dieser ID konnte nicht gefunden werden"
+          },
+          "406" : {
+            "description" : "Kein oder leerer Anhang"
+          }
+        }
+      }
+    },
+    "/item" : {
+      "get" : {
+        "summary" : "Liefert alle auf den aktuellen Nutzer registrierten Items zurück",
+        "operationId" : "GetUsersItems",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Gültiger Request, alle Items des Nutzers im ResponseBody",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Item"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Kein valides Token, Benutzer konnte nicht authentifiziert werden"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Ein neues Objekt (z.B.: Kühlschrank, Mikrowelle, etc.) im System anlegen und einem Benutzer zuweisen.",
+        "operationId" : "PostItem",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "responses" : {
+          "400" : {
+            "description" : "Kein Item im RequestBody gefunden"
+          },
+          "401" : {
+            "description" : "Kein valides Token, Benutzer konnte nicht authentifiziert werden"
+          },
+          "201" : {
+            "description" : "Item wurde erfolgreich erstellt",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Item"
+                }
+              }
+            }
+          }
+        },
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Item"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/item/{id}" : {
+      "parameters" : [ {
+        "name" : "id",
+        "in" : "path",
+        "description" : "UUID des abzufragenden Items",
+        "example" : "c03c82ae-1f7c-424f-5597-08d78866db09",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid"
+        }
+      } ],
+      "get" : {
+        "summary" : "Details zu einem einzelnen Item abrufen",
+        "operationId" : "GetItem",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Item wurde abgerufen, Details im Response Body",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Item"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Kein valides Token, Benutzer konnte nicht authentifiziert werden"
+          },
+          "403" : {
+            "description" : "Item gehört nicht dem aktuellen Benutzer"
+          }
+        }
+      },
+      "put" : {
+        "summary" : "Ein bestehendes Item modifizieren",
+        "operationId" : "PutItem",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Item"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Item wurde erfolgreich geändert",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Item"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "ID im Parameter stimmt nicht mit der ID des Items im Request Body überein."
+          },
+          "401" : {
+            "description" : "Kein valides Token, Benutzer konnte nicht authentifiziert werden oder Item gehört nicht dem aktuellen Benutzer"
+          },
+          "404" : {
+            "description" : "Item mit dieser ID konnte nicht gefunden werden"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Ein Item löschen",
+        "operationId" : "DeleteItem",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Item wurde erfolgreich gelöscht"
+          },
+          "401" : {
+            "description" : "Kein valides Token, Benutzer konnte nicht authentifiziert werden oder Item gehört nicht dem aktuellen Benutzer"
+          },
+          "404" : {
+            "description" : "Item mit dieser ID konnte nicht gefunden werden"
+          }
+        }
+      }
+    },
+    "/item/{id}/image" : {
+      "parameters" : [ {
+        "name" : "id",
+        "in" : "path",
+        "description" : "UUID des Items",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid"
+        }
+      } ],
+      "post" : {
+        "summary" : "Ein Bild zu einem Item hinzufügen",
+        "operationId" : "UploadImage",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/x-www-form-urlencoded" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary",
+                    "description" : "Binärinhalt des hochzuladenden bildes"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Bild erfolgreich hochgeladen",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Item"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Kein valides Token, Benutzer konnte nicht authentifiziert werden oder Item gehört nicht dem aktuellen Benutzer"
+          },
+          "404" : {
+            "description" : "Item mit dieser ID konnte nicht gefunden werden"
+          },
+          "406" : {
+            "description" : "Kein oder leerer Anhang"
+          }
+        }
+      }
+    },
+    "/messages" : {
+      "get" : {
+        "summary" : "Alle Nachrichten, die der aktuelle ein Benutzer empfangen oder gesendet hat abrufen",
+        "operationId" : "GetUserMessages",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Erfolg, alle Nachrichten abgerufen",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Message"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Kein valides Token, Benutzer konnte nicht authentifiziert werden, Benutzer unbekannt"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Eine neue Nachricht an einen anderen Benutzer verfassen",
+        "operationId" : "PostMessage",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Message"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Nachricht wurde erfolgreich gesendet",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Message"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Keine valide Message im RequestBody gefunden, Empfänger oder sendender Nutzer unbekannt"
+          },
+          "401" : {
+            "description" : "Kein valides Token, Benutzer konnte nicht authentifiziert werden, Benutzer unbekannt"
+          }
+        }
+      }
+    },
+    "/categories" : {
+      "get" : {
+        "summary" : "Alle existierenden Itemkategorien abfragen",
+        "operationId" : "GetAllCategories",
+        "responses" : {
+          "200" : {
+            "description" : "Array aller möglichen Kategorien für Items",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Legt eine neue Kategorie an",
+        "operationId" : "PostCategory",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Category"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Kategorie wurde erfolgreich angelegt",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Keine valide Kategorie im RequestBody gefunden"
+          },
+          "401" : {
+            "description" : "Kein valides Token, Benutzer konnte nicht authentifiziert werden, Benutzer unbekannt"
+          },
+          "403" : {
+            "description" : "Benutzer verfügt nicht über die Rechte eine Kategorie anzulegen"
+          },
+          "409" : {
+            "description" : "Fehler: Es existiert schon eine Kategorie mit diesem Pfad"
+          }
+        }
+      }
+    },
+    "/categories/{id}" : {
+      "parameters" : [ {
+        "name" : "id",
+        "in" : "path",
+        "description" : "UUID der zu löschenden Kategorie",
+        "example" : "88667266-9dc6-4cf7-a58e-08d7992df0e9",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid"
+        }
+      } ],
+      "get" : {
+        "summary" : "Details einer Kategorie abrufen",
+        "operationId" : "GetCategory",
+        "responses" : {
+          "200" : {
+            "description" : "Erfolg, Kategorie im ResponseBody",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Kategorie existiert nicht"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Löscht eine Kategorie",
+        "operationId" : "DeleteCategory",
+        "security" : [ {
+          "Auth" : [ ],
+          "Permissions.Categories.Delete" : [ ]
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Kategorie wurde erfolgreich gelöscht"
+          },
+          "401" : {
+            "description" : "Kein valides Token, Benutzer konnte nicht authentifiziert werden, Benutzer unbekannt"
+          },
+          "403" : {
+            "description" : "Benutzer verfügt nicht über die Rechte eine Kategorie zu löschen"
+          },
+          "404" : {
+            "description" : "Kategorie existiert nicht"
+          }
+        }
+      }
+    },
+    "/categories/{id}/children" : {
+      "parameters" : [ {
+        "name" : "id",
+        "in" : "path",
+        "description" : "UUID der zu löschenden Kategorie",
+        "example" : "88667266-9dc6-4cf7-a58e-08d7992df0e9",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid"
+        }
+      } ],
+      "get" : {
+        "summary" : "Alle (direkten) Kindkategorien einer ID abfragen",
+        "operationId" : "GetChildCategories",
+        "responses" : {
+          "200" : {
+            "description" : "Erfolg, Array aller Kinder im ResponseBody",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Category"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Kategorie existiert nicht"
+          }
+        }
+      }
+    },
+    "/categories/root" : {
+      "get" : {
+        "summary" : "Die Root-Kategorie (Pfad: / ) abfragen",
+        "operationId" : "GetRootCategory",
+        "responses" : {
+          "200" : {
+            "description" : "Erfolg",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Category"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Keine Root-Kategorie existent"
+          }
+        }
+      }
+    },
+    "/permissions/roles" : {
+      "get" : {
+        "summary" : "Zeigt die dem aktuellen Nutzer zugewiesenen Rollen an",
+        "operationId" : "GetUserRoles",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Erfolg",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/IdentityRole"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Benutzer konnte nicht in der Datenbank gefunden werden",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "properties" : {
+                    "message" : {
+                      "type" : "string",
+                      "description" : "Fehlermeldung",
+                      "example" : "Unknown user"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Benutzer ist nicht angemeldet"
+          }
+        }
+      },
+      "post" : {
+        "summary" : "Legt eine neue Benutzerrolle an",
+        "operationId" : "PostRole",
+        "security" : [ {
+          "Auth" : [ ],
+          "Permissions.Roles.Create" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/IdentityRole"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Rolle angelegt",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IdentityRole"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Keine Rolle im RequestBody gefunden oder die Rolle konnte nicht erstellt werden"
+          },
+          "409" : {
+            "description" : "Eine Benutzerrolle mit diesem Namen existiert bereits"
+          }
+        }
+      }
+    },
+    "/permissions/roles/{id}" : {
+      "parameters" : [ {
+        "name" : "id",
+        "in" : "path",
+        "description" : "UUID der Benutzerrolle",
+        "example" : "88667266-9dc6-4cf7-a58e-08d7992df0e9",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid"
+        }
+      } ],
+      "get" : {
+        "summary" : "Fragt eine einzelne Benutzerrolle ab",
+        "operationId" : "GetRole",
+        "security" : [ {
+          "Auth" : [ ],
+          "Permissions.Roles.View" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Erfolg",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IdentityRole"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Benutzer verfügt nicht über die nötige Berechtiung"
+          },
+          "404" : {
+            "description" : "Rolle nicht gefunden"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Löscht eine Benutzerrolle",
+        "operationId" : "DeleteRole",
+        "responses" : {
+          "204" : {
+            "description" : "Rolle gelöscht"
+          },
+          "400" : {
+            "description" : "Verschiedene Fehler, siehe ResponseBody"
+          },
+          "403" : {
+            "description" : "Benutzer verfügt nicht über das Recht rollen zu löschen"
+          },
+          "404" : {
+            "description" : "Rolle nicht gefunden"
+          }
+        }
+      }
+    },
+    "/permissions/roles/all" : {
+      "get" : {
+        "summary" : "Zeigt alle verfügbaren Benutzerrollen an",
+        "operationId" : "GetAllRoles",
+        "security" : [ {
+          "Auth" : [ ],
+          "Permissions.Roles.View" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Erfolg",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/IdentityRole"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Benutzer verfügt nicht über die nötigen Rechte"
+          }
+        }
+      }
+    },
+    "/locations" : {
+      "post" : {
+        "summary" : "Legt eine neue Location an",
+        "operationId" : "PostLocation",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Location"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Location angelegt",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Location"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Keine Location im RequestBody gefunden oder die Rolle konnte nicht erstellt werden"
+          }
+        }
+      },
+      "get" : {
+        "summary" : "Hole eine Liste aller Locations des aktuellen Nutzers",
+        "operationId" : "GetUserLocations",
+        "security" : [ {
+          "Auth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Erfolg",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Location"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Benutzer unbekannt"
+          },
+          "401" : {
+            "description" : "Benutzer nicht gefunden oder nicht angemeldet"
+          }
+        }
+      }
+    },
+    "/locations/{id}" : {
+      "parameters" : [ {
+        "name" : "id",
+        "in" : "path",
+        "description" : "UUID der Location",
+        "example" : "88667266-9dc6-4cf7-a58e-08d7992df0e9",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid"
+        }
+      } ],
+      "get" : {
+        "summary" : "Holt die mit der ID bezeichnete Location",
+        "operationId" : "GetLocation",
+        "security" : [ {
+          "Auth" : [ ]
+        }, {
+          "Permissions.Locations.ViewAll" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Erfolg",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Location"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Benutzer unbekannt"
+          },
+          "401" : {
+            "description" : "Benutzer nicht gefunden oder nicht angemeldet oder hat nicht die nötigen Rechte"
+          },
+          "404" : {
+            "description" : "Location unbekannt"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Löscht die mit der ID bezeichnete Location",
+        "operationId" : "DeleteLocation",
+        "security" : [ {
+          "Auth" : [ ]
+        }, {
+          "Permissions.Locations.Delete" : [ ]
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "Erfolg"
+          },
+          "400" : {
+            "description" : "Benutzer unbekannt"
+          },
+          "401" : {
+            "description" : "Benutzer nicht gefunden oder nicht angemeldet oder hat nicht die nötigen Rechte"
+          },
+          "404" : {
+            "description" : "Location unbekannt"
+          }
+        }
+      }
+    },
+    "/locations/all" : {
+      "parameters" : [ {
+        "in" : "query",
+        "name" : "PageNumber",
+        "schema" : {
+          "type" : "integer",
+          "minimum" : 1
+        }
+      }, {
+        "in" : "query",
+        "name" : "PageSize",
+        "schema" : {
+          "type" : "integer",
+          "minimum" : 1
+        }
+      } ],
+      "get" : {
+        "summary" : "Holt eine Liste aller Locations",
+        "operationId" : "GetAllLocations",
+        "security" : [ {
+          "Permissions.Locations.ViewAll" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Erfolg",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Location"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Benutzer nicht gefunden oder nicht angemeldet oder hat nicht die nötigen Rechte"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "securitySchemes" : {
+      "Auth" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "Permissions.Roles.View" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "Permissions.Roles.Create" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "Permissions.Roles.Edit" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "Permissions.Roles.Delete" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "Permissions.Claims.View" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "Permissions.Categories.View" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "Permissions.Categories.Create" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "Permissions.Categories.Edit" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "Permissions.Categories.Delete" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "Permissions.Locations.Delete" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      },
+      "Permissions.Locations.ViewAll" : {
+        "type" : "http",
+        "scheme" : "bearer"
+      }
+    },
+    "schemas" : {
+      "User" : {
+        "type" : "object",
+        "description" : "Objekt, dass einen Benutzer beschreibt",
+        "properties" : {
+          "ownedItems" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Item"
+            },
+            "description" : "Liste der vom Nutzer besessenen Items"
+          },
+          "token" : {
+            "type" : "string",
+            "description" : "JWT-Token des Nutzers (vom Server vergeben)",
+            "example" : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6ImVmMDFmMDhkLWY4YmMtNDZlNi04ODUzLTVkZTRkZjE1YWVkZiIsIm5iZiI6MTU3NzE4NTM1NywiZXhwIjoxNTc3NzkwMTU3LCJpYXQiOjE1NzcxODUzNTd9.0ZtO_3b2Kdm6oe-EJzQzdvMCvD6rbwO_WiLgd4qIfe0"
+          },
+          "profilePicture" : {
+            "type" : "string",
+            "format" : "filename",
+            "description" : "Dateiname des Profilbilds des Benutzers",
+            "example" : "ef01f08d-f8bc-46e6-8853-5de4df15aedf.jpg"
+          },
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Eindeutige ID des Nutzers",
+            "example" : "ef01f08d-f8bc-46e6-8853-5de4df15aedf"
+          },
+          "userName" : {
+            "type" : "string",
+            "format" : "email",
+            "description" : "Benutzername - in unserem Fall EMail des Nutzers",
+            "example" : "example@sense4future.de"
+          },
+          "normalizedUserName" : {
+            "type" : "string",
+            "format" : "email",
+            "description" : "Benutzername in GROSSBUCHSTABEN - geeignet für vergleiche, Hashing etc.",
+            "example" : "EXAMPLE@SENSE4FUTURE.DE"
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "description" : "Mailadresse des Nutzers",
+            "example" : "example@sense4future.de"
+          },
+          "normalizedEmail" : {
+            "type" : "string",
+            "format" : "email",
+            "description" : "Mailadresses des Nutzers in GROSSBUCHSTABEN - geeignet für Vergleiche, Hashing, etc.",
+            "example" : "EXAMPLE@SENSE4FUTURE.DE"
+          },
+          "emailConfirmed" : {
+            "type" : "boolean",
+            "description" : "Ob der Benutzer seine EMail Adresse bestätigt hat - AKTUELL UNGENUTZT!",
+            "example" : false
+          }
+        }
+      },
+      "Item" : {
+        "type" : "object",
+        "description" : "Ein Gegenstand, den ein Benutzer besitzen kann",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "example" : "c03c82ae-1f7c-424f-5597-08d78866db09",
+            "description" : "Einmalige ID des Items"
+          },
+          "name" : {
+            "type" : "string",
+            "example" : "Mikrowelle",
+            "description" : "Bezeichnung des Items"
+          },
+          "ownerId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "example" : "ef01f08d-f8bc-46e6-8853-5de4df15aedf",
+            "description" : "Id des Benutzers"
+          },
+          "images" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "description" : "Dateinamen der zugehörigen Bilder",
+              "example" : "e9d06ba124f4e8a59508561834d2da134ba5a809812b456240c53c229654e6c3.png"
+            }
+          },
+          "conditionState" : {
+            "type" : "integer"
+          },
+          "euEnergyLabel" : {
+            "type" : "integer"
+          },
+          "firstPurchaseDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "usageValue" : {
+            "type" : "number",
+            "format" : "float"
+          },
+          "resourceValue" : {
+            "type" : "number",
+            "format" : "float"
+          },
+          "locationId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "ID der Location an der sich das Item befindet",
+            "example" : "bd83c000-c635-4240-c514-08d7d56dc79b"
+          }
+        }
+      },
+      "Message" : {
+        "type" : "object",
+        "description" : "Nachricht, die von einem Benutzer an einen anderen gesendet wird",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "example" : "b7b07ab8-daae-42d3-bb1d-e7098857b4e9",
+            "description" : "Einmalige ID der Nachricht, vom Server vergeben"
+          },
+          "time" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Genauer Sendezeitpunkt der Nachricht, vom Server festgelegt. Formattiert nach RFC 3339, Section 5.6",
+            "example" : "2019-07-21T17:32:28Z"
+          },
+          "messageType" : {
+            "type" : "integer",
+            "description" : "Art der Nachricht",
+            "enum" : [ "0; Normale Textnachricht (Default)" ]
+          },
+          "senderId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "UserID des Senders der Nachricht",
+            "example" : "9b55f52b-48d1-43b2-9410-d1aafd64d23a"
+          },
+          "recipientId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "UserID des Empfängers der Nachricht",
+            "example" : "ff7193a2-ada6-4954-be7a-9fc13c9ee05d"
+          },
+          "text" : {
+            "type" : "string",
+            "description" : "Text der Nachricht",
+            "example" : "Hallo Karl_der_Schrotthändler, hat die Batterie denn noch volle Kapazität?"
+          },
+          "itemId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "ID des Items, um das es in der Nachricht geht",
+            "example" : "44bdb15d-0e68-4cfe-a770-51dd8eaa1c9d"
+          },
+          "money" : {
+            "type" : "number",
+            "format" : "float",
+            "description" : "Summe (in €), um die es in der Nachricht geht - optionales Attribut für Preisangebote etc.",
+            "example" : "7.50"
+          }
+        }
+      },
+      "Category" : {
+        "type" : "object",
+        "description" : "Kategorie um Items zu sortieren. n zu m Beziehung zwischen Items und Kategorien",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Eindeutige ID der Kategorie",
+            "example" : "88667266-9dc6-4cf7-a58e-08d7992df0e9"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Name der Kategorie",
+            "example" : "Mikrowellen"
+          },
+          "description" : {
+            "type" : "string",
+            "description" : "Beschreibung der Kategorie",
+            "example" : "Haushaltsmikrowellen als Kleingeräte",
+            "nullable" : true
+          },
+          "path" : {
+            "type" : "string",
+            "description" : "Pfad der Kategorie. Eine die Wurzelkategorie hat den Pfad /, ihre Kinder sind /1/, /2/, usw. deren Kinder wiederum sind /1/1/, /1/2/, /1/3/, /2/1/. usw. Beliebig tiefe Schachtelung möglich",
+            "example" : "/2/1/4/"
+          }
+        }
+      },
+      "Location" : {
+        "type" : "object",
+        "description" : "Beschreibt einen (geografischen) Ort",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Eindeutige ID der Location",
+            "example" : "bd83c000-c635-4240-c514-08d7d56dc79b"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Frei wählbarer Name der Location",
+            "example" : "Zu Hause"
+          },
+          "country" : {
+            "type" : "string",
+            "minLength" : 3,
+            "maxLength" : 3,
+            "description" : "Ländercode nach ISO-3166-ALPHA-3",
+            "example" : "DEU"
+          },
+          "zip" : {
+            "type" : "string",
+            "description" : "Postleitzahl der Location",
+            "example" : "00815"
+          },
+          "city" : {
+            "type" : "string",
+            "description" : "Name der Gemeinde der Location",
+            "example" : "Beispielstadt"
+          },
+          "street" : {
+            "type" : "string",
+            "description" : "Straßenname der Adresse der Location",
+            "example" : "Mustertraße"
+          },
+          "houseNumber" : {
+            "type" : "string",
+            "description" : "Hausnummer",
+            "example" : "42 a"
+          },
+          "latitude" : {
+            "type" : "number",
+            "format" : "double",
+            "description" : "Die geographische Breite der Location",
+            "example" : 51.799173
+          },
+          "longitude" : {
+            "type" : "number",
+            "format" : "double",
+            "description" : "Längendgrad der Location",
+            "example" : 10.3456638
+          },
+          "ownerId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "ID des Besitzers der Location",
+            "example" : "a86246fc-dd18-4f48-a32a-3a7ba065117d"
+          },
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Item"
+            },
+            "description" : "Items, die sich hier befinden"
+          }
+        }
+      },
+      "IdentityRole" : {
+        "type" : "object",
+        "description" : "Beschreibt eine Benutzerrolle",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Eindeutige ID der Benutzerrolle",
+            "example" : "88667266-9dc6-4cf7-a58e-08d7992df0e9"
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Name der Rolle",
+            "example" : "Administrator"
+          },
+          "normalizedName" : {
+            "type" : "string",
+            "description" : "Normalisierter Name der Kategorie",
+            "example" : "ADMINISTRATOR"
+          },
+          "concurrencyStam" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "ConcurrencyStamp, wird bei jeder Änderung neu generiert. Interne Nutzung zur Überprüfung ob eine Änderung seit der Abfrage stattgefunden hat",
+            "example" : "e581fad2-93d5-454c-90f8-6c734bbada8d"
+          }
+        }
+      }
+    }
+  },
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/cash4scrap-test/cash4scrap/1.0.0"
+  }, {
+    "description" : "Test Server",
+    "url" : "https://cash4scrap-test-temp.azurewebsites.net/"
+  } ]
+}

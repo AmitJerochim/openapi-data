@@ -1,0 +1,1856 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "url" : "https://api.iot.cra.cz/cxf/IOTServices/v2"
+  } ],
+  "info" : {
+    "version" : "2.4",
+    "title" : "CRA IoT Cloud API",
+    "description" : "API interfaces for LoRaWAN device management, IoT traffic rounting and account management. Click the \"Schema\" next to \"Example Value\" where you could see complete documentation."
+  },
+  "security" : [ {
+    "ApiKeyAuth" : [ ]
+  } ],
+  "paths" : {
+    "/Login" : {
+      "post" : {
+        "summary" : "Method for obtaining authorization token",
+        "description" : "This method returns value sessionId authorization token to be placed in HTTP header of all other Endpoints",
+        "requestBody" : {
+          "description" : "Authorization credentials (Username & Password)",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "username", "password" ],
+                "properties" : {
+                  "username" : {
+                    "type" : "string",
+                    "description" : "Username provided by CRA IoT Cloud"
+                  },
+                  "password" : {
+                    "type" : "string",
+                    "description" : "Your password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Device object",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "sessionId" : {
+                      "type" : "string",
+                      "example" : "8a60000-d441-11e7-950d-000000000000"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Import" : {
+      "post" : {
+        "summary" : "Import LoRaWAN device using ABP method",
+        "description" : "This method allows to import LoRaWAN device(s) using activation-by-personalization (ABP) method. The import process is asynchronous, therefore you have to use batchId param returned by this method in /ImportStatus/{batchId} to obtain import status.",
+        "requestBody" : {
+          "description" : "Device object with params for activation-by-personalization (ABP) provisioning.",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "devEui" : {
+                      "type" : "string",
+                      "description" : "LoRaWAN device identifier. To be obtained from device manufacturer.",
+                      "example" : "00000000000000AA"
+                    },
+                    "label" : {
+                      "type" : "string",
+                      "example" : "My device"
+                    },
+                    "tech" : {
+                      "type" : "string",
+                      "example" : "LoRa",
+                      "description" : "Use value \"LoRa\""
+                    },
+                    "devAddr" : {
+                      "type" : "string",
+                      "example" : "000000AA",
+                      "description" : "LoRaWAN device address, usually last 8 chars of DevEUI"
+                    },
+                    "nwkSKey" : {
+                      "type" : "string",
+                      "example" : "00000000000000BBBB00000000000000",
+                      "description" : "Network session key. To be obtained from device manufacturer."
+                    },
+                    "appSKey" : {
+                      "type" : "string",
+                      "example" : "00000000000000BBBB00000000000000",
+                      "description" : "Application session key. If not provided, you shall perform payload decription on application-side."
+                    },
+                    "tenantId" : {
+                      "type" : "string",
+                      "example" : "T200000001326960aaa",
+                      "description" : "Account identifier, to be found after logging in admin.iot.cra.cz"
+                    },
+                    "serviceId" : {
+                      "type" : "string",
+                      "example" : "OP-00-0000-00000s00",
+                      "description" : "Service identifier, to be found after logging in admin.iot.cra.cz"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Response object",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "batchId" : {
+                          "type" : "string",
+                          "example" : "00000000-0000-aaaa-cccc-0000000000",
+                          "description" : "Batch process identifier, to be used in /ImportStatus method"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ImportOTAA" : {
+      "post" : {
+        "summary" : "Import LoRaWAN device using OTAA method",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "description" : "This method allows to import LoRaWAN device(s) using over-the-air-activation (OTAA) method. The import process is asynchronous, therefore you have to use batchId param returned by this method in /ImportStatus/{batchId} to obtain import status.",
+        "requestBody" : {
+          "description" : "Device object with params for over-the-air-activation (OTAA) provisioning.",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "devEui" : {
+                      "type" : "string",
+                      "description" : "LoRaWAN device identifier. To be obtained from device manufacturer.",
+                      "example" : "00000000000000AA"
+                    },
+                    "label" : {
+                      "type" : "string",
+                      "example" : "My device"
+                    },
+                    "tech" : {
+                      "type" : "string",
+                      "example" : "LoRa",
+                      "description" : "Use value \"LoRa\""
+                    },
+                    "appeui" : {
+                      "type" : "string",
+                      "example" : "00000000000000BBBB00000000000000",
+                      "description" : "Application identifier. To be obtained from device manufacturer."
+                    },
+                    "appkey" : {
+                      "type" : "string",
+                      "example" : "00000000000000BBBB00000000000000",
+                      "description" : "Application key. To be obtained from device manufacturer."
+                    },
+                    "tenantId" : {
+                      "type" : "string",
+                      "example" : "T200000001326960aaa",
+                      "description" : "Account identifier, to be found after logging in admin.iot.cra.cz"
+                    },
+                    "serviceId" : {
+                      "type" : "string",
+                      "example" : "OP-00-0000-00000s00",
+                      "description" : "Service identifier, to be found after logging in admin.iot.cra.cz"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Response object",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "batchId" : {
+                          "type" : "string",
+                          "example" : "00000000-0000-aaaa-cccc-0000000000",
+                          "description" : "Batch process identifier, to be used in /ImportStatus method"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ImportMQTT" : {
+      "post" : {
+        "summary" : "Import MQTT device",
+        "description" : "This method allows to import MQTT device(s). The import process is asynchronous, therefore you have to use batchId param returned by this method in /ImportStatus/{batchId} to obtain import status.",
+        "requestBody" : {
+          "description" : "Device object with params.",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "object",
+                  "properties" : {
+                    "clientId" : {
+                      "type" : "string",
+                      "description" : "MQTT device identifier. To be obtained from device manufacturer.",
+                      "example" : "faTWZ51gsfafw"
+                    },
+                    "label" : {
+                      "type" : "string",
+                      "example" : "My MQTT device"
+                    },
+                    "tech" : {
+                      "type" : "string",
+                      "example" : "MQTT",
+                      "description" : "Use value \"MQTT\""
+                    },
+                    "username" : {
+                      "type" : "string",
+                      "example" : "root",
+                      "description" : "Username of MQTT broker"
+                    },
+                    "password" : {
+                      "type" : "string",
+                      "example" : "toor",
+                      "description" : "Password of MQTT broker"
+                    },
+                    "tenantId" : {
+                      "type" : "string",
+                      "example" : "T201902121326960aaa",
+                      "description" : "Account identifier, to be found after logging in admin.iot.cra.cz"
+                    },
+                    "serviceId" : {
+                      "type" : "string",
+                      "example" : "OP-00-0000-00000s00",
+                      "description" : "Service identifier, to be found after logging in admin.iot.cra.cz"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Response object",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "batchId" : {
+                          "type" : "string",
+                          "example" : "00000000-0000-aaaa-cccc-0000000000",
+                          "description" : "Batch process identifier, to be used in /ImportStatus method"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Import/{batchId}" : {
+      "get" : {
+        "summary" : "Get device import status",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "batchId",
+          "schema" : {
+            "type" : "string",
+            "example" : "00000000-0000-aaaa-cccc-0000000000"
+          },
+          "required" : true,
+          "description" : "Batch process identifier returned by device import method"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Response object",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "summary" : {
+                          "type" : "object",
+                          "properties" : {
+                            "new" : {
+                              "type" : "integer"
+                            },
+                            "inProgress" : {
+                              "type" : "integer"
+                            },
+                            "complete" : {
+                              "type" : "integer",
+                              "example" : 1
+                            },
+                            "error" : {
+                              "type" : "integer"
+                            }
+                          }
+                        },
+                        "errors" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "object",
+                            "properties" : {
+                              "lastStep" : {
+                                "type" : "string",
+                                "example" : "Database Validation"
+                              },
+                              "line" : {
+                                "type" : "number",
+                                "example" : 1
+                              },
+                              "errorMessage" : {
+                                "type" : "string",
+                                "example" : "Device XYZ already exists in database"
+                              },
+                              "errorCode" : {
+                                "type" : "number",
+                                "example" : 182
+                              },
+                              "deviceId" : {
+                                "type" : "string",
+                                "example" : "1234567890"
+                              }
+                            }
+                          }
+                        },
+                        "devices" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "object",
+                            "properties" : {
+                              "line" : {
+                                "type" : "number",
+                                "example" : "1"
+                              },
+                              "username" : {
+                                "type" : "string",
+                                "example" : "myusername007"
+                              },
+                              "password" : {
+                                "type" : "string",
+                                "example" : "PaxP0rT007"
+                              },
+                              "deviceId" : {
+                                "type" : "string",
+                                "example" : "1234567890XXX"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Device/{deviceId}" : {
+      "get" : {
+        "summary" : "Get device details",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "deviceId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "LoRaWAN DevEUI"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Device object",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "serviceId" : {
+                          "type" : "string",
+                          "example" : "OP-00-0000-00000s00"
+                        },
+                        "tenantId" : {
+                          "type" : "string",
+                          "example" : "T200000001326960aaa"
+                        },
+                        "label" : {
+                          "type" : "string"
+                        },
+                        "deviceGroupIds" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "string",
+                            "example" : 22
+                          }
+                        },
+                        "isSuspended" : {
+                          "type" : "integer"
+                        },
+                        "activated" : {
+                          "type" : "string",
+                          "format" : "date-time"
+                        },
+                        "counters" : {
+                          "type" : "object",
+                          "properties" : {
+                            "messageInDaily" : {
+                              "type" : "integer",
+                              "example" : 223
+                            },
+                            "messageOutDaily" : {
+                              "type" : "integer",
+                              "example" : 10
+                            }
+                          }
+                        },
+                        "limits" : {
+                          "type" : "object",
+                          "properties" : {
+                            "messageInDaily" : {
+                              "type" : "integer",
+                              "example" : -1
+                            },
+                            "messageOutDaily" : {
+                              "type" : "integer",
+                              "example" : 200
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Delete device",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "deviceId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "LoRaWAN DevEUI"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Device/{deviceId}/Suspend/{suspend}" : {
+      "put" : {
+        "summary" : "Suspend or Unsuspend device",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "deviceId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "LoRaWAN DevEUI"
+        }, {
+          "in" : "path",
+          "name" : "suspend",
+          "schema" : {
+            "type" : "integer"
+          },
+          "required" : true,
+          "description" : "Suspend or Unsuspend. 1 = Suspend, 0 = Unsuspend."
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Device/{deviceId}/flushQueue" : {
+      "post" : {
+        "summary" : "Clean queue of Downling messages for deviceId",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "deviceId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "LoRaWAN DevEUI"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Device/QueryPeriod" : {
+      "post" : {
+        "summary" : "Return device activity",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "description" : "Filter object. Response can be modified by providing tenantId, serviceId, deviceId or date period.",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "deviceId", "start", "stop" ],
+                "properties" : {
+                  "tenantId" : {
+                    "type" : "string",
+                    "description" : "Required if service ID is not set"
+                  },
+                  "serviceId" : {
+                    "type" : "string",
+                    "description" : "Required if tenant ID is not set"
+                  },
+                  "deviceId" : {
+                    "type" : "string"
+                  },
+                  "start" : {
+                    "type" : "string",
+                    "format" : "date-time"
+                  },
+                  "stop" : {
+                    "type" : "string",
+                    "format" : "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Device periods",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer"
+                    },
+                    "status" : {
+                      "type" : "string"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "totalDevices" : {
+                          "type" : "integer"
+                        },
+                        "devicePeriods" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "object",
+                            "properties" : {
+                              "deviceId" : {
+                                "type" : "string"
+                              },
+                              "tenantId" : {
+                                "type" : "string"
+                              },
+                              "serviceId" : {
+                                "type" : "string"
+                              },
+                              "start" : {
+                                "type" : "string",
+                                "format" : "date-time"
+                              },
+                              "stop" : {
+                                "type" : "string",
+                                "format" : "date-time"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Device/QueryStat" : {
+      "post" : {
+        "summary" : "Return device activity intervals",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "description" : "Create new endpoint (client's server for real-time message delivery)",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "deviceId", "start", "stop" ],
+                "properties" : {
+                  "tenantId" : {
+                    "type" : "string",
+                    "description" : "Required if service ID is not set"
+                  },
+                  "serviceId" : {
+                    "type" : "string",
+                    "description" : "Required if tenant ID is not set"
+                  },
+                  "deviceId" : {
+                    "type" : "string"
+                  },
+                  "start" : {
+                    "type" : "string",
+                    "format" : "date-time"
+                  },
+                  "stop" : {
+                    "type" : "string",
+                    "format" : "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Device periods",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer"
+                    },
+                    "status" : {
+                      "type" : "string"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "totalDevices" : {
+                          "type" : "integer"
+                        },
+                        "deviceStats" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "object",
+                            "properties" : {
+                              "deviceId" : {
+                                "type" : "string"
+                              },
+                              "tenantId" : {
+                                "type" : "string"
+                              },
+                              "serviceId" : {
+                                "type" : "string"
+                              },
+                              "date" : {
+                                "type" : "string",
+                                "format" : "date-time"
+                              },
+                              "counterType" : {
+                                "type" : "string"
+                              },
+                              "value" : {
+                                "type" : "integer"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Message" : {
+      "post" : {
+        "summary" : "Send downlink message to LoRaWAN device",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "description" : "This method allows to send downlink message to LoRaWAN devices.",
+        "requestBody" : {
+          "description" : "Downlink message object.",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "EUI" : {
+                    "type" : "string",
+                    "example" : "0000000000000AA",
+                    "description" : "Unique LoRaWAN device identifier. Parameter confirmed requesting Network server to send confirmation status („ack“ = true) in new GW/RX message (available from 2019/06/13)."
+                  },
+                  "data" : {
+                    "type" : "string",
+                    "example" : "{\"cmd\":\"tx\",\"port\":1,\"confirmed\":1,\"data\":\"00\",\"EUI\":\"0000000000000AA\"}"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK, message was equeued for delivery"
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/MessageStoreQuery" : {
+      "post" : {
+        "summary" : "Return LoRaWAN messages based on provided criteria",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "description" : "This method allows query for historic LoRaWAN messages.",
+        "requestBody" : {
+          "description" : "Criteria object",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "sync" : {
+                    "type" : "boolean",
+                    "example" : true,
+                    "description" : "Use sync or async message download. Only sync in currently supported"
+                  },
+                  "maxRows" : {
+                    "type" : "integer",
+                    "example" : 100,
+                    "maximum" : 1000,
+                    "description" : "Maximum number of messages to be returned."
+                  },
+                  "criteria" : {
+                    "type" : "object",
+                    "properties" : {
+                      "tenantId" : {
+                        "type" : "string",
+                        "example" : "T200000001326960aaa"
+                      },
+                      "EUI" : {
+                        "type" : "string",
+                        "example" : "0000000000000AA"
+                      },
+                      "dateFrom" : {
+                        "type" : "string",
+                        "format" : "date-time"
+                      },
+                      "dateTo" : {
+                        "type" : "string",
+                        "format" : "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Response object",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "actRows" : {
+                      "type" : "integer",
+                      "example" : 100,
+                      "description" : "Total number of returned messages."
+                    },
+                    "data" : {
+                      "type" : "array",
+                      "description" : "Array of LoRaWAN messages - escaped JSON strings.",
+                      "items" : {
+                        "type" : "string",
+                        "example" : "{\"cmd\":\"gw\",\"seqno\":3977729,\"EUI\":\"0000000000000AA\",\"ts\":1515408500497,\"fcnt\":1740,\"port\":3,\"freq\":867700000,\"toa\":164,\"dr\":\"SF7 BW125 4/5\",\"ack\":false,\"gws\":[{\"rssi\":-89,\"snr\":10.5,\"ts\":1515408500525,\"time\":\"2018-01-08T10:48:20.509604Z\",\"gweui\":\"B827EBFFFFCE0A2D\",\"lat\":50.08697009999999,\"lon\":14.4559926},{\"rssi\":-96,\"snr\":7,\"ts\":1515408500523,\"time\":\"2018-01-08T10:48:20.500937Z\",\"gweui\":\"FCC23DFFFF0E6C9B\",\"lat\":50.0809788,\"lon\":14.4517755},{\"rssi\":-101,\"snr\":7,\"ts\":1515408500524,\"time\":\"2018-01-08T10:48:20.505926Z\",\"gweui\":\"B827EBFFFFC21ED3\",\"lat\":50.0504093,\"lon\":14.3522196},{\"rssi\":-108,\"snr\":8,\"ts\":1515408500525,\"time\":\"2018-01-08T10:48:20.492194898Z\",\"gweui\":\"F03D29FFFF000049\",\"lat\":50.12008119999999,\"lon\":14.5013552},{\"rssi\":-109,\"snr\":7,\"ts\":1515408500525,\"time\":\"2018-01-08T10:48:20.510700Z\",\"gweui\":\"B827EBFFFF168306\",\"lat\":50.0580813,\"lon\":14.3198719},{\"rssi\":-113,\"snr\":2,\"ts\":1515408500497,\"time\":\"2018-01-08T10:48:20.492191295Z\",\"gweui\":\"024B08FFFF04003C\",\"lat\":50.0809788,\"lon\":14.4517755},{\"rssi\":-115,\"snr\":3.8,\"ts\":1515408500524,\"time\":\"2018-01-08T10:48:20.492208552Z\",\"gweui\":\"024B08FFFF040024\",\"lat\":50.10116941008648,\"lon\":14.349155564062471},{\"rssi\":-115,\"snr\":-0.2,\"ts\":1515408500526,\"time\":\"2018-01-08T10:48:20.492200895Z\",\"gweui\":\"F03D29FFFF0000F5\",\"lat\":50.0796539,\"lon\":14.3755064}],\"bat\":255,\"data\":\"00000aaaaa\"}"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Tenant/{tenantId}" : {
+      "get" : {
+        "summary" : "Get tenant details",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tenantId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "Tenant (Account) ID"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Tenant object",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "deviceIds" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "string",
+                            "example" : 141
+                          }
+                        },
+                        "deviceGroupIds" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "string",
+                            "example" : 22
+                          }
+                        },
+                        "endpointIds" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "string",
+                            "example" : 12
+                          }
+                        },
+                        "serviceIds" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "string",
+                            "example" : "OP-00-0000-00000s00"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Service/{serviceId}" : {
+      "get" : {
+        "summary" : "Get service details",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "serviceId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "Service ID"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Service object",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "deviceIds" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "string",
+                            "example" : "0000000000000AA"
+                          }
+                        },
+                        "counters" : {
+                          "type" : "object",
+                          "properties" : {
+                            "messageIn" : {
+                              "type" : "integer",
+                              "example" : 123
+                            },
+                            "deviceRegistration" : {
+                              "type" : "integer",
+                              "example" : 1
+                            },
+                            "messageOut" : {
+                              "type" : "integer",
+                              "example" : 11
+                            }
+                          }
+                        },
+                        "limits" : {
+                          "type" : "object",
+                          "properties" : {
+                            "messageIn" : {
+                              "type" : "integer",
+                              "example" : -1
+                            },
+                            "deviceRegistration" : {
+                              "type" : "integer",
+                              "example" : 10
+                            },
+                            "messageOut" : {
+                              "type" : "integer",
+                              "example" : 100
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/DeviceGroup/Tenant/{tenantId}" : {
+      "get" : {
+        "summary" : "Get all device groups associated with provided tenantId",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "tenantId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "Tenant (Account) ID"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Array of device group identifiers",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "deviceGroupsIds" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "string",
+                            "example" : 22
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/DeviceGroup/{deviceGroupId}" : {
+      "get" : {
+        "summary" : "Get device group details",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "deviceGroupId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "Device group identifier"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Device group object",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "tenantId" : {
+                          "type" : "string",
+                          "example" : "T200000001326960aaa"
+                        },
+                        "label" : {
+                          "type" : "string",
+                          "example" : "My account"
+                        },
+                        "description" : {
+                          "type" : "string",
+                          "example" : "My account description"
+                        },
+                        "devices" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "string",
+                            "example" : "00000000000000AA"
+                          }
+                        },
+                        "endpoints" : {
+                          "type" : "array",
+                          "items" : {
+                            "type" : "string",
+                            "example" : 33
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Delete device group",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "deviceGroupId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "Device group identifier"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/DeviceGroup/{deviceGroupId}/Device/{deviceId}" : {
+      "post" : {
+        "summary" : "Assign device to device group",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "deviceGroupId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "Device Group identifier"
+        }, {
+          "in" : "path",
+          "name" : "deviceId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "LoRaWAN DevEUI"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove device from device group",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "deviceGroupId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "Device Group identifier"
+        }, {
+          "in" : "path",
+          "name" : "deviceId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "LoRaWAN DevEUI"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/DeviceGroup/{deviceGroupId}/Endpoint/{endpointId}" : {
+      "post" : {
+        "summary" : "Assign endpoint to device group",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "deviceGroupId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "Device Group identifier"
+        }, {
+          "in" : "path",
+          "name" : "endpointId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "Endpoint identifier"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "422" : {
+            "description" : "Validation failed"
+          }
+        }
+      },
+      "delete" : {
+        "summary" : "Remove endpoint from device group",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "deviceGroupId",
+          "schema" : {
+            "type" : "integer"
+          },
+          "required" : true,
+          "description" : "Device Group identifier"
+        }, {
+          "in" : "path",
+          "name" : "endpointId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "Endpoint identifier"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Endpoint" : {
+      "post" : {
+        "summary" : "Create new endpoint",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "description" : "Create new endpoint (client's server for real-time message delivery or MQTT broker)",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "tenantId" : {
+                    "type" : "string",
+                    "example" : "T200000001326960aaa"
+                  },
+                  "label" : {
+                    "type" : "string",
+                    "example" : "My best IoT application, used for REST or MQTT"
+                  },
+                  "protocol" : {
+                    "type" : "string",
+                    "example" : "REST",
+                    "description" : "Protocol could be REST or MQTT"
+                  },
+                  "url" : {
+                    "type" : "string",
+                    "example" : "http://mydomain.eu/iot_listener",
+                    "description" : "URL which is listening for new LoRa messages, used for REST protocol"
+                  },
+                  "auth" : {
+                    "type" : "string",
+                    "example" : "Basic asddasdapskd",
+                    "description" : "Authentication header, used for REST protocol"
+                  },
+                  "address" : {
+                    "type" : "string",
+                    "example" : "10150062.T201902121559275abc.out.mqtt",
+                    "description" : "Name of destination address at allocated prefix, used for MQTT broker. Contstructed: CustomerID.TenantID.out.<endpointname>"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Endpoint created",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "example" : 200
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "success"
+                    },
+                    "data" : {
+                      "type" : "object",
+                      "properties" : {
+                        "endpointId" : {
+                          "type" : "integer",
+                          "example" : 42
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Endpoint/{endpointId}" : {
+      "delete" : {
+        "summary" : "Delete endpoint",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "endpointId",
+          "schema" : {
+            "type" : "string"
+          },
+          "required" : true,
+          "description" : "Endpoint identifier"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/LoraSignal" : {
+      "post" : {
+        "summary" : "Return expected LoRa signal in provided GEO possition (please use GET insted of POST!)",
+        "security" : [ {
+          "ApiKeyAuth" : [ ]
+        } ],
+        "requestBody" : {
+          "description" : "Based on provided GEO possition will be returned expected LoRa signal. By device category is also provided is connectivity will be stable or not. If category is not set in request, will be used default value (3). This method is GET, not POST as presented here. Will be corrected in next release.",
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "object",
+                "required" : [ "system", "lat", "lon" ],
+                "properties" : {
+                  "system" : {
+                    "type" : "string",
+                    "example" : "WGS84",
+                    "description" : "Use value \"WGS84\" or \"JTSK\". In case WGS84, lat is from 11-19, lon is 48-52, if JTSK, lan is between -910000 and -430000, lon is between -1220000 and -930000"
+                  },
+                  "deviceCategory" : {
+                    "type" : "number",
+                    "enum" : [ 2, 3, 4, 5 ],
+                    "description" : "Expected values 2,3,4,5. If not specified, default is 3. CRA understands 4 levels of antenna signal strenght. Very strong (2), Strong (3), Medium (4), Low (5)"
+                  },
+                  "lat" : {
+                    "type" : "string",
+                    "example" : "50.082698714241666",
+                    "description" : "Latitude"
+                  },
+                  "lon" : {
+                    "type" : "string",
+                    "example" : "14.368069564088842",
+                    "description" : "Longitude"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Expected signal coverage",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "enum" : [ 100, 200, 201, 300, 301, 302, 303 ]
+                    },
+                    "lat" : {
+                      "type" : "string",
+                      "example" : "50.082698714241666"
+                    },
+                    "lon" : {
+                      "type" : "string",
+                      "example" : "14.368069564088842"
+                    },
+                    "validCodinates" : {
+                      "type" : "boolean",
+                      "example" : true
+                    },
+                    "signalProbability" : {
+                      "type" : "integer",
+                      "example" : -96
+                    },
+                    "deviceCategory" : {
+                      "type" : "number",
+                      "example" : 5
+                    },
+                    "expectedSignal" : {
+                      "type" : "number",
+                      "description" : "Deep indoor=5, Indoor=4, NLOS=3, LOS=2, Bad signal=1. Deep Indoor - device in room, in middle of a building, or even in cellar. Indoor - device directly behind window. NLOS - Non Line of Sight - not direct visibility, trees, building are in a way. LOS - Line of Sight - direct visibility.",
+                      "example" : 4
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "Too many requests",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "integer",
+                      "enum" : [ 202 ]
+                    },
+                    "status" : {
+                      "type" : "string",
+                      "example" : "error"
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "example" : "Too many requests"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422" : {
+            "description" : "Error response",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Error" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "example" : 422,
+            "description" : "HTTP error code"
+          },
+          "status" : {
+            "type" : "string",
+            "example" : "error"
+          },
+          "message" : {
+            "type" : "string",
+            "example" : "Validation failed"
+          },
+          "errors" : {
+            "type" : "array",
+            "items" : {
+              "properties" : {
+                "code" : {
+                  "type" : "integer"
+                },
+                "message" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "ApiKeyAuth" : {
+        "type" : "apiKey",
+        "in" : "header",
+        "name" : "sessionId"
+      }
+    }
+  }
+}

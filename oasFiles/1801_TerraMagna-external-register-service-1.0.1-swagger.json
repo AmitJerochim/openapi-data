@@ -1,0 +1,869 @@
+{
+  "openapi" : "3.0.2",
+  "info" : {
+    "title" : "External TerraMagna's Register Service API",
+    "version" : "1.0.1",
+    "description" : "# Introduction\n\nThe Register Service API expose requests that interacts with operations,\nproducers and farms, i.e. any financial information present in the FIDES system\nwill pass by this API.\n\n## Authorization\n\nAuthorization follows the standard pattern used by other TerraMagna's APIs:\nauthenticate with the IAM service and send the token in the `Authorization` header.\n\n## Dates and Timestamps\n\nAll dates and timestamps used in the API interface are in [RFC 3339] format.\nEposed values are in the [Coordinated Universal Time (UTC)] time zone.\n\n[RFC 3339]: https://tools.ietf.org/html/rfc3339#section-5.6\n[Coordinated Universal Time (UTC)]: https://en.wikipedia.org/wiki/Coordinated_Universal_Time\n\n## Pagination\n\nAll listing operations provide pagination capabilities in the form of the parameters\n`page` and `size` which both need to be specified and be _strictly positives_ (i.e.\npages start at index 1).\n"
+  },
+  "servers" : [ {
+    "description" : "SwaggerHub API Auto Mocking",
+    "url" : "https://virtserver.swaggerhub.com/TerraMagna/external-register-service/1.0.0"
+  } ],
+  "tags" : [ {
+    "name" : "Register",
+    "description" : "Register an operation."
+  } ],
+  "paths" : {
+    "/register" : {
+      "post" : {
+        "tags" : [ "Register" ],
+        "operationId" : "register",
+        "summary" : "Register information about the operation.",
+        "description" : "Register the financial information and creates\nthe farm registers for the associated areas.\n",
+        "security" : [ {
+          "internalAuthorization" : [ ]
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NewRegister"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Successfully created register.\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Register"
+                }
+              }
+            }
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404NotFound"
+          },
+          "422" : {
+            "$ref" : "#/components/responses/422UnprocessableEntity"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/403Forbidden"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultResponse"
+          }
+        }
+      }
+    },
+    "/register/{registerId}" : {
+      "put" : {
+        "tags" : [ "Register" ],
+        "operationId" : "updateRegister",
+        "summary" : "Update information about the register.",
+        "description" : "Updates the financial information and creates\nthe farm registers for the associated areas.\n\nFarm registers that will be added need to be passed as `NewFarmRegister`,\notherwise it will be considered an error since they were not created before.\n",
+        "security" : [ {
+          "internalAuthorization" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "registerId",
+          "required" : true,
+          "description" : "The ID of the register being updated.",
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateRegister"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Successfully created a register.\n",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Register"
+                }
+              }
+            }
+          },
+          "404" : {
+            "$ref" : "#/components/responses/404NotFound"
+          },
+          "422" : {
+            "$ref" : "#/components/responses/422UnprocessableEntity"
+          },
+          "403" : {
+            "$ref" : "#/components/responses/403Forbidden"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultResponse"
+          }
+        }
+      }
+    },
+    "/registers" : {
+      "get" : {
+        "tags" : [ "Register" ],
+        "operationId" : "listAllRegisters",
+        "summary" : "List the registers for all client.",
+        "description" : "List all registers for all clients.",
+        "security" : [ {
+          "internalAuthorization" : [ ]
+        } ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/after"
+        }, {
+          "$ref" : "#/components/parameters/page"
+        }, {
+          "$ref" : "#/components/parameters/size"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successfully returned a page.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RegisterPage"
+                }
+              }
+            }
+          },
+          "204" : {
+            "description" : "No registers available"
+          },
+          "default" : {
+            "$ref" : "#/components/responses/DefaultResponse"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "securitySchemes" : {
+      "authorization" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      },
+      "internalAuthorization" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    },
+    "parameters" : {
+      "after" : {
+        "name" : "after",
+        "required" : false,
+        "in" : "query",
+        "description" : "Minimum timestamp to use as a filter during the operation.\n\nThis provides an interface for clients fetching only the resources created\nafter the provided timestamp, instead of all of them.\n\nIf no value is provided, the response will contains _all_ the resources.\n",
+        "schema" : {
+          "$ref" : "#/components/schemas/DateTime"
+        }
+      },
+      "page" : {
+        "name" : "page",
+        "in" : "query",
+        "required" : true,
+        "description" : "Number of the page requested.\n",
+        "schema" : {
+          "type" : "number",
+          "format" : "int32",
+          "minimum" : 0,
+          "maximum" : 6553500,
+          "exclusiveMinimum" : true
+        },
+        "example" : 2
+      },
+      "size" : {
+        "name" : "size",
+        "in" : "query",
+        "required" : true,
+        "description" : "Size of the pages requested.\n",
+        "schema" : {
+          "type" : "number",
+          "format" : "int32",
+          "minimum" : 50,
+          "maximum" : 65535,
+          "exclusiveMinimum" : true
+        },
+        "example" : 50
+      }
+    },
+    "responses" : {
+      "403Forbidden" : {
+        "description" : "The user doesn't have authorization to execute the operation.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "error" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "string",
+                      "enum" : [ "UNAUTHORIZED" ]
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "enum" : [ "The user doesn't have access to the operation" ]
+                    }
+                  },
+                  "required" : [ "code", "message" ]
+                }
+              },
+              "required" : [ "error" ]
+            }
+          }
+        }
+      },
+      "404NotFound" : {
+        "description" : "The resource wasn't found.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "error" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "string",
+                      "enum" : [ "REGISTER_NOT_FOUND", "PRODUCER_NOT_FOUND" ]
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "example" : "The register '3fa85f64-5717-4562-b3fc-2c963f66afa6' was not found."
+                    }
+                  },
+                  "required" : [ "code", "message" ]
+                }
+              },
+              "required" : [ "error" ]
+            }
+          }
+        }
+      },
+      "422UnprocessableEntity" : {
+        "description" : "The request contains some semantic error and could not\nbe processed.\n",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "error" : {
+                  "type" : "object",
+                  "properties" : {
+                    "code" : {
+                      "type" : "string",
+                      "enum" : [ "OPERATION_MISSING" ]
+                    },
+                    "message" : {
+                      "type" : "string",
+                      "example" : "The operation data for register '3fa85f64-5717-4562-b3fc-2c963f66afa6' was not found."
+                    }
+                  },
+                  "required" : [ "code", "message" ]
+                }
+              },
+              "required" : [ "error" ]
+            }
+          }
+        }
+      },
+      "DefaultResponse" : {
+        "description" : "Unknown error that may occurr due to unexpected errors inside\ncode, infrastructure errors, etc.\n",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "oneOf" : [ {
+                "type" : "object",
+                "properties" : {
+                  "error" : {
+                    "type" : "object",
+                    "properties" : {
+                      "code" : {
+                        "type" : "string",
+                        "enum" : [ "INTERNAL_ERROR" ]
+                      },
+                      "message" : {
+                        "type" : "string"
+                      }
+                    }
+                  }
+                }
+              }, {
+                "type" : "string"
+              } ]
+            }
+          }
+        }
+      }
+    },
+    "schemas" : {
+      "Id" : {
+        "description" : "An Entity's Identifier.\n\nThis provides an unified interface for handling all the identifiers used\nin the API.\n",
+        "type" : "string",
+        "format" : "uuid",
+        "readOnly" : true
+      },
+      "DateTime" : {
+        "description" : "A timestamp in the [RFC 3339] format.\n\n[RFC 3339]: https://tools.ietf.org/html/rfc3339#section-5.6\n",
+        "type" : "string",
+        "format" : "date-time",
+        "example" : "1996-12-19T16:39:57-03:00"
+      },
+      "Date" : {
+        "description" : "ISO 8601 date in the UTC time zone. Its value should be formatted in the\nformat described in [RFC 3339].\n\n[RFC 3339]: https://tools.ietf.org/html/rfc3339#section-5.6\n",
+        "type" : "string",
+        "format" : "date",
+        "example" : "1996-12-19"
+      },
+      "Hyperlink" : {
+        "description" : "A REST Hypermedia link, with an associated HTTP method that should be\nused in the request.\n",
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "enum" : [ "GET", "POST", "PATCH", "DELETE" ]
+          },
+          "href" : {
+            "type" : "string",
+            "format" : "uri"
+          }
+        },
+        "required" : [ "type", "href" ],
+        "example" : {
+          "type" : "GET",
+          "href" : "/registers?page=1&size=50"
+        }
+      },
+      "NewFarmRegister" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "description" : "The name of the Farm.",
+            "type" : "string"
+          },
+          "registration" : {
+            "description" : "The farm registration number.",
+            "type" : "string"
+          },
+          "car" : {
+            "$ref" : "#/components/schemas/CarRegistration"
+          },
+          "stands" : {
+            "description" : "The stands of a farm\n",
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Stand"
+            }
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "UpdateFarmRegister" : {
+        "oneOf" : [ {
+          "$ref" : "#/components/schemas/FarmRegister"
+        }, {
+          "$ref" : "#/components/schemas/NewFarmRegister"
+        } ]
+      },
+      "FarmRegister" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "$ref" : "#/components/schemas/Id"
+          },
+          "createdAt" : {
+            "$ref" : "#/components/schemas/DateTime"
+          },
+          "registerId" : {
+            "$ref" : "#/components/schemas/Id"
+          },
+          "name" : {
+            "description" : "The name of the Farm.",
+            "type" : "string"
+          },
+          "registration" : {
+            "description" : "The farm registration number.",
+            "type" : "string"
+          },
+          "car" : {
+            "$ref" : "#/components/schemas/CarRegistration"
+          },
+          "stands" : {
+            "description" : "The stands of a farm\n",
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Stand"
+            }
+          }
+        },
+        "required" : [ "name", "stands" ]
+      },
+      "CarRegistration" : {
+        "description" : "A registration in SICAR (Sistema Nacional de Cadastro Ambiental Rural).\n\nThe registration CAR code is an _unique_ identifier for a farm \ninside Brazil and can be safely used to search for one.\n\nThe code is composed by three parts, separated by hyphens:\n\n* The UF where the farm is located.\n* A code for the municipality where the farm is located.\n* A UUID (in simple formatting) identifying the farm itself.\n",
+        "type" : "string",
+        "pattern" : "^(A[CLPM]|BA|CE|DF|ES|GO|M[ATSG]|P[ABREI]|R[JNSOR]|S[CPE]|TO)-(\\d+)-([[:xdigit:]]{32})$",
+        "example" : "CE-2306306-8DB25DF7804C4BF1A9B521BBA5998D2E"
+      },
+      "NewRegister" : {
+        "type" : "object",
+        "properties" : {
+          "operation" : {
+            "$ref" : "#/components/schemas/NewOperation"
+          },
+          "farmRegisters" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/NewFarmRegister"
+            },
+            "uniqueItems" : true
+          }
+        },
+        "required" : [ "operation", "farmRegisters" ]
+      },
+      "UpdateRegister" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "$ref" : "#/components/schemas/Id"
+          },
+          "operation" : {
+            "$ref" : "#/components/schemas/Operation"
+          },
+          "farmRegisters" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/UpdateFarmRegister"
+            },
+            "uniqueItems" : true
+          }
+        },
+        "required" : [ "operation", "farmRegisters" ]
+      },
+      "Register" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "$ref" : "#/components/schemas/Id"
+          },
+          "farmRegisters" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/FarmRegister"
+            },
+            "uniqueItems" : true
+          },
+          "operation" : {
+            "$ref" : "#/components/schemas/Operation"
+          }
+        },
+        "required" : [ "farmRegisters" ]
+      },
+      "RegisterPage" : {
+        "description" : "A page of registers.",
+        "type" : "object",
+        "properties" : {
+          "total" : {
+            "description" : "Total number of registers made by the user's client.\n\nThis can be used to properly implement pagination in user\ninterfaces.\n",
+            "type" : "number",
+            "format" : "int64",
+            "minimum" : 0
+          },
+          "registers" : {
+            "description" : "A page of registers available to the user.",
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Register"
+            },
+            "uniqueItems" : true
+          },
+          "links" : {
+            "description" : "Hyperlinks available for the page.\n\n`self` will always be present but `previousPage` and `nextPage`\nwill only occur if they in fact exists.\n",
+            "type" : "object",
+            "properties" : {
+              "self" : {
+                "$ref" : "#/components/schemas/Hyperlink"
+              },
+              "previousPage" : {
+                "$ref" : "#/components/schemas/Hyperlink"
+              },
+              "nextPage" : {
+                "$ref" : "#/components/schemas/Hyperlink"
+              }
+            },
+            "required" : [ "self" ]
+          }
+        },
+        "required" : [ "total", "registers", "links" ]
+      },
+      "NewOperation" : {
+        "description" : "A not yet persisted operation.",
+        "allOf" : [ {
+          "type" : "object",
+          "properties" : {
+            "producer" : {
+              "$ref" : "#/components/schemas/NewProducer"
+            }
+          }
+        }, {
+          "$ref" : "#/components/schemas/FinancialData"
+        } ]
+      },
+      "NewProducer" : {
+        "description" : "A not yet persisted producer.",
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "description" : "Name of the producer.",
+            "type" : "string"
+          },
+          "cpf" : {
+            "$ref" : "#/components/schemas/Cpf"
+          }
+        },
+        "required" : [ "name", "cpf" ]
+      },
+      "Operation" : {
+        "description" : "A registered operation.\n\nAlthough it is registered, the farms associated with it may\nnot be ready.\n",
+        "allOf" : [ {
+          "type" : "object",
+          "properties" : {
+            "id" : {
+              "$ref" : "#/components/schemas/Id"
+            },
+            "createdAt" : {
+              "$ref" : "#/components/schemas/DateTime"
+            },
+            "registerId" : {
+              "$ref" : "#/components/schemas/Id"
+            },
+            "producer" : {
+              "$ref" : "#/components/schemas/Producer"
+            }
+          },
+          "required" : [ "id", "createdAt", "registerId", "producer" ]
+        }, {
+          "$ref" : "#/components/schemas/FinancialData"
+        } ]
+      },
+      "Producer" : {
+        "description" : "The producer financed by some `Operation`.\n\nThis may be a physical or juridical person.\n",
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "$ref" : "#/components/schemas/Id"
+          },
+          "name" : {
+            "description" : "Name of the producer.",
+            "type" : "string"
+          },
+          "cpf" : {
+            "$ref" : "#/components/schemas/Cpf"
+          }
+        },
+        "required" : [ "id", "name", "cpf" ]
+      },
+      "Cpf" : {
+        "description" : "CPF or CNPJ of a producer.\n\nThis is guaranteed to be unique.\n",
+        "type" : "string",
+        "pattern" : "^(\\d{3}.\\d{3}.\\d{3})|(\\d{2}.\\d{3}.\\d{3}/\\d{4})-\\d{2}$",
+        "example" : "071.361.203-26"
+      },
+      "FinancialData" : {
+        "description" : "Financial information of an `Operation`.\n\nThe fields `deliveryPlace`, `qualityDescription` are required\nonly if `documentType` is  `CPR` or `CPRF`, and `depositAccount`\nonly when `CPRF`.\n",
+        "type" : "object",
+        "properties" : {
+          "documentType" : {
+            "$ref" : "#/components/schemas/DocumentType"
+          },
+          "documentCode" : {
+            "type" : "string"
+          },
+          "season" : {
+            "$ref" : "#/components/schemas/Season"
+          },
+          "cropType" : {
+            "$ref" : "#/components/schemas/CropType"
+          },
+          "financedValue" : {
+            "$ref" : "#/components/schemas/Value"
+          },
+          "financedArea" : {
+            "$ref" : "#/components/schemas/Area"
+          },
+          "dueDate" : {
+            "$ref" : "#/components/schemas/Date"
+          },
+          "deliveryPlace" : {
+            "type" : "string"
+          },
+          "qualityDescription" : {
+            "type" : "string"
+          },
+          "depositAccount" : {
+            "$ref" : "#/components/schemas/BankAccount"
+          }
+        },
+        "required" : [ "documentType", "documentCode", "season", "cropType", "financedValue", "financedArea", "dueDate" ]
+      },
+      "BankAccount" : {
+        "description" : "A bank account",
+        "type" : "object",
+        "properties" : {
+          "bank" : {
+            "type" : "string"
+          },
+          "agency" : {
+            "type" : "string"
+          },
+          "account" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "bank", "agency", "account" ]
+      },
+      "DocumentType" : {
+        "description" : "Possible types of financial operations being executed.\n\nThe types `CPR`, `CPRF` and `CCB` are known to the system. Unknonwn\ntypes can be sent directly without need to special formatting, but\nthey will have limited support.\n",
+        "type" : "string",
+        "minLength" : 2,
+        "example" : "CPR"
+      },
+      "Season" : {
+        "type" : "object",
+        "properties" : {
+          "year" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 1970
+          },
+          "crop" : {
+            "type" : "string",
+            "enum" : [ "SAFRA", "SAFRINHA" ]
+          }
+        },
+        "required" : [ "year", "crop" ],
+        "example" : {
+          "year" : 2017,
+          "crop" : "SAFRA"
+        }
+      },
+      "CropType" : {
+        "description" : "Available crop types.",
+        "type" : "string",
+        "enum" : [ "BEAN", "CORN", "COTTON", "COFFEE", "EUCALYPTUS", "OAT", "OTHERS", "PEANUT", "RICE", "SORGHUM", "SOYBEAN", "SURGARCANE", "UNKNOWN", "WHEAT" ]
+      },
+      "Value" : {
+        "description" : "A financed amount with it currency.",
+        "type" : "object",
+        "properties" : {
+          "amount" : {
+            "type" : "number",
+            "format" : "double",
+            "minimum" : 0,
+            "exclusiveMinimum" : true
+          },
+          "currency" : {
+            "$ref" : "#/components/schemas/Currency"
+          }
+        },
+        "example" : {
+          "amount" : 1234.43223,
+          "currency" : "SACK"
+        }
+      },
+      "Currency" : {
+        "description" : "Available currencies.\n\nAlthough `TONNE` is an available currency, it is only\navailable for _write_. _All_ `TONNE` values WILL be\nconverted to `KILOGRAM` uppon saving. Clients MUST\nconsider that NO `TONNE` value will be present in\nresponses from the API.\n",
+        "type" : "string",
+        "enum" : [ "REAL", "SACK", "ARROBA", "KILOGRAM", "TONNE" ]
+      },
+      "Area" : {
+        "type" : "number",
+        "format" : "double",
+        "minimum" : 0,
+        "exclusiveMinimum" : true,
+        "example" : 1231.0
+      },
+      "Stand" : {
+        "type" : "object",
+        "description" : "Stand is the minimum cultivation unit on a farm.",
+        "properties" : {
+          "id" : {
+            "readOnly" : true,
+            "type" : "number"
+          },
+          "geometry" : {
+            "writeOnly" : true,
+            "allOf" : [ {
+              "$ref" : "#/components/schemas/MultiPolygon"
+            } ]
+          }
+        }
+      },
+      "Geometry" : {
+        "type" : "object",
+        "description" : "GeoJSon geometry",
+        "required" : [ "type" ],
+        "externalDocs" : {
+          "url" : "https://tools.ietf.org/html/rfc7946"
+        },
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "enum" : [ "Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon" ],
+            "description" : "the geometry type"
+          }
+        }
+      },
+      "Point2D" : {
+        "type" : "array",
+        "maxItems" : 2,
+        "minItems" : 2,
+        "items" : {
+          "type" : "number"
+        }
+      },
+      "Point" : {
+        "type" : "object",
+        "description" : "GeoJSon geometry",
+        "externalDocs" : {
+          "url" : "https://tools.ietf.org/html/rfc7946"
+        },
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Geometry"
+        }, {
+          "properties" : {
+            "coordinates" : {
+              "$ref" : "#/components/schemas/Point2D"
+            }
+          }
+        } ]
+      },
+      "LineString" : {
+        "type" : "object",
+        "description" : "GeoJSon geometry",
+        "externalDocs" : {
+          "url" : "https://tools.ietf.org/html/rfc7946"
+        },
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Geometry"
+        }, {
+          "properties" : {
+            "coordinates" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/components/schemas/Point2D"
+              }
+            }
+          }
+        } ]
+      },
+      "Polygon" : {
+        "type" : "object",
+        "description" : "GeoJSon geometry",
+        "externalDocs" : {
+          "url" : "https://tools.ietf.org/html/rfc7946"
+        },
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Geometry"
+        }, {
+          "properties" : {
+            "coordinates" : {
+              "type" : "array",
+              "items" : {
+                "type" : "array",
+                "items" : {
+                  "$ref" : "#/components/schemas/Point2D"
+                }
+              }
+            }
+          }
+        } ]
+      },
+      "MultiPoint" : {
+        "type" : "object",
+        "description" : "GeoJSon geometry",
+        "externalDocs" : {
+          "url" : "https://tools.ietf.org/html/rfc7946"
+        },
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Geometry"
+        }, {
+          "properties" : {
+            "coordinates" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/components/schemas/Point2D"
+              }
+            }
+          }
+        } ]
+      },
+      "MultiLineString" : {
+        "type" : "object",
+        "description" : "GeoJSon geometry",
+        "externalDocs" : {
+          "url" : "https://tools.ietf.org/html/rfc7946"
+        },
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Geometry"
+        }, {
+          "properties" : {
+            "coordinates" : {
+              "type" : "array",
+              "items" : {
+                "type" : "array",
+                "items" : {
+                  "$ref" : "#/components/schemas/Point2D"
+                }
+              }
+            }
+          }
+        } ]
+      },
+      "MultiPolygon" : {
+        "type" : "object",
+        "description" : "GeoJSon geometry",
+        "externalDocs" : {
+          "url" : "https://tools.ietf.org/html/rfc7946"
+        },
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Geometry"
+        }, {
+          "properties" : {
+            "coordinates" : {
+              "type" : "array",
+              "items" : {
+                "type" : "array",
+                "items" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Point2D"
+                  }
+                }
+              }
+            }
+          }
+        } ],
+        "example" : {
+          "type" : "MultiPolygon",
+          "coordinates" : [ [ [ [ 0, 0 ] ] ] ]
+        }
+      }
+    }
+  }
+}

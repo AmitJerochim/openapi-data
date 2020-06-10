@@ -1,0 +1,562 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "version" : "1.13.0",
+    "title" : "Mobile API",
+    "description" : "Descripción de la API del micro servicios Mobile.  En todas las request    se debe incluir el header 'x-api-token' con el token entregado por Debmedia.    En caso contrario las request retornarán con status 401"
+  },
+  "servers" : [ {
+    "url" : "http://integraciones.debmedia.com"
+  } ],
+  "tags" : [ {
+    "name" : "queue",
+    "description" : ""
+  } ],
+  "security" : [ {
+    "APIKeyHeader" : [ ]
+  } ],
+  "paths" : {
+    "/api/v1/companies" : {
+      "get" : {
+        "tags" : [ "companies" ],
+        "summary" : "Servicio para listar las compañías",
+        "description" : "Al ejecutar este servicio se listan todos las compañías de mobile.",
+        "responses" : {
+          "200" : {
+            "description" : "Una lista de compañías",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Company"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error al obtener las compañías",
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                },
+                "examples" : {
+                  "Error inesperado" : {
+                    "value" : "Error al obtener las compañías"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/queue" : {
+      "get" : {
+        "tags" : [ "queue" ],
+        "summary" : "Servicio para listar trámites virtuales",
+        "description" : "Al ejecutar este servicio se listan todos los trámites de todas las sucursales sobre los cuales es posible encolarse virtualemente. Adicionalemente, si se envía el id de la sucursal como parámetro en la url, sólo se listan aquellos trámites que pertenezcan a dicha sucursal",
+        "parameters" : [ {
+          "name" : "branchId",
+          "in" : "query",
+          "description" : "Id de la sucursal",
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Una lista de trámites",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/queue"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error inesperado",
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                },
+                "examples" : {
+                  "Error inesperado" : {
+                    "value" : "Error al obtener los trámites"
+                  },
+                  "Error inesperado en debQ" : {
+                    "value" : "Ocurrió un error inesperado al intentar obtener el trámite"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/queue/:queueId/branch/:branchId/enqueue" : {
+      "post" : {
+        "tags" : [ "queue" ],
+        "summary" : "Servicio para encolar trámites virtuales",
+        "description" : "Al ejectutar este servicio se encola un trámite en el sistema debQ",
+        "parameters" : [ {
+          "name" : "queueId",
+          "in" : "path",
+          "required" : true,
+          "description" : "Id del trámite sobre el cual se quiere encolar",
+          "schema" : {
+            "type" : "integer"
+          }
+        }, {
+          "name" : "branchId",
+          "description" : "sucursal sobre la cual se quiere encolar el turno",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EnqueueBody"
+              }
+            }
+          },
+          "description" : "Body de la petición"
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Un turno",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/turn"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Error con alguno de los parámetros",
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                },
+                "examples" : {
+                  "Branch Invalida" : {
+                    "value" : "La sucursal propocionada no es correcta"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error",
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                },
+                "examples" : {
+                  "Tramite invalido" : {
+                    "value" : "No se encontró el trámite que desea realizar."
+                  },
+                  "Sucursal invalida" : {
+                    "description" : "Esto ocurre cuando el conjunto el trámite seleccionado no se encuentra en la sucursal",
+                    "value" : "No puede realizar este trámite en esta sucursal"
+                  },
+                  "Máximo cantidad de turnos alcanzada" : {
+                    "value" : "Se superó el límite de turnos permitidos para este trámite."
+                  },
+                  "Máximo cantidad de turnos por tramite y cliente alcanzada" : {
+                    "value" : "Se superó el límite de turnos para un mismo trámite y cliente."
+                  },
+                  "Máximo cantidad de turnos  cliente alcanzada" : {
+                    "value" : "Se superó el límite de turnos para un cliente."
+                  },
+                  "Transacción en curso" : {
+                    "value" : "Transacción en curso, vuelva a intentar más tarde"
+                  },
+                  "Tipo de cliente invalido" : {
+                    "value" : "El tipo de cliente ingresado no es válido.",
+                    "description" : "Este error ocurre cuando se completa el campo customerType.id en el body de la request, y el valor ingresado no corresponde a un tipo de cliente"
+                  },
+                  "Error inesperado" : {
+                    "value" : "Error al encolar el turno"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/turn/code/:turnCode" : {
+      "get" : {
+        "tags" : [ "turn" ],
+        "summary" : "Servicio para realizar seguimiento sobre un turno",
+        "description" : "Al ejecutar este servicio se devuelven los datos del turno.",
+        "responses" : {
+          "200" : {
+            "description" : "obtención de turno exitosa",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/turn"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe un turno con ese código",
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                },
+                "examples" : {
+                  "Turno no encontrado" : {
+                    "value" : "No se pudo encontrar el turno, intente nuevamente"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error",
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                },
+                "examples" : {
+                  "Error inesperado" : {
+                    "value" : "No se pudo encontrar el turno, hubo un error interno"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/turn/:turnCode/cancel" : {
+      "post" : {
+        "tags" : [ "turn" ],
+        "summary" : "Servicio para cancelar un turno ya encolado previamente",
+        "description" : "Al ejectuar este servicio se cancela un turno que previamente haya sido encolado",
+        "responses" : {
+          "200" : {
+            "description" : "Cancelación de turno exitosa"
+          },
+          "404" : {
+            "description" : "No existe un turno con ese código",
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                },
+                "examples" : {
+                  "Turno no encontrado" : {
+                    "value" : "No se encontró el turno de código {0}"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error",
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                },
+                "examples" : {
+                  "Turno previamente cancelado" : {
+                    "value" : "El turno ya fue cancelado"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/debdash/api/branch/listbycompany" : {
+      "get" : {
+        "tags" : [ "branch" ],
+        "summary" : "Lista las sucursales a las cuales el usuario tiene acceso",
+        "description" : "",
+        "responses" : {
+          "200" : {
+            "description" : "Sucursales obtenidas con exito",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Branch"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "securitySchemes" : {
+      "APIKeyHeader" : {
+        "type" : "apiKey",
+        "in" : "header",
+        "name" : "x-api-token"
+      }
+    },
+    "schemas" : {
+      "queue" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "El id de trámite.",
+            "example" : 1
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "El nombre del trámite",
+            "example" : "trámite 1"
+          },
+          "branch" : {
+            "$ref" : "#/components/schemas/Branch"
+          }
+        }
+      },
+      "turn" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "description" : "El código único de turno.",
+            "example" : "1ADJ3LC4"
+          },
+          "finishTime" : {
+            "type" : "string",
+            "description" : "La hora a la que fue finalizado el turno",
+            "example" : "2018-11-20T14:44:12.000Z"
+          },
+          "status" : {
+            "type" : "string",
+            "description" : "El estado del turno.",
+            "example" : "CHECK_IN_PENDING"
+          },
+          "jsonDetails" : {
+            "type" : "object",
+            "description" : "datos útiles para realizar el seguimiento del turno",
+            "properties" : {
+              "turn" : {
+                "type" : "string",
+                "description" : "Número y letra del turno en cuestión",
+                "example" : "A10"
+              },
+              "actualTurn" : {
+                "type" : "string",
+                "description" : "Número y letra del próximo turno a llamar del mismo trámite en el cual estoy encolado.",
+                "example" : "A4"
+              },
+              "serviceTime" : {
+                "type" : "number",
+                "description" : "tiempo promedio de atención (en minutos) para el trámite donde estoy encolado",
+                "example" : 17.3
+              },
+              "waintingTime" : {
+                "type" : "number",
+                "description" : "tiempo promedio de espera (en minutos) para el trámite donde estoy encolado",
+                "example" : 2.3
+              },
+              "estimatorResult" : {
+                "type" : "object",
+                "properties" : {
+                  "turnsInFront" : {
+                    "type" : "number",
+                    "description" : "Cantidad de personas por delante de mi turno.",
+                    "example" : 12
+                  },
+                  "waitingTime" : {
+                    "type" : "number",
+                    "description" : "Tiempo de espera estimado en minutos."
+                  }
+                }
+              }
+            }
+          },
+          "branch" : {
+            "$ref" : "#/components/schemas/Branch"
+          }
+        }
+      },
+      "Branch" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "description" : "El id de la sucursal",
+            "example" : 1
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "el nombre de la sucursal",
+            "example" : "sucursal 1"
+          },
+          "monitorInfo" : {
+            "$ref" : "#/components/schemas/monitorInfo"
+          }
+        }
+      },
+      "monitorInfo" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "nombre de la sucursal",
+            "example" : "sucursal 1"
+          },
+          "lastUpdate" : {
+            "type" : "string",
+            "description" : "ultima vez en que se actualizó los datos de congestión de sucursal",
+            "example" : "2018-11-16T10:24:18.000Z"
+          },
+          "waitingTurns" : {
+            "type" : "integer",
+            "description" : "cantidad de turnos en espera en toda la sucursal",
+            "example" : 15
+          },
+          "avgWaitingTime" : {
+            "type" : "string",
+            "description" : "tiempo de espera promedio en la sucursal de la última hora expresado en minutos. Se mostrará \"--\" en caso de que no haya datos para la hora actual",
+            "example" : "22.3"
+          },
+          "serviceLevel" : {
+            "type" : "string",
+            "description" : "Nivel de servicio de la sucursal. El cómputo de este valor cambia según como esté configurado en debQ.  Se mostrará \"--\" en caso de que no haya datos para la hora actual",
+            "example" : "8.6"
+          },
+          "waitingRooms" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "name" : {
+                  "type" : "string",
+                  "description" : "nombre de la sala de espera",
+                  "example" : "sala de espera 1"
+                },
+                "waitingTurns" : {
+                  "type" : "integer",
+                  "description" : "cantidad de turnos en espera en toda la sucursal",
+                  "example" : 15
+                },
+                "avgWaitingTime" : {
+                  "type" : "string",
+                  "description" : "tiempo de espera promedio en la sala de espera de la última hora expresado en minutos. Se mostrará \"--\" en caso de que no haya datos para la hora actual",
+                  "example" : "15.3"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Company" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        }
+      },
+      "EnqueueBody" : {
+        "type" : "object",
+        "properties" : {
+          "dni" : {
+            "type" : "string",
+            "example" : "192837482"
+          },
+          "cuil" : {
+            "type" : "string",
+            "example" : "192837482-9"
+          },
+          "libretaEnrolamiento" : {
+            "type" : "string",
+            "example" : "A828391929"
+          },
+          "libretaCivica" : {
+            "type" : "string",
+            "example" : "LV121929"
+          },
+          "cedulaIdentidad" : {
+            "type" : "string",
+            "example" : "1018475452"
+          },
+          "passport" : {
+            "type" : "string",
+            "example" : "AM-78452"
+          },
+          "cedulaDiplomatica" : {
+            "type" : "string",
+            "example" : "828391929-12"
+          },
+          "cuit" : {
+            "type" : "string",
+            "example" : "828391929-1"
+          },
+          "firstName" : {
+            "type" : "string",
+            "example" : "Mi nombre"
+          },
+          "lastName" : {
+            "type" : "string",
+            "example" : "Mi apellido"
+          },
+          "email" : {
+            "type" : "string",
+            "example" : "mi.email@mail.com"
+          },
+          "businessName" : {
+            "type" : "string",
+            "example" : "Otros"
+          },
+          "phone" : {
+            "type" : "string",
+            "example" : "3142305842"
+          },
+          "customerNumber" : {
+            "type" : "string",
+            "example" : "232123"
+          },
+          "customerType" : {
+            "type" : "object",
+            "properties" : {
+              "id" : {
+                "type" : "integer",
+                "description" : "Tipo de cliente",
+                "example" : 7
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,996 @@
+{
+  "openapi" : "3.0.2",
+  "info" : {
+    "title" : "Returns API",
+    "version" : "0.3.4"
+  },
+  "paths" : {
+    "/returns" : {
+      "post" : {
+        "summary" : "Create a return",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/Platform"
+        }, {
+          "$ref" : "#/components/parameters/Store"
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NewReturn"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "The return has been created.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "id" : {
+                      "type" : "string",
+                      "format" : "uuid",
+                      "example" : "633ddf1f-ed00-4e1a-9e70-bab7f741e8a7",
+                      "description" : "Return ID."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/UnexpectedError"
+          },
+          "501" : {
+            "$ref" : "#/components/responses/InvalidPlatform"
+          }
+        }
+      }
+    },
+    "/returns/{id}" : {
+      "get" : {
+        "summary" : "Retrieve return details",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/Platform"
+        }, {
+          "$ref" : "#/components/parameters/Store"
+        }, {
+          "$ref" : "#/components/parameters/Return"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Return"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/UnexpectedError"
+          },
+          "501" : {
+            "$ref" : "#/components/responses/InvalidPlatform"
+          }
+        }
+      }
+    },
+    "/returns/{id}/shipments" : {
+      "post" : {
+        "summary" : "Create a shipment for the return",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/Platform"
+        }, {
+          "$ref" : "#/components/parameters/Store"
+        }, {
+          "$ref" : "#/components/parameters/Return"
+        } ],
+        "requestBody" : {
+          "required" : true,
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "oneOf" : [ {
+                  "$ref" : "#/components/schemas/NewDhlShipment"
+                }, {
+                  "$ref" : "#/components/schemas/NewPaczkomatyShipment"
+                } ],
+                "discriminator" : {
+                  "propertyName" : "carrier",
+                  "mapping" : {
+                    "dhl" : "#/components/schemas/NewDhlShipment",
+                    "paczkomaty" : "#/components/schemas/NewPaczkomatyShipment"
+                  }
+                }
+              },
+              "examples" : {
+                "dhl" : {
+                  "$ref" : "#/components/examples/NewDhlShipment"
+                },
+                "paczkomaty" : {
+                  "$ref" : "#/components/examples/NewPaczkomatyShipment"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "202" : {
+            "description" : "The shipment request has been registered and the system is trying to create a shipment in the courier service.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object",
+                  "properties" : {
+                    "id" : {
+                      "type" : "string",
+                      "example" : "a8d1c5b3-8d65-46c2-a2a1-0eeef0269fcb",
+                      "description" : "Reference ID."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "429" : {
+            "description" : "Too many shipment requests."
+          },
+          "500" : {
+            "$ref" : "#/components/responses/UnexpectedError"
+          },
+          "501" : {
+            "$ref" : "#/components/responses/InvalidPlatform"
+          }
+        },
+        "callbacks" : {
+          "onUpdate" : {
+            "{$request.body#/callbackUrl}" : {
+              "post" : {
+                "summary" : "Receive a shipment number.",
+                "requestBody" : {
+                  "required" : true,
+                  "content" : {
+                    "application/json" : {
+                      "schema" : {
+                        "oneOf" : [ {
+                          "$ref" : "#/components/schemas/DhlShipment"
+                        }, {
+                          "$ref" : "#/components/schemas/PaczkomatyShipment"
+                        } ]
+                      },
+                      "examples" : {
+                        "dhl" : {
+                          "$ref" : "#/components/examples/DhlShipment"
+                        },
+                        "paczkomaty" : {
+                          "$ref" : "#/components/examples/PaczkomatyShipment"
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses" : {
+                  "200" : {
+                    "description" : "Notification successfully processed."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers/{platformId}/returns" : {
+      "get" : {
+        "summary" : "List returns created by the customer",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/Platform"
+        }, {
+          "$ref" : "#/components/parameters/Store"
+        }, {
+          "name" : "platformId",
+          "in" : "path",
+          "schema" : {
+            "type" : "string",
+            "example" : "5521123"
+          },
+          "description" : "Customer ID in the e-commerce platform.",
+          "required" : true
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Sucessful response.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Return"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/UnexpectedError"
+          },
+          "501" : {
+            "$ref" : "#/components/responses/InvalidPlatform"
+          }
+        }
+      }
+    },
+    "/orders/getReturnableItems" : {
+      "post" : {
+        "summary" : "List returnable items for given orders",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/Platform"
+        }, {
+          "$ref" : "#/components/parameters/Store"
+        } ],
+        "requestBody" : {
+          "description" : "Post all items which have been shipped to the customer. In case of multiple quantity of the same SKU you should split them into multiple items.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OrderItems"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "The response contains returnable items only.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReturnableOrderItems"
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/UnexpectedError"
+          },
+          "501" : {
+            "$ref" : "#/components/responses/InvalidPlatform"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Return" : {
+        "allOf" : [ {
+          "type" : "object",
+          "required" : [ "id", "status", "createdAt", "updatedAt", "newShipmentFlag" ],
+          "properties" : {
+            "id" : {
+              "type" : "string",
+              "format" : "uuid",
+              "description" : "Return ID.",
+              "example" : "633ddf1f-ed00-4e1a-9e70-bab7f741e8a7"
+            },
+            "createdAt" : {
+              "type" : "string",
+              "format" : "date-time",
+              "description" : "Creation time.",
+              "example" : "2020-01-21T17:32:28Z"
+            },
+            "updatedAt" : {
+              "type" : "string",
+              "format" : "date-time",
+              "description" : "Update time.",
+              "example" : "2020-01-27T10:41:44Z"
+            },
+            "status" : {
+              "type" : "string",
+              "description" : "Return status.",
+              "enum" : [ "new" ]
+            },
+            "newShipmentFlag" : {
+              "type" : "boolean",
+              "description" : "Flag to indicate if a new shipment can be created.",
+              "default" : true
+            },
+            "shipment" : {
+              "oneOf" : [ {
+                "$ref" : "#/components/schemas/DhlShipment"
+              }, {
+                "$ref" : "#/components/schemas/PaczkomatyShipment"
+              } ],
+              "discriminator" : {
+                "propertyName" : "carrier",
+                "mapping" : {
+                  "dhl" : "#/components/schemas/DhlShipment",
+                  "paczkomaty" : "#/components/schemas/PaczkomatyShipment"
+                }
+              },
+              "example" : {
+                "carrier" : "dhl",
+                "callbackUrl" : "https://example.com/webhooks",
+                "sender" : {
+                  "firstName" : "Dariusz",
+                  "lastName" : "Testowy",
+                  "email" : "dariusztestowy@gmail.com",
+                  "phoneNumber" : "48782233199",
+                  "address" : {
+                    "street" : "Mostowa",
+                    "houseNumber" : "11",
+                    "postalCode" : "61-854",
+                    "city" : "Poznań"
+                  }
+                }
+              }
+            }
+          }
+        }, {
+          "$ref" : "#/components/schemas/NewReturn"
+        } ]
+      },
+      "NewReturn" : {
+        "required" : [ "customer", "items", "orderId", "refundClaim" ],
+        "type" : "object",
+        "properties" : {
+          "orderId" : {
+            "type" : "string",
+            "description" : "Order ID in the e-commerce platform.",
+            "example" : "110181018"
+          },
+          "customer" : {
+            "$ref" : "#/components/schemas/Customer"
+          },
+          "refundClaim" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/RefundClaim"
+            }, {
+              "$ref" : "#/components/schemas/BankTransferRefundClaim"
+            } ],
+            "example" : {
+              "method" : "bank_transfer",
+              "bankAccountNumber" : "PL27114020040000300201355387"
+            }
+          },
+          "items" : {
+            "type" : "array",
+            "minItems" : 1,
+            "items" : {
+              "$ref" : "#/components/schemas/ReturnItem"
+            }
+          },
+          "platformId" : {
+            "type" : "string",
+            "description" : "Return ID in the e-commerce platform if exists.",
+            "example" : "102298925",
+            "nullable" : false
+          }
+        }
+      },
+      "Customer" : {
+        "type" : "object",
+        "required" : [ "firstName", "lastName", "email", "phoneNumber", "address", "platformId" ],
+        "properties" : {
+          "platformId" : {
+            "type" : "string",
+            "description" : "Customer ID in the e-commerce platform. Leave empty for guest orders.",
+            "example" : "5521123",
+            "nullable" : true
+          },
+          "firstName" : {
+            "type" : "string",
+            "example" : "Dariusz"
+          },
+          "lastName" : {
+            "type" : "string",
+            "example" : "Testowy"
+          },
+          "email" : {
+            "type" : "string",
+            "format" : "email",
+            "example" : "dariusztestowy@gmail.com"
+          },
+          "phoneNumber" : {
+            "pattern" : "^\\d+$",
+            "type" : "string",
+            "example" : "48782233199"
+          },
+          "address" : {
+            "type" : "object",
+            "required" : [ "street", "houseNumber", "postalCode", "city", "country" ],
+            "properties" : {
+              "street" : {
+                "type" : "string",
+                "description" : "The name of the street.",
+                "example" : "Mostowa"
+              },
+              "houseNumber" : {
+                "type" : "string",
+                "description" : "The number or name of the house.",
+                "example" : "11"
+              },
+              "postalCode" : {
+                "type" : "string",
+                "maxLength" : 10,
+                "example" : "61-854"
+              },
+              "city" : {
+                "type" : "string",
+                "description" : "The name of the city.",
+                "example" : "Poznań"
+              },
+              "country" : {
+                "type" : "string",
+                "description" : "The two-character country code as defined in ISO-3166-1 alpha-2.",
+                "example" : "PL"
+              }
+            }
+          }
+        }
+      },
+      "ReturnItem" : {
+        "type" : "object",
+        "required" : [ "name", "sku", "reason" ],
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "Product name in the default language of the e-commerce platform.",
+            "example" : "Sneakersy NEW BALANCE - ML373BN Bordowy"
+          },
+          "sku" : {
+            "type" : "string",
+            "description" : "Product SKU.",
+            "example" : "0000199638961-45"
+          },
+          "reason" : {
+            "oneOf" : [ {
+              "type" : "object",
+              "required" : [ "code" ],
+              "properties" : {
+                "code" : {
+                  "type" : "integer",
+                  "enum" : [ 11, 12, 13, 14, 20, 30, 40, 50, 60 ],
+                  "description" : "A numerical identifier of the reason.\n * `11` - Too small\n * `12` - Too big\n * `13` - Too narrow\n * `14` - Too wide\n * `20` - Uncomfortable\n * `30` - Look different than the pictures\n * `40` - Broken\n * `50` - Delivery mistake\n * `60` - Parcel not received\n"
+                }
+              }
+            }, {
+              "type" : "object",
+              "required" : [ "code", "message" ],
+              "properties" : {
+                "code" : {
+                  "type" : "integer",
+                  "enum" : [ 999 ],
+                  "description" : "A numerical identifier of the reason.\n * `999` - Other\n"
+                },
+                "message" : {
+                  "type" : "string",
+                  "description" : "The other reason entered by the customer."
+                }
+              }
+            } ],
+            "example" : {
+              "code" : 999,
+              "message" : "My other reason."
+            }
+          }
+        }
+      },
+      "RefundClaim" : {
+        "type" : "object",
+        "required" : [ "method" ],
+        "properties" : {
+          "method" : {
+            "type" : "string",
+            "enum" : [ "online", "bank_transfer" ]
+          }
+        },
+        "discriminator" : {
+          "propertyName" : "method",
+          "mapping" : {
+            "bank_transfer" : "#/components/schemas/BankTransferRefundClaim"
+          }
+        }
+      },
+      "BankTransferRefundClaim" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/RefundClaim"
+        }, {
+          "type" : "object",
+          "required" : [ "bankAccountNumber" ],
+          "properties" : {
+            "method" : {
+              "enum" : [ "bank_transfer" ]
+            },
+            "bankAccountNumber" : {
+              "description" : "A bank account number in IBAN format without separators.",
+              "type" : "string",
+              "example" : "PL27114020040000300201355387"
+            }
+          }
+        } ]
+      },
+      "Shipment" : {
+        "allOf" : [ {
+          "type" : "object",
+          "required" : [ "id", "returnId", "createdAt", "updatedAt", "status", "number" ],
+          "properties" : {
+            "id" : {
+              "type" : "string",
+              "format" : "uuid",
+              "example" : "37668040-85bb-41b9-929e-69c127a588d6",
+              "description" : "Shipment ID."
+            },
+            "returnId" : {
+              "type" : "string",
+              "format" : "uuid",
+              "description" : "Return ID.",
+              "example" : "633ddf1f-ed00-4e1a-9e70-bab7f741e8a7"
+            },
+            "createdAt" : {
+              "type" : "string",
+              "format" : "date-time",
+              "description" : "Creation time.",
+              "example" : "2020-01-21T18:32:28Z"
+            },
+            "updatedAt" : {
+              "type" : "string",
+              "format" : "date-time",
+              "description" : "Update time.",
+              "example" : "2020-01-21T19:32:28Z",
+              "nullable" : true
+            },
+            "status" : {
+              "type" : "string",
+              "description" : "Shipment status. It will change to `complete` when shipping label is available.",
+              "enum" : [ "pending", "complete" ]
+            },
+            "number" : {
+              "type" : "string",
+              "example" : "1112223334",
+              "description" : "A shipment number generated in the courier service.",
+              "nullable" : true
+            }
+          }
+        }, {
+          "$ref" : "#/components/schemas/NewShipment"
+        } ]
+      },
+      "DhlShipment" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Shipment"
+        }, {
+          "$ref" : "#/components/schemas/NewDhlShipment"
+        } ]
+      },
+      "PaczkomatyShipment" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/Shipment"
+        }, {
+          "$ref" : "#/components/schemas/NewPaczkomatyShipment"
+        } ]
+      },
+      "NewShipment" : {
+        "type" : "object",
+        "required" : [ "carrier", "callbackUrl" ],
+        "properties" : {
+          "carrier" : {
+            "type" : "string",
+            "description" : "Carrier code.",
+            "enum" : [ "paczkomaty", "dhl" ]
+          },
+          "callbackUrl" : {
+            "type" : "string",
+            "format" : "uri",
+            "description" : "We will send a shipment number to this url.",
+            "example" : "https://example.com/webhooks"
+          }
+        },
+        "discriminator" : {
+          "propertyName" : "carrier",
+          "mapping" : {
+            "dhl" : "#/components/schemas/NewDhlShipment",
+            "paczkomaty" : "#/components/schemas/NewPaczkomatyShipment"
+          }
+        }
+      },
+      "NewDhlShipment" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/NewShipment"
+        }, {
+          "type" : "object",
+          "required" : [ "sender" ],
+          "properties" : {
+            "carrier" : {
+              "enum" : [ "dhl" ]
+            },
+            "sender" : {
+              "type" : "object",
+              "required" : [ "firstName", "lastName", "email", "phoneNumber", "address" ],
+              "properties" : {
+                "firstName" : {
+                  "type" : "string",
+                  "example" : "Dariusz"
+                },
+                "lastName" : {
+                  "type" : "string",
+                  "example" : "Testowy"
+                },
+                "email" : {
+                  "type" : "string",
+                  "format" : "email",
+                  "example" : "dariusztestowy@gmail.com"
+                },
+                "phoneNumber" : {
+                  "pattern" : "^\\d+$",
+                  "type" : "string",
+                  "example" : "48782233199",
+                  "description" : "The phone number in the international format."
+                },
+                "address" : {
+                  "type" : "object",
+                  "required" : [ "street", "houseNumber", "postalCode", "city" ],
+                  "properties" : {
+                    "street" : {
+                      "type" : "string",
+                      "description" : "The name of the street.",
+                      "example" : "Mostowa"
+                    },
+                    "houseNumber" : {
+                      "type" : "string",
+                      "description" : "The number or name of the house.",
+                      "example" : "11"
+                    },
+                    "postalCode" : {
+                      "type" : "string",
+                      "example" : "61-854",
+                      "pattern" : "^\\d{2}\\-\\d{3}"
+                    },
+                    "city" : {
+                      "type" : "string",
+                      "description" : "The name of the city.",
+                      "example" : "Poznań"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        } ]
+      },
+      "NewPaczkomatyShipment" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/NewShipment"
+        }, {
+          "type" : "object",
+          "required" : [ "packageSize", "sender" ],
+          "properties" : {
+            "carrier" : {
+              "enum" : [ "paczkomaty" ]
+            },
+            "packageSize" : {
+              "type" : "string",
+              "example" : "a",
+              "enum" : [ "a", "b", "c" ],
+              "description" : "Package size."
+            },
+            "sender" : {
+              "type" : "object",
+              "required" : [ "email", "phoneNumber" ],
+              "properties" : {
+                "email" : {
+                  "type" : "string",
+                  "format" : "email",
+                  "example" : "dariusztestowy@gmail.com"
+                },
+                "phoneNumber" : {
+                  "type" : "string",
+                  "minLength" : 9,
+                  "maxLength" : 9,
+                  "example" : "782233199",
+                  "description" : "Mobile phone number without spaces."
+                }
+              }
+            }
+          }
+        } ]
+      },
+      "OrderItems" : {
+        "required" : [ "orders" ],
+        "type" : "object",
+        "properties" : {
+          "orders" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "required" : [ "items", "orderId" ],
+              "properties" : {
+                "orderId" : {
+                  "type" : "string",
+                  "description" : "Order ID in the e-commerce platform.",
+                  "example" : "110181018"
+                },
+                "items" : {
+                  "minItems" : 1,
+                  "description" : "List of all order items shipped to customer.",
+                  "type" : "array",
+                  "items" : {
+                    "required" : [ "sku" ],
+                    "type" : "object",
+                    "properties" : {
+                      "sku" : {
+                        "type" : "string",
+                        "example" : "0000199638961-45"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ReturnableOrderItems" : {
+        "required" : [ "orders" ],
+        "type" : "object",
+        "properties" : {
+          "orders" : {
+            "type" : "array",
+            "minItems" : 0,
+            "items" : {
+              "type" : "object",
+              "required" : [ "items", "orderId" ],
+              "properties" : {
+                "orderId" : {
+                  "type" : "string",
+                  "description" : "Order ID in the e-commerce platform.",
+                  "example" : "110181018"
+                },
+                "items" : {
+                  "minItems" : 1,
+                  "description" : "List of items which can be returned.",
+                  "type" : "array",
+                  "items" : {
+                    "required" : [ "sku" ],
+                    "type" : "object",
+                    "properties" : {
+                      "sku" : {
+                        "type" : "string",
+                        "example" : "0000199638961-45"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ValidationError" : {
+        "required" : [ "errors" ],
+        "type" : "object",
+        "properties" : {
+          "errors" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "field" : {
+                  "type" : "string",
+                  "example" : "customer.phoneNumber"
+                },
+                "message" : {
+                  "type" : "string",
+                  "example" : "Invalid phone number. The number must be in the international format."
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error" : {
+        "type" : "object",
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "message" ]
+      }
+    },
+    "examples" : {
+      "NewDhlShipment" : {
+        "value" : {
+          "carrier" : "dhl",
+          "callbackUrl" : "https://example.com/webhooks",
+          "sender" : {
+            "firstName" : "Dariusz",
+            "lastName" : "Testowy",
+            "email" : "dariusztestowy@gmail.com",
+            "phoneNumber" : "48782233199",
+            "address" : {
+              "street" : "Mostowa",
+              "houseNumber" : "11",
+              "postalCode" : "61-854",
+              "city" : "Poznań"
+            }
+          }
+        }
+      },
+      "DhlShipment" : {
+        "value" : {
+          "id" : "a8d1c5b3-8d65-46c2-a2a1-0eeef0269fcb",
+          "number" : "1112223334",
+          "createdAt" : "2020-01-27T10:41:44Z",
+          "updatedAt" : "2020-01-27T10:45:44Z",
+          "status" : "complete",
+          "carrier" : "dhl",
+          "callbackUrl" : "https://example.com/webhooks",
+          "sender" : {
+            "firstName" : "Dariusz",
+            "lastName" : "Testowy",
+            "email" : "dariusztestowy@gmail.com",
+            "phoneNumber" : "48782233199",
+            "address" : {
+              "street" : "Mostowa",
+              "houseNumber" : "11",
+              "postalCode" : "61-854",
+              "city" : "Poznań"
+            }
+          }
+        }
+      },
+      "NewPaczkomatyShipment" : {
+        "value" : {
+          "carrier" : "paczkomaty",
+          "callbackUrl" : "https://example.com/webhooks",
+          "packageSize" : "a",
+          "sender" : {
+            "email" : "dariusztestowy@gmail.com",
+            "phoneNumber" : "782233199"
+          }
+        }
+      },
+      "PaczkomatyShipment" : {
+        "value" : {
+          "id" : "a8d1c5b3-8d65-46c2-a2a1-0eeef0269fcb",
+          "number" : "1112223334",
+          "createdAt" : "2020-01-27T10:41:44Z",
+          "updatedAt" : "2020-01-27T10:45:44Z",
+          "status" : "complete",
+          "carrier" : "paczkomaty",
+          "callbackUrl" : "https://example.com/webhooks",
+          "packageSize" : "a",
+          "sender" : {
+            "email" : "dariusztestowy@gmail.com",
+            "phoneNumber" : "782233199"
+          }
+        }
+      }
+    },
+    "parameters" : {
+      "Platform" : {
+        "name" : "X-Platform",
+        "in" : "header",
+        "description" : "E-commerce platform.",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "enum" : [ "platform-a", "platform-b" ]
+        }
+      },
+      "Store" : {
+        "name" : "X-Store",
+        "in" : "header",
+        "description" : "Store code.",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "example" : "pl"
+        }
+      },
+      "Return" : {
+        "name" : "id",
+        "in" : "path",
+        "description" : "Return ID.",
+        "required" : true,
+        "schema" : {
+          "type" : "string",
+          "format" : "uuid",
+          "example" : "633ddf1f-ed00-4e1a-9e70-bab7f741e8a7"
+        }
+      }
+    },
+    "responses" : {
+      "BadRequest" : {
+        "description" : "Invalid request.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ValidationError"
+            }
+          }
+        }
+      },
+      "NotFound" : {
+        "description" : "The specified resource was not found.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized" : {
+        "description" : "Unauthorized.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "InvalidPlatform" : {
+        "description" : "The platform and store specified in request headers are not implemented."
+      },
+      "UnexpectedError" : {
+        "description" : "Unexpected error.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    }
+  },
+  "security" : [ {
+    "bearerAuth" : [ ]
+  } ]
+}

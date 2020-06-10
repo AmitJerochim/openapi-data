@@ -1,0 +1,2054 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "description" : "Awesome Table Firebase server",
+    "url" : "https://customers-dot-awesome-table-server.appspot.com"
+  } ],
+  "info" : {
+    "version" : "0.0.3",
+    "title" : "Awesome Table Billing api",
+    "description" : "This api provide entrypoints to control all billing operations and customers listing",
+    "contact" : {
+      "email" : "mathieu.moullec@revevol.eu",
+      "name" : "Mathieu Moullec"
+    }
+  },
+  "tags" : [ {
+    "name" : "customer",
+    "description" : "Create, update, delete awesome table customers"
+  }, {
+    "name" : "customers",
+    "description" : "list of customer"
+  }, {
+    "name" : "user",
+    "description" : "A physical user"
+  }, {
+    "name" : "users",
+    "description" : "List of user"
+  }, {
+    "name" : "subscription",
+    "description" : "A paying subscription created offline or with stripe."
+  }, {
+    "name" : "subscriptions",
+    "description" : "List of subscriptions"
+  }, {
+    "name" : "licence",
+    "description" : "Links a plan and a quota. For example, 5 Pro apps or 10000 page views"
+  }, {
+    "name" : "licences",
+    "description" : "List of licences"
+  }, {
+    "name" : "plan",
+    "description" : "A paying plan. Can be a plan based on pageview or app count"
+  }, {
+    "name" : "plans",
+    "description" : "List of plans"
+  }, {
+    "name" : "quota",
+    "description" : "Available and remaining quota for a specific licence"
+  }, {
+    "name" : "quotas",
+    "description" : "List of quotas"
+  }, {
+    "name" : "team",
+    "description" : "A group of users"
+  }, {
+    "name" : "teams",
+    "description" : "List of team"
+  } ],
+  "security" : [ {
+    "bearerAuth" : [ ]
+  } ],
+  "paths" : {
+    "/customers" : {
+      "description" : "A generic entity representing a customer in Awesome Table. Can be linked to a user or an organization. Supports billing infos, enabled feature flags and some possible settings Only organization admin can have a list of customers",
+      "get" : {
+        "tags" : [ "customers" ],
+        "summary" : "Retrieve customers list",
+        "description" : "This call should send back a list of customers if customer.type === organization => only organization admin can read this data",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/filterParameter"
+        }, {
+          "$ref" : "#/components/parameters/limitParameters"
+        }, {
+          "$ref" : "#/components/parameters/offsetParameters"
+        }, {
+          "$ref" : "#/components/parameters/sortByParameters"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of (customers)",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Customer"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "customers", "customer" ],
+        "summary" : "Create a new customer",
+        "description" : "Post request to create a new customer, it will return the created customer or an error",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Customer"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "The new created customer",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Customer"
+                }
+              }
+            },
+            "links" : {
+              "GetCustomerById" : {
+                "operationId" : "getCustomer",
+                "parameters" : {
+                  "customerID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `customerID` parameter in `GET /customers/{customerID}`.\n"
+              },
+              "UpdateCustomer" : {
+                "operationId" : "updateCustomer",
+                "parameters" : {
+                  "customerID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `customerID` parameter in `PUT /customers/{customerID}`.\n"
+              },
+              "PartialUpdateCustomer" : {
+                "operationId" : "partialUpdateCustomer",
+                "parameters" : {
+                  "customerID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `customerID` parameter in `PATCH /customers/{customerID}`.\n"
+              },
+              "DeleteCustomer" : {
+                "operationId" : "deleteCustomer",
+                "parameters" : {
+                  "customerID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `customerID` parameter in `DELETE /customers/{customerID}`.\n"
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/customers/{customerID}" : {
+      "parameters" : [ {
+        "in" : "path",
+        "name" : "customerID",
+        "schema" : {
+          "type" : "string",
+          "example" : "4423"
+        },
+        "description" : "the customer id",
+        "required" : true
+      } ],
+      "description" : "A generic entity representing a customer in Awesome Table. Can be linked to a user or an organization. Supports billing infos, enabled feature flags and some possible settings Applied to one customer defined by his ID",
+      "get" : {
+        "operationId" : "getCustomer",
+        "summary" : "Retrieve one customer",
+        "description" : "find a customer by his ID",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The customer",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "customer" ]
+      },
+      "put" : {
+        "operationId" : "updateCustomer",
+        "summary" : "Update a customer",
+        "description" : "Update the desired customer",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "customer",
+          "schema" : {
+            "$ref" : "#/components/schemas/Customer"
+          },
+          "required" : true
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The customer",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "customer" ]
+      },
+      "patch" : {
+        "operationId" : "partialUpdateCustomer",
+        "summary" : "Partial update a customer",
+        "description" : "Update the desired customer",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "customer",
+          "schema" : {
+            "$ref" : "#/components/schemas/Customer"
+          },
+          "description" : "partial"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The customer",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "customer" ]
+      },
+      "delete" : {
+        "operationId" : "deleteCustomer",
+        "summary" : "Delete a customer",
+        "description" : "Delete the desired customer",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No content"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "customer" ]
+      }
+    },
+    "/customers/{customerID}/subscriptions" : {
+      "parameters" : [ {
+        "in" : "path",
+        "name" : "customerID",
+        "schema" : {
+          "type" : "string",
+          "example" : "443"
+        },
+        "description" : "The user id\"",
+        "required" : true
+      } ],
+      "get" : {
+        "summary" : "Retrieve subscription list for a specific customer",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Subscription"
+                  }
+                }
+              }
+            },
+            "description" : "Retrieve the sub listS for the user"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "customer", "subscription", "subscriptions" ]
+      }
+    },
+    "/users" : {
+      "description" : "A physical user",
+      "get" : {
+        "tags" : [ "users" ],
+        "summary" : "Retrieve users list",
+        "description" : "This call should send back a list of users",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/filterParameter"
+        }, {
+          "$ref" : "#/components/parameters/limitParameters"
+        }, {
+          "$ref" : "#/components/parameters/offsetParameters"
+        }, {
+          "$ref" : "#/components/parameters/sortByParameters"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of (customers)",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/User"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "users", "user" ],
+        "summary" : "Create a new user",
+        "description" : "Post request to create a new user, it will return the created customer or an error",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/User"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "The new created user",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/User"
+                }
+              }
+            },
+            "links" : {
+              "GetUserById" : {
+                "operationId" : "getUser",
+                "parameters" : {
+                  "userID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `userID` parameter in `GET /users/{userID}`.\n"
+              },
+              "UpdateUser" : {
+                "operationId" : "updateUser",
+                "parameters" : {
+                  "userID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `userID` parameter in `PUT /users/{userID}`.\n"
+              },
+              "PartialUpdateUser" : {
+                "operationId" : "partialUpdateUser",
+                "parameters" : {
+                  "userID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `userID` parameter in `PATCH /users/{userID}`.\n"
+              },
+              "DeleteUser" : {
+                "operationId" : "deleteUser",
+                "parameters" : {
+                  "userID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `userID` parameter in `DELETE /users/{userID}`.\n"
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/users/{userID}" : {
+      "parameters" : [ {
+        "in" : "path",
+        "name" : "userID",
+        "schema" : {
+          "type" : "string",
+          "example" : "4423"
+        },
+        "description" : "the user id",
+        "required" : true
+      } ],
+      "description" : "An awesome-table physical user",
+      "get" : {
+        "operationId" : "getUser",
+        "summary" : "Retrieve one user",
+        "description" : "find a user by his ID",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "includeSubscriptions",
+          "schema" : {
+            "type" : "boolean",
+            "example" : true
+          }
+        }, {
+          "in" : "query",
+          "name" : "includeLicences",
+          "schema" : {
+            "type" : "boolean",
+            "example" : false
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The user",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "user" ]
+      },
+      "put" : {
+        "operationId" : "updateUser",
+        "summary" : "Update a user",
+        "description" : "Update the desired user",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "user",
+          "schema" : {
+            "$ref" : "#/components/schemas/User"
+          },
+          "required" : true
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The user",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "user" ]
+      },
+      "patch" : {
+        "operationId" : "partialUpdateUser",
+        "summary" : "Partial update a user",
+        "description" : "Update the desired user",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "user",
+          "schema" : {
+            "$ref" : "#/components/schemas/User"
+          },
+          "description" : "partial"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The user",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "user" ]
+      },
+      "delete" : {
+        "operationId" : "deleteUser",
+        "summary" : "Delete a user",
+        "description" : "Delete the desired user",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No content"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "user" ]
+      }
+    },
+    "/users/{userID}/licences" : {
+      "parameters" : [ {
+        "in" : "path",
+        "description" : "the user id to find (404 if not exist)",
+        "name" : "userID",
+        "schema" : {
+          "type" : "string"
+        },
+        "required" : true
+      } ],
+      "get" : {
+        "description" : "Retrieve licences for a specific user",
+        "tags" : [ "users", "licence", "licences", "user" ],
+        "summary" : "Retrieve licences for a specific user",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "licences left for a user",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Licence"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/subscriptions" : {
+      "summary" : "A paying subscription created offline or with stripe.",
+      "description" : "used to find a list of subscription or creating a subscription for a customer",
+      "get" : {
+        "tags" : [ "subscriptions" ],
+        "summary" : "Retrieve a subscription list",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/filterParameter"
+        }, {
+          "$ref" : "#/components/parameters/limitParameters"
+        }, {
+          "$ref" : "#/components/parameters/offsetParameters"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of subscriptions",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Subscription"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "subscriptions", "subscription" ],
+        "summary" : "Create a new subscription",
+        "description" : "Post request to create a new subscription, it will return the created subscription or an error",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Subscription"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "The new created subscription",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Subscription"
+                }
+              }
+            },
+            "links" : {
+              "GetSubscriptionById" : {
+                "operationId" : "getSubscription",
+                "parameters" : {
+                  "subscriptionID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `subscriptionID` parameter in `GET /subscriptions/{subscriptionID}`.\n"
+              },
+              "UpdateSubscription" : {
+                "operationId" : "updateSubscription",
+                "parameters" : {
+                  "subscriptionID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `subscriptionID` parameter in `PUT /subscriptions/{subscriptionID}`.\n"
+              },
+              "PartialUpdateSubscription" : {
+                "operationId" : "partialUpdateSubscription",
+                "parameters" : {
+                  "subscriptionID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `subscriptionID` parameter in `PATCH /subscriptions/{subscriptionID}`.\n"
+              },
+              "DeleteSubscription" : {
+                "operationId" : "deleteSubscription",
+                "parameters" : {
+                  "subscriptionID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `subscriptionID` parameter in `DELETE /subscriptions/{subscriptionID}`.\n"
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/subscriptions/{subscriptionID}" : {
+      "parameters" : [ {
+        "in" : "path",
+        "name" : "subscriptionID",
+        "description" : "The subscription id to find, modify or delete",
+        "required" : true,
+        "schema" : {
+          "type" : "string"
+        }
+      } ],
+      "summary" : "A paying subscription created offline or with stripe.\n",
+      "description" : "Update, patch, find or delete a subscription",
+      "get" : {
+        "operationId" : "getSubscription",
+        "summary" : "Retrieve a subscription",
+        "description" : "Find a subscription by ID",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The subscription",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Subscription"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "subscription" ]
+      },
+      "put" : {
+        "operationId" : "updateSubscription",
+        "summary" : "Update a subscription",
+        "description" : "Update the desired subscription",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "subscription",
+          "schema" : {
+            "$ref" : "#/components/schemas/Subscription"
+          },
+          "required" : true
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The subscription",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Subscription"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "subscription" ]
+      },
+      "patch" : {
+        "operationId" : "partialUpdateSubscription",
+        "summary" : "Partial update a subscription",
+        "description" : "Update the desired subscription",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "subscription",
+          "schema" : {
+            "$ref" : "#/components/schemas/Subscription"
+          },
+          "description" : "partial"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The subscription",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Subscription"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "subscription" ]
+      },
+      "delete" : {
+        "operationId" : "deleteSubscription",
+        "summary" : "Delete a subscription",
+        "description" : "Delete the desired subscription",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No content"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "subscription" ]
+      }
+    },
+    "/licences" : {
+      "summary" : "Retrieve licences",
+      "description" : "licences are the payed data in awesome table",
+      "get" : {
+        "tags" : [ "licences" ],
+        "summary" : "Retrieve a licences list",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/filterParameter"
+        }, {
+          "$ref" : "#/components/parameters/limitParameters"
+        }, {
+          "$ref" : "#/components/parameters/offsetParameters"
+        }, {
+          "$ref" : "#/components/parameters/sortByParameters"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of licences",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Licence"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "licences", "licence" ],
+        "summary" : "Create a new Licence",
+        "description" : "Post request to create a new Licence, it will return the created Licence or an error",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Licence"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "The new created licence",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Licence"
+                }
+              }
+            },
+            "links" : {
+              "GetLicenceById" : {
+                "operationId" : "getLicence",
+                "parameters" : {
+                  "licenceID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `licenceID` parameter in `GET /licences/{licenceID}`.\n"
+              },
+              "UpdateLicence" : {
+                "operationId" : "updateLicence",
+                "parameters" : {
+                  "licenceID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `licenceID` parameter in `PUT /licences/{licenceID}`.\n"
+              },
+              "PartialUpdateLicence" : {
+                "operationId" : "partialUpdateLicence",
+                "parameters" : {
+                  "licenceID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `licenceID` parameter in `PATCH /licences/{licenceID}`.\n"
+              },
+              "DeleteLicence" : {
+                "operationId" : "deleteLicence",
+                "parameters" : {
+                  "licenceID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `licenceID` parameter in `DELETE /licences/{licenceID}`.\n"
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/licences/{licenceID}" : {
+      "parameters" : [ {
+        "in" : "path",
+        "name" : "licenceID",
+        "description" : "The licence id to find, modify or delete",
+        "required" : true,
+        "schema" : {
+          "type" : "string"
+        }
+      } ],
+      "summary" : "Methods for licence",
+      "description" : "Update, patch, find or delete a licence",
+      "get" : {
+        "operationId" : "getLicence",
+        "summary" : "Retrieve a Licence",
+        "description" : "Find a Licence by ID",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The Licence",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Licence"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "licence" ]
+      },
+      "put" : {
+        "operationId" : "updateLicence",
+        "summary" : "Update a licence",
+        "description" : "Update the desired licence",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "licence",
+          "schema" : {
+            "$ref" : "#/components/schemas/Licence"
+          },
+          "required" : true
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The Licence",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Licence"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "licence" ]
+      },
+      "patch" : {
+        "operationId" : "partialUpdateLicence",
+        "summary" : "Partial update a Licence",
+        "description" : "Update the desired Licence",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "licence",
+          "schema" : {
+            "$ref" : "#/components/schemas/Licence"
+          },
+          "description" : "partial"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The Licence updated",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Licence"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "licence" ]
+      },
+      "delete" : {
+        "operationId" : "deleteLicence",
+        "summary" : "Delete a Licence",
+        "description" : "Delete the desired licence",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No content"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "licence" ]
+      }
+    },
+    "/teams" : {
+      "summary" : "Retrieve teams",
+      "description" : "teams are the payed data in awesome table",
+      "get" : {
+        "tags" : [ "teams" ],
+        "summary" : "Retrieve a teams list",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/filterParameter"
+        }, {
+          "$ref" : "#/components/parameters/limitParameters"
+        }, {
+          "$ref" : "#/components/parameters/offsetParameters"
+        }, {
+          "$ref" : "#/components/parameters/sortByParameters"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of teams",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Team"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "teams", "team" ],
+        "summary" : "Create a new Team",
+        "description" : "Post request to create a new Team, it will return the created Team or an error",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Team"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "201" : {
+            "description" : "The new created team",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Team"
+                }
+              }
+            },
+            "links" : {
+              "GetTeamById" : {
+                "operationId" : "getTeam",
+                "parameters" : {
+                  "teamID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `teamID` parameter in `GET /teams/{teamID}`.\n"
+              },
+              "UpdateTeam" : {
+                "operationId" : "updateTeam",
+                "parameters" : {
+                  "teamID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `teamID` parameter in `PUT /teams/{teamID}`.\n"
+              },
+              "PartialUpdateTeam" : {
+                "operationId" : "partialUpdateTeam",
+                "parameters" : {
+                  "teamID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `teamID` parameter in `PATCH /teams/{teamID}`.\n"
+              },
+              "DeleteTeam" : {
+                "operationId" : "deleteTeam",
+                "parameters" : {
+                  "teamID" : "$response.body#/id"
+                },
+                "description" : "The `id` value returned in the response can be used as the `teamID` parameter in `DELETE /teams/{teamID}`.\n"
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/teams/{teamID}" : {
+      "parameters" : [ {
+        "in" : "path",
+        "name" : "teamID",
+        "description" : "The team id to find, modify or delete",
+        "required" : true,
+        "schema" : {
+          "type" : "string"
+        }
+      } ],
+      "summary" : "Methods for team",
+      "description" : "Update, patch, find or delete a team",
+      "get" : {
+        "operationId" : "getTeam",
+        "summary" : "Retrieve a Team",
+        "description" : "Find a Team by ID",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The Team",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "team" ]
+      },
+      "put" : {
+        "operationId" : "updateTeam",
+        "summary" : "Update a team",
+        "description" : "Update the desired team",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "team",
+          "schema" : {
+            "$ref" : "#/components/schemas/Team"
+          },
+          "required" : true
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The Team",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "team" ]
+      },
+      "patch" : {
+        "operationId" : "partialUpdateTeam",
+        "summary" : "Partial update a Team",
+        "description" : "Update the desired Team",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "team",
+          "schema" : {
+            "$ref" : "#/components/schemas/Team"
+          },
+          "description" : "partial"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The Team updated",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Team"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "team" ]
+      },
+      "delete" : {
+        "operationId" : "deleteTeam",
+        "summary" : "Delete a Team",
+        "description" : "Delete the desired team",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No content"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        },
+        "tags" : [ "team" ]
+      }
+    },
+    "/plans" : {
+      "get" : {
+        "tags" : [ "plans" ],
+        "summary" : "Retrieve plan list",
+        "description" : "This call should send back a list of plans",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/filterParameter"
+        }, {
+          "$ref" : "#/components/parameters/limitParameters"
+        }, {
+          "$ref" : "#/components/parameters/offsetParameters"
+        }, {
+          "$ref" : "#/components/parameters/sortByParameters"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "List of plan",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Plan"
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/plans/{planID}" : {
+      "parameters" : [ {
+        "in" : "path",
+        "name" : "planID",
+        "schema" : {
+          "type" : "string"
+        },
+        "description" : "The plan ID to find",
+        "required" : true
+      } ],
+      "get" : {
+        "summary" : "Get a plan by his ID",
+        "tags" : [ "plan", "plans" ],
+        "responses" : {
+          "200" : {
+            "description" : "The found plan",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Plan"
+                }
+              }
+            }
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      }
+    },
+    "/apps/{appID}/tier" : {
+      "parameters" : [ {
+        "in" : "path",
+        "name" : "appID",
+        "schema" : {
+          "type" : "string"
+        },
+        "description" : "The app id to update",
+        "required" : true
+      } ],
+      "put" : {
+        "operationId" : "updateAppTier",
+        "security" : [ {
+          "bearerAuth" : [ ]
+        } ],
+        "summary" : "Set new tier for a specific app",
+        "tags" : [ "apps", "app" ],
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "tier",
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "FREE", "BASIC", "PRO" ]
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "OK"
+          },
+          "400" : {
+            "$ref" : "#/components/responses/BadRequest"
+          },
+          "401" : {
+            "$ref" : "#/components/responses/Unauthorized"
+          },
+          "404" : {
+            "$ref" : "#/components/responses/NotFound"
+          },
+          "405" : {
+            "$ref" : "#/components/responses/MethodNotAllowed"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/ServerError"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "parameters" : {
+      "filterParameter" : {
+        "in" : "query",
+        "name" : "filters",
+        "required" : false,
+        "schema" : {
+          "type" : "string"
+        },
+        "description" : "where parameter to filter collection  (select collection where ...)  (strict equal)"
+      },
+      "sortByParameters" : {
+        "in" : "query",
+        "name" : "sortBy",
+        "required" : false,
+        "schema" : {
+          "type" : "string",
+          "enum" : [ "asc", "desc" ]
+        },
+        "description" : "sort the collection by some parameters"
+      },
+      "offsetParameters" : {
+        "in" : "query",
+        "name" : "offset",
+        "required" : false,
+        "schema" : {
+          "type" : "integer",
+          "minimum" : 0
+        },
+        "description" : "The number of items to skip before starting to collect the result"
+      },
+      "limitParameters" : {
+        "in" : "query",
+        "name" : "limit",
+        "required" : false,
+        "schema" : {
+          "type" : "integer",
+          "minimum" : 1,
+          "maximum" : 50,
+          "default" : 20
+        },
+        "description" : "The numbers of items to return"
+      }
+    },
+    "responses" : {
+      "BadRequest" : {
+        "description" : "The request is too big, invalid or malformed",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFound" : {
+        "description" : "The specified resource was not found",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Unauthorized" : {
+        "description" : "Unauthorized",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "MethodNotAllowed" : {
+        "description" : "The method is not allowed",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ServerError" : {
+        "description" : "Unexpected error happened on server",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "schemas" : {
+      "Error" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "details" : {
+            "type" : "object"
+          }
+        },
+        "required" : [ "code", "message" ]
+      },
+      "Customer" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1
+          },
+          "creationDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updateDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "user", "org" ],
+            "example" : "user"
+          },
+          "featureFlags" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "settings" : {
+            "type" : "object"
+          },
+          "billingAddress" : {
+            "type" : "string"
+          },
+          "stripeCustomerId" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "vatNumber" : {
+            "type" : "string"
+          },
+          "contactName" : {
+            "type" : "string"
+          },
+          "contactEmail" : {
+            "type" : "string",
+            "format" : "email"
+          },
+          "contactPhone" : {
+            "type" : "string"
+          }
+        }
+      },
+      "User" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "customerID" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "firebaseID" : {
+            "type" : "string"
+          },
+          "organizationID" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "Subscription" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1
+          },
+          "creationDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updateDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "discount" : {
+            "type" : "number",
+            "format" : "float"
+          },
+          "taxRate" : {
+            "type" : "number",
+            "format" : "float"
+          },
+          "subscriptionDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "renewPeriod" : {
+            "type" : "string",
+            "enum" : [ "year", "month" ]
+          },
+          "startDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "endDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "active", "cancelled" ]
+          },
+          "source" : {
+            "type" : "string",
+            "enum" : [ "offline", "online" ]
+          },
+          "customerID" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "amount" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "stripeSubscriptionID" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1532
+          }
+        }
+      },
+      "Licence" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "creationDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updateDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "planID" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "subscriptionID" : {
+            "type" : "integer"
+          },
+          "allowedQty" : {
+            "type" : "integer"
+          },
+          "remainingQty" : {
+            "type" : "integer"
+          }
+        }
+      },
+      "Team" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "creationDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updateDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ownerID" : {
+            "type" : "integer"
+          }
+        }
+      },
+      "Plan" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "creationDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updateDate" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "PageView", "App" ]
+          },
+          "includedQty" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "stripePlanID" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "bearerAuth" : {
+        "type" : "http",
+        "scheme" : "bearer",
+        "bearerFormat" : "JWT"
+      }
+    }
+  }
+}

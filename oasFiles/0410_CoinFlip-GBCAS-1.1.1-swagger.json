@@ -1,0 +1,733 @@
+{
+  "openapi" : "3.0.0",
+  "servers" : [ {
+    "description" : "Production API Base",
+    "url" : "https://api.coinflip.cloud:7743/extensions/rest/v1.1.1"
+  }, {
+    "description" : "Sandbox (testing) API Base",
+    "url" : "https://sandbox.coinflip.cloud:7743/extensions/rest/v1.1.1"
+  } ],
+  "info" : {
+    "description" : "RESTful Interface to CoinFlip Crypto Application Server (CAS)",
+    "version" : "1.1.1",
+    "title" : "CAS REST API",
+    "contact" : {
+      "email" : "william@coinflip.tech",
+      "name" : "William Rosenbloom"
+    },
+    "license" : {
+      "name" : "Apache 2.0",
+      "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "tags" : [ {
+    "name" : "public",
+    "description" : "Unauthenticated API calls"
+  }, {
+    "name" : "basic",
+    "description" : "Operations requiring basic authentication"
+  } ],
+  "paths" : {
+    "/ping" : {
+      "get" : {
+        "tags" : [ "public" ],
+        "summary" : "Ping the API.",
+        "description" : "Can be useful for testing availability of the API. The `timestamp` field can also be used to check and synchronize with our server's time.",
+        "responses" : {
+          "200" : {
+            "description" : "API is online.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "allOf" : [ {
+                    "$ref" : "#/components/schemas/BasicResponseWrapper"
+                  }, {
+                    "type" : "object",
+                    "properties" : {
+                      "body" : {
+                        "example" : null
+                      },
+                      "error" : {
+                        "example" : null
+                      }
+                    }
+                  } ]
+                }
+              }
+            }
+          },
+          "405" : {
+            "description" : "Method not allowed.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "allOf" : [ {
+                    "$ref" : "#/components/schemas/BasicResponseWrapper"
+                  }, {
+                    "type" : "object",
+                    "properties" : {
+                      "body" : {
+                        "example" : null
+                      },
+                      "error" : {
+                        "example" : {
+                          "code" : 405,
+                          "domain" : "http",
+                          "message" : "Method not allowed"
+                        }
+                      }
+                    }
+                  } ]
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Internal server error.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "allOf" : [ {
+                    "$ref" : "#/components/schemas/BasicResponseWrapper"
+                  }, {
+                    "type" : "object",
+                    "properties" : {
+                      "body" : {
+                        "example" : null
+                      },
+                      "error" : {
+                        "example" : {
+                          "code" : 500,
+                          "domain" : "http",
+                          "message" : "Internal server error"
+                        }
+                      }
+                    }
+                  } ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/terminals" : {
+      "get" : {
+        "security" : [ {
+          "basicAuth" : [ ]
+        } ],
+        "tags" : [ "basic" ],
+        "summary" : "Query information about ATMs.",
+        "description" : "Provide a list of all terminals with status and balance info.",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/provisional"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Success",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "allOf" : [ {
+                    "$ref" : "#/components/schemas/BasicResponseWrapper"
+                  }, {
+                    "type" : "object",
+                    "properties" : {
+                      "error" : {
+                        "example" : null
+                      },
+                      "body" : {
+                        "type" : "array",
+                        "items" : {
+                          "$ref" : "#/components/schemas/TerminalStatus"
+                        }
+                      }
+                    }
+                  } ]
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/BasicUnauthorizedError"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/transactions" : {
+      "get" : {
+        "security" : [ {
+          "basicAuth" : [ ]
+        } ],
+        "tags" : [ "basic" ],
+        "summary" : "Retrieve transaction records",
+        "description" : "This is the primary interface to provisional credit info. Transaction records may be both buys and sells.",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/limit"
+        }, {
+          "$ref" : "#/components/parameters/earliest"
+        }, {
+          "$ref" : "#/components/parameters/latest"
+        }, {
+          "$ref" : "#/components/parameters/provisional"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "allOf" : [ {
+                    "$ref" : "#/components/schemas/BasicResponseWrapper"
+                  }, {
+                    "type" : "object",
+                    "properties" : {
+                      "error" : {
+                        "example" : null
+                      },
+                      "body" : {
+                        "type" : "array",
+                        "items" : {
+                          "oneOf" : [ {
+                            "$ref" : "#/components/schemas/TransactionRecord"
+                          }, {
+                            "$ref" : "#/components/schemas/WithdrawalRecord"
+                          } ]
+                        }
+                      }
+                    }
+                  } ]
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/BasicUnauthorizedError"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/collections" : {
+      "get" : {
+        "security" : [ {
+          "basicAuth" : [ ]
+        } ],
+        "tags" : [ "basic" ],
+        "summary" : "Query pickup records",
+        "description" : "Cash collections can be queried from here. They are not included as transactions.",
+        "parameters" : [ {
+          "$ref" : "#/components/parameters/limit"
+        }, {
+          "$ref" : "#/components/parameters/earliest"
+        }, {
+          "$ref" : "#/components/parameters/latest"
+        }, {
+          "$ref" : "#/components/parameters/provisional"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "allOf" : [ {
+                    "$ref" : "#/components/schemas/BasicResponseWrapper"
+                  }, {
+                    "type" : "object",
+                    "properties" : {
+                      "error" : {
+                        "example" : null
+                      },
+                      "body" : {
+                        "type" : "array",
+                        "items" : {
+                          "$ref" : "#/components/schemas/CollectionRecord"
+                        }
+                      }
+                    }
+                  } ]
+                }
+              }
+            }
+          },
+          "401" : {
+            "$ref" : "#/components/responses/BasicUnauthorizedError"
+          },
+          "500" : {
+            "$ref" : "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "responses" : {
+      "InternalServerError" : {
+        "description" : "An unknown, internal error prevented successful completion.",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "allOf" : [ {
+                "$ref" : "#/components/schemas/BasicResponseWrapper"
+              }, {
+                "type" : "object",
+                "properties" : {
+                  "body" : {
+                    "example" : null
+                  },
+                  "error" : {
+                    "example" : {
+                      "code" : 500,
+                      "domain" : "http",
+                      "message" : "Internal server error"
+                    }
+                  }
+                }
+              } ]
+            }
+          }
+        }
+      },
+      "BasicUnauthorizedError" : {
+        "description" : "Basic authentication information is missing or invalid",
+        "headers" : {
+          "WWW-Authenticate" : {
+            "description" : "Will always be equal to \"Basic\"",
+            "schema" : {
+              "type" : "string",
+              "format" : "scheme",
+              "default" : "Basic",
+              "example" : "Basic"
+            }
+          }
+        },
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "allOf" : [ {
+                "$ref" : "#/components/schemas/BasicResponseWrapper"
+              }, {
+                "type" : "object",
+                "properties" : {
+                  "body" : {
+                    "example" : null
+                  },
+                  "error" : {
+                    "example" : {
+                      "code" : 401,
+                      "domain" : "http",
+                      "message" : "Basic authentication required"
+                    }
+                  }
+                }
+              } ]
+            }
+          }
+        }
+      }
+    },
+    "parameters" : {
+      "limit" : {
+        "in" : "query",
+        "name" : "limit",
+        "schema" : {
+          "type" : "integer",
+          "format" : "int32",
+          "minimum" : 0,
+          "default" : 0
+        },
+        "description" : "The maximum number of items to return. Zero implies unlimited."
+      },
+      "earliest" : {
+        "in" : "query",
+        "name" : "earliest",
+        "schema" : {
+          "type" : "integer",
+          "format" : "int64",
+          "default" : 0
+        },
+        "description" : "Specifies a lowerbound for the timestamp of records. Represents a UNIX time in UTC seconds. Zero and negative values imply no limit."
+      },
+      "latest" : {
+        "in" : "query",
+        "name" : "latest",
+        "schema" : {
+          "type" : "integer",
+          "format" : "int64",
+          "default" : 0
+        },
+        "description" : "Specifies a lowerbound for the timestamp of records. Represents a UNIX time in UTC seconds. Zero and negative values imply no limit."
+      },
+      "provisional" : {
+        "in" : "query",
+        "name" : "provisional",
+        "schema" : {
+          "type" : "boolean",
+          "default" : false
+        },
+        "description" : "Specifies whether to limit results to ATMs currently tracked for provisional crediting."
+      }
+    },
+    "securitySchemes" : {
+      "basicAuth" : {
+        "type" : "http",
+        "scheme" : "basic"
+      }
+    },
+    "schemas" : {
+      "CashAmount" : {
+        "type" : "array",
+        "items" : {
+          "$ref" : "#/components/schemas/CashAmountComponent"
+        }
+      },
+      "CashAmountComponent" : {
+        "type" : "object",
+        "properties" : {
+          "currency" : {
+            "type" : "string",
+            "pattern" : "^[A-Z]{3}$",
+            "default" : "USD",
+            "example" : "USD"
+          },
+          "denomination" : {
+            "type" : "number",
+            "format" : "float",
+            "description" : "The unit value of the denomination e.g. one dollar = 100",
+            "example" : 5000
+          },
+          "count" : {
+            "type" : "integer",
+            "minimum" : 0,
+            "example" : 64
+          }
+        }
+      },
+      "CashboxModel" : {
+        "type" : "object",
+        "required" : [ "name" ],
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "example" : "acceptor_cashbox"
+          },
+          "id" : {
+            "type" : "integer",
+            "minimum" : 0,
+            "exclusiveMinimum" : true
+          },
+          "capacity" : {
+            "type" : "integer",
+            "minimum" : 0,
+            "exclusiveMinimum" : true,
+            "nullable" : true,
+            "example" : 600
+          },
+          "contents" : {
+            "$ref" : "#/components/schemas/CashAmount"
+          }
+        }
+      },
+      "TerminalError" : {
+        "type" : "object",
+        "required" : [ "code" ],
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "minimum" : 0,
+            "exclusiveMinimum" : true,
+            "example" : 4
+          },
+          "severity" : {
+            "type" : "string",
+            "enum" : [ "error", "warning" ],
+            "default" : "error"
+          },
+          "display" : {
+            "type" : "string",
+            "nullable" : true,
+            "example" : "ACCEPTOR STACKER OUT"
+          }
+        }
+      },
+      "TerminalSerialNumber" : {
+        "type" : "string",
+        "pattern" : "^BT\\d{6}$",
+        "example" : "BT123456"
+      },
+      "TerminalStatus" : {
+        "type" : "object",
+        "properties" : {
+          "serial" : {
+            "$ref" : "#/components/schemas/TerminalSerialNumber"
+          },
+          "common" : {
+            "type" : "string",
+            "nullable" : true,
+            "description" : "The human readable - not necessarily unique - name.",
+            "example" : "Foo Bar Liquors"
+          },
+          "connectedat" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1589796983
+          },
+          "pingedat" : {
+            "type" : "integer",
+            "format" : "int64",
+            "example" : 1589797983
+          },
+          "ping" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0,
+            "example" : 345,
+            "description" : "The duration of the most recent ping in milliseconds."
+          },
+          "active" : {
+            "type" : "boolean",
+            "description" : "Whether the terminal is currently deployed."
+          },
+          "locked" : {
+            "type" : "boolean",
+            "description" : "Whether the terminal is currently locked."
+          },
+          "errors" : {
+            "nullable" : true,
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TerminalError"
+            },
+            "minItems" : 1
+          },
+          "boxes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CashboxModel"
+            }
+          }
+        }
+      },
+      "BuyStatus" : {
+        "type" : "string",
+        "enum" : [ "underway", "success", "autocomplete", "failed" ]
+      },
+      "SellStatus" : {
+        "type" : "string",
+        "enum" : [ "requested", "arriving", "arrived", "allocated", "withdrawn", "failed" ]
+      },
+      "TransactionID" : {
+        "type" : "string",
+        "pattern" : "^R[0-9A-Z]+$",
+        "example" : "R123ABC"
+      },
+      "TransactionRecord" : {
+        "type" : "object",
+        "properties" : {
+          "terminal" : {
+            "$ref" : "#/components/schemas/TerminalSerialNumber"
+          },
+          "tid" : {
+            "$ref" : "#/components/schemas/TransactionID"
+          },
+          "cashbox" : {
+            "type" : "string",
+            "example" : "acceptor_cashbox"
+          },
+          "amount" : {
+            "$ref" : "#/components/schemas/CashAmount"
+          },
+          "currency" : {
+            "type" : "string",
+            "example" : "BTC"
+          },
+          "address" : {
+            "type" : "string",
+            "example" : "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2"
+          },
+          "crypto-amount" : {
+            "type" : "number",
+            "format" : "float",
+            "example" : 1.23456789
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "type" : {
+            "type" : "string",
+            "enum" : [ "buy", "sell" ],
+            "example" : "buy"
+          },
+          "status" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/BuyStatus"
+            }, {
+              "$ref" : "#/components/schemas/SellStatus"
+            } ]
+          },
+          "error" : {
+            "type" : "integer",
+            "nullable" : true,
+            "minimum" : 0,
+            "exclusiveMinimum" : true,
+            "example" : 0
+          },
+          "fixedfee" : {
+            "type" : "number",
+            "minimum" : 0,
+            "default" : 0,
+            "example" : 0.99
+          },
+          "profitrate" : {
+            "type" : "number",
+            "minimum" : 0,
+            "example" : 6.99
+          },
+          "unit-cost" : {
+            "type" : "number",
+            "minimum" : 0,
+            "example" : 8123.45
+          },
+          "discount" : {
+            "type" : "object",
+            "properties" : {
+              "fraction" : {
+                "type" : "number",
+                "format" : "double",
+                "minimum" : 0,
+                "maximum" : 1,
+                "exclusiveMinimum" : true,
+                "exclusiveMaximum" : false,
+                "example" : 0.65
+              },
+              "code" : {
+                "type" : "string",
+                "nullable" : true
+              }
+            },
+            "nullable" : true
+          },
+          "note" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        }
+      },
+      "WithdrawalRecord" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "enum" : [ "withdrawal" ]
+          },
+          "terminal" : {
+            "$ref" : "#/components/schemas/TerminalSerialNumber"
+          },
+          "tid" : {
+            "$ref" : "#/components/schemas/TransactionID"
+          },
+          "sale-tid" : {
+            "$ref" : "#/components/schemas/TransactionID"
+          },
+          "cashbox" : {
+            "type" : "string",
+            "example" : "dispensor_cashbox"
+          },
+          "amount" : {
+            "$ref" : "#/components/schemas/CashAmount"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "integer",
+            "minimum" : 0,
+            "default" : 0,
+            "description" : "Either zero or an error code.",
+            "example" : 0
+          },
+          "note" : {
+            "type" : "string",
+            "nullable" : true,
+            "example" : null
+          }
+        }
+      },
+      "CollectionRecord" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "example" : "ABCDEFXYZ"
+          },
+          "terminal" : {
+            "$ref" : "#/components/schemas/TerminalSerialNumber"
+          },
+          "cashbox" : {
+            "type" : "string",
+            "example" : "acceptor_cashbox"
+          },
+          "amount" : {
+            "$ref" : "#/components/schemas/CashAmount"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "note" : {
+            "type" : "string",
+            "nullable" : true
+          }
+        }
+      },
+      "ErrorModel" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "integer",
+            "example" : 3
+          },
+          "domain" : {
+            "type" : "string",
+            "example" : "jdbc"
+          },
+          "message" : {
+            "type" : "string",
+            "nullable" : true,
+            "example" : "Detailed description of what went wrong"
+          }
+        },
+        "nullable" : true
+      },
+      "BasicResponseWrapper" : {
+        "type" : "object",
+        "properties" : {
+          "uuid" : {
+            "type" : "string",
+            "format" : "uuid",
+            "pattern" : "^[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}$"
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "error" : {
+            "$ref" : "#/components/schemas/ErrorModel"
+          },
+          "body" : {
+            "type" : "object",
+            "nullable" : true
+          }
+        }
+      }
+    }
+  }
+}
